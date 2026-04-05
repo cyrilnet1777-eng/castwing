@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Castwing — Studio d'Audition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#f5f1e8;--blue:#4169e1;--navy:#001a4d;--navy-light:#0a2a6e;--white:#fff;--cream:#faf8f2;--border:#d0c9b8;--border-light:#e5dfd3;--shadow:0 2px 12px rgba(0,26,77,.1);--shadow-lg:0 8px 32px rgba(0,26,77,.15);--radius:10px;--radius-lg:16px;--text-dark:#001a4d;--text-muted:#5a6a8a;--success:#22c55e;--danger:#ef4444;--warning:#f59e0b}
+html{height:100%;-webkit-text-size-adjust:100%}
+body{min-height:100vh;min-height:100dvh;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text-dark);line-height:1.5;font-weight:500;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.screen{display:none;flex-direction:column;min-height:100vh;min-height:100dvh}.screen.active{display:flex}
+
+/* HOME */
+#home{justify-content:center;align-items:center;padding:2rem 1.5rem;background:linear-gradient(160deg,var(--bg) 0%,#ede8db 50%,var(--bg) 100%)}
+.home-inner{max-width:460px;width:100%;display:flex;flex-direction:column;align-items:center;gap:2rem}
+.logo{text-align:center}.logo h1{font-size:2.6rem;font-weight:700;color:var(--navy);letter-spacing:-.02em;line-height:1.1;margin-bottom:.35rem}.logo h1 span{color:var(--blue);font-style:italic}.logo p{font-size:.8rem;color:var(--text-muted);letter-spacing:.12em;text-transform:uppercase;font-weight:500}
+.home-cards{width:100%;display:flex;flex-direction:column;gap:.85rem}
+.hcard{background:var(--white);border:1.5px solid var(--border-light);border-radius:var(--radius-lg);padding:1.4rem 1.3rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:1rem}
+.hcard:hover{border-color:var(--blue);box-shadow:var(--shadow);transform:translateY(-2px)}.hcard:active{transform:translateY(0)}
+.hcard-icon{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0}
+.hcard-icon.actor{background:linear-gradient(135deg,var(--blue),#5a82ee)}.hcard-icon.partner{background:linear-gradient(135deg,var(--navy),var(--navy-light))}.hcard-icon.ai{background:linear-gradient(135deg,#9333ea,#c084fc)}
+.hcard-text h3{font-size:1rem;font-weight:700;color:var(--navy);margin-bottom:.15rem}.hcard-text p{font-size:.82rem;color:var(--text-muted);font-weight:400}
+.home-footer{font-size:.72rem;color:var(--text-muted);text-align:center;margin-top:.5rem}
+
+/* SETUP */
+#setup{padding:1.5rem;justify-content:flex-start;gap:1.2rem;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.setup-header{display:flex;align-items:center;gap:.8rem}
+.back-btn{background:none;border:none;cursor:pointer;font-size:1.4rem;color:var(--blue);padding:.3rem}
+.setup-header h2{font-size:1.3rem;font-weight:700;color:var(--navy)}
+.setup-card{background:var(--white);border:1.5px solid var(--border-light);border-radius:var(--radius-lg);padding:1.5rem;box-shadow:var(--shadow);margin-bottom:1rem}
+.setup-card label,.s-label{display:block;font-size:.82rem;font-weight:700;color:var(--navy);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em}
+.setup-card input,.setup-card textarea,.setup-card select{width:100%;padding:.7rem .9rem;border:1.5px solid var(--border);border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:500;color:var(--text-dark);background:var(--cream);outline:none;transition:border-color .2s}
+.setup-card input:focus,.setup-card textarea:focus,.setup-card select:focus{border-color:var(--blue)}
+.setup-card textarea{min-height:100px;resize:vertical;line-height:1.6}
+.field-group{margin-bottom:1.2rem}.field-group:last-child{margin-bottom:0}
+.session-code-display{background:var(--navy);color:var(--white);font-size:1.8rem;font-weight:700;letter-spacing:.3em;text-align:center;padding:1rem;border-radius:var(--radius);margin-top:.5rem;user-select:all}
+.code-hint{font-size:.75rem;color:var(--text-muted);text-align:center;margin-top:.4rem}
+
+/* PDF */
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius-lg);padding:1.5rem;text-align:center;cursor:pointer;transition:all .2s;background:var(--cream)}
+.upload-zone:hover{border-color:var(--blue);background:#eef2ff}
+.upload-zone .up-icon{font-size:2rem;margin-bottom:.4rem}.upload-zone .up-label{font-size:.9rem;font-weight:700;color:var(--navy)}.upload-zone .up-sub{font-size:.75rem;color:var(--text-muted);margin-top:.2rem}
+input[type="file"]{display:none}
+.upload-ok{display:flex;align-items:center;gap:.6rem;background:#e8f5e9;border-radius:var(--radius);padding:.7rem 1rem;font-size:.85rem;font-weight:700;color:#2e7d32}
+.upload-ok .fname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.upload-ok .clear-btn{background:none;border:none;cursor:pointer;font-size:1rem;color:#999;padding:.2rem}
+.setup-status{font-size:.78rem;color:var(--text-muted);text-align:center;margin-top:.3rem}
+.no-pdf-hint{font-size:.78rem;color:var(--text-muted);text-align:center;margin-top:.5rem;line-height:1.5}
+
+/* CHAR PICKER */
+.char-grid{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.4rem}
+.char-item{padding:.5rem .9rem;border-radius:var(--radius);border:1.5px solid var(--border);background:var(--white);cursor:pointer;transition:all .2s;font-size:.82rem;font-weight:700}
+.char-item:hover{border-color:var(--blue)}.char-item.selected{background:var(--blue);color:var(--white);border-color:var(--blue)}
+.char-item .char-count{font-weight:400;font-size:.72rem;opacity:.7;margin-left:.3rem}
+
+/* VOICE PICKER */
+.voice-grid{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.4rem}
+.voice-item{padding:.5rem .9rem;border-radius:var(--radius);border:1.5px solid var(--border);background:var(--white);cursor:pointer;transition:all .2s;font-size:.82rem;font-weight:600}
+.voice-item:hover{border-color:var(--blue)}.voice-item.selected{background:var(--blue);color:var(--white);border-color:var(--blue)}
+.voice-item .voice-tag{font-size:.7rem;display:block;opacity:.7;margin-top:.1rem;font-weight:400}
+
+/* BUTTONS */
+.btn{display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.85rem 1.5rem;border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;border:none;transition:all .2s;text-transform:uppercase;letter-spacing:.04em}
+.btn-primary{background:var(--blue);color:var(--white);box-shadow:0 4px 14px rgba(65,105,225,.35)}.btn-primary:hover{background:#3555c8;transform:translateY(-1px)}.btn-primary:active{transform:translateY(0)}.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-secondary{background:var(--white);color:var(--blue);border:1.5px solid var(--blue)}.btn-secondary:hover{background:#eef2ff}
+.btn-danger{background:var(--danger);color:var(--white);box-shadow:0 4px 14px rgba(239,68,68,.3)}.btn-danger:hover{background:#dc2626}
+.btn-full{width:100%}
+
+/* SESSION */
+#session{padding:0;position:relative;background:var(--navy);color:var(--white)}
+.session-top{display:flex;align-items:center;justify-content:space-between;padding:.7rem 1rem;background:rgba(0,26,77,.95);border-bottom:1px solid rgba(255,255,255,.1);flex-shrink:0}
+.session-top .status{display:flex;align-items:center;gap:.4rem;font-size:.75rem;font-weight:700}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--success);animation:pulse 2s ease infinite}
+.status-dot.waiting{background:var(--warning)}.status-dot.disconnected{background:var(--danger);animation:none}
+.status-dot.ai{background:#c084fc}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.session-body{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.video-area{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:.5rem;position:relative;background:#000}
+.video-container{position:relative;width:100%;max-width:720px;aspect-ratio:16/9;border-radius:var(--radius);overflow:hidden;background:#111}
+.video-container video{width:100%;height:100%;object-fit:cover;display:block}
+.video-container .no-video{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.85rem;color:rgba(255,255,255,.4);font-weight:500}
+.video-controls{position:absolute;bottom:.8rem;left:50%;transform:translateX(-50%);display:flex;gap:.5rem;z-index:5}
+.vctrl{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);border:1.5px solid rgba(255,255,255,.15);color:#fff;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.vctrl:hover{background:rgba(0,0,0,.75)}.vctrl.recording{background:var(--danger);border-color:var(--danger);animation:pulse-rec 1.2s ease infinite}
+@keyframes pulse-rec{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}50%{box-shadow:0 0 0 10px rgba(239,68,68,0)}}
+
+.prompter-area{flex-shrink:0;max-height:35vh;background:rgba(0,26,77,.92);border-top:1px solid rgba(255,255,255,.08);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem 1.2rem}
+.prompter-line{font-size:1rem;line-height:1.7;font-weight:500;color:rgba(255,255,255,.5);margin-bottom:.3rem;transition:all .3s ease;padding:.25rem .4rem;border-radius:6px}
+.prompter-line.active{color:var(--white);font-weight:700;background:rgba(65,105,225,.25);font-size:1.05rem}
+.prompter-line.partner-line{color:rgba(255,255,255,.35);font-style:italic}.prompter-line.partner-line.active{color:rgba(200,210,255,.8)}
+.prompter-empty{text-align:center;color:rgba(255,255,255,.3);font-size:.85rem;padding:2rem 0}
+
+/* AI voice panel in session */
+.ai-voice-panel{display:none;flex-shrink:0;padding:.5rem 1rem;background:rgba(60,20,120,.3);border-top:1px solid rgba(192,132,252,.2);align-items:center;gap:.5rem;font-size:.75rem}
+.ai-voice-panel.active{display:flex}
+.ai-voice-panel select{padding:.3rem .5rem;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:#fff;font-size:.75rem;font-family:'DM Sans',sans-serif}
+.ai-voice-panel .ai-label{color:rgba(192,132,252,.8);font-weight:700}
+
+.session-bottom{display:flex;align-items:center;justify-content:center;gap:.6rem;padding:.6rem 1rem;background:rgba(0,26,77,.95);border-top:1px solid rgba(255,255,255,.1);flex-shrink:0}
+
+/* OVERLAYS */
+.overlay{display:none;position:fixed;inset:0;z-index:100;background:rgba(0,26,77,.85);backdrop-filter:blur(6px);flex-direction:column;align-items:center;justify-content:center;gap:1rem;color:var(--white)}.overlay.active{display:flex}
+.overlay h3{font-size:1.2rem;font-weight:700}.overlay p{font-size:.85rem;opacity:.7;text-align:center;max-width:300px}
+.spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.2);border-top-color:var(--white);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;top:1.2rem;left:50%;transform:translateX(-50%);background:var(--navy);color:var(--white);padding:.65rem 1.2rem;border-radius:var(--radius);font-size:.82rem;font-weight:700;box-shadow:var(--shadow-lg);z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90vw;text-align:center}.toast.show{opacity:1}
+.loading-overlay{display:none;position:fixed;inset:0;z-index:150;background:rgba(0,26,77,.7);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:.8rem;color:var(--white)}.loading-overlay.active{display:flex}.loading-overlay p{font-size:.9rem;font-weight:700}
+
+@media(min-width:768px){#home{padding:3rem}.home-inner{max-width:520px}.logo h1{font-size:3.2rem}.session-body{flex-direction:row}.video-area{flex:3}.prompter-area{flex:2;max-height:none;border-top:none;border-left:1px solid rgba(255,255,255,.08)}}
+</style>
+</head>
+<body>
+<div id="toast" class="toast"></div>
+<div id="loadingOverlay" class="loading-overlay"><div class="spinner"></div><p id="loadingMsg">Chargement…</p></div>
+<div id="connectOverlay" class="overlay"><div class="spinner"></div><h3 id="overlayTitle">Connexion…</h3><p id="overlayMsg"></p><button class="btn btn-secondary" onclick="cancelConnection()" style="margin-top:.5rem">Annuler</button></div>
+
+<!-- HOME -->
+<div id="home" class="screen active">
+  <div class="home-inner">
+    <div class="logo"><h1>Cast<span>wing</span></h1><p>Studio d'audition</p></div>
+    <div class="home-cards">
+      <div class="hcard" onclick="goSetup('actor-ai')"><div class="hcard-icon ai">🤖</div><div class="hcard-text"><h3>Solo + IA</h3><p>L'IA donne la réplique avec une voix</p></div></div>
+      <div class="hcard" onclick="goSetup('actor')"><div class="hcard-icon actor">🎬</div><div class="hcard-text"><h3>Avec un partenaire</h3><p>Inviter quelqu'un à donner la réplique</p></div></div>
+      <div class="hcard" onclick="goSetup('solo')"><div class="hcard-icon partner">✋</div><div class="hcard-text"><h3>Solo manuel</h3><p>Je gère le prompteur moi-même</p></div></div>
+    </div>
+    <div class="home-footer">WebRTC pair-à-pair · Aucune donnée stockée</div>
+  </div>
+</div>
+
+<!-- SETUP -->
+<div id="setup" class="screen">
+  <div class="setup-header"><button class="back-btn" onclick="goHome()">←</button><h2 id="setupTitle">Configuration</h2></div>
+
+  <!-- Actor AI Setup -->
+  <div id="actorAiSetup" style="display:none">
+    <div class="setup-card">
+      <label>Script (PDF ou texte)</label>
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('pdfInput').click()"><div class="up-icon">📄</div><div class="up-label">Importer un PDF de scénario</div><div class="up-sub">Format scénario standard</div></div>
+      <div class="upload-ok" id="uploadOk" style="display:none"><span>✓</span><span class="fname" id="fileName"></span><button class="clear-btn" onclick="clearPDF()">✕</button></div>
+      <input type="file" id="pdfInput" accept=".pdf,application/pdf" onchange="handlePDF(this)">
+      <div class="setup-status" id="setupStatus"></div>
+      <div id="charSection" style="display:none;margin-top:1rem"><label>Mon personnage</label><div class="char-grid" id="charGrid"></div></div>
+      <div style="margin-top:1rem"><label>Ou colle le texte</label><textarea id="scriptInput" placeholder="MOI: Ma réplique&#10;PARTENAIRE: Sa réplique"></textarea></div>
+    </div>
+    <div class="setup-card">
+      <label>Voix de l'IA</label>
+      <div class="voice-grid" id="voiceGrid"></div>
+      <div style="margin-top:.8rem"><label>Vitesse</label><input type="range" id="voiceSpeed" min="0.5" max="2" step="0.1" value="1" style="width:100%"><div style="display:flex;justify-content:space-between;font-size:.7rem;color:var(--text-muted)"><span>Lent</span><span>Normal</span><span>Rapide</span></div></div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="startAiSession()">Lancer avec IA</button>
+  </div>
+
+  <!-- Actor + Partner Setup -->
+  <div id="actorSetup" style="display:none">
+    <div class="setup-card"><div class="field-group"><label>Ton code de session</label><div class="session-code-display" id="mySessionCode">—</div><div class="code-hint">Partage ce code à ton partenaire</div></div></div>
+    <div class="setup-card">
+      <label>Script (PDF ou texte)</label>
+      <div class="upload-zone" id="uploadZone2" onclick="document.getElementById('pdfInput2').click()"><div class="up-icon">📄</div><div class="up-label">Importer un PDF</div><div class="up-sub">Format scénario standard</div></div>
+      <div class="upload-ok" id="uploadOk2" style="display:none"><span>✓</span><span class="fname" id="fileName2"></span><button class="clear-btn" onclick="clearPDF2()">✕</button></div>
+      <input type="file" id="pdfInput2" accept=".pdf,application/pdf" onchange="handlePDF2(this)">
+      <div class="setup-status" id="setupStatus2"></div>
+      <div id="charSection2" style="display:none;margin-top:1rem"><label>Mon personnage</label><div class="char-grid" id="charGrid2"></div></div>
+      <div style="margin-top:1rem"><label>Ou colle le texte</label><textarea id="scriptInput2" placeholder="MOI: Ma réplique&#10;PARTENAIRE: Sa réplique"></textarea></div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="startActorSession()">Lancer la session</button>
+  </div>
+
+  <!-- Partner Join -->
+  <div id="partnerSetup" style="display:none">
+    <div class="setup-card"><div class="field-group"><label>Code de session</label><input type="text" id="joinCodeInput" placeholder="Entre le code de l'acteur" maxlength="10" autocapitalize="characters" spellcheck="false"></div></div>
+    <button class="btn btn-primary btn-full" onclick="joinPartnerSession()">Rejoindre la session</button>
+  </div>
+
+  <!-- Solo Setup -->
+  <div id="soloSetup" style="display:none">
+    <div class="setup-card">
+      <label>Script (PDF ou texte)</label>
+      <div class="upload-zone" id="uploadZone3" onclick="document.getElementById('pdfInput3').click()"><div class="up-icon">📄</div><div class="up-label">Importer un PDF</div><div class="up-sub">Format scénario standard</div></div>
+      <div class="upload-ok" id="uploadOk3" style="display:none"><span>✓</span><span class="fname" id="fileName3"></span><button class="clear-btn" onclick="clearPDF3()">✕</button></div>
+      <input type="file" id="pdfInput3" accept=".pdf,application/pdf" onchange="handlePDF3(this)">
+      <div class="setup-status" id="setupStatus3"></div>
+      <div id="charSection3" style="display:none;margin-top:1rem"><label>Mon personnage</label><div class="char-grid" id="charGrid3"></div></div>
+      <div style="margin-top:1rem"><label>Ou colle le texte</label><textarea id="scriptInput3" placeholder="MOI: Ma réplique&#10;PARTENAIRE: Sa réplique"></textarea></div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="startSoloSession()">Lancer solo</button>
+  </div>
+</div>
+
+<!-- SESSION -->
+<div id="session" class="screen">
+  <div class="session-top"><div class="status"><div class="status-dot waiting" id="statusDot"></div><span id="statusText">En attente…</span></div><button class="back-btn" onclick="endSession()" style="color:#fff;font-size:1rem">✕</button></div>
+  <div class="session-body">
+    <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><div class="no-video" id="noVideoMsg">Caméra en attente…</div><div class="video-controls"><button class="vctrl" id="btnMic" onclick="toggleMic()">🎙️</button><button class="vctrl" id="btnRec" onclick="toggleRecording()">⏺</button><button class="vctrl" id="btnCam" onclick="toggleCam()">📷</button></div></div></div>
+    <div class="prompter-area" id="prompterArea"><div class="prompter-empty">Aucun texte chargé</div></div>
+  </div>
+  <div class="ai-voice-panel" id="aiVoicePanel"><span class="ai-label">🤖 Voix IA :</span><select id="sessionVoiceSelect" onchange="changeSessionVoice()"></select></div>
+  <div class="session-bottom">
+    <button class="btn btn-secondary" onclick="prompterPrev()" style="padding:.5rem .8rem;font-size:.75rem">◀ Préc</button>
+    <button class="btn btn-secondary" onclick="prompterNext()" style="padding:.5rem .8rem;font-size:.75rem">Suiv ▶</button>
+    <button class="btn btn-danger" onclick="endSession()" style="padding:.5rem .8rem;font-size:.75rem">Quitter</button>
+  </div>
+</div>
+
+<audio id="remoteAudio" autoplay></audio>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ── State ──
+let role=null,sessionMode=null; // 'actor-ai','actor','partner','solo'
+let peer=null,conn=null,call=null,localStream=null,mediaRecorder=null,recordedChunks=[];
+let isRecording=false,isMicOn=true,isCamOn=true,prompterLines=[],prompterIndex=0,connectionTimeout=null;
+let selectedChar=null,recognition=null,pdfScript=[];
+let selectedVoice=null,voiceSpeed=1,aiSpeaking=false;
+
+const ICE_SERVERS=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:'stun:stun2.l.google.com:19302'}];
+
+// ── Voice presets ──
+const VOICE_PRESETS=[
+  {id:'femme-douce',label:'Sophie',tag:'Voix douce 🌸',gender:'female',pitch:1.1,rate:0.95},
+  {id:'femme-pro',label:'Marie',tag:'Pro & posée 🎯',gender:'female',pitch:1.0,rate:1.0},
+  {id:'femme-charme',label:'Camille',tag:'Charmeuse 💋',gender:'female',pitch:1.15,rate:0.9},
+  {id:'homme-neutre',label:'Thomas',tag:'Neutre pro 🎯',gender:'male',pitch:0.9,rate:1.0},
+  {id:'homme-grave',label:'Jacques',tag:'Voix grave 🎭',gender:'male',pitch:0.7,rate:0.9},
+  {id:'homme-texan',label:'Billy',tag:'Accent texan 🤠',gender:'male',pitch:0.85,rate:1.1},
+];
+
+// ── Helpers ──
+function genCode(){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let r='';for(let i=0;i<8;i++)r+=c[Math.floor(Math.random()*c.length)];return r}
+function showToast(m,d=3000){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),d)}
+function showOverlay(t,m){document.getElementById('overlayTitle').textContent=t;document.getElementById('overlayMsg').textContent=m;document.getElementById('connectOverlay').classList.add('active')}
+function hideOverlay(){document.getElementById('connectOverlay').classList.remove('active')}
+function setLoading(on,m){const e=document.getElementById('loadingOverlay');if(on){document.getElementById('loadingMsg').textContent=m||'Chargement…';e.classList.add('active')}else e.classList.remove('active')}
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
+function goHome(){endSession();showScreen('home')}
+
+function goSetup(mode){
+  sessionMode=mode;showScreen('setup');
+  document.getElementById('actorAiSetup').style.display='none';
+  document.getElementById('actorSetup').style.display='none';
+  document.getElementById('partnerSetup').style.display='none';
+  document.getElementById('soloSetup').style.display='none';
+  if(mode==='actor-ai'){
+    document.getElementById('setupTitle').textContent='Solo + IA';
+    document.getElementById('actorAiSetup').style.display='block';
+    initVoiceGrid();
+  }else if(mode==='actor'){
+    document.getElementById('setupTitle').textContent='Avec un partenaire';
+    document.getElementById('actorSetup').style.display='block';
+    document.getElementById('mySessionCode').textContent=genCode();
+    role='actor';
+  }else if(mode==='partner'){
+    document.getElementById('setupTitle').textContent='Rejoindre une session';
+    document.getElementById('partnerSetup').style.display='block';
+    role='partner';
+  }else if(mode==='solo'){
+    document.getElementById('setupTitle').textContent='Solo manuel';
+    document.getElementById('soloSetup').style.display='block';
+  }
+}
+
+// ── Voice Grid ──
+function initVoiceGrid(){
+  const g=document.getElementById('voiceGrid');g.innerHTML='';
+  VOICE_PRESETS.forEach((v,i)=>{
+    const el=document.createElement('div');el.className='voice-item'+(i===0?' selected':'');
+    el.innerHTML=`${v.label}<span class="voice-tag">${v.tag}</span>`;
+    el.onclick=()=>{selectedVoice=v;document.querySelectorAll('.voice-item').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');previewVoice(v)};
+    g.appendChild(el);
+  });
+  selectedVoice=VOICE_PRESETS[0];
+}
+
+function previewVoice(v){
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance('Bonjour, je suis '+v.label);
+  u.lang='fr-FR';u.pitch=v.pitch;u.rate=v.rate;
+  const voices=speechSynthesis.getVoices();
+  const match=voices.find(x=>x.lang.startsWith('fr')&&(v.gender==='female'?x.name.match(/female|femme|amelie|thomas/i)||!x.name.match(/male|homme/i):x.name.match(/male|homme|thomas/i)));
+  if(match)u.voice=match;
+  speechSynthesis.speak(u);
+}
+
+function populateSessionVoiceSelect(){
+  const s=document.getElementById('sessionVoiceSelect');s.innerHTML='';
+  VOICE_PRESETS.forEach(v=>{const o=document.createElement('option');o.value=v.id;o.textContent=v.label+' — '+v.tag;if(selectedVoice&&v.id===selectedVoice.id)o.selected=true;s.appendChild(o)});
+}
+function changeSessionVoice(){
+  const id=document.getElementById('sessionVoiceSelect').value;
+  selectedVoice=VOICE_PRESETS.find(v=>v.id===id)||VOICE_PRESETS[0];
+  showToast('Voix : '+selectedVoice.label);
+}
+
+// ── AI Speech ──
+function aiSpeak(text,callback){
+  if(!text)return callback&&callback();
+  speechSynthesis.cancel();aiSpeaking=true;
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='fr-FR';
+  u.pitch=selectedVoice?selectedVoice.pitch:1;
+  u.rate=(selectedVoice?selectedVoice.rate:1)*voiceSpeed;
+  const voices=speechSynthesis.getVoices();
+  if(selectedVoice){const g=selectedVoice.gender;const m=voices.find(x=>x.lang.startsWith('fr'));if(m)u.voice=m}
+  u.onend=()=>{aiSpeaking=false;if(callback)callback()};
+  u.onerror=()=>{aiSpeaking=false;if(callback)callback()};
+  speechSynthesis.speak(u);
+}
+
+// ── PDF (shared logic) ──
+function parsePDFScript(text){
+  const lines=text.split('\n'),res=[];
+  const cRx=/^([A-ZÀÂÉÈÊËÎÏÔÙÛÜÇ][A-ZÀÂÉÈÊËÎÏÔÙÛÜÇ\s\-\.]{1,28})$/;
+  const dRx=/^\s*[\(\[].+[\)\]]\s*$/;
+  let cur=null;
+  for(const raw of lines){const l=raw.trim();if(!l){cur=null;continue}if(dRx.test(l))continue;if(l.startsWith('(')&&l.endsWith(')'))continue;if(cRx.test(l)&&l===l.toUpperCase()&&l.length<35)cur=l.trim();else if(cur&&l.length>1)res.push({char:cur,line:l})}
+  return res;
+}
+function getChars(ps){const c={};for(const{char}of ps)c[char]=(c[char]||0)+1;return Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([char,count])=>({char,count}))}
+
+async function loadPDF(input,zoneId,okId,fnameId,statusId,charSectionId,charGridId){
+  const file=input.files[0];if(!file)return;setLoading(true,'Lecture du script…');
+  try{const buf=await file.arrayBuffer();const pdf=await pdfjsLib.getDocument({data:buf}).promise;let text='';
+  for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const ct=await pg.getTextContent();let lastY=null,line='';for(const it of ct.items){if(lastY!==null&&Math.abs(it.transform[5]-lastY)>3){text+=line+'\n';line=''}line+=it.str;lastY=it.transform[5]}text+=line+'\n'}
+  pdfScript=parsePDFScript(text);const chars=getChars(pdfScript);
+  document.getElementById(zoneId).style.display='none';document.getElementById(okId).style.display='flex';document.getElementById(fnameId).textContent=file.name;
+  if(chars.length>0){renderCharsIn(chars,charGridId);document.getElementById(charSectionId).style.display='block';document.getElementById(statusId).textContent=pdfScript.length+' répliques'}
+  else document.getElementById(statusId).textContent='Format non détecté — texte importé';
+  }catch(e){showToast('Erreur PDF')}setLoading(false);
+}
+function renderCharsIn(chars,gridId){const g=document.getElementById(gridId);g.innerHTML='';chars.forEach(({char,count})=>{const el=document.createElement('div');el.className='char-item';el.innerHTML=`${char}<span class="char-count">(${count})</span>`;el.onclick=()=>{selectedChar=char;g.querySelectorAll('.char-item').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');showToast('Tu joues '+char)};g.appendChild(el)})}
+
+function handlePDF(i){loadPDF(i,'uploadZone','uploadOk','fileName','setupStatus','charSection','charGrid')}
+function handlePDF2(i){loadPDF(i,'uploadZone2','uploadOk2','fileName2','setupStatus2','charSection2','charGrid2')}
+function handlePDF3(i){loadPDF(i,'uploadZone3','uploadOk3','fileName3','setupStatus3','charSection3','charGrid3')}
+function clearPDF(){pdfScript=[];selectedChar=null;document.getElementById('uploadZone').style.display='block';document.getElementById('uploadOk').style.display='none';document.getElementById('charSection').style.display='none';document.getElementById('setupStatus').textContent='';document.getElementById('pdfInput').value=''}
+function clearPDF2(){pdfScript=[];selectedChar=null;document.getElementById('uploadZone2').style.display='block';document.getElementById('uploadOk2').style.display='none';document.getElementById('charSection2').style.display='none';document.getElementById('setupStatus2').textContent='';document.getElementById('pdfInput2').value=''}
+function clearPDF3(){pdfScript=[];selectedChar=null;document.getElementById('uploadZone3').style.display='block';document.getElementById('uploadOk3').style.display='none';document.getElementById('charSection3').style.display='none';document.getElementById('setupStatus3').textContent='';document.getElementById('pdfInput3').value=''}
+
+// ── Prompter ──
+function buildLines(textareaId){
+  if(pdfScript.length>0&&selectedChar)return pdfScript.map(s=>({text:s.line,type:s.char===selectedChar?'actor':'partner',char:s.char}));
+  if(pdfScript.length>0)return pdfScript.map(s=>({text:s.char+': '+s.line,type:'actor',char:s.char}));
+  const t=document.getElementById(textareaId).value;if(!t||!t.trim())return[];
+  return t.split('\n').filter(l=>l.trim()).map(l=>{const tr=l.trim();const isP=/^(PARTENAIRE|PARTNER|P)\s*:/i.test(tr);let clean=tr;if(/^(PARTENAIRE|PARTNER|P|MOI|ME|ACTEUR|ACTOR|A)\s*:/i.test(tr))clean=tr.replace(/^[^:]+:\s*/,'');return{text:clean,type:isP?'partner':'actor'}});
+}
+function renderPrompter(){
+  const a=document.getElementById('prompterArea');
+  if(!prompterLines.length){a.innerHTML='<div class="prompter-empty">Aucun texte chargé</div>';return}
+  a.innerHTML=prompterLines.map((l,i)=>{const cls=['prompter-line'];if(i===prompterIndex)cls.push('active');if(l.type==='partner')cls.push('partner-line');const pfx=l.type==='partner'?'🎙️ ':'🎬 ';const ch=l.char?`<b>${l.char}:</b> `:'';return`<div class="${cls.join(' ')}">${pfx}${ch}${l.text}</div>`}).join('');
+  const act=a.querySelector('.prompter-line.active');if(act)act.scrollIntoView({behavior:'smooth',block:'center'});
+}
+function prompterNext(){
+  if(prompterIndex>=prompterLines.length-1)return;
+  prompterIndex++;renderPrompter();syncPrompter();
+  // AI mode: if next line is partner, AI speaks it then auto-advance
+  if(sessionMode==='actor-ai'&&prompterLines[prompterIndex]&&prompterLines[prompterIndex].type==='partner'){
+    aiSpeak(prompterLines[prompterIndex].text,()=>{if(prompterIndex<prompterLines.length-1){prompterIndex++;renderPrompter();syncPrompter()}});
+  }
+}
+function prompterPrev(){if(prompterIndex>0){prompterIndex--;renderPrompter();syncPrompter()}}
+function syncPrompter(){if(conn&&conn.open)conn.send({type:'prompter',index:prompterIndex})}
+
+// ── Camera (actor only) ──
+async function startCamera(){
+  try{localStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:true});document.getElementById('localVideo').srcObject=localStream;document.getElementById('noVideoMsg').style.display='none';return localStream}
+  catch(e){showToast('Erreur caméra : '+e.message,5000);return null}
+}
+function toggleMic(){if(!localStream)return;isMicOn=!isMicOn;localStream.getAudioTracks().forEach(t=>t.enabled=isMicOn);document.getElementById('btnMic').textContent=isMicOn?'🎙️':'🔇';showToast(isMicOn?'Micro activé':'Micro coupé')}
+function toggleCam(){if(!localStream)return;isCamOn=!isCamOn;localStream.getVideoTracks().forEach(t=>t.enabled=isCamOn);document.getElementById('btnCam').textContent=isCamOn?'📷':'📷❌';showToast(isCamOn?'Caméra activée':'Caméra coupée')}
+
+// ── Recording ──
+function toggleRecording(){if(isRecording)stopRecording();else startRecording()}
+function startRecording(){
+  if(!localStream){showToast('Pas de flux vidéo');return}recordedChunks=[];
+  try{mediaRecorder=new MediaRecorder(localStream,{mimeType:MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm'});
+  mediaRecorder.ondataavailable=e=>{if(e.data.size>0)recordedChunks.push(e.data)};
+  mediaRecorder.onstop=()=>{const b=new Blob(recordedChunks,{type:'video/webm'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`castwing-${Date.now()}.webm`;a.click();URL.revokeObjectURL(u);showToast('Audition téléchargée !')};
+  mediaRecorder.start(1000);isRecording=true;document.getElementById('btnRec').classList.add('recording');document.getElementById('btnRec').textContent='⏹';showToast('Enregistrement…')}
+  catch(e){showToast('Erreur enregistrement')}
+}
+function stopRecording(){if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').textContent='⏺'}
+
+// ── WebRTC ──
+function createPeer(id){return new Peer(id,{config:{iceServers:ICE_SERVERS}})}
+function setStatus(s,t){document.getElementById('statusDot').className='status-dot '+s;document.getElementById('statusText').textContent=t}
+function handleDataMessage(d){if(d.type==='prompter'){prompterIndex=d.index;renderPrompter()}else if(d.type==='script'){prompterLines=d.lines;prompterIndex=d.index||0;renderPrompter()}else if(d.type==='ready'){if(role==='actor'&&localStream){call=peer.call(conn.peer,localStream);setupCallHandlers(call)}}}
+function setupDataConnection(c){
+  conn=c;conn.on('open',()=>{setStatus('','Connecté');hideOverlay();showToast('Partenaire connecté !');if(role==='actor'&&prompterLines.length>0)conn.send({type:'script',lines:prompterLines,index:prompterIndex});if(role==='partner')conn.send({type:'ready'})});
+  conn.on('data',handleDataMessage);conn.on('close',()=>{setStatus('disconnected','Déconnecté');showToast('Partenaire déconnecté')});conn.on('error',e=>showToast('Erreur : '+e.message));
+}
+function setupCallHandlers(c){call=c;call.on('stream',s=>{document.getElementById('remoteAudio').srcObject=s});call.on('error',e=>console.error('Call error:',e))}
+
+// ── START SESSIONS ──
+async function startAiSession(){
+  sessionMode='actor-ai';role='actor';
+  voiceSpeed=parseFloat(document.getElementById('voiceSpeed').value)||1;
+  prompterLines=buildLines('scriptInput');prompterIndex=0;
+  showScreen('session');renderPrompter();
+  setStatus('ai','IA prête');
+  document.getElementById('aiVoicePanel').classList.add('active');
+  populateSessionVoiceSelect();
+  await startCamera();
+  hideOverlay();
+  // If first line is partner, AI speaks it
+  if(prompterLines.length>0&&prompterLines[0].type==='partner'){
+    aiSpeak(prompterLines[0].text,()=>{});
+  }
+}
+
+async function startActorSession(){
+  role='actor';sessionMode='actor';
+  const code=document.getElementById('mySessionCode').textContent;if(!code||code==='—')return;
+  prompterLines=buildLines('scriptInput2');prompterIndex=0;
+  showScreen('session');renderPrompter();setStatus('waiting','En attente du partenaire…');showOverlay('Préparation…','Démarrage de la caméra…');
+  await startCamera();
+  const pid='castwing-'+code;peer=createPeer(pid);
+  peer.on('open',()=>{hideOverlay();showOverlay('En attente…','Partage le code '+code)});
+  peer.on('connection',c=>setupDataConnection(c));
+  peer.on('call',ic=>{ic.answer(localStream);setupCallHandlers(ic)});
+  peer.on('error',e=>{hideOverlay();showToast('Erreur : '+e.message,5000)});
+  connectionTimeout=setTimeout(()=>{if(!conn||!conn.open){hideOverlay();setStatus('waiting','En attente… (tu peux commencer seul)')}},15000);
+}
+
+async function joinPartnerSession(){
+  role='partner';sessionMode='partner';
+  const code=document.getElementById('joinCodeInput').value.trim().toUpperCase();if(!code){showToast('Entre un code');return}
+  showScreen('session');setStatus('waiting','Connexion…');showOverlay('Connexion…','Recherche de la session '+code+'…');
+  // Partner: audio only, no video needed for display
+  try{localStream=await navigator.mediaDevices.getUserMedia({audio:true});document.getElementById('noVideoMsg').textContent='Audio seulement (partenaire)'}catch(e){showToast('Erreur micro')}
+  const mid='castwing-partner-'+code+'-'+Math.random().toString(36).substr(2,4);peer=createPeer(mid);
+  peer.on('open',()=>{const c=peer.connect('castwing-'+code,{reliable:true});setupDataConnection(c)});
+  peer.on('call',ic=>{ic.answer(localStream);setupCallHandlers(ic)});
+  peer.on('error',e=>{hideOverlay();showToast('Session introuvable.',5000);setStatus('disconnected','Introuvable')});
+  connectionTimeout=setTimeout(()=>{if(!conn||!conn.open){hideOverlay();showToast('Connexion lente',5000)}},12000);
+}
+
+async function startSoloSession(){
+  sessionMode='solo';role='actor';
+  prompterLines=buildLines('scriptInput3');prompterIndex=0;
+  showScreen('session');renderPrompter();setStatus('','Solo');
+  await startCamera();
+}
+
+// ── Cleanup ──
+function endSession(){
+  if(connectionTimeout)clearTimeout(connectionTimeout);speechSynthesis.cancel();
+  if(isRecording)stopRecording();if(call){call.close();call=null}if(conn){conn.close();conn=null}if(peer){peer.destroy();peer=null}
+  if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null}
+  document.getElementById('localVideo').srcObject=null;document.getElementById('remoteAudio').srcObject=null;
+  document.getElementById('noVideoMsg').style.display='flex';document.getElementById('noVideoMsg').textContent='Caméra en attente…';
+  document.getElementById('aiVoicePanel').classList.remove('active');
+  hideOverlay();isMicOn=true;isCamOn=true;prompterLines=[];prompterIndex=0;showScreen('home');
+}
+function cancelConnection(){hideOverlay();if(!conn||!conn.open){endSession();showScreen('setup')}}
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded',()=>{showScreen('home');speechSynthesis.getVoices()});
+// Some browsers need this event to load voices
+speechSynthesis.onvoiceschanged=()=>{};
+</script>
+</body>
+</html>
