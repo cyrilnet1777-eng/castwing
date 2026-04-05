@@ -1,0 +1,19 @@
+{
+  "name": "castwing",
+  "version": "1.0.0",
+  "description": "AI-Powered Self-Tape Studio with WebRTC",
+  "scripts": {
+    "build": "echo 'Static site - no build needed'",
+    "start": "netlify dev",
+    "deploy": "netlify deploy --prod"
+  },
+  "keywords": [
+    "audition",
+    "self-tape",
+    "webrtc",
+    "recording"
+  ],
+  "author": "Castwing",
+  "license": "MIT",
+  "devDependencies": {}
+}
