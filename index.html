@@ -164,6 +164,10 @@ input[type="file"]{display:none}
     <div class="mode-hint" id="modeHint">L'IA lit les répliques du partenaire automatiquement.</div>
     <div class="voice-section active" id="voiceSection">
       <label>Voix de l'IA</label>
+      <div class="mode-toggle" style="margin-top:.4rem">
+        <div class="mode-opt active" id="engineBrowserBtn" onclick="setTtsEngine('browser')">Free (Browser)</div>
+        <div class="mode-opt" id="engineElevenBtn" onclick="setTtsEngine('elevenlabs')">Pro (ElevenLabs)</div>
+      </div>
       <div class="voice-grid" id="voiceGrid"></div>
       <div style="margin-top:.6rem">
         <label>Émotion</label>
@@ -232,21 +236,27 @@ let isRecording=false,isMicOn=true,isCamOn=true,prompterLines=[],prompterIndex=0
 let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',voiceSpeed=1,availableVoices=[],presetVoiceMap={};
 let autoAdvanceTimer=null,lastAutoSpokenIndex=-1,activeSpeechToken=0;
 let ttsAudio=null,vad=null;
+let ttsEngine='browser';
 
-const useElevenLabs=false;
-// ElevenLabs voices (reference): Rachel (female calm), Bella (female soft), Antoni (male warm),
-// Josh (male deep), Serena (female FR), Daniel (male FR)
 const pauseBetweenLines=500;
 
 const ICE_SERVERS=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:'stun:stun2.l.google.com:19302'}];
 
-const VOICE_PRESETS=[
+const BROWSER_VOICE_PRESETS=[
   {id:'f1',label:'Sophie',tag:'Douce 🌸',pitch:1.15,rate:0.95},
   {id:'f2',label:'Marie',tag:'Pro 🎯',pitch:1.0,rate:1.0},
   {id:'f3',label:'Camille',tag:'Charmeuse 💋',pitch:1.2,rate:0.88},
   {id:'m1',label:'Thomas',tag:'Neutre 🎯',pitch:0.85,rate:1.0},
   {id:'m2',label:'Jacques',tag:'Grave 🎭',pitch:0.65,rate:0.92},
   {id:'m3',label:'Billy',tag:'Énergique 🤠',pitch:0.9,rate:1.15},
+];
+const ELEVENLABS_VOICE_PRESETS=[
+  {id:'serena',label:'Serena',tag:'FR · Female · warm',voiceId:'bHkOO3JOGzSRKwMpGIbB'},
+  {id:'daniel',label:'Daniel',tag:'FR · Male · deep',voiceId:'onwK4e9ZLuTAKqWW03F9'},
+  {id:'rachel',label:'Rachel',tag:'EN · Female · calm',voiceId:'21m00Tcm4TlvDq8ikWAM'},
+  {id:'antoni',label:'Antoni',tag:'EN · Male · warm',voiceId:'ErXwobaYiN019PkySvjV'},
+  {id:'bella',label:'Bella',tag:'EN · Female · soft',voiceId:'EXAVITQu4vr4xnSDxMaL'},
+  {id:'josh',label:'Josh',tag:'EN · Male · deep',voiceId:'TxGEqnHWrfWFTfGW9XjX'},
 ];
 
 const EMOTION_PRESETS={
@@ -258,6 +268,7 @@ const EMOTION_PRESETS={
 };
 
 const TTS_LANGS=['fr','en','es','it','de'];
+function getActiveVoicePresets(){return ttsEngine==='elevenlabs'?ELEVENLABS_VOICE_PRESETS:BROWSER_VOICE_PRESETS}
 
 class VoiceActivityDetector{
   constructor({speechThreshold=0.015,silenceDuration=1500,onSpeechEnd}={}){
@@ -346,11 +357,12 @@ function getFilteredVoices(){
   return pool;
 }
 function buildVoiceMap(){
+  if(ttsEngine!=='browser'){presetVoiceMap={};return}
   const pool=getFilteredVoices();
   const fallback=availableVoices.slice();
   const used=new Set();
   const map={};
-  VOICE_PRESETS.forEach((p,i)=>{
+  BROWSER_VOICE_PRESETS.forEach((p,i)=>{
     let pick=null;
     for(const v of pool){if(!used.has(v.voiceURI)){pick=v;used.add(v.voiceURI);break}}
     if(!pick)for(const v of fallback){if(!used.has(v.voiceURI)){pick=v;used.add(v.voiceURI);break}}
@@ -366,6 +378,7 @@ function findVoiceByURI(voiceURI){
   return availableVoices.find(v=>v.voiceURI===voiceURI)||null;
 }
 function getBestVoice(p){
+  if(ttsEngine!=='browser')return null;
   if(!availableVoices.length)availableVoices=speechSynthesis.getVoices();
   if(!presetVoiceMap[p.id])buildVoiceMap();
   const exact=findVoiceByURI(presetVoiceMap[p.id]);
@@ -374,7 +387,7 @@ function getBestVoice(p){
 }
 function getEmotionSettings(){return EMOTION_PRESETS[selectedEmotion]||EMOTION_PRESETS.neutral;}
 function getSpeechStyle(v){
-  const base=v||VOICE_PRESETS[0];
+  const base=v||getActiveVoicePresets()[0]||{};
   const emo=getEmotionSettings();
   return{
     pitch:(base.pitch||1)*emo.pitch,
@@ -385,34 +398,45 @@ function setEmotion(key){
   selectedEmotion=EMOTION_PRESETS[key]?key:'neutral';
   showToast('Émotion : '+EMOTION_PRESETS[selectedEmotion].label);
 }
+function setTtsEngine(engine,silent){
+  ttsEngine=engine==='elevenlabs'?'elevenlabs':'browser';
+  document.getElementById('engineBrowserBtn').classList.toggle('active',ttsEngine==='browser');
+  document.getElementById('engineElevenBtn').classList.toggle('active',ttsEngine==='elevenlabs');
+  const presets=getActiveVoicePresets();
+  if(!presets.some(v=>selectedVoice&&v.id===selectedVoice.id))selectedVoice=presets[0]||null;
+  initVoiceGrid();
+  if(document.getElementById('session').classList.contains('active'))populateSessionVoiceSelect();
+  if(!silent)showToast(ttsEngine==='browser'?'Moteur voix: Free (Browser)':'Moteur voix: Pro (ElevenLabs)');
+}
 
 function initVoiceGrid(){
+  const presets=getActiveVoicePresets();
   const g=document.getElementById('voiceGrid');g.innerHTML='';
-  if(!selectedVoice)selectedVoice=VOICE_PRESETS[0];
-  VOICE_PRESETS.forEach((v,i)=>{
+  if(!selectedVoice)selectedVoice=presets[0]||null;
+  presets.forEach(v=>{
     const el=document.createElement('div');el.className='voice-item'+(selectedVoice&&selectedVoice.id===v.id?' selected':'');
     el.innerHTML=`${v.label}<span class="vtag">${v.tag}</span>`;
     el.onclick=()=>{selectedVoice=v;g.querySelectorAll('.voice-item').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');previewVoice(v)};
     g.appendChild(el);
   });
-  if(!selectedVoice)selectedVoice=VOICE_PRESETS[0];
+  if(!selectedVoice&&presets.length)selectedVoice=presets[0];
 }
 
 function previewVoice(v){
-  activeSpeechToken++;
-  cancelTTSPlayback();
-  const u=new SpeechSynthesisUtterance('Bonjour, je suis '+v.label+'.');
-  const style=getSpeechStyle(v);
-  u.lang='fr-FR';u.pitch=style.pitch;u.rate=style.rate;
-  const voice=getBestVoice(v);if(voice)u.voice=voice;
-  speechSynthesis.speak(u);
+  const sample='Bonjour, je suis '+v.label+'.';
+  aiSpeak(sample);
 }
 
 function populateSessionVoiceSelect(){
+  const presets=getActiveVoicePresets();
   const s=document.getElementById('sessionVoiceSelect');s.innerHTML='';
-  VOICE_PRESETS.forEach(v=>{const o=document.createElement('option');o.value=v.id;o.textContent=v.label+' — '+v.tag;if(selectedVoice&&v.id===selectedVoice.id)o.selected=true;s.appendChild(o)});
+  presets.forEach(v=>{const o=document.createElement('option');o.value=v.id;o.textContent=v.label+' — '+v.tag;if(selectedVoice&&v.id===selectedVoice.id)o.selected=true;s.appendChild(o)});
 }
-function changeSessionVoice(){selectedVoice=VOICE_PRESETS.find(v=>v.id===document.getElementById('sessionVoiceSelect').value)||VOICE_PRESETS[0];showToast('Voix : '+selectedVoice.label)}
+function changeSessionVoice(){
+  const presets=getActiveVoicePresets();
+  selectedVoice=presets.find(v=>v.id===document.getElementById('sessionVoiceSelect').value)||presets[0]||null;
+  if(selectedVoice)showToast('Voix : '+selectedVoice.label);
+}
 
 function clearAutoTimer(){if(autoAdvanceTimer){clearTimeout(autoAdvanceTimer);autoAdvanceTimer=null}}
 function cancelTTSPlayback(){
@@ -424,12 +448,12 @@ function cancelTTSPlayback(){
     ttsAudio=null;
   }
 }
-async function speakWithElevenLabs(text,preset,style,token,cb){
+async function speakWithElevenLabs(text,preset,token,cb){
   try{
-    const rsp=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,presetId:preset.id,voiceURI:presetVoiceMap[preset.id]||null,emotion:selectedEmotion,rate:style.rate,pitch:style.pitch})});
+    const rsp=await fetch('/.netlify/functions/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,voiceId:preset.voiceId,emotion:selectedEmotion})});
     if(!rsp.ok)throw new Error('HTTP '+rsp.status);
     const blob=await rsp.blob();
-    if(token!==activeSpeechToken){return}
+    if(token!==activeSpeechToken)return;
     const url=URL.createObjectURL(blob);
     const audio=new Audio(url);
     ttsAudio=audio;
@@ -438,7 +462,7 @@ async function speakWithElevenLabs(text,preset,style,token,cb){
     audio.onerror=done;
     try{await audio.play()}catch(e){done()}
   }catch(e){
-    if(token===activeSpeechToken)speakWithBrowser(text,preset,style,token,cb);
+    if(token===activeSpeechToken&&cb)cb();
   }
 }
 function speakWithBrowser(text,preset,style,token,cb){
@@ -455,11 +479,13 @@ function speakWithBrowser(text,preset,style,token,cb){
 }
 function aiSpeak(text,cb){
   if(!text){if(cb)cb();return}
-  const preset=selectedVoice||VOICE_PRESETS[0];
-  const style=getSpeechStyle(preset);
+  const presets=getActiveVoicePresets();
+  const preset=selectedVoice||presets[0]||null;
+  if(!preset){if(cb)cb();return}
   const token=++activeSpeechToken;
   cancelTTSPlayback();
-  if(useElevenLabs){speakWithElevenLabs(text,preset,style,token,cb);return}
+  if(ttsEngine==='elevenlabs'){speakWithElevenLabs(text,preset,token,cb);return}
+  const style=getSpeechStyle(preset);
   speakWithBrowser(text,preset,style,token,cb);
 }
 
@@ -475,6 +501,7 @@ function goJoin(){showScreen('joinScreen')}
 function goSetupAi(){
   showScreen('setupAi');
   loadVoices();
+  setTtsEngine(ttsEngine,true);
   initVoiceGrid();
   const emo=document.getElementById('emotionSelect');if(emo)emo.value=selectedEmotion;
   initDragDrop('uploadZone1');
@@ -784,7 +811,7 @@ async function startAiSession(){
   role='actor';sessionMode='ai';
   voiceSpeed=parseFloat(document.getElementById('voiceSpeed').value)||1;
   selectedEmotion=document.getElementById('emotionSelect').value||selectedEmotion;
-  if(!selectedVoice)selectedVoice=VOICE_PRESETS[0];
+  if(!selectedVoice)selectedVoice=getActiveVoicePresets()[0]||null;
   prompterLines=buildLines(1);prompterIndex=0;
   lastAutoSpokenIndex=-1;
   showScreen('session');renderPrompter();
