@@ -223,35 +223,66 @@ let selectedChar=null,pdfScript=[],selectedVoice=null,voiceSpeed=1,availableVoic
 const ICE_SERVERS=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:'stun:stun2.l.google.com:19302'}];
 
 const VOICE_PRESETS=[
-  {id:'f1',label:'Sophie',tag:'Douce 🌸',pitch:1.15,rate:0.95,vi:0},
-  {id:'f2',label:'Marie',tag:'Pro 🎯',pitch:1.0,rate:1.0,vi:1},
-  {id:'f3',label:'Camille',tag:'Charmeuse 💋',pitch:1.2,rate:0.88,vi:2},
-  {id:'m1',label:'Thomas',tag:'Neutre 🎯',pitch:0.85,rate:1.0,vi:3},
-  {id:'m2',label:'Jacques',tag:'Grave 🎭',pitch:0.65,rate:0.92,vi:4},
-  {id:'m3',label:'Billy',tag:'Énergique 🤠',pitch:0.9,rate:1.15,vi:5},
+  {id:'f1',label:'Sophie',tag:'Douce 🌸',gender:'f',pitch:1.1,rate:0.92},
+  {id:'f2',label:'Marie',tag:'Pro 🎯',gender:'f',pitch:1.0,rate:1.0},
+  {id:'f3',label:'Camille',tag:'Charmeuse 💋',gender:'f',pitch:1.25,rate:0.85},
+  {id:'m1',label:'Thomas',tag:'Neutre 🎯',gender:'m',pitch:0.85,rate:1.0},
+  {id:'m2',label:'Jacques',tag:'Grave 🎭',gender:'m',pitch:0.55,rate:0.88},
+  {id:'m3',label:'Billy',tag:'Énergique 🤠',gender:'m',pitch:0.95,rate:1.2},
 ];
 
 function loadVoices(){availableVoices=speechSynthesis.getVoices();voiceMap=null;}
 speechSynthesis.onvoiceschanged=loadVoices;
 
+function guessGender(v){
+  const n=(v.name+' '+v.voiceURI).toLowerCase();
+  const fem=['female','woman','féminin','femme','amelie','aurelie','audrey','virginie','alice','anna','karen','moira','samantha','tessa','fiona','victoria','zira','susan','hazel','jenny','aria','sara','nicky','monica','sophie','marie','camille','celine','sylvie','natasha','linda','heera','sabina','elsa'];
+  const mal=['male','\\bman\\b','masculin','homme','thomas','daniel','jacques','nicolas','pierre','alex\\b','james','oliver','david','george','mark','rishi','aaron','gordon','fred','luca','ivan','jorge','diego','filip','damien','mathieu','bruce'];
+  for(const f of fem)if(new RegExp(f).test(n))return 'f';
+  for(const m of mal)if(new RegExp(m).test(n))return 'm';
+  return null;
+}
+
+function scoreVoice(v){
+  let s=0;
+  const n=(v.name||'').toLowerCase();
+  if(v.lang&&v.lang.startsWith('fr'))s+=100;
+  else if(v.lang&&/^en/i.test(v.lang))s+=30;
+  if(/google/i.test(n))s+=20;
+  if(/microsoft/i.test(n))s+=15;
+  if(/natural/i.test(n))s+=25;
+  if(/premium|enhanced|neural/i.test(n))s+=20;
+  if(!v.localService)s+=5;
+  return s;
+}
+
 let voiceMap=null;
 function buildVoiceMap(){
   if(!availableVoices.length)availableVoices=speechSynthesis.getVoices();
-  const all=availableVoices.slice();
-  const fr=all.filter(v=>v.lang&&v.lang.startsWith('fr'));
-  const en=all.filter(v=>v.lang&&(/^en/i.test(v.lang)));
-  const pool=[...fr,...en];
-  if(!pool.length)pool.push(...all);
-  const used=new Set();
+  const catalog=availableVoices.map(v=>({ref:v,score:scoreVoice(v),gender:guessGender(v),lang:v.lang||''}));
+  catalog.sort((a,b)=>b.score-a.score);
+  const usedURIs=new Set();
   const map={};
   VOICE_PRESETS.forEach(p=>{
-    let pick=null;
-    for(const v of pool){if(!used.has(v.voiceURI)){pick=v;used.add(v.voiceURI);break}}
-    if(!pick&&pool.length)pick=pool[p.vi%pool.length];
-    map[p.id]=pick||null;
+    let best=null;
+    for(const c of catalog){
+      if(usedURIs.has(c.ref.voiceURI))continue;
+      if(c.gender&&p.gender&&c.gender!==p.gender)continue;
+      best=c;break;
+    }
+    if(!best){
+      for(const c of catalog){
+        if(usedURIs.has(c.ref.voiceURI))continue;
+        best=c;break;
+      }
+    }
+    if(!best&&catalog.length)best=catalog[0];
+    if(best){usedURIs.add(best.ref.voiceURI);map[p.id]=best.ref;}
+    else map[p.id]=null;
   });
   voiceMap=map;
 }
+
 function getBestVoice(p){
   if(!availableVoices.length)availableVoices=speechSynthesis.getVoices();
   if(!voiceMap)buildVoiceMap();
@@ -259,10 +290,14 @@ function getBestVoice(p){
 }
 
 function initVoiceGrid(){
+  loadVoices();
+  if(!voiceMap)buildVoiceMap();
   const g=document.getElementById('voiceGrid');g.innerHTML='';
   VOICE_PRESETS.forEach((v,i)=>{
     const el=document.createElement('div');el.className='voice-item'+(i===0?' selected':'');
-    el.innerHTML=`${v.label}<span class="vtag">${v.tag}</span>`;
+    const mapped=voiceMap[v.id];
+    const vname=mapped?mapped.name.replace(/^(Google|Microsoft)\s*/i,'').split(/[(\-]/)[0].trim():'';
+    el.innerHTML=`${v.label}<span class="vtag">${v.tag}${vname?' · '+vname:''}</span>`;
     el.onclick=()=>{selectedVoice=v;g.querySelectorAll('.voice-item').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');previewVoice(v)};
     g.appendChild(el);
   });
@@ -272,8 +307,9 @@ function initVoiceGrid(){
 function previewVoice(v){
   speechSynthesis.cancel();
   const u=new SpeechSynthesisUtterance('Bonjour, je suis '+v.label+'.');
-  u.lang='fr-FR';u.pitch=v.pitch;u.rate=v.rate;
-  const voice=getBestVoice(v);if(voice)u.voice=voice;
+  const voice=getBestVoice(v);
+  if(voice){u.voice=voice;u.lang=voice.lang||'fr-FR';}else u.lang='fr-FR';
+  u.pitch=v.pitch;u.rate=v.rate;
   speechSynthesis.speak(u);
 }
 
@@ -283,14 +319,20 @@ function populateSessionVoiceSelect(){
 }
 function changeSessionVoice(){selectedVoice=VOICE_PRESETS.find(v=>v.id===document.getElementById('sessionVoiceSelect').value)||VOICE_PRESETS[0];showToast('Voix : '+selectedVoice.label)}
 
+let _keepAliveTimer=null;
 function aiSpeak(text,cb){
   if(!text){if(cb)cb();return}
   speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);u.lang='fr-FR';
-  u.pitch=selectedVoice?selectedVoice.pitch:1;u.rate=(selectedVoice?selectedVoice.rate:1)*(voiceSpeed||1);
-  const voice=getBestVoice(selectedVoice||VOICE_PRESETS[0]);if(voice)u.voice=voice;
-  u.onend=()=>{if(cb)cb()};u.onerror=()=>{if(cb)cb()};
+  if(_keepAliveTimer){clearInterval(_keepAliveTimer);_keepAliveTimer=null;}
+  const u=new SpeechSynthesisUtterance(text);
+  const voice=getBestVoice(selectedVoice||VOICE_PRESETS[0]);
+  if(voice){u.voice=voice;u.lang=voice.lang||'fr-FR';}else u.lang='fr-FR';
+  u.pitch=selectedVoice?selectedVoice.pitch:1;
+  u.rate=(selectedVoice?selectedVoice.rate:1)*(voiceSpeed||1);
+  const done=()=>{if(_keepAliveTimer){clearInterval(_keepAliveTimer);_keepAliveTimer=null;}if(cb)cb()};
+  u.onend=done;u.onerror=done;
   speechSynthesis.speak(u);
+  _keepAliveTimer=setInterval(()=>{if(!speechSynthesis.speaking){clearInterval(_keepAliveTimer);_keepAliveTimer=null;return;}speechSynthesis.pause();speechSynthesis.resume();},8000);
 }
 
 // ── Helpers ──
@@ -467,7 +509,7 @@ async function joinAsPartner(){
 
 // ── Cleanup ──
 function endSession(){
-  if(connectionTimeout)clearTimeout(connectionTimeout);speechSynthesis.cancel();
+  if(connectionTimeout)clearTimeout(connectionTimeout);if(_keepAliveTimer){clearInterval(_keepAliveTimer);_keepAliveTimer=null;}speechSynthesis.cancel();
   if(isRecording)stopRecording();if(call){call.close();call=null}if(conn){conn.close();conn=null}if(peer){peer.destroy();peer=null}
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null}
   document.getElementById('localVideo').srcObject=null;document.getElementById('remoteAudio').srcObject=null;
