@@ -159,11 +159,22 @@ input[type="file"]{display:none}
     <div class="mode-toggle">
       <div class="mode-opt active" id="modeAiBtn" onclick="setMode('ai')">🦾 IA vocale</div>
       <div class="mode-opt" id="modeManBtn" onclick="setMode('manual')">✋ Manuel</div>
+      <div class="mode-opt" id="modeAutoBtn" onclick="setMode('auto')">🎤 Auto</div>
     </div>
     <div class="mode-hint" id="modeHint">L'IA lit les répliques du partenaire automatiquement.</div>
     <div class="voice-section active" id="voiceSection">
       <label>Voix de l'IA</label>
       <div class="voice-grid" id="voiceGrid"></div>
+      <div style="margin-top:.6rem">
+        <label>Émotion</label>
+        <select id="emotionSelect" onchange="setEmotion(this.value)">
+          <option value="neutral">Neutre</option>
+          <option value="excited">Excité</option>
+          <option value="sad">Triste</option>
+          <option value="angry">En colère</option>
+          <option value="whisper">Chuchoté</option>
+        </select>
+      </div>
       <div style="margin-top:.6rem"><label>Vitesse</label><input type="range" id="voiceSpeed" min="0.5" max="2" step="0.1" value="1" style="width:100%"><div style="display:flex;justify-content:space-between;font-size:.7rem;color:var(--text-muted)"><span>Lent</span><span>Normal</span><span>Rapide</span></div></div>
     </div>
   </div>
@@ -218,61 +229,181 @@ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/p
 let role='actor',sessionMode='ai',mode='ai';
 let peer=null,conn=null,call=null,localStream=null,mediaRecorder=null,recordedChunks=[];
 let isRecording=false,isMicOn=true,isCamOn=true,prompterLines=[],prompterIndex=0,connectionTimeout=null;
-let selectedChar=null,pdfScript=[],selectedVoice=null,voiceSpeed=1,availableVoices=[];
+let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',voiceSpeed=1,availableVoices=[],presetVoiceMap={};
+let autoAdvanceTimer=null,lastAutoSpokenIndex=-1,activeSpeechToken=0;
+let ttsAudio=null,vad=null;
+
+const useElevenLabs=false;
+// ElevenLabs voices (reference): Rachel (female calm), Bella (female soft), Antoni (male warm),
+// Josh (male deep), Serena (female FR), Daniel (male FR)
+const pauseBetweenLines=500;
 
 const ICE_SERVERS=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:'stun:stun2.l.google.com:19302'}];
 
 const VOICE_PRESETS=[
-  {id:'f1',label:'Sophie',tag:'Douce 🌸',pitch:1.15,rate:0.95,vi:0},
-  {id:'f2',label:'Marie',tag:'Pro 🎯',pitch:1.0,rate:1.0,vi:1},
-  {id:'f3',label:'Camille',tag:'Charmeuse 💋',pitch:1.2,rate:0.88,vi:2},
-  {id:'m1',label:'Thomas',tag:'Neutre 🎯',pitch:0.85,rate:1.0,vi:3},
-  {id:'m2',label:'Jacques',tag:'Grave 🎭',pitch:0.65,rate:0.92,vi:4},
-  {id:'m3',label:'Billy',tag:'Énergique 🤠',pitch:0.9,rate:1.15,vi:5},
+  {id:'f1',label:'Sophie',tag:'Douce 🌸',pitch:1.15,rate:0.95},
+  {id:'f2',label:'Marie',tag:'Pro 🎯',pitch:1.0,rate:1.0},
+  {id:'f3',label:'Camille',tag:'Charmeuse 💋',pitch:1.2,rate:0.88},
+  {id:'m1',label:'Thomas',tag:'Neutre 🎯',pitch:0.85,rate:1.0},
+  {id:'m2',label:'Jacques',tag:'Grave 🎭',pitch:0.65,rate:0.92},
+  {id:'m3',label:'Billy',tag:'Énergique 🤠',pitch:0.9,rate:1.15},
 ];
 
-function loadVoices(){availableVoices=speechSynthesis.getVoices();voiceMap=null;}
+const EMOTION_PRESETS={
+  neutral:{label:'Neutre',rate:1,pitch:1},
+  excited:{label:'Excité',rate:1.12,pitch:1.1},
+  sad:{label:'Triste',rate:0.88,pitch:0.9},
+  angry:{label:'En colère',rate:1.08,pitch:0.85},
+  whisper:{label:'Chuchoté',rate:0.8,pitch:1.22},
+};
+
+const TTS_LANGS=['fr','en','es','it','de'];
+
+class VoiceActivityDetector{
+  constructor({speechThreshold=0.015,silenceDuration=1500,onSpeechEnd}={}){
+    this.speechThreshold=speechThreshold;
+    this.silenceDuration=silenceDuration;
+    this.onSpeechEnd=typeof onSpeechEnd==='function'?onSpeechEnd:()=>{};
+    this.state='WAITING';
+    this.trailingSince=0;
+    this.hasSpoken=false;
+    this.audioContext=null;
+    this.source=null;
+    this.analyser=null;
+    this.data=null;
+    this.rafId=null;
+    this.running=false;
+  }
+  async start(stream){
+    if(!stream)return false;
+    this.stop();
+    const Ctx=window.AudioContext||window.webkitAudioContext;
+    if(!Ctx)return false;
+    this.audioContext=new Ctx();
+    this.source=this.audioContext.createMediaStreamSource(stream);
+    this.analyser=this.audioContext.createAnalyser();
+    this.analyser.fftSize=512;
+    this.data=new Float32Array(this.analyser.fftSize);
+    this.source.connect(this.analyser);
+    this.running=true;
+    this.state='WAITING';
+    this.hasSpoken=false;
+    this.loop();
+    return true;
+  }
+  getRms(){
+    if(!this.analyser||!this.data)return 0;
+    this.analyser.getFloatTimeDomainData(this.data);
+    let sum=0;
+    for(let i=0;i<this.data.length;i++)sum+=this.data[i]*this.data[i];
+    return Math.sqrt(sum/this.data.length);
+  }
+  loop(){
+    if(!this.running)return;
+    const now=Date.now();
+    const rms=this.getRms();
+    if(this.state==='WAITING'){
+      if(rms>=this.speechThreshold){this.state='SPEAKING';this.hasSpoken=true}
+    }else if(this.state==='SPEAKING'){
+      if(rms<this.speechThreshold){this.state='TRAILING';this.trailingSince=now}
+    }else if(this.state==='TRAILING'){
+      if(rms>=this.speechThreshold)this.state='SPEAKING';
+      else if(this.hasSpoken&&now-this.trailingSince>=this.silenceDuration){
+        this.onSpeechEnd();
+        this.state='WAITING';
+        this.hasSpoken=false;
+      }
+    }
+    this.rafId=requestAnimationFrame(()=>this.loop());
+  }
+  stop(){
+    this.running=false;
+    if(this.rafId){cancelAnimationFrame(this.rafId);this.rafId=null}
+    if(this.source){try{this.source.disconnect()}catch(e){} this.source=null}
+    if(this.analyser){try{this.analyser.disconnect()}catch(e){} this.analyser=null}
+    if(this.audioContext){this.audioContext.close().catch(()=>{});this.audioContext=null}
+    this.data=null;
+    this.state='WAITING';
+    this.hasSpoken=false;
+  }
+}
+
+function loadVoices(){availableVoices=speechSynthesis.getVoices();presetVoiceMap={};}
 speechSynthesis.onvoiceschanged=loadVoices;
 
-let voiceMap=null;
-function buildVoiceMap(){
+function scoreVoiceQuality(v){
+  const name=(v.name||'').toLowerCase();
+  const vendor=/(google|microsoft)/.test(name)?0:1;
+  const local=v.localService?1:0;
+  const frFirst=/^fr/i.test(v.lang||'')?0:1;
+  return vendor*100+local*10+frFirst;
+}
+function getFilteredVoices(){
   if(!availableVoices.length)availableVoices=speechSynthesis.getVoices();
-  const all=availableVoices.slice();
-  const fr=all.filter(v=>v.lang&&v.lang.startsWith('fr'));
-  const en=all.filter(v=>v.lang&&(/^en/i.test(v.lang)));
-  const pool=[...fr,...en];
-  if(!pool.length)pool.push(...all);
+  const filtered=availableVoices.filter(v=>TTS_LANGS.some(code=>(v.lang||'').toLowerCase().startsWith(code)));
+  const pool=(filtered.length?filtered:availableVoices).slice();
+  pool.sort((a,b)=>scoreVoiceQuality(a)-scoreVoiceQuality(b)||(a.name||'').localeCompare(b.name||''));
+  return pool;
+}
+function buildVoiceMap(){
+  const pool=getFilteredVoices();
+  const fallback=availableVoices.slice();
   const used=new Set();
   const map={};
-  VOICE_PRESETS.forEach(p=>{
+  VOICE_PRESETS.forEach((p,i)=>{
     let pick=null;
     for(const v of pool){if(!used.has(v.voiceURI)){pick=v;used.add(v.voiceURI);break}}
-    if(!pick&&pool.length)pick=pool[p.vi%pool.length];
-    map[p.id]=pick||null;
+    if(!pick)for(const v of fallback){if(!used.has(v.voiceURI)){pick=v;used.add(v.voiceURI);break}}
+    if(!pick&&pool.length)pick=pool[i%pool.length];
+    if(!pick&&fallback.length)pick=fallback[i%fallback.length];
+    map[p.id]=pick?pick.voiceURI:null;
   });
-  voiceMap=map;
+  presetVoiceMap=map;
+}
+function findVoiceByURI(voiceURI){
+  if(!voiceURI)return null;
+  if(!availableVoices.length)availableVoices=speechSynthesis.getVoices();
+  return availableVoices.find(v=>v.voiceURI===voiceURI)||null;
 }
 function getBestVoice(p){
   if(!availableVoices.length)availableVoices=speechSynthesis.getVoices();
-  if(!voiceMap)buildVoiceMap();
-  return voiceMap[p.id]||availableVoices[0]||null;
+  if(!presetVoiceMap[p.id])buildVoiceMap();
+  const exact=findVoiceByURI(presetVoiceMap[p.id]);
+  if(exact)return exact;
+  return getFilteredVoices()[0]||availableVoices[0]||null;
+}
+function getEmotionSettings(){return EMOTION_PRESETS[selectedEmotion]||EMOTION_PRESETS.neutral;}
+function getSpeechStyle(v){
+  const base=v||VOICE_PRESETS[0];
+  const emo=getEmotionSettings();
+  return{
+    pitch:(base.pitch||1)*emo.pitch,
+    rate:(base.rate||1)*(voiceSpeed||1)*emo.rate,
+  };
+}
+function setEmotion(key){
+  selectedEmotion=EMOTION_PRESETS[key]?key:'neutral';
+  showToast('Émotion : '+EMOTION_PRESETS[selectedEmotion].label);
 }
 
 function initVoiceGrid(){
   const g=document.getElementById('voiceGrid');g.innerHTML='';
+  if(!selectedVoice)selectedVoice=VOICE_PRESETS[0];
   VOICE_PRESETS.forEach((v,i)=>{
-    const el=document.createElement('div');el.className='voice-item'+(i===0?' selected':'');
+    const el=document.createElement('div');el.className='voice-item'+(selectedVoice&&selectedVoice.id===v.id?' selected':'');
     el.innerHTML=`${v.label}<span class="vtag">${v.tag}</span>`;
     el.onclick=()=>{selectedVoice=v;g.querySelectorAll('.voice-item').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');previewVoice(v)};
     g.appendChild(el);
   });
-  selectedVoice=VOICE_PRESETS[0];
+  if(!selectedVoice)selectedVoice=VOICE_PRESETS[0];
 }
 
 function previewVoice(v){
-  speechSynthesis.cancel();
+  activeSpeechToken++;
+  cancelTTSPlayback();
   const u=new SpeechSynthesisUtterance('Bonjour, je suis '+v.label+'.');
-  u.lang='fr-FR';u.pitch=v.pitch;u.rate=v.rate;
+  const style=getSpeechStyle(v);
+  u.lang='fr-FR';u.pitch=style.pitch;u.rate=style.rate;
   const voice=getBestVoice(v);if(voice)u.voice=voice;
   speechSynthesis.speak(u);
 }
@@ -283,14 +414,53 @@ function populateSessionVoiceSelect(){
 }
 function changeSessionVoice(){selectedVoice=VOICE_PRESETS.find(v=>v.id===document.getElementById('sessionVoiceSelect').value)||VOICE_PRESETS[0];showToast('Voix : '+selectedVoice.label)}
 
+function clearAutoTimer(){if(autoAdvanceTimer){clearTimeout(autoAdvanceTimer);autoAdvanceTimer=null}}
+function cancelTTSPlayback(){
+  speechSynthesis.cancel();
+  if(ttsAudio){
+    ttsAudio.pause();
+    if(ttsAudio.src)URL.revokeObjectURL(ttsAudio.src);
+    ttsAudio.src='';
+    ttsAudio=null;
+  }
+}
+async function speakWithElevenLabs(text,preset,style,token,cb){
+  try{
+    const rsp=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,presetId:preset.id,voiceURI:presetVoiceMap[preset.id]||null,emotion:selectedEmotion,rate:style.rate,pitch:style.pitch})});
+    if(!rsp.ok)throw new Error('HTTP '+rsp.status);
+    const blob=await rsp.blob();
+    if(token!==activeSpeechToken){return}
+    const url=URL.createObjectURL(blob);
+    const audio=new Audio(url);
+    ttsAudio=audio;
+    const done=()=>{URL.revokeObjectURL(url);if(ttsAudio===audio)ttsAudio=null;if(token===activeSpeechToken&&cb)cb();};
+    audio.onended=done;
+    audio.onerror=done;
+    try{await audio.play()}catch(e){done()}
+  }catch(e){
+    if(token===activeSpeechToken)speakWithBrowser(text,preset,style,token,cb);
+  }
+}
+function speakWithBrowser(text,preset,style,token,cb){
+  const u=new SpeechSynthesisUtterance(text);
+  const voice=getBestVoice(preset);
+  u.lang=voice&&voice.lang?voice.lang:'fr-FR';
+  u.pitch=style.pitch;
+  u.rate=style.rate;
+  if(voice)u.voice=voice;
+  const done=()=>{if(token===activeSpeechToken&&cb)cb();};
+  u.onend=done;
+  u.onerror=done;
+  speechSynthesis.speak(u);
+}
 function aiSpeak(text,cb){
   if(!text){if(cb)cb();return}
-  speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);u.lang='fr-FR';
-  u.pitch=selectedVoice?selectedVoice.pitch:1;u.rate=(selectedVoice?selectedVoice.rate:1)*(voiceSpeed||1);
-  const voice=getBestVoice(selectedVoice||VOICE_PRESETS[0]);if(voice)u.voice=voice;
-  u.onend=()=>{if(cb)cb()};u.onerror=()=>{if(cb)cb()};
-  speechSynthesis.speak(u);
+  const preset=selectedVoice||VOICE_PRESETS[0];
+  const style=getSpeechStyle(preset);
+  const token=++activeSpeechToken;
+  cancelTTSPlayback();
+  if(useElevenLabs){speakWithElevenLabs(text,preset,style,token,cb);return}
+  speakWithBrowser(text,preset,style,token,cb);
 }
 
 // ── Helpers ──
@@ -302,16 +472,28 @@ function setLoading(on,m){const e=document.getElementById('loadingOverlay');if(o
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
 function goHome(){endSession();showScreen('home')}
 function goJoin(){showScreen('joinScreen')}
-function goSetupAi(){showScreen('setupAi');initVoiceGrid();loadVoices();initDragDrop('uploadZone1')}
+function goSetupAi(){
+  showScreen('setupAi');
+  loadVoices();
+  initVoiceGrid();
+  const emo=document.getElementById('emotionSelect');if(emo)emo.value=selectedEmotion;
+  initDragDrop('uploadZone1');
+}
 function goSetupPartner(){showScreen('setupPartner');document.getElementById('mySessionCode').textContent=genCode();initDragDrop('uploadZone2')}
 
 // ── Mode ──
+function modeHintText(m){
+  if(m==='auto')return 'L\'IA lit le partenaire puis détecte ton silence (1,5s) pour avancer.';
+  if(m==='ai')return 'L\'IA lit les répliques du partenaire automatiquement.';
+  return 'Avance les répliques manuellement avec les boutons.';
+}
 function setMode(m){
   mode=m;
   document.getElementById('modeAiBtn').classList.toggle('active',m==='ai');
   document.getElementById('modeManBtn').classList.toggle('active',m==='manual');
-  document.getElementById('voiceSection').classList.toggle('active',m==='ai');
-  document.getElementById('modeHint').textContent=m==='ai'?'L\'IA lit les répliques du partenaire automatiquement.':'Avance les répliques manuellement avec les boutons.';
+  document.getElementById('modeAutoBtn').classList.toggle('active',m==='auto');
+  document.getElementById('voiceSection').classList.toggle('active',m==='ai'||m==='auto');
+  document.getElementById('modeHint').textContent=modeHintText(m);
 }
 
 // ── Drag & Drop PDF ──
@@ -327,39 +509,60 @@ function initDragDrop(zoneId){
 
 function handlePDFInput(n,input){const f=input.files[0];if(f)processPDF(n,f)}
 
+function extractPageText(textContent){
+  const rows=new Map();
+  for(const it of textContent.items){
+    const clean=(it.str||'').replace(/\u00A0/g,' ').trim();
+    if(!clean)continue;
+    const yKey=Math.round((it.transform&&it.transform[5]?it.transform[5]:0)/2);
+    if(!rows.has(yKey))rows.set(yKey,[]);
+    rows.get(yKey).push({x:it.transform&&it.transform[4]?it.transform[4]:0,str:clean});
+  }
+  return [...rows.entries()]
+    .sort((a,b)=>b[0]-a[0])
+    .map(([,items])=>items.sort((a,b)=>a.x-b.x).map(i=>i.str).join(' ').replace(/\s{2,}/g,' ').trim())
+    .filter(Boolean)
+    .join('\n');
+}
+
 async function processPDF(n,file){
   setLoading(true,'Lecture du script…');
   try{
-    const buf=await file.arrayBuffer();const pdf=await pdfjsLib.getDocument({data:buf}).promise;let text='';
-    for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const ct=await pg.getTextContent();let lastY=null,line='';for(const it of ct.items){if(lastY!==null&&Math.abs(it.transform[5]-lastY)>3){text+=line+'\n';line=''}line+=it.str;lastY=it.transform[5]}text+=line+'\n'}
+    const buf=await file.arrayBuffer();const pdf=await pdfjsLib.getDocument({data:buf}).promise;const pageTexts=[];
+    for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const ct=await pg.getTextContent();pageTexts.push(extractPageText(ct))}
+    const text=pageTexts.join('\n').replace(/\u00A0/g,' ');
     pdfScript=parsePDFScript(text);const chars=getChars();
     document.getElementById('uploadZone'+n).style.display='none';
     document.getElementById('uploadOk'+n).style.display='flex';
     document.getElementById('fileName'+n).textContent=file.name;
-    if(chars.length>0){renderChars(n,chars);document.getElementById('charSection'+n).style.display='block';document.getElementById('setupStatus'+n).textContent=pdfScript.length+' répliques détectées'}
-    else{document.getElementById('scriptInput'+n).value=text;document.getElementById('setupStatus'+n).textContent='Texte importé'}
+    if(pdfScript.length>0&&chars.length>0){renderChars(n,chars);document.getElementById('charSection'+n).style.display='block';document.getElementById('setupStatus'+n).textContent=pdfScript.length+' répliques détectées'}
+    else{pdfScript=[];document.getElementById('charSection'+n).style.display='none';document.getElementById('scriptInput'+n).value=text;document.getElementById('setupStatus'+n).textContent='Texte importé (brut)'}
   }catch(e){showToast('Erreur lecture PDF')}
   setLoading(false);
 }
 
 function parsePDFScript(text){
-  text=text.normalize('NFC');
+  text=(text||'').normalize('NFC').replace(/\u00A0/g,' ');
   const lines=text.split('\n'),res=[];
   const UP='A-ZÀÂÄÆÇÉÈÊËÎÏÔÖŒÙÛÜŸÑ';
-  const charInlineRx=new RegExp('^(['+UP+']['+UP+'\\s\\-\\.\\\']{0,33})\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*(.+)$');
-  const charAloneRx=new RegExp('^(['+UP+']['+UP+'\\s\\-\\.\\\']{0,33})\\s*(?:\\([^)]*\\)\\s*)*$');
+  const name='['+UP+']['+UP+'\\s\\-\\.\\\'’]{0,40}';
+  const charInlineRx=new RegExp('^('+name+')\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*(.+)$');
+  const charDashOnlyRx=new RegExp('^('+name+')\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*$');
+  const charAloneRx=new RegExp('^('+name+')\\s*(?:\\([^)]*\\)\\s*)*:?\\s*$');
   const didasRx=/^\s*[\(\[].+[\)\]]\s*$/;
   const sceneRx=/^(INT[\.\s\/]|EXT[\.\s\/]|SÉQUENCE\b|TRANSITION\b|FONDU\b|FADE\b|CUT TO\b|NOIR\b)/i;
   const pageRx=/^\d{1,4}\s*\.?\s*$/;
   let cur=null;
   for(const raw of lines){
-    const l=raw.trim();
+    const l=raw.trim().replace(/\s{2,}/g,' ');
     if(!l){cur=null;continue}
     if(pageRx.test(l))continue;
     if(sceneRx.test(l))continue;
     if(didasRx.test(l))continue;
     let m=charInlineRx.exec(l);
     if(m){const name=m[1].trim();if(name.length>=2&&name===name.toUpperCase()){cur=name;res.push({char:cur,line:m[2].trim()});continue}}
+    m=charDashOnlyRx.exec(l);
+    if(m){const name=m[1].trim();if(name.length>=2&&name===name.toUpperCase()){cur=name;continue}}
     m=charAloneRx.exec(l);
     if(m){const name=m[1].trim();if(name.length>=2&&name===name.toUpperCase()){cur=name;continue}}
     if(cur&&l.length>1&&!/^\s*[\(\[]/.test(l))res.push({char:cur,line:l});
@@ -386,14 +589,81 @@ function renderPrompter(){
   a.innerHTML=prompterLines.map((l,i)=>{const cls=['prompter-line'];if(i===prompterIndex)cls.push('active');if(l.type==='partner')cls.push('partner-line');const pfx=l.type==='partner'?'🎙️ ':'🎬 ';const ch=l.char?`<b>${l.char}:</b> `:'';return`<div class="${cls.join(' ')}">${pfx}${ch}${l.text}</div>`}).join('');
   const act=a.querySelector('.prompter-line.active');if(act)act.scrollIntoView({behavior:'smooth',block:'center'});
 }
+function ensureVAD(){
+  if(!vad)vad=new VoiceActivityDetector({speechThreshold:0.015,silenceDuration:1500,onSpeechEnd:onAutoSpeechEnd});
+  return vad;
+}
+function stopAutoVAD(){if(vad)vad.stop()}
+function cancelSpeechFlow(){
+  activeSpeechToken++;
+  cancelTTSPlayback();
+  clearAutoTimer();
+  stopAutoVAD();
+}
+async function armAutoVADForActorLine(){
+  if(mode!=='auto'||sessionMode!=='ai')return;
+  const line=prompterLines[prompterIndex];
+  if(!line||line.type!=='actor'||!localStream)return;
+  const tracks=localStream.getAudioTracks();
+  if(!tracks.length||!tracks[0].enabled)return;
+  await ensureVAD().start(new MediaStream(tracks));
+}
+function onAutoSpeechEnd(){
+  if(mode!=='auto'||sessionMode!=='ai')return;
+  const line=prompterLines[prompterIndex];
+  if(!line||line.type!=='actor')return;
+  if(prompterIndex>=prompterLines.length-1)return;
+  prompterIndex++;
+  lastAutoSpokenIndex=-1;
+  renderPrompter();
+  syncPrompter();
+  handleCurrentLineAutomation();
+}
+function scheduleAfterPartner(lineIndex){
+  clearAutoTimer();
+  autoAdvanceTimer=setTimeout(()=>{
+    if(prompterIndex!==lineIndex)return;
+    if(mode==='manual')return;
+    if(prompterIndex>=prompterLines.length-1)return;
+    prompterIndex++;
+    lastAutoSpokenIndex=-1;
+    renderPrompter();
+    syncPrompter();
+    handleCurrentLineAutomation();
+  },pauseBetweenLines);
+}
+function handleCurrentLineAutomation(){
+  clearAutoTimer();
+  stopAutoVAD();
+  if(sessionMode!=='ai'||!prompterLines[prompterIndex])return;
+  const line=prompterLines[prompterIndex];
+  if(line.type==='partner'&&(mode==='ai'||mode==='auto')){
+    if(lastAutoSpokenIndex===prompterIndex)return;
+    const currentIndex=prompterIndex;
+    lastAutoSpokenIndex=currentIndex;
+    aiSpeak(line.text,()=>scheduleAfterPartner(currentIndex));
+    return;
+  }
+  if(mode==='auto'&&line.type==='actor')armAutoVADForActorLine();
+}
 function prompterNext(){
   if(prompterIndex>=prompterLines.length-1)return;
-  prompterIndex++;renderPrompter();syncPrompter();
-  if(mode==='ai'&&sessionMode==='ai'&&prompterLines[prompterIndex]&&prompterLines[prompterIndex].type==='partner'){
-    aiSpeak(prompterLines[prompterIndex].text,()=>{if(prompterIndex<prompterLines.length-1){prompterIndex++;renderPrompter();syncPrompter()}});
-  }
+  cancelSpeechFlow();
+  prompterIndex++;
+  lastAutoSpokenIndex=-1;
+  renderPrompter();
+  syncPrompter();
+  handleCurrentLineAutomation();
 }
-function prompterPrev(){if(prompterIndex>0){speechSynthesis.cancel();prompterIndex--;renderPrompter();syncPrompter()}}
+function prompterPrev(){
+  if(prompterIndex<=0)return;
+  cancelSpeechFlow();
+  prompterIndex--;
+  lastAutoSpokenIndex=-1;
+  renderPrompter();
+  syncPrompter();
+  handleCurrentLineAutomation();
+}
 function syncPrompter(){if(conn&&conn.open)conn.send({type:'prompter',index:prompterIndex})}
 
 // ── Camera ──
@@ -430,16 +700,20 @@ function setupCallHandlers(c){call=c;call.on('stream',s=>{document.getElementByI
 async function startAiSession(){
   role='actor';sessionMode='ai';
   voiceSpeed=parseFloat(document.getElementById('voiceSpeed').value)||1;
+  selectedEmotion=document.getElementById('emotionSelect').value||selectedEmotion;
+  if(!selectedVoice)selectedVoice=VOICE_PRESETS[0];
   prompterLines=buildLines(1);prompterIndex=0;
+  lastAutoSpokenIndex=-1;
   showScreen('session');renderPrompter();
-  if(mode==='ai'){document.getElementById('aiPanel').classList.add('active');populateSessionVoiceSelect();setStatus('','🦾 IA prête')}
+  if(mode==='ai'||mode==='auto'){document.getElementById('aiPanel').classList.add('active');populateSessionVoiceSelect();setStatus('',mode==='auto'?'🎤 Auto prêt':'🦾 IA prête')}
   else setStatus('','Manuel');
   await startCamera();
-  if(mode==='ai'&&prompterLines.length>0&&prompterLines[0].type==='partner')aiSpeak(prompterLines[0].text);
+  handleCurrentLineAutomation();
 }
 
 async function startPartnerSession(){
   role='actor';sessionMode='partner';mode='manual';
+  cancelSpeechFlow();
   const code=document.getElementById('mySessionCode').textContent;if(!code||code==='—')return;
   prompterLines=buildLines(2);prompterIndex=0;
   showScreen('session');renderPrompter();setStatus('waiting','En attente du partenaire…');showOverlay('En attente…','Partage le code '+code);
@@ -454,6 +728,7 @@ async function startPartnerSession(){
 
 async function joinAsPartner(){
   role='partner';sessionMode='partner';
+  cancelSpeechFlow();
   const code=document.getElementById('joinCodeInput').value.trim().toUpperCase();if(!code){showToast('Entre un code');return}
   showScreen('session');setStatus('waiting','Connexion…');showOverlay('Connexion…','Recherche de '+code+'…');
   document.getElementById('noVideoMsg').textContent='Audio uniquement (partenaire)';
@@ -467,7 +742,7 @@ async function joinAsPartner(){
 
 // ── Cleanup ──
 function endSession(){
-  if(connectionTimeout)clearTimeout(connectionTimeout);speechSynthesis.cancel();
+  if(connectionTimeout)clearTimeout(connectionTimeout);cancelSpeechFlow();
   if(isRecording)stopRecording();if(call){call.close();call=null}if(conn){conn.close();conn=null}if(peer){peer.destroy();peer=null}
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null}
   document.getElementById('localVideo').srcObject=null;document.getElementById('remoteAudio').srcObject=null;
@@ -477,7 +752,11 @@ function endSession(){
 }
 function cancelConnection(){hideOverlay();if(!conn||!conn.open)endSession()}
 
-document.addEventListener('DOMContentLoaded',()=>{showScreen('home');loadVoices()});
+document.addEventListener('DOMContentLoaded',()=>{
+  showScreen('home');
+  loadVoices();
+  setMode('ai');
+});
 </script>
 </body>
 </html>
