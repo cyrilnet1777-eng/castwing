@@ -343,6 +343,7 @@ async function processPDF(n,file){
 }
 
 function parsePDFScript(text){
+  text=text.normalize('NFC');
   const lines=text.split('\n'),res=[];
   const UP='A-ZÀÂÄÆÇÉÈÊËÎÏÔÖŒÙÛÜŸÑ';
   const charInlineRx=new RegExp('^(['+UP+']['+UP+'\\s\\-\\.\\\']{0,33})\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*(.+)$');
