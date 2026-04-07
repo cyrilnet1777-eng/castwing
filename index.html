@@ -231,14 +231,31 @@ const VOICE_PRESETS=[
   {id:'m3',label:'Billy',tag:'Énergique 🤠',pitch:0.9,rate:1.15,vi:5},
 ];
 
-function loadVoices(){availableVoices=speechSynthesis.getVoices()}
+function loadVoices(){availableVoices=speechSynthesis.getVoices();voiceMap=null;}
 speechSynthesis.onvoiceschanged=loadVoices;
 
+let voiceMap=null;
+function buildVoiceMap(){
+  if(!availableVoices.length)availableVoices=speechSynthesis.getVoices();
+  const all=availableVoices.slice();
+  const fr=all.filter(v=>v.lang&&v.lang.startsWith('fr'));
+  const en=all.filter(v=>v.lang&&(/^en/i.test(v.lang)));
+  const pool=[...fr,...en];
+  if(!pool.length)pool.push(...all);
+  const used=new Set();
+  const map={};
+  VOICE_PRESETS.forEach(p=>{
+    let pick=null;
+    for(const v of pool){if(!used.has(v.voiceURI)){pick=v;used.add(v.voiceURI);break}}
+    if(!pick&&pool.length)pick=pool[p.vi%pool.length];
+    map[p.id]=pick||null;
+  });
+  voiceMap=map;
+}
 function getBestVoice(p){
   if(!availableVoices.length)availableVoices=speechSynthesis.getVoices();
-  const fr=availableVoices.filter(v=>v.lang&&v.lang.startsWith('fr'));
-  if(!fr.length)return availableVoices[0]||null;
-  return fr[p.vi%fr.length]||fr[0];
+  if(!voiceMap)buildVoiceMap();
+  return voiceMap[p.id]||availableVoices[0]||null;
 }
 
 function initVoiceGrid(){
@@ -300,10 +317,12 @@ function setMode(m){
 // ── Drag & Drop PDF ──
 function initDragDrop(zoneId){
   const zone=document.getElementById(zoneId);if(!zone||zone.dataset.dd)return;zone.dataset.dd='1';
+  const n=parseInt(zoneId.replace('uploadZone',''));
   ['dragenter','dragover'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();zone.classList.add('dragover')}));
   ['dragleave','drop'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();zone.classList.remove('dragover')}));
-  const n=zoneId.replace('uploadZone','');
-  zone.addEventListener('drop',e=>{const f=e.dataTransfer.files;if(f.length>0&&f[0].type==='application/pdf')processPDF(parseInt(n),f[0]);else showToast('Seuls les PDF sont acceptés')});
+  zone.addEventListener('drop',e=>{const f=e.dataTransfer.files;if(f.length>0&&f[0].type==='application/pdf')processPDF(n,f[0]);else showToast('Seuls les PDF sont acceptés')});
+  zone.addEventListener('touchstart',function(e){zone.classList.add('dragover')},{passive:true});
+  zone.addEventListener('touchend',function(e){zone.classList.remove('dragover');document.getElementById('pdfInput'+n).click()},{passive:true});
 }
 
 function handlePDFInput(n,input){const f=input.files[0];if(f)processPDF(n,f)}
@@ -324,8 +343,26 @@ async function processPDF(n,file){
 }
 
 function parsePDFScript(text){
-  const lines=text.split('\n'),res=[];const cRx=/^([A-ZÀÂÉÈÊËÎÏÔÙÛÜÇ][A-ZÀÂÉÈÊËÎÏÔÙÛÜÇ\s\-\.]{1,28})$/;const dRx=/^\s*[\(\[].+[\)\]]\s*$/;let cur=null;
-  for(const raw of lines){const l=raw.trim();if(!l){cur=null;continue}if(dRx.test(l))continue;if(l.startsWith('(')&&l.endsWith(')'))continue;if(cRx.test(l)&&l===l.toUpperCase()&&l.length<35)cur=l.trim();else if(cur&&l.length>1)res.push({char:cur,line:l})}
+  const lines=text.split('\n'),res=[];
+  const UP='A-ZÀÂÄÆÇÉÈÊËÎÏÔÖŒÙÛÜŸÑ';
+  const charInlineRx=new RegExp('^(['+UP+']['+UP+'\\s\\-\\.\\\']{0,33})\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*(.+)$');
+  const charAloneRx=new RegExp('^(['+UP+']['+UP+'\\s\\-\\.\\\']{0,33})\\s*(?:\\([^)]*\\)\\s*)*$');
+  const didasRx=/^\s*[\(\[].+[\)\]]\s*$/;
+  const sceneRx=/^(INT[\.\s\/]|EXT[\.\s\/]|SÉQUENCE\b|TRANSITION\b|FONDU\b|FADE\b|CUT TO\b|NOIR\b)/i;
+  const pageRx=/^\d{1,4}\s*\.?\s*$/;
+  let cur=null;
+  for(const raw of lines){
+    const l=raw.trim();
+    if(!l){cur=null;continue}
+    if(pageRx.test(l))continue;
+    if(sceneRx.test(l))continue;
+    if(didasRx.test(l))continue;
+    let m=charInlineRx.exec(l);
+    if(m){const name=m[1].trim();if(name.length>=2&&name===name.toUpperCase()){cur=name;res.push({char:cur,line:m[2].trim()});continue}}
+    m=charAloneRx.exec(l);
+    if(m){const name=m[1].trim();if(name.length>=2&&name===name.toUpperCase()){cur=name;continue}}
+    if(cur&&l.length>1&&!/^\s*[\(\[]/.test(l))res.push({char:cur,line:l});
+  }
   return res;
 }
 function getChars(){const c={};for(const{char}of pdfScript)c[char]=(c[char]||0)+1;return Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([char,count])=>({char,count}))}
