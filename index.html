@@ -588,7 +588,7 @@ function parsePDFScript(text){
   }
 
   function classifyLine(trimmed){
-    if(!trimmed)return true;
+    if(!trimmed)return 'noise';
     const upper=trimmed.toUpperCase();
     if(watermarkKeys.has(upper))return 'watermark';
     if(headerRx.test(trimmed))return 'noise';
