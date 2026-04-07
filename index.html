@@ -518,9 +518,22 @@ function extractPageText(textContent){
     if(!rows.has(yKey))rows.set(yKey,[]);
     rows.get(yKey).push({x:it.transform&&it.transform[4]?it.transform[4]:0,str:clean});
   }
-  return [...rows.entries()]
-    .sort((a,b)=>b[0]-a[0])
-    .map(([,items])=>items.sort((a,b)=>a.x-b.x).map(i=>i.str).join(' ').replace(/\s{2,}/g,' ').trim())
+  const sorted=[...rows.entries()].sort((a,b)=>b[0]-a[0]);
+  let minX=Infinity;
+  sorted.forEach(([,items])=>{
+    items.forEach(it=>{if(typeof it.x==='number'&&it.x<minX)minX=it.x});
+  });
+  if(!Number.isFinite(minX))minX=0;
+  return sorted
+    .map(([,items])=>{
+      const lineItems=items.sort((a,b)=>a.x-b.x);
+      const line=lineItems.map(i=>i.str).join(' ').replace(/\s{2,}/g,' ').trim();
+      if(!line)return '';
+      const lineX=lineItems.length?lineItems[0].x:minX;
+      const indentLevel=Math.max(0,Math.round((lineX-minX)/24));
+      const indent=' '.repeat(Math.min(20,indentLevel*2));
+      return indent+line;
+    })
     .filter(Boolean)
     .join('\n');
 }
@@ -543,30 +556,100 @@ async function processPDF(n,file){
 
 function parsePDFScript(text){
   text=(text||'').normalize('NFC').replace(/\u00A0/g,' ');
-  const lines=text.split('\n'),res=[];
+  const rawLines=text.split('\n').map(l=>l.replace(/\u00A0/g,' '));
+  const res=[];
   const UP='A-ZÀÂÄÆÇÉÈÊËÎÏÔÖŒÙÛÜŸÑ';
-  const name='['+UP+']['+UP+'\\s\\-\\.\\\'’]{0,40}';
-  const charInlineRx=new RegExp('^('+name+')\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*(.+)$');
-  const charDashOnlyRx=new RegExp('^('+name+')\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*$');
-  const charAloneRx=new RegExp('^('+name+')\\s*(?:\\([^)]*\\)\\s*)*:?\\s*$');
-  const didasRx=/^\s*[\(\[].+[\)\]]\s*$/;
-  const sceneRx=/^(INT[\.\s\/]|EXT[\.\s\/]|SÉQUENCE\b|TRANSITION\b|FONDU\b|FADE\b|CUT TO\b|NOIR\b)/i;
-  const pageRx=/^\d{1,4}\s*\.?\s*$/;
-  let cur=null;
-  for(const raw of lines){
-    const l=raw.trim().replace(/\s{2,}/g,' ');
-    if(!l){cur=null;continue}
-    if(pageRx.test(l))continue;
-    if(sceneRx.test(l))continue;
-    if(didasRx.test(l))continue;
-    let m=charInlineRx.exec(l);
-    if(m){const name=m[1].trim();if(name.length>=2&&name===name.toUpperCase()){cur=name;res.push({char:cur,line:m[2].trim()});continue}}
-    m=charDashOnlyRx.exec(l);
-    if(m){const name=m[1].trim();if(name.length>=2&&name===name.toUpperCase()){cur=name;continue}}
-    m=charAloneRx.exec(l);
-    if(m){const name=m[1].trim();if(name.length>=2&&name===name.toUpperCase()){cur=name;continue}}
-    if(cur&&l.length>1&&!/^\s*[\(\[]/.test(l))res.push({char:cur,line:l});
+  const charName='['+UP+']['+UP+'\\s\\-\\.\\\'’]{0,38}';
+  const charOnlyRx=new RegExp('^('+charName+')(?:\\s*\\((?:CONT[\\\'’]D|O\\.S\\.|V\\.O\\.)\\))?$');
+  const charInlineRx=new RegExp('^('+charName+')(?:\\s*\\((?:CONT[\\\'’]D|O\\.S\\.|V\\.O\\.)\\))?\\s*[:\\-–—]\\s*(.+)$');
+  const markerRx=/^(?:START|END|<+\\s*[-–—]*\\s*END|START\\s*[-–—]*>+)$/i;
+  const headerRx=/^(?:SCENE\s+\d+|PINK\s+REV\b|SALVATOR\s+SIDES\b|\d+\.$|\d+\s*\/\s*\d+|\(MORE\)|INT\.|EXT\.)/i;
+  const countMap={};
+  const normalizeKey=(line)=>line.replace(/\s+/g,' ').trim().toUpperCase();
+
+  rawLines.forEach(raw=>{
+    const key=normalizeKey(raw);
+    if(!key)return;
+    countMap[key]=(countMap[key]||0)+1;
+  });
+
+  const watermarkKeys=new Set(
+    Object.entries(countMap)
+      .filter(([key,count])=>count>4&&key.split(' ').length>=2)
+      .map(([key])=>key)
+  );
+
+  function normalizeCharName(name){
+    let clean=name.replace(/\s*\((?:CONT['’]D|O\.S\.|V\.O\.)\)\s*$/i,'').replace(/\s{2,}/g,' ').trim();
+    if(!clean||clean.length<2||clean.length>40)return null;
+    if(clean!==clean.toUpperCase())return null;
+    if(/\d/.test(clean))return null;
+    return clean;
   }
+
+  function classifyLine(trimmed){
+    if(!trimmed)return true;
+    const upper=trimmed.toUpperCase();
+    if(watermarkKeys.has(upper))return 'watermark';
+    if(headerRx.test(trimmed))return 'noise';
+    if(markerRx.test(trimmed.replace(/[<>\-–—\s]/g,' ').replace(/\s+/g,' ').trim()))return 'noise';
+    if(/^(?:CUT TO|FADE IN|FADE OUT|TRANSITION)\b/i.test(trimmed))return 'noise';
+    return 'content';
+  }
+
+  function isDirectionLine(raw,trimmed){
+    if(!trimmed)return true;
+    const indentLen=(raw.match(/^\s*/)||[''])[0].length;
+    if(/^\(.*\)$/.test(trimmed)&&indentLen<=2)return true;
+    if(indentLen<=1)return true;
+    return false;
+  }
+
+  let currentChar=null;
+  let dialogueParts=[];
+  function flushDialogue(){
+    if(currentChar&&dialogueParts.length){
+      const line=dialogueParts.join(' ').replace(/\s{2,}/g,' ').trim();
+      if(line)res.push({char:currentChar,line});
+    }
+    dialogueParts=[];
+  }
+
+  for(const raw of rawLines){
+    const trimmed=raw.replace(/\s+/g,' ').trim();
+    if(!trimmed){flushDialogue();currentChar=null;continue}
+    const kind=classifyLine(trimmed);
+    if(kind==='watermark')continue;
+    if(kind==='noise'){flushDialogue();currentChar=null;continue}
+
+    let m=charInlineRx.exec(trimmed);
+    if(m){
+      flushDialogue();
+      const cname=normalizeCharName(m[1]);
+      const spoken=(m[2]||'').trim();
+      if(cname&&spoken){res.push({char:cname,line:spoken});currentChar=cname;continue}
+    }
+
+    m=charOnlyRx.exec(trimmed);
+    if(m){
+      const cname=normalizeCharName(m[1]);
+      if(cname){
+        flushDialogue();
+        currentChar=cname;
+        continue;
+      }
+    }
+
+    if(currentChar){
+      if(isDirectionLine(raw,trimmed)){
+        flushDialogue();
+        currentChar=null;
+        continue;
+      }
+      dialogueParts.push(trimmed);
+    }
+  }
+  flushDialogue();
   return res;
 }
 function getChars(){const c={};for(const{char}of pdfScript)c[char]=(c[char]||0)+1;return Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([char,count])=>({char,count}))}
