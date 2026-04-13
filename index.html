@@ -178,9 +178,9 @@ input[type="file"]{display:none}
       <div style="margin-top:.6rem">
         <label>Vitesse</label>
         <div class="mode-toggle" style="margin-top:.4rem">
-          <div class="mode-opt" id="speedSlowBtn" onclick="setVoiceSpeed('slow')">Lent x0.5</div>
+          <div class="mode-opt" id="speedSlowBtn" onclick="setVoiceSpeed('slow')">Lent x0.7</div>
           <div class="mode-opt active" id="speedNormalBtn" onclick="setVoiceSpeed('normal')">Normal x1</div>
-          <div class="mode-opt" id="speedFastBtn" onclick="setVoiceSpeed('fast')">Rapide x2</div>
+          <div class="mode-opt" id="speedFastBtn" onclick="setVoiceSpeed('fast')">Rapide x1.6</div>
         </div>
       </div>
     </div>
@@ -261,7 +261,7 @@ const EMOTION_PRESETS={
   angry:{label:'En colère',pitch:0.88},
   whisper:{label:'Chuchoté',pitch:1.2},
 };
-const SPEED_PRESETS={slow:0.5,normal:1,fast:2};
+const SPEED_PRESETS={slow:0.7,normal:1,fast:1.6};
 
 const TTS_LANGS=['fr','en','es','it','de'];
 
@@ -403,7 +403,7 @@ function setVoiceSpeed(preset,silent){
   document.getElementById('speedSlowBtn').classList.toggle('active',voiceSpeedPreset==='slow');
   document.getElementById('speedNormalBtn').classList.toggle('active',voiceSpeedPreset==='normal');
   document.getElementById('speedFastBtn').classList.toggle('active',voiceSpeedPreset==='fast');
-  if(!silent)showToast('Vitesse : '+(voiceSpeedPreset==='slow'?'Lent x0.5':voiceSpeedPreset==='fast'?'Rapide x2':'Normal x1'));
+  if(!silent)showToast('Vitesse : '+(voiceSpeedPreset==='slow'?'Lent x0.7':voiceSpeedPreset==='fast'?'Rapide x1.6':'Normal x1'));
 }
 
 function initVoiceGrid(){
