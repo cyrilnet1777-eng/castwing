@@ -12,7 +12,7 @@ export default async (req, context) => {
   }
   let body;
   try { body = await req.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
-  const { text, voiceId, modelId, emotion, speed } = body;
+  const { text, voiceId, modelId, emotion, speed, languageCode } = body;
   if (!text || !voiceId) return new Response("Missing text or voiceId", { status: 400 });
   const cleanVoiceId = String(voiceId).trim();
   const cleanEmotion = String(emotion || "neutral").trim().toLowerCase();
@@ -34,6 +34,7 @@ export default async (req, context) => {
   };
   const voiceCandidates = [cleanVoiceId];
   const requestedModelId = String(modelId || "").trim();
+  const cleanLanguageCode = String(languageCode || "").trim().toLowerCase();
   const modelCandidates = [];
   if (requestedModelId) modelCandidates.push(requestedModelId);
   modelCandidates.push("eleven_multilingual_v2");
@@ -46,6 +47,7 @@ export default async (req, context) => {
       body: JSON.stringify({
         text,
         model_id: model,
+        ...(cleanLanguageCode ? { language_code: cleanLanguageCode } : {}),
         voice_settings: voiceSettings
       })
     });

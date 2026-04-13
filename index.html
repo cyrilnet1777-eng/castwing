@@ -291,7 +291,7 @@ const ELEVEN_VOICE_IDS={
   rachel:'21m00Tcm4TlvDq8ikWAM',
   antoni:'ErXwobaYiN019PkySvjV',
   bella:'EXAVITQu4vr4xnSDxMaL',
-  josh:'TxGEqnHWrfWFTfGW9XjX',
+  josh:'pNInz6obpgDQGcFmaJgB',
 };
 const VOICE_LOCALES=[
   {id:'france',label:'🇫🇷 France',profiles:[{voice:'serena',label:'Serena',tag:'FR · Parisien'},{voice:'daniel',label:'Daniel',tag:'FR · Neutre'},{voice:'rachel',label:'Rachel',tag:'FR · Québécois'}]},
@@ -339,11 +339,49 @@ const EMOTION_PRESETS={
   whisper:{label:'Chuchoté',pitch:1.2},
 };
 const SPEED_PRESETS={slow:0.7,normal:1,fast:1.6};
+const LOCALE_LANGUAGE_CODES={
+  france:'fr',belgium:'fr',switzerland:'fr',canada:'fr','united-kingdom':'en',usa:'en',australia:'en','new-zealand':'en',ireland:'en',
+  spain:'es',mexico:'es',argentina:'es',colombia:'es',
+  brazil:'pt',portugal:'pt',
+  italy:'it',germany:'de',netherlands:'nl',albania:'sq',
+  nigeria:'en',ghana:'en',kenya:'en','south-africa':'en',
+  morocco:'ar',egypt:'ar',turkiye:'tr',
+  india:'hi',pakistan:'ur',bangladesh:'bn',
+  china:'zh',japan:'ja','south-korea':'ko',indonesia:'id',philippines:'tl',
+};
+const PREVIEW_TEXT_BY_LANG={
+  fr:'Bonjour, je suis {name}.',
+  en:'Hello, I am {name}.',
+  es:'Hola, soy {name}.',
+  pt:'Ola, eu sou {name}.',
+  it:'Ciao, sono {name}.',
+  de:'Hallo, ich bin {name}.',
+  nl:'Hallo, ik ben {name}.',
+  sq:'Pershendetje, une jam {name}.',
+  ar:'Marhaban, ana {name}.',
+  tr:'Merhaba, ben {name}.',
+  hi:'Namaste, main {name} hoon.',
+  ur:'Assalam, main {name} hoon.',
+  bn:'Nomoskar, ami {name}.',
+  zh:'Ni hao, wo shi {name}.',
+  ja:'Konnichiwa, watashi wa {name} desu.',
+  ko:'Annyeong, jeoneun {name} imnida.',
+  id:'Halo, saya {name}.',
+  tl:'Kumusta, ako si {name}.',
+};
 
 const TTS_LANGS=['fr','en','es','it','de'];
 
 function getLocaleConfig(localeId){
   return VOICE_LOCALES.find(l=>l.id===localeId)||VOICE_LOCALES[0];
+}
+function getCurrentLanguageCode(){
+  return LOCALE_LANGUAGE_CODES[selectedLocale]||'en';
+}
+function getPreviewTextForVoice(voice){
+  const lang=getCurrentLanguageCode();
+  const tpl=PREVIEW_TEXT_BY_LANG[lang]||PREVIEW_TEXT_BY_LANG.en;
+  return tpl.replace('{name}',voice&&voice.label?voice.label:'voix');
 }
 function buildVoicePresetsFromLocale(localeId){
   const locale=getLocaleConfig(localeId);
@@ -534,7 +572,7 @@ function initVoiceGrid(){
 }
 
 function previewVoice(v){
-  aiSpeak('Bonjour, je suis '+v.label+'.');
+  aiSpeak(getPreviewTextForVoice(v));
 }
 
 function populateSessionVoiceSelect(){
@@ -561,7 +599,7 @@ async function speakWithElevenLabs(text,preset,token,cb){
     if(!preset||!preset.voiceId)throw new Error('Missing ElevenLabs voiceId');
     const style=getSpeechStyle(preset);
     const speed=getCurrentVoiceSpeed();
-    const rsp=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,voiceId:preset.voiceId,modelId:'eleven_multilingual_v2',emotion:selectedEmotion,speed})});
+    const rsp=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,voiceId:preset.voiceId,modelId:'eleven_multilingual_v2',emotion:selectedEmotion,speed,languageCode:getCurrentLanguageCode()})});
     if(!rsp.ok){
       let err='';try{const j=await rsp.json();err=j&&j.details?j.details:(j&&j.error?j.error:'')}catch(e){}
       throw new Error('HTTP '+rsp.status+(err?' · '+err:''));
