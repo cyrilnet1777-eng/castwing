@@ -19,14 +19,14 @@ export default async (req, context) => {
   const cleanSpeed = Number.isFinite(Number(speed)) ? Number(speed) : 1;
   const emotionSettingsMap = {
     neutral: { stability: 0.55, similarity_boost: 0.75, style: 0.2 },
-    excited: { stability: 0.35, similarity_boost: 0.72, style: 0.72 },
-    sad: { stability: 0.78, similarity_boost: 0.68, style: 0.06 },
-    angry: { stability: 0.3, similarity_boost: 0.8, style: 0.86 },
-    whisper: { stability: 0.84, similarity_boost: 0.66, style: 0.02 },
+    excited: { stability: 0.28, similarity_boost: 0.7, style: 0.92 },
+    sad: { stability: 0.92, similarity_boost: 0.58, style: 0.0 },
+    angry: { stability: 0.22, similarity_boost: 0.85, style: 1.0 },
+    whisper: { stability: 0.98, similarity_boost: 0.52, style: 0.0 },
   };
   const baseVoiceSettings = emotionSettingsMap[cleanEmotion] || emotionSettingsMap.neutral;
-  const speedBoost = cleanSpeed > 1 ? Math.min(0.1, (cleanSpeed - 1) * 0.25) : 0;
-  const speedSlow = cleanSpeed < 1 ? Math.min(0.1, (1 - cleanSpeed) * 0.25) : 0;
+  const speedBoost = cleanSpeed > 1 ? Math.min(0.22, (cleanSpeed - 1) * 0.3) : 0;
+  const speedSlow = cleanSpeed < 1 ? Math.min(0.22, (1 - cleanSpeed) * 0.3) : 0;
   const voiceSettings = {
     stability: Math.max(0.1, Math.min(1, baseVoiceSettings.stability + speedBoost - speedSlow)),
     similarity_boost: Math.max(0.1, Math.min(1, baseVoiceSettings.similarity_boost + speedSlow * 0.5)),

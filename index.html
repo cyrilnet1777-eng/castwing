@@ -175,7 +175,14 @@ input[type="file"]{display:none}
           <option value="whisper">Chuchoté</option>
         </select>
       </div>
-      <div style="margin-top:.6rem"><label>Vitesse</label><input type="range" id="voiceSpeed" min="0.5" max="2" step="0.1" value="1" style="width:100%"><div style="display:flex;justify-content:space-between;font-size:.7rem;color:var(--text-muted)"><span>Lent</span><span>Normal</span><span>Rapide</span></div></div>
+      <div style="margin-top:.6rem">
+        <label>Vitesse</label>
+        <div class="mode-toggle" style="margin-top:.4rem">
+          <div class="mode-opt" id="speedSlowBtn" onclick="setVoiceSpeed('slow')">Lent x0.5</div>
+          <div class="mode-opt active" id="speedNormalBtn" onclick="setVoiceSpeed('normal')">Normal x1</div>
+          <div class="mode-opt" id="speedFastBtn" onclick="setVoiceSpeed('fast')">Rapide x2</div>
+        </div>
+      </div>
     </div>
   </div>
   <button class="btn btn-primary btn-full" onclick="startAiSession()">Lancer la session 🦾</button>
@@ -229,7 +236,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/p
 let role='actor',sessionMode='ai',mode='ai';
 let peer=null,conn=null,call=null,localStream=null,mediaRecorder=null,recordedChunks=[];
 let isRecording=false,isMicOn=true,isCamOn=true,prompterLines=[],prompterIndex=0,connectionTimeout=null;
-let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',voiceSpeed=1,availableVoices=[],presetVoiceMap={};
+let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',voiceSpeed=1,voiceSpeedPreset='normal',availableVoices=[],presetVoiceMap={};
 let autoAdvanceTimer=null,lastAutoSpokenIndex=-1,activeSpeechToken=0;
 let ttsAudio=null,vad=null;
 
@@ -254,6 +261,7 @@ const EMOTION_PRESETS={
   angry:{label:'En colère',pitch:0.88},
   whisper:{label:'Chuchoté',pitch:1.2},
 };
+const SPEED_PRESETS={slow:0.5,normal:1,fast:2};
 
 const TTS_LANGS=['fr','en','es','it','de'];
 
@@ -372,9 +380,8 @@ function getBestVoice(p){
 }
 function getEmotionSettings(){return EMOTION_PRESETS[selectedEmotion]||EMOTION_PRESETS.neutral;}
 function getCurrentVoiceSpeed(){
-  const input=document.getElementById('voiceSpeed');
-  const parsed=input?parseFloat(input.value):NaN;
-  voiceSpeed=Number.isFinite(parsed)?parsed:1;
+  const base=SPEED_PRESETS[voiceSpeedPreset]||1;
+  voiceSpeed=base;
   return voiceSpeed;
 }
 function getSpeechStyle(v){
@@ -389,6 +396,14 @@ function getSpeechStyle(v){
 function setEmotion(key){
   selectedEmotion=EMOTION_PRESETS[key]?key:'neutral';
   showToast('Émotion : '+EMOTION_PRESETS[selectedEmotion].label);
+}
+function setVoiceSpeed(preset,silent){
+  voiceSpeedPreset=SPEED_PRESETS[preset]?preset:'normal';
+  voiceSpeed=SPEED_PRESETS[voiceSpeedPreset];
+  document.getElementById('speedSlowBtn').classList.toggle('active',voiceSpeedPreset==='slow');
+  document.getElementById('speedNormalBtn').classList.toggle('active',voiceSpeedPreset==='normal');
+  document.getElementById('speedFastBtn').classList.toggle('active',voiceSpeedPreset==='fast');
+  if(!silent)showToast('Vitesse : '+(voiceSpeedPreset==='slow'?'Lent x0.5':voiceSpeedPreset==='fast'?'Rapide x2':'Normal x1'));
 }
 
 function initVoiceGrid(){
@@ -428,13 +443,13 @@ async function speakWithElevenLabs(text,preset,token,cb){
     if(!preset||!preset.voiceId)throw new Error('Missing ElevenLabs voiceId');
     const style=getSpeechStyle(preset);
     const speed=getCurrentVoiceSpeed();
-    const rsp=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,voiceId:preset.voiceId,modelId:'eleven_flash_v2_5',emotion:selectedEmotion,speed})});
+    const rsp=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,voiceId:preset.voiceId,modelId:'eleven_multilingual_v2',emotion:selectedEmotion,speed})});
     if(!rsp.ok)throw new Error('HTTP '+rsp.status);
     const blob=await rsp.blob();
     if(token!==activeSpeechToken){return}
     const url=URL.createObjectURL(blob);
     const audio=new Audio(url);
-    audio.playbackRate=Math.max(0.7,Math.min(1.5,speed||1));
+    audio.playbackRate=Math.max(0.5,Math.min(2,speed||1));
     ttsAudio=audio;
     const done=()=>{URL.revokeObjectURL(url);if(ttsAudio===audio)ttsAudio=null;if(token===activeSpeechToken&&cb)cb();};
     audio.onended=done;
@@ -479,6 +494,7 @@ function goSetupAi(){
   showScreen('setupAi');
   loadVoices();
   initVoiceGrid();
+  setVoiceSpeed(voiceSpeedPreset,true);
   const emo=document.getElementById('emotionSelect');if(emo)emo.value=selectedEmotion;
   initDragDrop('uploadZone1');
 }
