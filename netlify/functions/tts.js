@@ -53,11 +53,12 @@ exports.handler = async (event) => {
     }
 
     const emotionMap = {
-      neutral: { stability: 0.58, similarity_boost: 0.76, style: 0.25 },
-      excited: { stability: 0.2, similarity_boost: 0.7, style: 1.0 },
-      sad: { stability: 0.98, similarity_boost: 0.45, style: 0.0 },
-      angry: { stability: 0.15, similarity_boost: 0.88, style: 1.0 },
-      whisper: { stability: 1.0, similarity_boost: 0.4, style: 0.0 },
+      neutral: { stability: 0.62, similarity_boost: 0.74, style: 0.18 },
+      excited: { stability: 0.22, similarity_boost: 0.72, style: 1.0 },
+      sad: { stability: 0.96, similarity_boost: 0.42, style: 0.02 },
+      angry: { stability: 0.14, similarity_boost: 0.9, style: 1.0 },
+      // Lower similarity + very high stability gives softer, breathier whisper output.
+      whisper: { stability: 1.0, similarity_boost: 0.2, style: 0.0 },
     };
     const base = emotionMap[emotion] || emotionMap.neutral;
     const speedBoost = speed > 1 ? Math.min(0.22, (speed - 1) * 0.3) : 0;
