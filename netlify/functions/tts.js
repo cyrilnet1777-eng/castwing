@@ -15,14 +15,20 @@ export default async (req, context) => {
   const { text, voiceId, modelId } = body;
   if (!text || !voiceId) return new Response("Missing text or voiceId", { status: 400 });
   const cleanVoiceId = String(voiceId).trim();
+  const fallbackVoiceIds = [
+    "bHkOO3JOGzSRKwMpGIbB", // Serena
+    "EXAVITQu4vr4xnSDxMaL", // Bella
+    "ErXwobaYiN019PkySvjV", // Antoni
+  ];
+  const voiceCandidates = [cleanVoiceId, ...fallbackVoiceIds.filter((id) => id !== cleanVoiceId)];
   const requestedModelId = String(modelId || "").trim();
   const modelCandidates = [];
   if (requestedModelId) modelCandidates.push(requestedModelId);
   modelCandidates.push("eleven_multilingual_v2");
   if (!modelCandidates.includes("eleven_flash_v2_5")) modelCandidates.push("eleven_flash_v2_5");
 
-  async function callElevenLabs(model) {
-    return fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(cleanVoiceId)}`, {
+  async function callElevenLabs(model, candidateVoiceId) {
+    return fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(candidateVoiceId)}`, {
       method: "POST",
       headers: { "xi-api-key": apiKey, "Content-Type": "application/json", Accept: "audio/mpeg" },
       body: JSON.stringify({
@@ -35,17 +41,21 @@ export default async (req, context) => {
 
   let r = null;
   let usedModel = null;
+  let usedVoiceId = cleanVoiceId;
   let lastDetailsText = "";
   let lastDetailsJson = null;
-  for (const candidate of modelCandidates) {
-    r = await callElevenLabs(candidate);
-    if (r.ok) {
-      usedModel = candidate;
-      break;
+  outer: for (const candidateVoiceId of voiceCandidates) {
+    for (const candidateModel of modelCandidates) {
+      r = await callElevenLabs(candidateModel, candidateVoiceId);
+      if (r.ok) {
+        usedModel = candidateModel;
+        usedVoiceId = candidateVoiceId;
+        break outer;
+      }
+      if (r.status !== 404) break outer;
+      try { lastDetailsText = await r.text(); } catch { lastDetailsText = ""; }
+      try { lastDetailsJson = lastDetailsText ? JSON.parse(lastDetailsText) : null; } catch { lastDetailsJson = null; }
     }
-    if (r.status !== 404) break;
-    try { lastDetailsText = await r.text(); } catch { lastDetailsText = ""; }
-    try { lastDetailsJson = lastDetailsText ? JSON.parse(lastDetailsText) : null; } catch { lastDetailsJson = null; }
   }
 
   if (!r || !r.ok) {
@@ -65,14 +75,21 @@ export default async (req, context) => {
       r.status === 401 && /text_to_speech|permission|unauthorized/i.test(detailMsg)
         ? "Check ElevenLabs key scope: enable text_to_speech permission."
         : r.status === 404
-        ? "Voice/model combination not found. Verify voiceId or try another model/voice."
+        ? "Voice/model not found. Tried fallback voices automatically; check your ElevenLabs voice library."
         : "";
     return new Response(
       JSON.stringify({ error: "ElevenLabs error " + r.status, details: detailMsg, hint }),
       { status: 502, headers: { "Content-Type": "application/json" } }
     );
   }
-  return new Response(await r.arrayBuffer(), { status: 200, headers: { "Content-Type": "audio/mpeg", "X-Elevenlabs-Model": usedModel || "" } });
+  return new Response(await r.arrayBuffer(), {
+    status: 200,
+    headers: {
+      "Content-Type": "audio/mpeg",
+      "X-Elevenlabs-Model": usedModel || "",
+      "X-Elevenlabs-Voice": usedVoiceId || cleanVoiceId
+    }
+  });
 };
 
 export const config = {
