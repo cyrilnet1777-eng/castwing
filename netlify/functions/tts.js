@@ -18,11 +18,11 @@ export default async (req, context) => {
   const cleanEmotion = String(emotion || "neutral").trim().toLowerCase();
   const cleanSpeed = Number.isFinite(Number(speed)) ? Number(speed) : 1;
   const emotionSettingsMap = {
-    neutral: { stability: 0.55, similarity_boost: 0.75, style: 0.2 },
-    excited: { stability: 0.28, similarity_boost: 0.7, style: 0.92 },
-    sad: { stability: 0.92, similarity_boost: 0.58, style: 0.0 },
-    angry: { stability: 0.22, similarity_boost: 0.85, style: 1.0 },
-    whisper: { stability: 0.98, similarity_boost: 0.52, style: 0.0 },
+    neutral: { stability: 0.58, similarity_boost: 0.76, style: 0.25 },
+    excited: { stability: 0.2, similarity_boost: 0.7, style: 1.0 },
+    sad: { stability: 0.98, similarity_boost: 0.45, style: 0.0 },
+    angry: { stability: 0.15, similarity_boost: 0.88, style: 1.0 },
+    whisper: { stability: 1.0, similarity_boost: 0.4, style: 0.0 },
   };
   const baseVoiceSettings = emotionSettingsMap[cleanEmotion] || emotionSettingsMap.neutral;
   const speedBoost = cleanSpeed > 1 ? Math.min(0.22, (cleanSpeed - 1) * 0.3) : 0;
@@ -32,12 +32,7 @@ export default async (req, context) => {
     similarity_boost: Math.max(0.1, Math.min(1, baseVoiceSettings.similarity_boost + speedSlow * 0.5)),
     style: Math.max(0, Math.min(1, baseVoiceSettings.style + speedBoost)),
   };
-  const fallbackVoiceIds = [
-    "bHkOO3JOGzSRKwMpGIbB", // Serena
-    "EXAVITQu4vr4xnSDxMaL", // Bella
-    "ErXwobaYiN019PkySvjV", // Antoni
-  ];
-  const voiceCandidates = [cleanVoiceId, ...fallbackVoiceIds.filter((id) => id !== cleanVoiceId)];
+  const voiceCandidates = [cleanVoiceId];
   const requestedModelId = String(modelId || "").trim();
   const modelCandidates = [];
   if (requestedModelId) modelCandidates.push(requestedModelId);
@@ -69,7 +64,7 @@ export default async (req, context) => {
         usedVoiceId = candidateVoiceId;
         break outer;
       }
-      if (r.status !== 404) break outer;
+      if (r.status !== 404) break;
       try { lastDetailsText = await r.text(); } catch { lastDetailsText = ""; }
       try { lastDetailsJson = lastDetailsText ? JSON.parse(lastDetailsText) : null; } catch { lastDetailsJson = null; }
     }
@@ -92,7 +87,7 @@ export default async (req, context) => {
       r.status === 401 && /text_to_speech|permission|unauthorized/i.test(detailMsg)
         ? "Check ElevenLabs key scope: enable text_to_speech permission."
         : r.status === 404
-        ? "Voice/model not found. Tried fallback voices automatically; check your ElevenLabs voice library."
+        ? "Voice/model not found for this exact voice. Verify this voiceId is available on your ElevenLabs account."
         : "";
     return new Response(
       JSON.stringify({ error: "ElevenLabs error " + r.status, details: detailMsg, hint }),

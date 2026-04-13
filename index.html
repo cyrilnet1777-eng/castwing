@@ -562,19 +562,25 @@ async function speakWithElevenLabs(text,preset,token,cb){
     const style=getSpeechStyle(preset);
     const speed=getCurrentVoiceSpeed();
     const rsp=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,voiceId:preset.voiceId,modelId:'eleven_multilingual_v2',emotion:selectedEmotion,speed})});
-    if(!rsp.ok)throw new Error('HTTP '+rsp.status);
+    if(!rsp.ok){
+      let err='';try{const j=await rsp.json();err=j&&j.details?j.details:(j&&j.error?j.error:'')}catch(e){}
+      throw new Error('HTTP '+rsp.status+(err?' · '+err:''));
+    }
     const blob=await rsp.blob();
     if(token!==activeSpeechToken){return}
     const url=URL.createObjectURL(blob);
     const audio=new Audio(url);
-    audio.playbackRate=Math.max(0.5,Math.min(2,speed||1));
+    audio.playbackRate=Math.max(0.65,Math.min(1.6,speed||1));
     ttsAudio=audio;
     const done=()=>{URL.revokeObjectURL(url);if(ttsAudio===audio)ttsAudio=null;if(token===activeSpeechToken&&cb)cb();};
     audio.onended=done;
     audio.onerror=done;
     try{await audio.play()}catch(e){done()}
   }catch(e){
-    if(token===activeSpeechToken){showToast('ElevenLabs indisponible, fallback navigateur',3500);speakWithBrowser(text,preset,getSpeechStyle(preset),token,cb)}
+    if(token===activeSpeechToken){
+      showToast('Voix ElevenLabs indisponible: '+(e&&e.message?e.message:'erreur'),4500);
+      if(cb)cb();
+    }
   }
 }
 function speakWithBrowser(text,preset,style,token,cb){
