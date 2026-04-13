@@ -132,13 +132,32 @@ input[type="file"]{display:none}
         <div class="hcard-icon navy">🦾</div>
         <div class="hcard-text"><h3>Solo + IA</h3><p>L'IA donne la réplique avec une voix</p></div>
       </div>
-      <div class="hcard" onclick="goSetupPartner()">
+      <div class="hcard" onclick="goPartnerChoice()">
         <div class="hcard-icon blue">🎬</div>
         <div class="hcard-text"><h3>Avec un partenaire</h3><p>Inviter quelqu'un à donner la réplique</p></div>
       </div>
     </div>
-    <div class="join-link"><a onclick="goJoin()">Rejoindre une session (partenaire)</a></div>
+    <div class="join-link"><a onclick="goPartnerChoice()">Session partenaire : créer ou rejoindre</a></div>
     <div class="home-footer">WebRTC pair-à-pair · Aucune donnée stockée</div>
+  </div>
+</div>
+
+<!-- ═══ PARTNER CHOICE ═══ -->
+<div id="partnerChoice" class="screen">
+  <div class="setup-header" style="padding:1.5rem"><button class="back-btn" onclick="goHome()">←</button><h2>Session partenaire</h2></div>
+  <div style="padding:1.5rem">
+    <div class="setup-card">
+      <div class="home-cards">
+        <div class="hcard" onclick="goSetupPartner()">
+          <div class="hcard-icon blue">🎬</div>
+          <div class="hcard-text"><h3>Je crée la session (acteur)</h3><p>Générer un code et inviter un partenaire</p></div>
+        </div>
+        <div class="hcard" onclick="goJoin()">
+          <div class="hcard-icon navy">🎙️</div>
+          <div class="hcard-text"><h3>Je rejoins une session (partenaire)</h3><p>Entrer le code de l'acteur</p></div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -190,8 +209,26 @@ input[type="file"]{display:none}
 
 <!-- ═══ SETUP: AVEC PARTENAIRE ═══ -->
 <div id="setupPartner" class="screen">
-  <div class="setup-header"><button class="back-btn" onclick="goHome()">←</button><h2>Avec un partenaire</h2></div>
-  <div class="setup-card"><div class="field-group"><label>Ton code de session</label><div class="session-code-display" id="mySessionCode">—</div><div class="code-hint">Partage ce code à ton partenaire</div></div></div>
+  <div class="setup-header"><button class="back-btn" onclick="goPartnerChoice()">←</button><h2>Avec un partenaire</h2></div>
+  <div class="setup-card">
+    <div class="field-group">
+      <label>Ton code de session</label>
+      <div class="session-code-display" id="mySessionCode">—</div>
+      <div class="code-hint">Partage ce code à ton partenaire</div>
+      <div class="mode-toggle" style="margin-top:.6rem">
+        <div class="mode-opt" onclick="copyPartnerCode()">📋 Copier code</div>
+        <div class="mode-opt" onclick="copyPartnerLink()">🔗 Copier lien</div>
+      </div>
+      <div class="mode-toggle" style="margin-top:.5rem">
+        <div class="mode-opt" onclick="shareVia('native')">📤 Partager</div>
+        <div class="mode-opt" onclick="shareVia('whatsapp')">💬 WhatsApp</div>
+      </div>
+      <div class="mode-toggle" style="margin-top:.5rem">
+        <div class="mode-opt" onclick="shareVia('telegram')">✈️ Telegram</div>
+        <div class="mode-opt" onclick="shareVia('wechat')">🟢 WeChat</div>
+      </div>
+    </div>
+  </div>
   <div class="setup-card">
     <label>Script (PDF ou texte)</label>
     <div class="upload-zone" id="uploadZone2" onclick="document.getElementById('pdfInput2').click()"><div class="up-icon">📄</div><div class="up-label">Glisse ton PDF ici ou clique</div><div class="up-sub">Format scénario standard</div></div>
@@ -206,7 +243,7 @@ input[type="file"]{display:none}
 
 <!-- ═══ JOIN (PARTENAIRE) ═══ -->
 <div id="joinScreen" class="screen">
-  <div class="setup-header" style="padding:1.5rem 1.5rem 0"><button class="back-btn" onclick="goHome()">←</button><h2>Rejoindre une session</h2></div>
+  <div class="setup-header" style="padding:1.5rem 1.5rem 0"><button class="back-btn" onclick="goPartnerChoice()">←</button><h2>Rejoindre une session</h2></div>
   <div style="padding:1.5rem">
     <div class="setup-card"><div class="field-group"><label>Code de session</label><input type="text" id="joinCodeInput" placeholder="Entre le code de l'acteur" maxlength="10" autocapitalize="characters" spellcheck="false"></div></div>
     <button class="btn btn-primary btn-full" onclick="joinAsPartner()">Rejoindre 🎙️</button>
@@ -489,6 +526,7 @@ function hideOverlay(){document.getElementById('connectOverlay').classList.remov
 function setLoading(on,m){const e=document.getElementById('loadingOverlay');if(on){document.getElementById('loadingMsg').textContent=m||'Chargement…';e.classList.add('active')}else e.classList.remove('active')}
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
 function goHome(){endSession();showScreen('home')}
+function goPartnerChoice(){showScreen('partnerChoice')}
 function goJoin(){showScreen('joinScreen')}
 function goSetupAi(){
   showScreen('setupAi');
@@ -499,6 +537,25 @@ function goSetupAi(){
   initDragDrop('uploadZone1');
 }
 function goSetupPartner(){showScreen('setupPartner');document.getElementById('mySessionCode').textContent=genCode();initDragDrop('uploadZone2')}
+function getPartnerCode(){const code=(document.getElementById('mySessionCode').textContent||'').trim();return code&&code!=='—'?code:''}
+function getJoinLink(){const code=getPartnerCode();if(!code)return '';return window.location.origin+window.location.pathname+'?code='+encodeURIComponent(code)}
+function getPartnerShareText(){const code=getPartnerCode();if(!code)return '';const link=getJoinLink();return '🎬 Rejoins ma session Castwing\nCode: '+code+'\nLien direct: '+link}
+async function copyToClipboard(text){if(!text)return false;try{if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(text);return true}}catch(e){}const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand('copy')}catch(e){}document.body.removeChild(ta);return ok}
+async function copyPartnerCode(){const code=getPartnerCode();if(!code){showToast('Code indisponible');return}const ok=await copyToClipboard(code);showToast(ok?'Code copié ✅':'Copie impossible')}
+async function copyPartnerLink(){const link=getJoinLink();if(!link){showToast('Lien indisponible');return}const ok=await copyToClipboard(link);showToast(ok?'Lien copié ✅':'Copie impossible')}
+async function shareVia(channel){
+  const text=getPartnerShareText();const link=getJoinLink();if(!text||!link){showToast('Code indisponible');return}
+  if(channel==='native'&&navigator.share){try{await navigator.share({title:'Session Castwing',text,url:link});return}catch(e){}}
+  if(channel==='whatsapp'){window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');return}
+  if(channel==='telegram'){window.open('https://t.me/share/url?url='+encodeURIComponent(link)+'&text='+encodeURIComponent('🎬 Rejoins ma session Castwing (code '+getPartnerCode()+')'),'_blank');return}
+  if(channel==='wechat'){await copyToClipboard(text);window.open('https://web.wechat.com/','_blank');showToast('Texte copié, colle-le dans WeChat');return}
+  const ok=await copyToClipboard(text);showToast(ok?'Texte copié ✅':'Partage indisponible')}
+function applyJoinCodeFromURL(){
+  const params=new URLSearchParams(window.location.search);const raw=(params.get('code')||'').toUpperCase();
+  const clean=raw.replace(/[^A-Z0-9]/g,'').slice(0,10);if(!clean)return false;
+  const input=document.getElementById('joinCodeInput');if(input)input.value=clean;
+  showScreen('joinScreen');showToast('Code prérempli : '+clean,4000);return true;
+}
 
 // ── Mode ──
 function modeHintText(m){
@@ -687,8 +744,34 @@ function syncPrompter(){if(conn&&conn.open)conn.send({type:'prompter',index:prom
 
 // ── Camera ──
 async function startCamera(){
-  try{localStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:true});document.getElementById('localVideo').srcObject=localStream;document.getElementById('noVideoMsg').style.display='none';return localStream}
-  catch(e){showToast('Erreur caméra : '+e.message,5000);return null}
+  if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null}
+  const attempts=[
+    {video:{facingMode:{ideal:'user'},width:{ideal:1280},height:{ideal:720}},audio:true},
+    {video:{width:{ideal:1280},height:{ideal:720}},audio:true},
+    {video:true,audio:true},
+  ];
+  let lastErr=null;
+  for(const constraints of attempts){
+    try{
+      localStream=await navigator.mediaDevices.getUserMedia(constraints);
+      document.getElementById('localVideo').srcObject=localStream;
+      document.getElementById('noVideoMsg').style.display='none';
+      return localStream;
+    }catch(e){lastErr=e}
+  }
+  showToast('Erreur caméra : '+(lastErr&&lastErr.message?lastErr.message:'permission refusée'),5000);
+  return null
+}
+async function ensureSessionStream(){
+  const cam=await startCamera();if(cam)return cam;
+  try{
+    localStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    document.getElementById('localVideo').srcObject=null;
+    document.getElementById('noVideoMsg').style.display='flex';
+    document.getElementById('noVideoMsg').textContent='Caméra indisponible, audio uniquement';
+    showToast('Caméra indisponible, audio uniquement',4000);
+    return localStream;
+  }catch(e){showToast('Impossible d\'accéder au micro',5000);return null}
 }
 function toggleMic(){if(!localStream)return;isMicOn=!isMicOn;localStream.getAudioTracks().forEach(t=>t.enabled=isMicOn);document.getElementById('btnMic').textContent=isMicOn?'🎙️':'🔇';showToast(isMicOn?'Micro activé':'Micro coupé')}
 function toggleCam(){if(!localStream)return;isCamOn=!isCamOn;localStream.getVideoTracks().forEach(t=>t.enabled=isCamOn);document.getElementById('btnCam').textContent=isCamOn?'📷':'📷❌';showToast(isCamOn?'Caméra activée':'Caméra coupée')}
@@ -726,7 +809,7 @@ async function startAiSession(){
   showScreen('session');renderPrompter();
   if(mode==='ai'||mode==='auto'){document.getElementById('aiPanel').classList.add('active');populateSessionVoiceSelect();setStatus('',mode==='auto'?'🎤 Auto prêt':'🦾 IA prête')}
   else setStatus('','Manuel');
-  await startCamera();
+  await ensureSessionStream();
   handleCurrentLineAutomation();
 }
 
@@ -736,7 +819,7 @@ async function startPartnerSession(){
   const code=document.getElementById('mySessionCode').textContent;if(!code||code==='—')return;
   prompterLines=buildLines(2);prompterIndex=0;
   showScreen('session');renderPrompter();setStatus('waiting','En attente du partenaire…');showOverlay('En attente…','Partage le code '+code);
-  await startCamera();
+  await ensureSessionStream();
   const pid='castwing-'+code;peer=createPeer(pid);
   peer.on('open',()=>{});
   peer.on('connection',c=>setupDataConnection(c));
@@ -750,8 +833,8 @@ async function joinAsPartner(){
   cancelSpeechFlow();
   const code=document.getElementById('joinCodeInput').value.trim().toUpperCase();if(!code){showToast('Entre un code');return}
   showScreen('session');setStatus('waiting','Connexion…');showOverlay('Connexion…','Recherche de '+code+'…');
-  document.getElementById('noVideoMsg').textContent='Audio uniquement (partenaire)';
-  try{localStream=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){showToast('Erreur micro')}
+  document.getElementById('noVideoMsg').textContent='Caméra en attente…';
+  await ensureSessionStream();
   const mid='castwing-p-'+code+'-'+Math.random().toString(36).substr(2,4);peer=createPeer(mid);
   peer.on('open',()=>{const c=peer.connect('castwing-'+code,{reliable:true});setupDataConnection(c)});
   peer.on('call',ic=>{ic.answer(localStream);setupCallHandlers(ic)});
@@ -772,9 +855,9 @@ function endSession(){
 function cancelConnection(){hideOverlay();if(!conn||!conn.open)endSession()}
 
 document.addEventListener('DOMContentLoaded',()=>{
-  showScreen('home');
   loadVoices();
   setMode('ai');
+  if(!applyJoinCodeFromURL())showScreen('home');
 });
 </script>
 </body>
