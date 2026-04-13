@@ -832,7 +832,12 @@ async function speakWithElevenLabs(text,preset,token,cb){
         usedFallback=i>0;
         break;
       }
-      let err='';try{const j=await rsp.json();err=j&&j.details?j.details:(j&&j.error?j.error:'')}catch(e){}
+      let err='';
+      try{
+        const j=await rsp.json();
+        if(j&&j.details)err=typeof j.details==='string'?j.details:JSON.stringify(j.details);
+        else if(j&&j.error)err=typeof j.error==='string'?j.error:JSON.stringify(j.error);
+      }catch(e){}
       lastErr='HTTP '+rsp.status+(err?' · '+err:'');
       if(rsp.status!==502&&rsp.status!==404)break;
     }
