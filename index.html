@@ -182,6 +182,10 @@ input[type="file"]{display:none}
     <div class="mode-hint" id="modeHint">L'IA lit les répliques du partenaire automatiquement.</div>
     <div class="voice-section active" id="voiceSection">
       <label>Voix de l'IA</label>
+      <div style="margin-top:.6rem">
+        <label>Pays / accent</label>
+        <select id="voiceCountrySelect" onchange="changeVoiceCountry(this.value)"></select>
+      </div>
       <div class="voice-grid" id="voiceGrid"></div>
       <div style="margin-top:.6rem">
         <label>Émotion</label>
@@ -272,7 +276,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/p
 let role='actor',sessionMode='ai',mode='ai';
 let peer=null,conn=null,call=null,localStream=null,mediaRecorder=null,recordedChunks=[];
 let isRecording=false,isMicOn=true,isCamOn=true,prompterLines=[],prompterIndex=0,connectionTimeout=null;
-let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',voiceSpeed=1,voiceSpeedPreset='normal',availableVoices=[],presetVoiceMap={};
+let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',selectedLocale='france',voiceSpeed=1,voiceSpeedPreset='normal',availableVoices=[],presetVoiceMap={};
 let autoAdvanceTimer=null,lastAutoSpokenIndex=-1,activeSpeechToken=0;
 let ttsAudio=null,vad=null;
 
@@ -281,14 +285,51 @@ const pauseBetweenLines=500;
 
 const ICE_SERVERS=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:'stun:stun2.l.google.com:19302'}];
 
-const VOICE_PRESETS=[
-  {id:'serena',label:'Serena',tag:'FR · Female · warm',voiceId:'bHkOO3JOGzSRKwMpGIbB',pitch:1,rate:1},
-  {id:'daniel',label:'Daniel',tag:'FR · Male · deep',voiceId:'onwK4e9ZLuTAKqWW03F9',pitch:1,rate:1},
-  {id:'rachel',label:'Rachel',tag:'EN · Female · calm',voiceId:'21m00Tcm4TlvDq8ikWAM',pitch:1,rate:1},
-  {id:'antoni',label:'Antoni',tag:'EN · Male · warm',voiceId:'ErXwobaYiN019PkySvjV',pitch:1,rate:1},
-  {id:'bella',label:'Bella',tag:'EN · Female · soft',voiceId:'EXAVITQu4vr4xnSDxMaL',pitch:1,rate:1},
-  {id:'josh',label:'Josh',tag:'EN · Male · deep',voiceId:'TxGEqnHWrfWFTfGW9XjX',pitch:1,rate:1},
+const ELEVEN_VOICE_IDS={
+  serena:'bHkOO3JOGzSRKwMpGIbB',
+  daniel:'onwK4e9ZLuTAKqWW03F9',
+  rachel:'21m00Tcm4TlvDq8ikWAM',
+  antoni:'ErXwobaYiN019PkySvjV',
+  bella:'EXAVITQu4vr4xnSDxMaL',
+  josh:'TxGEqnHWrfWFTfGW9XjX',
+};
+const VOICE_LOCALES=[
+  {id:'france',label:'🇫🇷 France',profiles:[{voice:'serena',label:'Serena',tag:'FR · Parisien'},{voice:'daniel',label:'Daniel',tag:'FR · Neutre'},{voice:'rachel',label:'Rachel',tag:'FR · Québécois'}]},
+  {id:'belgium',label:'🇧🇪 Belgique',profiles:[{voice:'serena',label:'Serena',tag:'FR · Belge'},{voice:'daniel',label:'Daniel',tag:'FR · Wallon'},{voice:'bella',label:'Bella',tag:'FR · Bruxelles'}]},
+  {id:'switzerland',label:'🇨🇭 Suisse',profiles:[{voice:'daniel',label:'Daniel',tag:'FR · Suisse romand'},{voice:'serena',label:'Serena',tag:'FR · Lémanique'},{voice:'antoni',label:'Antoni',tag:'FR · Alpin'}]},
+  {id:'canada',label:'🇨🇦 Canada',profiles:[{voice:'rachel',label:'Rachel',tag:'EN · Canadien'},{voice:'daniel',label:'Daniel',tag:'FR · Québécois'},{voice:'josh',label:'Josh',tag:'EN · Toronto'}]},
+  {id:'united-kingdom',label:'🇬🇧 Royaume-Uni',profiles:[{voice:'rachel',label:'Rachel',tag:'EN · British RP'},{voice:'josh',label:'Josh',tag:'EN · London'},{voice:'bella',label:'Bella',tag:'EN · Manchester'}]},
+  {id:'usa',label:'🇺🇸 États-Unis',profiles:[{voice:'josh',label:'Josh',tag:'EN · Californien'},{voice:'antoni',label:'Antoni',tag:'EN · Texan'},{voice:'rachel',label:'Rachel',tag:'EN · New York'}]},
+  {id:'australia',label:'🇦🇺 Australie',profiles:[{voice:'daniel',label:'Daniel',tag:'EN · Australien'},{voice:'rachel',label:'Rachel',tag:'EN · Sydney'},{voice:'josh',label:'Josh',tag:'EN · Melbourne'}]},
+  {id:'new-zealand',label:'🇳🇿 Nouvelle-Zélande',profiles:[{voice:'bella',label:'Bella',tag:'EN · Kiwi'},{voice:'josh',label:'Josh',tag:'EN · Auckland'},{voice:'antoni',label:'Antoni',tag:'EN · Wellington'}]},
+  {id:'ireland',label:'🇮🇪 Irlande',profiles:[{voice:'rachel',label:'Rachel',tag:'EN · Irlandais'},{voice:'josh',label:'Josh',tag:'EN · Dublin'},{voice:'bella',label:'Bella',tag:'EN · Cork'}]},
+  {id:'spain',label:'🇪🇸 Espagne',profiles:[{voice:'antoni',label:'Antoni',tag:'ES · Castillan'},{voice:'bella',label:'Bella',tag:'ES · Barcelone'},{voice:'rachel',label:'Rachel',tag:'ES · Andalous'}]},
+  {id:'mexico',label:'🇲🇽 Mexique',profiles:[{voice:'daniel',label:'Daniel',tag:'ES · Mexicain'},{voice:'bella',label:'Bella',tag:'ES · CDMX'},{voice:'josh',label:'Josh',tag:'ES · Norteño'}]},
+  {id:'argentina',label:'🇦🇷 Argentine',profiles:[{voice:'antoni',label:'Antoni',tag:'ES · Rioplatense'},{voice:'rachel',label:'Rachel',tag:'ES · Buenos Aires'},{voice:'josh',label:'Josh',tag:'ES · Cordoba'}]},
+  {id:'colombia',label:'🇨🇴 Colombie',profiles:[{voice:'bella',label:'Bella',tag:'ES · Bogota'},{voice:'josh',label:'Josh',tag:'ES · Medellín'},{voice:'antoni',label:'Antoni',tag:'ES · Cali'}]},
+  {id:'brazil',label:'🇧🇷 Brésil',profiles:[{voice:'bella',label:'Bella',tag:'PT · Brésilien'},{voice:'josh',label:'Josh',tag:'PT · Rio'},{voice:'rachel',label:'Rachel',tag:'PT · São Paulo'}]},
+  {id:'portugal',label:'🇵🇹 Portugal',profiles:[{voice:'antoni',label:'Antoni',tag:'PT · Lisbonne'},{voice:'bella',label:'Bella',tag:'PT · Porto'},{voice:'josh',label:'Josh',tag:'PT · Algarve'}]},
+  {id:'italy',label:'🇮🇹 Italie',profiles:[{voice:'daniel',label:'Daniel',tag:'IT · Standard'},{voice:'josh',label:'Josh',tag:'IT · Napolitain'},{voice:'bella',label:'Bella',tag:'IT · Milanais'}]},
+  {id:'germany',label:'🇩🇪 Allemagne',profiles:[{voice:'antoni',label:'Antoni',tag:'DE · Hochdeutsch'},{voice:'josh',label:'Josh',tag:'DE · Bavarois'},{voice:'rachel',label:'Rachel',tag:'DE · Berlin'}]},
+  {id:'netherlands',label:'🇳🇱 Pays-Bas',profiles:[{voice:'bella',label:'Bella',tag:'NL · Amsterdam'},{voice:'josh',label:'Josh',tag:'NL · Rotterdam'},{voice:'antoni',label:'Antoni',tag:'NL · Utrecht'}]},
+  {id:'albania',label:'🇦🇱 Albanie',profiles:[{voice:'antoni',label:'Antoni',tag:'SQ · Tiranë'},{voice:'bella',label:'Bella',tag:'SQ · Nord'},{voice:'josh',label:'Josh',tag:'SQ · Sud'}]},
+  {id:'nigeria',label:'🇳🇬 Nigéria',profiles:[{voice:'josh',label:'Josh',tag:'EN · Nigerian'},{voice:'bella',label:'Bella',tag:'EN · Lagos'},{voice:'antoni',label:'Antoni',tag:'EN · Abuja'}]},
+  {id:'ghana',label:'🇬🇭 Ghana',profiles:[{voice:'josh',label:'Josh',tag:'EN · Ghanaian'},{voice:'rachel',label:'Rachel',tag:'EN · Accra'},{voice:'bella',label:'Bella',tag:'EN · Kumasi'}]},
+  {id:'kenya',label:'🇰🇪 Kenya',profiles:[{voice:'antoni',label:'Antoni',tag:'EN · Kenyan'},{voice:'rachel',label:'Rachel',tag:'EN · Nairobi'},{voice:'josh',label:'Josh',tag:'EN · Mombasa'}]},
+  {id:'south-africa',label:'🇿🇦 Afrique du Sud',profiles:[{voice:'josh',label:'Josh',tag:'EN · South African'},{voice:'bella',label:'Bella',tag:'EN · Cape Town'},{voice:'antoni',label:'Antoni',tag:'EN · Johannesburg'}]},
+  {id:'morocco',label:'🇲🇦 Maroc',profiles:[{voice:'daniel',label:'Daniel',tag:'AR · Maghrebin'},{voice:'serena',label:'Serena',tag:'FR · Marocain'},{voice:'antoni',label:'Antoni',tag:'AR · Darija'}]},
+  {id:'egypt',label:'🇪🇬 Égypte',profiles:[{voice:'josh',label:'Josh',tag:'AR · Égyptien'},{voice:'bella',label:'Bella',tag:'AR · Caire'},{voice:'antoni',label:'Antoni',tag:'AR · Alexandrie'}]},
+  {id:'turkiye',label:'🇹🇷 Turquie',profiles:[{voice:'daniel',label:'Daniel',tag:'TR · Istanbul'},{voice:'bella',label:'Bella',tag:'TR · Ankara'},{voice:'josh',label:'Josh',tag:'TR · Izmir'}]},
+  {id:'india',label:'🇮🇳 Inde',profiles:[{voice:'rachel',label:'Rachel',tag:'EN · Indien'},{voice:'josh',label:'Josh',tag:'HI · Hindi'},{voice:'bella',label:'Bella',tag:'EN · Mumbai'}]},
+  {id:'pakistan',label:'🇵🇰 Pakistan',profiles:[{voice:'antoni',label:'Antoni',tag:'UR · Urdu'},{voice:'josh',label:'Josh',tag:'EN · Pakistani'},{voice:'bella',label:'Bella',tag:'UR · Lahore'}]},
+  {id:'bangladesh',label:'🇧🇩 Bangladesh',profiles:[{voice:'bella',label:'Bella',tag:'BN · Bengali'},{voice:'josh',label:'Josh',tag:'EN · Dhaka'},{voice:'antoni',label:'Antoni',tag:'BN · Chittagong'}]},
+  {id:'china',label:'🇨🇳 Chine',profiles:[{voice:'rachel',label:'Rachel',tag:'ZH · Mandarin'},{voice:'josh',label:'Josh',tag:'ZH · Pékin'},{voice:'bella',label:'Bella',tag:'ZH · Shanghai'}]},
+  {id:'japan',label:'🇯🇵 Japon',profiles:[{voice:'bella',label:'Bella',tag:'JA · Tokyo'},{voice:'rachel',label:'Rachel',tag:'JA · Standard'},{voice:'josh',label:'Josh',tag:'JA · Osaka'}]},
+  {id:'south-korea',label:'🇰🇷 Corée du Sud',profiles:[{voice:'daniel',label:'Daniel',tag:'KO · Seoul'},{voice:'bella',label:'Bella',tag:'KO · Standard'},{voice:'josh',label:'Josh',tag:'KO · Busan'}]},
+  {id:'indonesia',label:'🇮🇩 Indonésie',profiles:[{voice:'antoni',label:'Antoni',tag:'ID · Jakarta'},{voice:'bella',label:'Bella',tag:'ID · Bahasa'},{voice:'josh',label:'Josh',tag:'ID · Surabaya'}]},
+  {id:'philippines',label:'🇵🇭 Philippines',profiles:[{voice:'rachel',label:'Rachel',tag:'EN · Filipino'},{voice:'bella',label:'Bella',tag:'TL · Tagalog'},{voice:'josh',label:'Josh',tag:'EN · Manila'}]},
 ];
+let VOICE_PRESETS=[];
 
 const EMOTION_PRESETS={
   neutral:{label:'Neutre',pitch:1},
@@ -300,6 +341,44 @@ const EMOTION_PRESETS={
 const SPEED_PRESETS={slow:0.7,normal:1,fast:1.6};
 
 const TTS_LANGS=['fr','en','es','it','de'];
+
+function getLocaleConfig(localeId){
+  return VOICE_LOCALES.find(l=>l.id===localeId)||VOICE_LOCALES[0];
+}
+function buildVoicePresetsFromLocale(localeId){
+  const locale=getLocaleConfig(localeId);
+  return (locale.profiles||[]).map((p,idx)=>({
+    id:`${locale.id}-${p.voice}-${idx}`,
+    label:p.label,
+    tag:p.tag,
+    voiceId:ELEVEN_VOICE_IDS[p.voice]||ELEVEN_VOICE_IDS.serena,
+    pitch:1,
+    rate:1,
+  }));
+}
+function initVoiceCountrySelect(){
+  const select=document.getElementById('voiceCountrySelect');
+  if(!select)return;
+  select.innerHTML='';
+  VOICE_LOCALES.forEach(l=>{
+    const opt=document.createElement('option');
+    opt.value=l.id;
+    opt.textContent=l.label;
+    if(l.id===selectedLocale)opt.selected=true;
+    select.appendChild(opt);
+  });
+}
+function applyLocaleVoices(localeId,silent){
+  selectedLocale=getLocaleConfig(localeId).id;
+  VOICE_PRESETS=buildVoicePresetsFromLocale(selectedLocale);
+  if(!selectedVoice||!VOICE_PRESETS.some(v=>v.id===selectedVoice.id))selectedVoice=VOICE_PRESETS[0]||null;
+  const select=document.getElementById('voiceCountrySelect');
+  if(select)select.value=selectedLocale;
+  initVoiceGrid();
+  if(document.getElementById('session').classList.contains('active'))populateSessionVoiceSelect();
+  if(!silent)showToast('Accent : '+getLocaleConfig(selectedLocale).label);
+}
+function changeVoiceCountry(localeId){applyLocaleVoices(localeId,false);}
 
 class VoiceActivityDetector{
   constructor({speechThreshold=0.015,silenceDuration=1500,onSpeechEnd}={}){
@@ -444,14 +523,14 @@ function setVoiceSpeed(preset,silent){
 
 function initVoiceGrid(){
   const g=document.getElementById('voiceGrid');g.innerHTML='';
-  if(!selectedVoice)selectedVoice=VOICE_PRESETS[0];
+  if(!selectedVoice)selectedVoice=VOICE_PRESETS[0]||null;
   VOICE_PRESETS.forEach((v,i)=>{
     const el=document.createElement('div');el.className='voice-item'+(selectedVoice&&selectedVoice.id===v.id?' selected':'');
     el.innerHTML=`${v.label}<span class="vtag">${v.tag}</span>`;
     el.onclick=()=>{selectedVoice=v;g.querySelectorAll('.voice-item').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');previewVoice(v)};
     g.appendChild(el);
   });
-  if(!selectedVoice)selectedVoice=VOICE_PRESETS[0];
+  if(!selectedVoice&&VOICE_PRESETS.length)selectedVoice=VOICE_PRESETS[0];
 }
 
 function previewVoice(v){
@@ -462,7 +541,10 @@ function populateSessionVoiceSelect(){
   const s=document.getElementById('sessionVoiceSelect');s.innerHTML='';
   VOICE_PRESETS.forEach(v=>{const o=document.createElement('option');o.value=v.id;o.textContent=v.label+' — '+v.tag;if(selectedVoice&&v.id===selectedVoice.id)o.selected=true;s.appendChild(o)});
 }
-function changeSessionVoice(){selectedVoice=VOICE_PRESETS.find(v=>v.id===document.getElementById('sessionVoiceSelect').value)||VOICE_PRESETS[0];showToast('Voix : '+selectedVoice.label)}
+function changeSessionVoice(){
+  selectedVoice=VOICE_PRESETS.find(v=>v.id===document.getElementById('sessionVoiceSelect').value)||VOICE_PRESETS[0]||null;
+  if(selectedVoice)showToast('Voix : '+selectedVoice.label);
+}
 
 function clearAutoTimer(){if(autoAdvanceTimer){clearTimeout(autoAdvanceTimer);autoAdvanceTimer=null}}
 function cancelTTSPlayback(){
@@ -530,6 +612,8 @@ function goJoin(){showScreen('joinScreen')}
 function goSetupAi(){
   showScreen('setupAi');
   loadVoices();
+  initVoiceCountrySelect();
+  applyLocaleVoices(selectedLocale,true);
   initVoiceGrid();
   setVoiceSpeed(voiceSpeedPreset,true);
   const emo=document.getElementById('emotionSelect');if(emo)emo.value=selectedEmotion;
@@ -744,17 +828,34 @@ function syncPrompter(){if(conn&&conn.open)conn.send({type:'prompter',index:prom
 // ── Camera ──
 async function startCamera(){
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null}
+  const localVideo=document.getElementById('localVideo');
+  async function attachStream(stream){
+    localVideo.srcObject=stream;
+    document.getElementById('noVideoMsg').style.display='none';
+    try{await localVideo.play()}catch(e){}
+    return stream;
+  }
   const attempts=[
     {video:{facingMode:{ideal:'user'},width:{ideal:1280},height:{ideal:720}},audio:true},
     {video:{width:{ideal:1280},height:{ideal:720}},audio:true},
     {video:true,audio:true},
   ];
+  const videoOnlyAttempts=[
+    {video:{facingMode:{ideal:'user'},width:{ideal:1280},height:{ideal:720}},audio:false},
+    {video:true,audio:false},
+  ];
   let lastErr=null;
   for(const constraints of attempts){
     try{
       localStream=await navigator.mediaDevices.getUserMedia(constraints);
-      document.getElementById('localVideo').srcObject=localStream;
-      document.getElementById('noVideoMsg').style.display='none';
+      return await attachStream(localStream);
+    }catch(e){lastErr=e}
+  }
+  for(const constraints of videoOnlyAttempts){
+    try{
+      localStream=await navigator.mediaDevices.getUserMedia(constraints);
+      await attachStream(localStream);
+      showToast('Micro indisponible, caméra activée',4000);
       return localStream;
     }catch(e){lastErr=e}
   }
@@ -762,7 +863,17 @@ async function startCamera(){
   return null
 }
 async function ensureSessionStream(){
-  const cam=await startCamera();if(cam)return cam;
+  const cam=await startCamera();
+  if(cam){
+    if(!cam.getAudioTracks().length){
+      try{
+        const micOnly=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+        const micTrack=micOnly.getAudioTracks()[0];
+        if(micTrack)cam.addTrack(micTrack);
+      }catch(e){}
+    }
+    return cam;
+  }
   try{
     localStream=await navigator.mediaDevices.getUserMedia({audio:true});
     document.getElementById('localVideo').srcObject=null;
@@ -790,7 +901,7 @@ function stopRecording(){if(mediaRecorder&&mediaRecorder.state!=='inactive')medi
 // ── WebRTC ──
 function createPeer(id){return new Peer(id,{config:{iceServers:ICE_SERVERS}})}
 function setStatus(s,t){document.getElementById('statusDot').className='status-dot '+s;document.getElementById('statusText').textContent=t}
-function handleDataMessage(d){if(d.type==='prompter'){prompterIndex=d.index;renderPrompter()}else if(d.type==='script'){prompterLines=d.lines;prompterIndex=d.index||0;renderPrompter()}else if(d.type==='ready'){if(role==='actor'&&localStream){call=peer.call(conn.peer,localStream);setupCallHandlers(call)}}}
+function handleDataMessage(d){if(d.type==='prompter'){prompterIndex=d.index;renderPrompter()}else if(d.type==='script'){prompterLines=d.lines;prompterIndex=d.index||0;renderPrompter()}else if(d.type==='ready'){if(role==='actor'){call=localStream?peer.call(conn.peer,localStream):peer.call(conn.peer);setupCallHandlers(call)}}}
 function setupDataConnection(c){
   conn=c;conn.on('open',()=>{setStatus('','Connecté');hideOverlay();showToast('Partenaire connecté !');if(role==='actor'&&prompterLines.length>0)conn.send({type:'script',lines:prompterLines,index:prompterIndex});if(role==='partner')conn.send({type:'ready'})});
   conn.on('data',handleDataMessage);conn.on('close',()=>{setStatus('disconnected','Déconnecté');showToast('Partenaire déconnecté')});conn.on('error',e=>showToast('Erreur : '+e.message));
@@ -802,7 +913,7 @@ async function startAiSession(){
   role='actor';sessionMode='ai';
   voiceSpeed=getCurrentVoiceSpeed();
   selectedEmotion=document.getElementById('emotionSelect').value||selectedEmotion;
-  if(!selectedVoice)selectedVoice=VOICE_PRESETS[0];
+  if(!selectedVoice)selectedVoice=VOICE_PRESETS[0]||null;
   prompterLines=buildLines(1);prompterIndex=0;
   lastAutoSpokenIndex=-1;
   showScreen('session');renderPrompter();
@@ -822,7 +933,7 @@ async function startPartnerSession(){
   const pid='castwing-'+code;peer=createPeer(pid);
   peer.on('open',()=>{});
   peer.on('connection',c=>setupDataConnection(c));
-  peer.on('call',ic=>{ic.answer(localStream);setupCallHandlers(ic)});
+  peer.on('call',ic=>{if(localStream)ic.answer(localStream);else ic.answer();setupCallHandlers(ic)});
   peer.on('error',e=>{hideOverlay();showToast('Erreur : '+e.message,5000)});
   connectionTimeout=setTimeout(()=>{if(!conn||!conn.open){hideOverlay();setStatus('waiting','En attente… (tu peux commencer seul)')}},15000);
 }
@@ -836,7 +947,7 @@ async function joinAsPartner(){
   await ensureSessionStream();
   const mid='castwing-p-'+code+'-'+Math.random().toString(36).substr(2,4);peer=createPeer(mid);
   peer.on('open',()=>{const c=peer.connect('castwing-'+code,{reliable:true});setupDataConnection(c)});
-  peer.on('call',ic=>{ic.answer(localStream);setupCallHandlers(ic)});
+  peer.on('call',ic=>{if(localStream)ic.answer(localStream);else ic.answer();setupCallHandlers(ic)});
   peer.on('error',e=>{hideOverlay();showToast('Session introuvable.',5000);setStatus('disconnected','Introuvable')});
   connectionTimeout=setTimeout(()=>{if(!conn||!conn.open){hideOverlay();showToast('Connexion lente',5000)}},12000);
 }
@@ -855,6 +966,8 @@ function cancelConnection(){hideOverlay();if(!conn||!conn.open)endSession()}
 
 document.addEventListener('DOMContentLoaded',()=>{
   loadVoices();
+  initVoiceCountrySelect();
+  applyLocaleVoices(selectedLocale,true);
   setMode('ai');
   if(!applyJoinCodeFromURL())showScreen('home');
 });
