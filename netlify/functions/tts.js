@@ -12,9 +12,26 @@ export default async (req, context) => {
   }
   let body;
   try { body = await req.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
-  const { text, voiceId, modelId } = body;
+  const { text, voiceId, modelId, emotion, speed } = body;
   if (!text || !voiceId) return new Response("Missing text or voiceId", { status: 400 });
   const cleanVoiceId = String(voiceId).trim();
+  const cleanEmotion = String(emotion || "neutral").trim().toLowerCase();
+  const cleanSpeed = Number.isFinite(Number(speed)) ? Number(speed) : 1;
+  const emotionSettingsMap = {
+    neutral: { stability: 0.55, similarity_boost: 0.75, style: 0.2 },
+    excited: { stability: 0.35, similarity_boost: 0.72, style: 0.72 },
+    sad: { stability: 0.78, similarity_boost: 0.68, style: 0.06 },
+    angry: { stability: 0.3, similarity_boost: 0.8, style: 0.86 },
+    whisper: { stability: 0.84, similarity_boost: 0.66, style: 0.02 },
+  };
+  const baseVoiceSettings = emotionSettingsMap[cleanEmotion] || emotionSettingsMap.neutral;
+  const speedBoost = cleanSpeed > 1 ? Math.min(0.1, (cleanSpeed - 1) * 0.25) : 0;
+  const speedSlow = cleanSpeed < 1 ? Math.min(0.1, (1 - cleanSpeed) * 0.25) : 0;
+  const voiceSettings = {
+    stability: Math.max(0.1, Math.min(1, baseVoiceSettings.stability + speedBoost - speedSlow)),
+    similarity_boost: Math.max(0.1, Math.min(1, baseVoiceSettings.similarity_boost + speedSlow * 0.5)),
+    style: Math.max(0, Math.min(1, baseVoiceSettings.style + speedBoost)),
+  };
   const fallbackVoiceIds = [
     "bHkOO3JOGzSRKwMpGIbB", // Serena
     "EXAVITQu4vr4xnSDxMaL", // Bella
@@ -34,7 +51,7 @@ export default async (req, context) => {
       body: JSON.stringify({
         text,
         model_id: model,
-        voice_settings: { stability: 0.5, similarity_boost: 0.75 }
+        voice_settings: voiceSettings
       })
     });
   }

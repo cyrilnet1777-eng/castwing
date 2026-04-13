@@ -248,11 +248,11 @@ const VOICE_PRESETS=[
 ];
 
 const EMOTION_PRESETS={
-  neutral:{label:'Neutre',rate:1,pitch:1},
-  excited:{label:'Excité',rate:1.12,pitch:1.1},
-  sad:{label:'Triste',rate:0.88,pitch:0.9},
-  angry:{label:'En colère',rate:1.08,pitch:0.85},
-  whisper:{label:'Chuchoté',rate:0.8,pitch:1.22},
+  neutral:{label:'Neutre',pitch:1},
+  excited:{label:'Excité',pitch:1.08},
+  sad:{label:'Triste',pitch:0.92},
+  angry:{label:'En colère',pitch:0.88},
+  whisper:{label:'Chuchoté',pitch:1.2},
 };
 
 const TTS_LANGS=['fr','en','es','it','de'];
@@ -371,12 +371,19 @@ function getBestVoice(p){
   return getFilteredVoices()[0]||availableVoices[0]||null;
 }
 function getEmotionSettings(){return EMOTION_PRESETS[selectedEmotion]||EMOTION_PRESETS.neutral;}
+function getCurrentVoiceSpeed(){
+  const input=document.getElementById('voiceSpeed');
+  const parsed=input?parseFloat(input.value):NaN;
+  voiceSpeed=Number.isFinite(parsed)?parsed:1;
+  return voiceSpeed;
+}
 function getSpeechStyle(v){
   const base=v||VOICE_PRESETS[0];
   const emo=getEmotionSettings();
+  const speed=getCurrentVoiceSpeed();
   return{
     pitch:(base.pitch||1)*emo.pitch,
-    rate:(base.rate||1)*(voiceSpeed||1)*emo.rate,
+    rate:(base.rate||1)*(speed||1),
   };
 }
 function setEmotion(key){
@@ -419,12 +426,15 @@ function cancelTTSPlayback(){
 async function speakWithElevenLabs(text,preset,token,cb){
   try{
     if(!preset||!preset.voiceId)throw new Error('Missing ElevenLabs voiceId');
-    const rsp=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,voiceId:preset.voiceId,modelId:'eleven_flash_v2_5'})});
+    const style=getSpeechStyle(preset);
+    const speed=getCurrentVoiceSpeed();
+    const rsp=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,voiceId:preset.voiceId,modelId:'eleven_flash_v2_5',emotion:selectedEmotion,speed})});
     if(!rsp.ok)throw new Error('HTTP '+rsp.status);
     const blob=await rsp.blob();
     if(token!==activeSpeechToken){return}
     const url=URL.createObjectURL(blob);
     const audio=new Audio(url);
+    audio.playbackRate=Math.max(0.7,Math.min(1.5,speed||1));
     ttsAudio=audio;
     const done=()=>{URL.revokeObjectURL(url);if(ttsAudio===audio)ttsAudio=null;if(token===activeSpeechToken&&cb)cb();};
     audio.onended=done;
@@ -692,7 +702,7 @@ function setupCallHandlers(c){call=c;call.on('stream',s=>{document.getElementByI
 // ── START SESSIONS ──
 async function startAiSession(){
   role='actor';sessionMode='ai';
-  voiceSpeed=parseFloat(document.getElementById('voiceSpeed').value)||1;
+  voiceSpeed=getCurrentVoiceSpeed();
   selectedEmotion=document.getElementById('emotionSelect').value||selectedEmotion;
   if(!selectedVoice)selectedVoice=VOICE_PRESETS[0];
   prompterLines=buildLines(1);prompterIndex=0;
