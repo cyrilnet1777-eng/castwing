@@ -6,7 +6,7 @@ export default async (req, context) => {
     (globalThis.Netlify && Netlify.env && typeof Netlify.env.get === "function" ? Netlify.env.get("ELEVENLABS_API_KEY") : "") ||
     process.env.ELEVENLABS_API_KEY ||
     "";
-  const apiKey = String(rawKey).trim();
+  const apiKey = String(rawKey).trim().replace(/^['"]|['"]$/g, "").replace(/^Bearer\s+/i, "");
   if (!apiKey) {
     return new Response(JSON.stringify({ error: "No API key" }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
@@ -22,9 +22,22 @@ export default async (req, context) => {
     body: JSON.stringify({ text, model_id: cleanModelId, language_code: "fr", voice_settings: { stability: 0.5, similarity_boost: 0.75 } })
   });
   if (!r.ok) {
-    let details = "";
-    try { details = await r.text(); } catch {}
-    return new Response(JSON.stringify({ error: "ElevenLabs error " + r.status, details }), { status: 502, headers: { "Content-Type": "application/json" } });
+    let detailsText = "";
+    let detailsJson = null;
+    try { detailsText = await r.text(); } catch {}
+    try { detailsJson = detailsText ? JSON.parse(detailsText) : null; } catch {}
+    const detailMsg =
+      (detailsJson && (detailsJson.detail || detailsJson.message || detailsJson.error)) ||
+      detailsText ||
+      "";
+    const hint =
+      r.status === 401 && /text_to_speech|permission|unauthorized/i.test(detailMsg)
+        ? "Check ElevenLabs key scope: enable text_to_speech permission."
+        : "";
+    return new Response(
+      JSON.stringify({ error: "ElevenLabs error " + r.status, details: detailMsg, hint }),
+      { status: 502, headers: { "Content-Type": "application/json" } }
+    );
   }
   return new Response(await r.arrayBuffer(), { status: 200, headers: { "Content-Type": "audio/mpeg" } });
 };
