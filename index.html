@@ -280,7 +280,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/p
 let role='actor',sessionMode='ai',mode='ai';
 let peer=null,conn=null,call=null,localStream=null,mediaRecorder=null,recordedChunks=[];
 let isRecording=false,isMicOn=true,isCamOn=true,prompterLines=[],prompterIndex=0,connectionTimeout=null;
-let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',selectedLocale='french',selectedUILanguage='fr',voiceSpeed=1,voiceSpeedPreset='normal',availableVoices=[],presetVoiceMap={};
+let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',selectedLocale='france',selectedUILanguage='fr',voiceSpeed=1,voiceSpeedPreset='normal',availableVoices=[],presetVoiceMap={};
 let autoAdvanceTimer=null,lastAutoSpokenIndex=-1,activeSpeechToken=0;
 let ttsAudio=null,vad=null;
 
@@ -306,68 +306,121 @@ const ELEVEN_VOICE_IDS={
   domi:'AZnzlk1XvdvUeBnXmlld',
 };
 const VOICE_LOCALES=[
-  {id:'afrikaans',label:'Afrikaans',languageCode:'en',profiles:[
-    {id:'af-sa',voice:'george',fallback:['adam','lily'],label:'Pieter',tag:'South African'},
+  {id:'argentina',label:'Argentina 🇦🇷',languageCode:'es',profiles:[
+    {id:'ar-ba',voice:'dorothy',fallback:['glinda','bella'],label:'Sofía',tag:'Rioplatense (Buenos Aires)'},
+    {id:'ar-cordoba',voice:'bella',fallback:['dorothy','charlotte'],label:'Mateo',tag:'Cordobés'},
+    {id:'ar-cuyo',voice:'glinda',fallback:['bella','antoni'],label:'Valentina',tag:'Cuyo'},
   ]},
-  {id:'arabic',label:'العربية',languageCode:'ar',profiles:[
-    {id:'ar-levant',voice:'antoni',fallback:['daniel','bella'],label:'Khaled',tag:'Levantine'},
-    {id:'ar-eg',voice:'bella',fallback:['antoni','serena'],label:'Nour',tag:'Egyptian'},
-    {id:'ar-maghreb',voice:'daniel',fallback:['serena','antoni'],label:'Youssef',tag:'Maghrebi'},
+  {id:'australia',label:'Australia 🇦🇺',languageCode:'en',profiles:[
+    {id:'au-sydney',voice:'james',fallback:['george','adam'],label:'Oliver',tag:'Sydney'},
+    {id:'au-melbourne',voice:'lily',fallback:['james','charlotte'],label:'Charlotte',tag:'Melbourne'},
+    {id:'au-brisbane',voice:'george',fallback:['james','lily'],label:'Jack',tag:'Brisbane'},
   ]},
-  {id:'chinese',label:'中文',languageCode:'zh',profiles:[
-    {id:'zh-mandarin',voice:'charlotte',fallback:['rachel','bella'],label:'Mei',tag:'Mandarin'},
-    {id:'zh-cantonese',voice:'adam',fallback:['charlotte','bella'],label:'Wei',tag:'Cantonese'},
+  {id:'belgium',label:'Belgium 🇧🇪',languageCode:'fr',profiles:[
+    {id:'be-brussels',voice:'daniel',fallback:['serena','charlotte'],label:'Noah',tag:'Bruxelles'},
+    {id:'be-liege',voice:'serena',fallback:['daniel','domi'],label:'Emma',tag:'Liège'},
+    {id:'be-namur',voice:'charlotte',fallback:['serena','daniel'],label:'Louis',tag:'Namur'},
   ]},
-  {id:'english',label:'English',languageCode:'en',profiles:[
-    {id:'en-us',voice:'adam',fallback:['george','antoni'],label:'Noah',tag:'US mainstream'},
-    {id:'en-uk',voice:'lily',fallback:['charlotte','george'],label:'Olivia',tag:'British RP'},
-    {id:'en-au',voice:'james',fallback:['george','adam'],label:'Liam',tag:'Australian'},
-    {id:'en-ca',voice:'george',fallback:['adam','lily'],label:'Mason',tag:'Canadian'},
+  {id:'brazil',label:'Brazil 🇧🇷',languageCode:'pt',profiles:[
+    {id:'br-sp',voice:'bella',fallback:['charlotte','antoni'],label:'Miguel',tag:'São Paulo'},
+    {id:'br-rio',voice:'charlotte',fallback:['bella','domi'],label:'Helena',tag:'Rio de Janeiro'},
+    {id:'br-salvador',voice:'domi',fallback:['bella','charlotte'],label:'Gael',tag:'Salvador'},
   ]},
-  {id:'french',label:'Français',languageCode:'fr',profiles:[
-    {id:'fr-paris',voice:'serena',fallback:['charlotte','daniel'],label:'Camille',tag:'Parisien'},
-    {id:'fr-swiss',voice:'george',fallback:['daniel','serena'],label:'Nicolas',tag:'Suisse romand'},
-    {id:'fr-belgian',voice:'daniel',fallback:['serena','charlotte'],label:'Lucas',tag:'Belge'},
-    {id:'fr-quebec',voice:'charlotte',fallback:['serena','bella'],label:'Élodie',tag:'Québécois'},
-    {id:'fr-south',voice:'domi',fallback:['serena','daniel'],label:'Lina',tag:'Sud'},
+  {id:'canada',label:'Canada 🇨🇦',languageCode:'en',profiles:[
+    {id:'ca-toronto',voice:'george',fallback:['lily','james'],label:'Liam',tag:'Toronto'},
+    {id:'ca-vancouver',voice:'lily',fallback:['george','adam'],label:'Olivia',tag:'Vancouver'},
+    {id:'ca-montreal-en',voice:'james',fallback:['george','lily'],label:'Noah',tag:'Montréal (English)'},
   ]},
-  {id:'spanish',label:'Español',languageCode:'es',profiles:[
-    {id:'es-mx',voice:'glinda',fallback:['bella','dorothy'],label:'Santiago',tag:'Mexicano'},
-    {id:'es-ar',voice:'dorothy',fallback:['glinda','antoni'],label:'Valentina',tag:'Argentino'},
-    {id:'es-co',voice:'bella',fallback:['glinda','serena'],label:'Camila',tag:'Colombiano'},
-    {id:'es-es',voice:'antoni',fallback:['dorothy','bella'],label:'Javier',tag:'Castellano'},
-    {id:'es-cat',voice:'charlotte',fallback:['bella','glinda'],label:'Montserrat',tag:'Catalán'},
+  {id:'china',label:'China 🇨🇳',languageCode:'zh',profiles:[
+    {id:'cn-mandarin',voice:'charlotte',fallback:['rachel','bella'],label:'Wei',tag:'Mandarin (Beijing)'},
+    {id:'cn-shanghai',voice:'bella',fallback:['charlotte','adam'],label:'Yue',tag:'Shanghainese-flavored Mandarin'},
+    {id:'cn-cantonese',voice:'adam',fallback:['charlotte','bella'],label:'Jie',tag:'Cantonese'},
   ]},
-  {id:'german',label:'Deutsch',languageCode:'de',profiles:[
-    {id:'de-standard',voice:'antoni',fallback:['adam','charlotte'],label:'Johann',tag:'Hochdeutsch'},
-    {id:'de-swiss',voice:'adam',fallback:['antoni','bella'],label:'Felix',tag:'Swiss German'},
+  {id:'colombia',label:'Colombia 🇨🇴',languageCode:'es',profiles:[
+    {id:'co-bogota',voice:'bella',fallback:['glinda','dorothy'],label:'Santiago',tag:'Bogotá'},
+    {id:'co-medellin',voice:'glinda',fallback:['bella','charlotte'],label:'Valeria',tag:'Medellín'},
+    {id:'co-cali',voice:'dorothy',fallback:['bella','glinda'],label:'Samuel',tag:'Cali'},
   ]},
-  {id:'hebrew',label:'עברית',languageCode:'he',profiles:[
-    {id:'he-tlv',voice:'daniel',fallback:['charlotte','antoni'],label:'Noam',tag:'Tel Aviv'},
-    {id:'he-jerusalem',voice:'charlotte',fallback:['daniel','serena'],label:'Yael',tag:'Jerusalem'},
+  {id:'egypt',label:'Egypt 🇪🇬',languageCode:'ar',profiles:[
+    {id:'eg-cairo',voice:'bella',fallback:['daniel','antoni'],label:'Mohamed',tag:'Cairo Arabic'},
+    {id:'eg-alex',voice:'daniel',fallback:['bella','serena'],label:'Fatma',tag:'Alexandria Arabic'},
+    {id:'eg-upper',voice:'antoni',fallback:['bella','daniel'],label:'Omar',tag:'Upper Egypt flavor'},
   ]},
-  {id:'italian',label:'Italiano',languageCode:'it',profiles:[
-    {id:'it-standard',voice:'daniel',fallback:['bella','domi'],label:'Luca',tag:'Standard'},
-    {id:'it-naples',voice:'antoni',fallback:['daniel','adam'],label:'Marco',tag:'Napoletano'},
-    {id:'it-milan',voice:'bella',fallback:['daniel','charlotte'],label:'Giulia',tag:'Milanese'},
+  {id:'france',label:'France 🇫🇷',languageCode:'fr',profiles:[
+    {id:'fr-paris',voice:'serena',fallback:['charlotte','daniel'],label:'Gabriel',tag:'Paris'},
+    {id:'fr-lyon',voice:'daniel',fallback:['serena','domi'],label:'Léa',tag:'Lyon'},
+    {id:'fr-marseille',voice:'domi',fallback:['serena','daniel'],label:'Raphaël',tag:'Marseille'},
   ]},
-  {id:'portuguese',label:'Português',languageCode:'pt',profiles:[
-    {id:'pt-br',voice:'bella',fallback:['charlotte','antoni'],label:'Beatriz',tag:'Brasileiro'},
-    {id:'pt-pt',voice:'antoni',fallback:['bella','daniel'],label:'João',tag:'Lisboeta'},
+  {id:'germany',label:'Germany 🇩🇪',languageCode:'de',profiles:[
+    {id:'de-berlin',voice:'antoni',fallback:['adam','charlotte'],label:'Emil',tag:'Berlin'},
+    {id:'de-hamburg',voice:'adam',fallback:['antoni','bella'],label:'Mia',tag:'Hamburg'},
+    {id:'de-munich',voice:'charlotte',fallback:['adam','antoni'],label:'Finn',tag:'Munich'},
   ]},
-  {id:'japanese',label:'日本語',languageCode:'ja',profiles:[
-    {id:'ja-tokyo',voice:'bella',fallback:['charlotte','adam'],label:'Aiko',tag:'Tokyo'},
-    {id:'ja-osaka',voice:'charlotte',fallback:['bella','daniel'],label:'Haru',tag:'Osaka'},
+  {id:'india',label:'India 🇮🇳',languageCode:'en',profiles:[
+    {id:'in-delhi',voice:'george',fallback:['james','lily'],label:'Aarav',tag:'Delhi English'},
+    {id:'in-mumbai',voice:'charlotte',fallback:['george','domi'],label:'Ananya',tag:'Mumbai English'},
+    {id:'in-bangalore',voice:'james',fallback:['george','adam'],label:'Vihaan',tag:'Bangalore English'},
   ]},
-  {id:'nigeria',label:'Nigeria',languageCode:'en',profiles:[
-    {id:'ng-ne',voice:'george',fallback:['james','lily'],label:'Chike',tag:'Nigerian English'},
-    {id:'ng-pidgin',voice:'domi',fallback:['charlotte','adam'],label:'Sade',tag:'Pidgin English'},
-    {id:'ng-yoruba',voice:'charlotte',fallback:['domi','james'],label:'Bola',tag:'Yoruba-flavored English'},
-    {id:'ng-igbo',voice:'lily',fallback:['george','domi'],label:'Adaeze',tag:'Igbo-flavored English'},
+  {id:'italy',label:'Italy 🇮🇹',languageCode:'it',profiles:[
+    {id:'it-rome',voice:'daniel',fallback:['bella','antoni'],label:'Leonardo',tag:'Rome'},
+    {id:'it-milan',voice:'bella',fallback:['daniel','charlotte'],label:'Sofia',tag:'Milan'},
+    {id:'it-naples',voice:'antoni',fallback:['daniel','bella'],label:'Tommaso',tag:'Naples'},
   ]},
-  {id:'russian',label:'Русский',languageCode:'ru',profiles:[
+  {id:'japan',label:'Japan 🇯🇵',languageCode:'ja',profiles:[
+    {id:'jp-tokyo',voice:'bella',fallback:['charlotte','adam'],label:'Haruto',tag:'Tokyo'},
+    {id:'jp-osaka',voice:'charlotte',fallback:['bella','daniel'],label:'Yui',tag:'Osaka'},
+    {id:'jp-nagoya',voice:'adam',fallback:['charlotte','bella'],label:'Sota',tag:'Nagoya'},
+  ]},
+  {id:'mexico',label:'Mexico 🇲🇽',languageCode:'es',profiles:[
+    {id:'mx-cdmx',voice:'glinda',fallback:['bella','dorothy'],label:'Santiago',tag:'CDMX'},
+    {id:'mx-guadalajara',voice:'bella',fallback:['glinda','charlotte'],label:'Ximena',tag:'Guadalajara'},
+    {id:'mx-monterrey',voice:'dorothy',fallback:['glinda','bella'],label:'Mateo',tag:'Monterrey'},
+  ]},
+  {id:'morocco',label:'Morocco 🇲🇦',languageCode:'ar',profiles:[
+    {id:'ma-casablanca',voice:'daniel',fallback:['bella','serena'],label:'Yassine',tag:'Darija (Casablanca)'},
+    {id:'ma-rabat',voice:'serena',fallback:['daniel','antoni'],label:'Salma',tag:'Rabat Arabic'},
+    {id:'ma-marrakech',voice:'antoni',fallback:['daniel','bella'],label:'Adam',tag:'Marrakech flavor'},
+  ]},
+  {id:'nigeria',label:'Nigeria 🇳🇬',languageCode:'en',profiles:[
+    {id:'ng-ne',voice:'george',fallback:['james','lily'],label:'Chinedu',tag:'Nigerian English'},
+    {id:'ng-pidgin',voice:'james',fallback:['george','adam'],label:'Amina',tag:'Pidgin English'},
+    {id:'ng-yoruba',voice:'charlotte',fallback:['domi','lily'],label:'Tolu',tag:'Yoruba-flavored English'},
+    {id:'ng-igbo',voice:'domi',fallback:['charlotte','george'],label:'Amara',tag:'Igbo-flavored English'},
+  ]},
+  {id:'portugal',label:'Portugal 🇵🇹',languageCode:'pt',profiles:[
+    {id:'pt-lisbon',voice:'antoni',fallback:['bella','daniel'],label:'Francisco',tag:'Lisbon'},
+    {id:'pt-porto',voice:'bella',fallback:['antoni','charlotte'],label:'Maria',tag:'Porto'},
+    {id:'pt-coimbra',voice:'daniel',fallback:['antoni','bella'],label:'João',tag:'Coimbra'},
+  ]},
+  {id:'russia',label:'Russia 🇷🇺',languageCode:'ru',profiles:[
     {id:'ru-moscow',voice:'daniel',fallback:['bella','adam'],label:'Mikhail',tag:'Moscow'},
     {id:'ru-spb',voice:'bella',fallback:['daniel','charlotte'],label:'Anya',tag:'Saint Petersburg'},
+    {id:'ru-kazan',voice:'adam',fallback:['daniel','bella'],label:'Artem',tag:'Kazan'},
+  ]},
+  {id:'south-africa',label:'South Africa 🇿🇦',languageCode:'en',profiles:[
+    {id:'za-johannesburg',voice:'george',fallback:['lily','james'],label:'Sipho',tag:'Johannesburg English'},
+    {id:'za-cape-town',voice:'lily',fallback:['george','adam'],label:'Ayanda',tag:'Cape Town English'},
+    {id:'za-durban',voice:'james',fallback:['george','lily'],label:'Thabo',tag:'Durban English'},
+  ]},
+  {id:'spain',label:'Spain 🇪🇸',languageCode:'es',profiles:[
+    {id:'es-madrid',voice:'antoni',fallback:['dorothy','bella'],label:'Hugo',tag:'Castellano (Madrid)'},
+    {id:'es-barcelona',voice:'charlotte',fallback:['bella','glinda'],label:'Lucía',tag:'Catalán flavor'},
+    {id:'es-seville',voice:'dorothy',fallback:['antoni','bella'],label:'Martín',tag:'Andalusian'},
+  ]},
+  {id:'switzerland',label:'Switzerland 🇨🇭',languageCode:'fr',profiles:[
+    {id:'ch-geneva',voice:'george',fallback:['daniel','serena'],label:'Noah',tag:'Romand (Geneva)'},
+    {id:'ch-lausanne',voice:'daniel',fallback:['serena','charlotte'],label:'Emma',tag:'Romand (Lausanne)'},
+    {id:'ch-fribourg',voice:'serena',fallback:['daniel','george'],label:'Luca',tag:'Fribourg'},
+  ]},
+  {id:'united-kingdom',label:'United Kingdom 🇬🇧',languageCode:'en',profiles:[
+    {id:'uk-london',voice:'lily',fallback:['charlotte','george'],label:'George',tag:'London RP'},
+    {id:'uk-manchester',voice:'charlotte',fallback:['lily','james'],label:'Amelia',tag:'Manchester'},
+    {id:'uk-birmingham',voice:'george',fallback:['lily','adam'],label:'Harry',tag:'Birmingham'},
+  ]},
+  {id:'united-states',label:'United States 🇺🇸',languageCode:'en',profiles:[
+    {id:'us-ny',voice:'adam',fallback:['george','james'],label:'Liam',tag:'New York'},
+    {id:'us-texas',voice:'james',fallback:['adam','george'],label:'Emma',tag:'Texas'},
+    {id:'us-california',voice:'george',fallback:['adam','lily'],label:'Noah',tag:'California'},
   ]},
 ];
 let VOICE_PRESETS=[];
