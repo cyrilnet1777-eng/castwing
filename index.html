@@ -233,20 +233,18 @@ let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',
 let autoAdvanceTimer=null,lastAutoSpokenIndex=-1,activeSpeechToken=0;
 let ttsAudio=null,vad=null;
 
-const useElevenLabs=false;
-// ElevenLabs voices (reference): Rachel (female calm), Bella (female soft), Antoni (male warm),
-// Josh (male deep), Serena (female FR), Daniel (male FR)
+const useElevenLabs=true;
 const pauseBetweenLines=500;
 
 const ICE_SERVERS=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:'stun:stun2.l.google.com:19302'}];
 
 const VOICE_PRESETS=[
-  {id:'f1',label:'Sophie',tag:'Douce 🌸',pitch:1.15,rate:0.95},
-  {id:'f2',label:'Marie',tag:'Pro 🎯',pitch:1.0,rate:1.0},
-  {id:'f3',label:'Camille',tag:'Charmeuse 💋',pitch:1.2,rate:0.88},
-  {id:'m1',label:'Thomas',tag:'Neutre 🎯',pitch:0.85,rate:1.0},
-  {id:'m2',label:'Jacques',tag:'Grave 🎭',pitch:0.65,rate:0.92},
-  {id:'m3',label:'Billy',tag:'Énergique 🤠',pitch:0.9,rate:1.15},
+  {id:'serena',label:'Serena',tag:'FR · Female · warm',voiceId:'bHkOO3JOGzSRKwMpGIbB',pitch:1,rate:1},
+  {id:'daniel',label:'Daniel',tag:'FR · Male · deep',voiceId:'onwK4e9ZLuTAKqWW03F9',pitch:1,rate:1},
+  {id:'rachel',label:'Rachel',tag:'EN · Female · calm',voiceId:'21m00Tcm4TlvDq8ikWAM',pitch:1,rate:1},
+  {id:'antoni',label:'Antoni',tag:'EN · Male · warm',voiceId:'ErXwobaYiN019PkySvjV',pitch:1,rate:1},
+  {id:'bella',label:'Bella',tag:'EN · Female · soft',voiceId:'EXAVITQu4vr4xnSDxMaL',pitch:1,rate:1},
+  {id:'josh',label:'Josh',tag:'EN · Male · deep',voiceId:'TxGEqnHWrfWFTfGW9XjX',pitch:1,rate:1},
 ];
 
 const EMOTION_PRESETS={
@@ -399,13 +397,7 @@ function initVoiceGrid(){
 }
 
 function previewVoice(v){
-  activeSpeechToken++;
-  cancelTTSPlayback();
-  const u=new SpeechSynthesisUtterance('Bonjour, je suis '+v.label+'.');
-  const style=getSpeechStyle(v);
-  u.lang='fr-FR';u.pitch=style.pitch;u.rate=style.rate;
-  const voice=getBestVoice(v);if(voice)u.voice=voice;
-  speechSynthesis.speak(u);
+  aiSpeak('Bonjour, je suis '+v.label+'.');
 }
 
 function populateSessionVoiceSelect(){
@@ -424,9 +416,10 @@ function cancelTTSPlayback(){
     ttsAudio=null;
   }
 }
-async function speakWithElevenLabs(text,preset,style,token,cb){
+async function speakWithElevenLabs(text,preset,token,cb){
   try{
-    const rsp=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,presetId:preset.id,voiceURI:presetVoiceMap[preset.id]||null,emotion:selectedEmotion,rate:style.rate,pitch:style.pitch})});
+    if(!preset||!preset.voiceId)throw new Error('Missing ElevenLabs voiceId');
+    const rsp=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,voiceId:preset.voiceId,modelId:'eleven_flash_v2_5'})});
     if(!rsp.ok)throw new Error('HTTP '+rsp.status);
     const blob=await rsp.blob();
     if(token!==activeSpeechToken){return}
@@ -438,7 +431,7 @@ async function speakWithElevenLabs(text,preset,style,token,cb){
     audio.onerror=done;
     try{await audio.play()}catch(e){done()}
   }catch(e){
-    if(token===activeSpeechToken)speakWithBrowser(text,preset,style,token,cb);
+    if(token===activeSpeechToken){showToast('ElevenLabs indisponible, fallback navigateur',3500);speakWithBrowser(text,preset,getSpeechStyle(preset),token,cb)}
   }
 }
 function speakWithBrowser(text,preset,style,token,cb){
@@ -456,10 +449,10 @@ function speakWithBrowser(text,preset,style,token,cb){
 function aiSpeak(text,cb){
   if(!text){if(cb)cb();return}
   const preset=selectedVoice||VOICE_PRESETS[0];
-  const style=getSpeechStyle(preset);
   const token=++activeSpeechToken;
   cancelTTSPlayback();
-  if(useElevenLabs){speakWithElevenLabs(text,preset,style,token,cb);return}
+  if(useElevenLabs){speakWithElevenLabs(text,preset,token,cb);return}
+  const style=getSpeechStyle(preset);
   speakWithBrowser(text,preset,style,token,cb);
 }
 
