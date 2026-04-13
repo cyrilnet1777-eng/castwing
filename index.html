@@ -1121,14 +1121,18 @@ function syncPrompter(){if(conn&&conn.open)conn.send({type:'prompter',index:prom
 
 // ── Camera ──
 async function startCamera(){
-  if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null}
   const localVideo=document.getElementById('localVideo');
+  const hasLiveTrack=(stream,kind)=>stream&&stream.getTracks().some(t=>t.kind===kind&&t.readyState==='live');
   async function attachStream(stream){
-    localVideo.srcObject=stream;
+    if(localVideo.srcObject!==stream)localVideo.srcObject=stream;
+    localVideo.muted=true;
+    localVideo.playsInline=true;
     document.getElementById('noVideoMsg').style.display='none';
     try{await localVideo.play()}catch(e){}
     return stream;
   }
+  if(hasLiveTrack(localStream,'video'))return attachStream(localStream);
+  if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null}
   const attempts=[
     {video:{facingMode:{ideal:'user'},width:{ideal:1280},height:{ideal:720}},audio:true},
     {video:{width:{ideal:1280},height:{ideal:720}},audio:true},
@@ -1142,12 +1146,15 @@ async function startCamera(){
   for(const constraints of attempts){
     try{
       localStream=await navigator.mediaDevices.getUserMedia(constraints);
+      localStream.getVideoTracks().forEach(t=>t.enabled=isCamOn);
+      localStream.getAudioTracks().forEach(t=>t.enabled=isMicOn);
       return await attachStream(localStream);
     }catch(e){lastErr=e}
   }
   for(const constraints of videoOnlyAttempts){
     try{
       localStream=await navigator.mediaDevices.getUserMedia(constraints);
+      localStream.getVideoTracks().forEach(t=>t.enabled=isCamOn);
       await attachStream(localStream);
       showToast('Micro indisponible, caméra activée',4000);
       return localStream;
@@ -1159,11 +1166,12 @@ async function startCamera(){
 async function ensureSessionStream(){
   const cam=await startCamera();
   if(cam){
-    if(!cam.getAudioTracks().length){
+    const hasLiveAudio=cam.getAudioTracks().some(t=>t.readyState==='live');
+    if(!hasLiveAudio){
       try{
         const micOnly=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
         const micTrack=micOnly.getAudioTracks()[0];
-        if(micTrack)cam.addTrack(micTrack);
+        if(micTrack){micTrack.enabled=isMicOn;cam.addTrack(micTrack)}
       }catch(e){}
     }
     return cam;
@@ -1195,7 +1203,21 @@ function stopRecording(){if(mediaRecorder&&mediaRecorder.state!=='inactive')medi
 // ── WebRTC ──
 function createPeer(id){return new Peer(id,{config:{iceServers:ICE_SERVERS}})}
 function setStatus(s,t){document.getElementById('statusDot').className='status-dot '+s;document.getElementById('statusText').textContent=t}
-function handleDataMessage(d){if(d.type==='prompter'){prompterIndex=d.index;renderPrompter()}else if(d.type==='script'){prompterLines=d.lines;prompterIndex=d.index||0;renderPrompter()}else if(d.type==='ready'){if(role==='actor'){call=localStream?peer.call(conn.peer,localStream):peer.call(conn.peer);setupCallHandlers(call)}}}
+function handleDataMessage(d){
+  if(d.type==='prompter'){
+    prompterIndex=d.index;
+    renderPrompter();
+  }else if(d.type==='script'){
+    prompterLines=d.lines;
+    prompterIndex=d.index||0;
+    renderPrompter();
+  }else if(d.type==='ready'){
+    if(role==='actor'){
+      call=localStream?peer.call(conn.peer,localStream):peer.call(conn.peer);
+      setupCallHandlers(call);
+    }
+  }
+}
 function setupDataConnection(c){
   conn=c;conn.on('open',()=>{setStatus('','Connecté');hideOverlay();showToast('Partenaire connecté !');if(role==='actor'&&prompterLines.length>0)conn.send({type:'script',lines:prompterLines,index:prompterIndex});if(role==='partner')conn.send({type:'ready'})});
   conn.on('data',handleDataMessage);conn.on('close',()=>{setStatus('disconnected','Déconnecté');showToast('Partenaire déconnecté')});conn.on('error',e=>showToast('Erreur : '+e.message));
@@ -1222,7 +1244,8 @@ async function startPartnerSession(){
   cancelSpeechFlow();
   const code=document.getElementById('mySessionCode').textContent;if(!code||code==='—')return;
   prompterLines=buildLines(2);prompterIndex=0;
-  showScreen('session');renderPrompter();setStatus('waiting','En attente du partenaire…');showOverlay('En attente…','Partage le code '+code);
+  showScreen('session');renderPrompter();setStatus('waiting','En attente du partenaire…');hideOverlay();
+  showToast('Partage le code '+code,4500);
   await ensureSessionStream();
   const pid='castwing-'+code;peer=createPeer(pid);
   peer.on('open',()=>{});
