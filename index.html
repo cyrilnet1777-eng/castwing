@@ -62,9 +62,10 @@ input[type="file"]{display:none}
 
 /* CHAR */
 .char-grid{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.4rem}
-.char-item{padding:.5rem .9rem;border-radius:var(--radius);border:1.5px solid var(--border);background:var(--white);cursor:pointer;transition:all .2s;font-size:.82rem;font-weight:700}
+.char-item{padding:.5rem .9rem;border-radius:var(--radius);border:1.5px solid var(--border);background:#f4faf7;color:#0f2a24;cursor:pointer;transition:all .2s;font-size:.82rem;font-weight:700}
 .char-item:hover{border-color:var(--blue)}.char-item.selected{background:var(--blue);color:var(--white);border-color:var(--blue)}
-.char-item .cc{font-weight:400;font-size:.72rem;opacity:.7;margin-left:.3rem}
+.char-item .cc{font-weight:400;font-size:.72rem;opacity:.75;margin-left:.3rem;color:#3d5c52}
+.char-item.selected .cc{color:rgba(255,255,255,.85)}
 
 /* MODE TOGGLE */
 .mode-toggle{display:flex;gap:.5rem;margin-top:.4rem}
@@ -1293,6 +1294,8 @@ function normalizeScriptLine(line){
   return String(line||'')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g,'')
+    .replace(/[\u2010-\u2015\u2212]/g,'-')
+    .replace(/\u00A0/g,' ')
     .replace(/\s+/g,' ')
     .trim()
     .toUpperCase();
@@ -1301,7 +1304,7 @@ function normalizeScriptLine(line){
 function looksLikeWatermarkLine(line){
   const l=String(line||'').trim();
   if(!l)return false;
-  if(l.length<3||l.length>64)return false;
+  if(l.length<3||l.length>72)return false;
   if(/[.:;!?]/.test(l))return false;
   const letters=(l.match(/[A-Za-zÀ-ÖØ-öø-ÿ]/g)||[]).length;
   const specials=(l.match(/[_\-]/g)||[]).length;
@@ -1310,10 +1313,17 @@ function looksLikeWatermarkLine(line){
   const compact=l.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g,'');
   if(!compact)return false;
   const upperRatio=(compact.match(/[A-ZÀ-ÖØ-Þ]/g)||[]).length/compact.length;
-  return upperRatio>0.72||specials>=2;
+  return upperRatio>0.65||specials>=2;
 }
 
-function stripPdfWatermarkNoise(text,pageCount){
+function guessWatermarkNameKeyFromFileName(fileName){
+  const base=String(fileName||'').replace(/\.[^.]+$/,'');
+  const m=base.match(/[_\s-]+([A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ\s.'’-]{2,})$/u);
+  if(!m)return '';
+  return normalizeScriptLine(m[1]);
+}
+
+function stripPdfWatermarkNoise(text,pageCount,fileName){
   const lines=String(text||'').split('\n').map(l=>l.replace(/\u00A0/g,' ').trim());
   const freq=new Map();
   for(const line of lines){
@@ -1322,11 +1332,21 @@ function stripPdfWatermarkNoise(text,pageCount){
     if(!key)continue;
     freq.set(key,(freq.get(key)||0)+1);
   }
-  const repeatThreshold=Math.max(3,Math.ceil((Number(pageCount)||1)*0.6));
+  const pages=Math.max(1,Number(pageCount)||1);
+  const repeatThreshold=Math.max(2,Math.ceil(pages*0.35));
+  const strongRepeatThreshold=Math.max(3,Math.ceil(pages*0.55));
+  const fileNameKey=guessWatermarkNameKeyFromFileName(fileName);
+  const screenplayTokens=new Set(['CUT','FADE','DISSOLVE','SPLIT','MATCH','INTERMISSION','FIN','END','NOIR','BLACK','TITLE','CREDITS','MONTAGE']);
   const noise=new Set();
   for(const [key,count] of freq.entries()){
-    if(count<repeatThreshold)continue;
-    if(looksLikeWatermarkLine(key))noise.add(key);
+    if(!key)continue;
+    if(fileNameKey&&key===fileNameKey&&count>=2)noise.add(key);
+    if(count<strongRepeatThreshold)continue;
+    if(screenplayTokens.has(key))continue;
+    const wordCount=key.split(/\s+/).filter(Boolean).length;
+    const looksLikeNameWatermark=wordCount>=2&&key.length<=72&&!/[.:;!?]/.test(key);
+    if(looksLikeWatermarkLine(key)&&looksLikeNameWatermark)noise.add(key);
+    if(count>=repeatThreshold&&looksLikeNameWatermark&&key.length<=48)noise.add(key);
   }
   const cleaned=[];
   let prev='';
@@ -1351,7 +1371,7 @@ async function processPDF(n,file){
     const buf=await file.arrayBuffer();const pdf=await pdfjsLib.getDocument({data:buf}).promise;const pageTexts=[];
     for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const ct=await pg.getTextContent();pageTexts.push(extractPageText(ct))}
     const rawText=pageTexts.join('\n').replace(/\u00A0/g,' ');
-    const cleanText=stripPdfWatermarkNoise(rawText,pdf.numPages);
+    const cleanText=stripPdfWatermarkNoise(rawText,pdf.numPages,file&&file.name?file.name:'');
     pdfScript=parsePDFScript(cleanText||rawText);
     const chars=getChars();
     document.getElementById('uploadZone'+n).style.display='none';
