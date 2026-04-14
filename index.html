@@ -67,6 +67,7 @@ input[type="file"]{display:none}
 .char-grid .char-item.selected{background:var(--blue);color:var(--white) !important;border-color:var(--blue)}
 .char-grid .char-item .cc{font-weight:400;font-size:.72rem;opacity:.75;margin-left:.3rem;color:#3d5c52 !important}
 .char-item.selected .cc{color:rgba(255,255,255,.85)}
+.partner-char-grid .char-item.partner-all-chip{flex:1 1 100%;justify-content:center;text-align:center}
 
 /* MODE TOGGLE */
 .mode-toggle{display:flex;gap:.5rem;margin-top:.4rem}
@@ -190,7 +191,7 @@ input[type="file"]{display:none}
     <div class="upload-ok" id="uploadOk1" style="display:none"><span>✓</span><span class="fname" id="fileName1"></span><button class="clear-btn" onclick="clearPDF(1)">✕</button></div>
     <input type="file" id="pdfInput1" accept=".pdf,application/pdf" onchange="handlePDFInput(1,this)">
     <div class="setup-status" id="setupStatus1"></div>
-    <div id="charSection1" style="display:none;margin-top:1rem"><label id="myCharacterLabel1">Mon personnage</label><div class="char-grid" id="charGrid1"></div></div>
+    <div id="charSection1" style="display:none;margin-top:1rem"><label id="myCharacterLabel1">Mon personnage</label><div class="char-grid" id="charGrid1"></div><div id="partnerAssignWrap1" style="display:none;margin-top:1rem"><label id="partnerReadsLabel1">IA lit les répliques de :</label><div class="char-grid partner-char-grid" id="partnerCharGrid1"></div><div class="mode-hint" id="partnerAssignHint1"></div></div></div>
     <div style="margin-top:1rem"><label id="pasteScriptLabel1">Ou colle le texte</label><textarea id="scriptInput1" placeholder="MOI: Ma réplique&#10;PARTENAIRE: Sa réplique"></textarea></div>
   </div>
   <div class="setup-card">
@@ -302,6 +303,7 @@ let role='actor',sessionMode='ai',mode='ai';
 let peer=null,conn=null,call=null,localStream=null,mediaRecorder=null,recordedChunks=[];
 let isRecording=false,isMicOn=true,isCamOn=true,prompterLines=[],prompterIndex=0,connectionTimeout=null;
 let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',selectedLocale='french',selectedUILanguage='fr',voiceSpeed=1,availableVoices=[],presetVoiceMap={};
+let soloPartnerMode='all',soloPartnerChar=null;
 let autoAdvanceTimer=null,lastAutoSpokenIndex=-1,activeSpeechToken=0;
 let ttsAudio=null,vad=null;
 
@@ -531,8 +533,8 @@ const UI_LANGUAGES=[
   {id:'hi',label:'हिन्दी'},
 ];
 const UI_I18N={
-  fr:{homeSubtitle:"Studio d'audition",siteLanguageLabel:'Langue du site',homeSoloTitle:'Solo + IA',homeSoloDesc:"L'IA donne la réplique avec une voix",homePartnerTitle:'Avec un partenaire',homePartnerDesc:"Inviter quelqu'un à donner la réplique",homeFooterText:'WebRTC pair-à-pair · Aucune donnée stockée',partnerChoiceTitle:'Session partenaire',partnerCreateTitle:'Je crée la session (acteur)',partnerCreateDesc:'Générer un code et inviter un partenaire',partnerJoinTitle:'Je rejoins une session (partenaire)',partnerJoinDesc:"Entrer le code de l'acteur",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF ou texte)',uploadLabel:'Glisse ton PDF ici ou clique',uploadSub:'Format scénario standard',myCharacterLabel:'Mon personnage',pasteScriptLabel:'Ou colle le texte',replyModeLabel:'Mode réplique',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuel',modeAutoBtn:'🎤 Auto',voiceSectionLabel:"Voix de l'IA",voiceLanguageLabel:'Langue voix',emotionLabel:'Émotion',speedLabel:'Vitesse',speedSlowBtn:'Lent x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rapide x1.6',launchAiBtn:'Lancer la session 🦾',setupPartnerTitle:'Avec un partenaire',sessionCodeLabel:'Ton code de session',sessionCodeHint:'Partage ce code à ton partenaire',copyCodeBtn:'📋 Copier code',copyLinkBtn:'🔗 Copier lien',shareBtn:'📤 Partager',launchPartnerBtn:'Lancer la session 🎬',joinScreenTitle:'Rejoindre une session',joinCodeLabel:'Code de session',joinCodePlaceholder:"Entre le code de l'acteur",joinSessionBtn:'Rejoindre 🎙️',prompterEmptyText:'Aucun texte chargé',sessionVoiceLabel:'🦾 Voix :',prevBtn:'◀ Préc',nextBtn:'Suiv ▶',quitBtn:'Quitter',modeHintAi:"L'IA lit les répliques du partenaire automatiquement.",modeHintManual:'Avance les répliques manuellement avec les boutons.',modeHintAuto:"L'IA lit le partenaire puis détecte ton silence (1,5s) pour avancer.",toastEmotion:'Émotion',toastSpeed:'Vitesse',toastVoice:'Voix',toastAccent:'Langue voix',toastLanguage:'Langue du site',toastVoiceFallback:'Voix de secours utilisée'},
-  en:{homeSubtitle:'Audition studio',siteLanguageLabel:'Website language',homeSoloTitle:'Solo + AI',homeSoloDesc:'AI reads the partner lines',homePartnerTitle:'With a partner',homePartnerDesc:'Invite someone to read lines with you',homeFooterText:'Peer-to-peer WebRTC · No stored data',partnerChoiceTitle:'Partner session',partnerCreateTitle:'Create session (actor)',partnerCreateDesc:'Generate a code and invite a partner',partnerJoinTitle:'Join session (partner)',partnerJoinDesc:"Enter the actor's code",setupAiTitle:'Solo + AI',scriptLabel:'Script (PDF or text)',uploadLabel:'Drop your PDF here or click',uploadSub:'Standard screenplay format',myCharacterLabel:'My character',pasteScriptLabel:'Or paste text',replyModeLabel:'Reply mode',modeAiBtn:'🦾 Voice AI',modeManBtn:'✋ Manual',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'AI voice',voiceLanguageLabel:'Voice language',emotionLabel:'Emotion',speedLabel:'Speed',speedSlowBtn:'Slow x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Fast x1.6',launchAiBtn:'Start session 🦾',setupPartnerTitle:'With a partner',sessionCodeLabel:'Your session code',sessionCodeHint:'Share this code with your partner',copyCodeBtn:'📋 Copy code',copyLinkBtn:'🔗 Copy link',shareBtn:'📤 Share',launchPartnerBtn:'Start session 🎬',joinScreenTitle:'Join a session',joinCodeLabel:'Session code',joinCodePlaceholder:"Enter actor's code",joinSessionBtn:'Join 🎙️',prompterEmptyText:'No script loaded',sessionVoiceLabel:'🦾 Voice:',prevBtn:'◀ Prev',nextBtn:'Next ▶',quitBtn:'Quit',modeHintAi:'AI reads partner lines automatically.',modeHintManual:'Advance lines manually with the buttons.',modeHintAuto:'AI reads partner lines and advances after 1.5s silence.',toastEmotion:'Emotion',toastSpeed:'Speed',toastVoice:'Voice',toastAccent:'Voice language',toastLanguage:'Website language',toastVoiceFallback:'Backup voice used'},
+  fr:{homeSubtitle:"Studio d'audition",siteLanguageLabel:'Langue du site',homeSoloTitle:'Solo + IA',homeSoloDesc:"L'IA donne la réplique avec une voix",homePartnerTitle:'Avec un partenaire',homePartnerDesc:"Inviter quelqu'un à donner la réplique",homeFooterText:'WebRTC pair-à-pair · Aucune donnée stockée',partnerChoiceTitle:'Session partenaire',partnerCreateTitle:'Je crée la session (acteur)',partnerCreateDesc:'Générer un code et inviter un partenaire',partnerJoinTitle:'Je rejoins une session (partenaire)',partnerJoinDesc:"Entrer le code de l'acteur",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF ou texte)',uploadLabel:'Glisse ton PDF ici ou clique',uploadSub:'Format scénario standard',myCharacterLabel:'Mon personnage',partnerReadsLabel:'IA lit les répliques de :',partnerAllOthersBtn:'Tous les autres personnages',partnerHintAll:'L’IA joue tous les rôles sauf le tien.',partnerHintDuo:'Mode duo : uniquement les échanges entre toi et ce personnage.',pickCharacterFirst:'Choisis d’abord ton personnage',pasteScriptLabel:'Ou colle le texte',replyModeLabel:'Mode réplique',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuel',modeAutoBtn:'🎤 Auto',voiceSectionLabel:"Voix de l'IA",voiceLanguageLabel:'Langue voix',emotionLabel:'Émotion',speedLabel:'Vitesse',speedSlowBtn:'Lent x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rapide x1.6',launchAiBtn:'Lancer la session 🦾',setupPartnerTitle:'Avec un partenaire',sessionCodeLabel:'Ton code de session',sessionCodeHint:'Partage ce code à ton partenaire',copyCodeBtn:'📋 Copier code',copyLinkBtn:'🔗 Copier lien',shareBtn:'📤 Partager',launchPartnerBtn:'Lancer la session 🎬',joinScreenTitle:'Rejoindre une session',joinCodeLabel:'Code de session',joinCodePlaceholder:"Entre le code de l'acteur",joinSessionBtn:'Rejoindre 🎙️',prompterEmptyText:'Aucun texte chargé',sessionVoiceLabel:'🦾 Voix :',prevBtn:'◀ Préc',nextBtn:'Suiv ▶',quitBtn:'Quitter',modeHintAi:"L'IA lit les répliques du partenaire automatiquement.",modeHintManual:'Avance les répliques manuellement avec les boutons.',modeHintAuto:"L'IA lit le partenaire puis détecte la fin de ta phrase (silence) pour avancer — durée adaptée à la longueur de ta réplique.",toastEmotion:'Émotion',toastSpeed:'Vitesse',toastVoice:'Voix',toastAccent:'Langue voix',toastLanguage:'Langue du site',toastVoiceFallback:'Voix de secours utilisée'},
+  en:{homeSubtitle:'Audition studio',siteLanguageLabel:'Website language',homeSoloTitle:'Solo + AI',homeSoloDesc:'AI reads the partner lines',homePartnerTitle:'With a partner',homePartnerDesc:'Invite someone to read lines with you',homeFooterText:'Peer-to-peer WebRTC · No stored data',partnerChoiceTitle:'Partner session',partnerCreateTitle:'Create session (actor)',partnerCreateDesc:'Generate a code and invite a partner',partnerJoinTitle:'Join session (partner)',partnerJoinDesc:"Enter the actor's code",setupAiTitle:'Solo + AI',scriptLabel:'Script (PDF or text)',uploadLabel:'Drop your PDF here or click',uploadSub:'Standard screenplay format',myCharacterLabel:'My character',partnerReadsLabel:'Scene partner reads:',partnerAllOthersBtn:'All other characters',partnerHintAll:'The AI plays every role except yours.',partnerHintDuo:'Duo mode: only lines between you and this character.',pickCharacterFirst:'Choose your character first',pasteScriptLabel:'Or paste text',replyModeLabel:'Reply mode',modeAiBtn:'🦾 Voice AI',modeManBtn:'✋ Manual',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'AI voice',voiceLanguageLabel:'Voice language',emotionLabel:'Emotion',speedLabel:'Speed',speedSlowBtn:'Slow x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Fast x1.6',launchAiBtn:'Start session 🦾',setupPartnerTitle:'With a partner',sessionCodeLabel:'Your session code',sessionCodeHint:'Share this code with your partner',copyCodeBtn:'📋 Copy code',copyLinkBtn:'🔗 Copy link',shareBtn:'📤 Share',launchPartnerBtn:'Start session 🎬',joinScreenTitle:'Join a session',joinCodeLabel:'Session code',joinCodePlaceholder:"Enter actor's code",joinSessionBtn:'Join 🎙️',prompterEmptyText:'No script loaded',sessionVoiceLabel:'🦾 Voice:',prevBtn:'◀ Prev',nextBtn:'Next ▶',quitBtn:'Quit',modeHintAi:'AI reads partner lines automatically.',modeHintManual:'Advance lines manually with the buttons.',modeHintAuto:'AI reads partner lines, then waits for the end of your line (silence) — pause scales with line length.',toastEmotion:'Emotion',toastSpeed:'Speed',toastVoice:'Voice',toastAccent:'Voice language',toastLanguage:'Website language',toastVoiceFallback:'Backup voice used'},
   es:{homeSubtitle:'Estudio de audición',siteLanguageLabel:'Idioma del sitio',homeSoloTitle:'Solo + IA',homeSoloDesc:'La IA da la réplica con voz',homePartnerTitle:'Con un compañero',homePartnerDesc:'Invita a alguien para dar la réplica',homeFooterText:'WebRTC punto a punto · Sin datos guardados',partnerChoiceTitle:'Sesión con compañero',partnerCreateTitle:'Creo la sesión (actor)',partnerCreateDesc:'Generar código e invitar a un compañero',partnerJoinTitle:'Me uno a una sesión (compañero)',partnerJoinDesc:'Ingresar el código del actor',setupAiTitle:'Solo + IA',scriptLabel:'Guion (PDF o texto)',uploadLabel:'Arrastra tu PDF aquí o haz clic',uploadSub:'Formato estándar de guion',myCharacterLabel:'Mi personaje',pasteScriptLabel:'O pega el texto',replyModeLabel:'Modo de réplica',modeAiBtn:'🦾 IA vocal',modeManBtn:'✋ Manual',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'Voz de IA',voiceLanguageLabel:'Idioma de voz',emotionLabel:'Emoción',speedLabel:'Velocidad',speedSlowBtn:'Lento x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rápido x1.6',launchAiBtn:'Iniciar sesión 🦾',setupPartnerTitle:'Con un compañero',sessionCodeLabel:'Tu código de sesión',sessionCodeHint:'Comparte este código',copyCodeBtn:'📋 Copiar código',copyLinkBtn:'🔗 Copiar enlace',shareBtn:'📤 Compartir',launchPartnerBtn:'Iniciar sesión 🎬',joinScreenTitle:'Unirse a una sesión',joinCodeLabel:'Código de sesión',joinCodePlaceholder:'Ingresa el código del actor',joinSessionBtn:'Unirse 🎙️',prompterEmptyText:'Ningún texto cargado',sessionVoiceLabel:'🦾 Voz:',prevBtn:'◀ Ant',nextBtn:'Sig ▶',quitBtn:'Salir',modeHintAi:'La IA lee las líneas del compañero automáticamente.',modeHintManual:'Avanza manualmente con los botones.',modeHintAuto:'La IA lee y avanza tras 1.5s de silencio.',toastEmotion:'Emoción',toastSpeed:'Velocidad',toastVoice:'Voz',toastAccent:'Idioma de voz',toastLanguage:'Idioma del sitio',toastVoiceFallback:'Voz de respaldo usada'},
   it:{homeSubtitle:'Studio di audizione',siteLanguageLabel:'Lingua del sito',homeSoloTitle:'Solo + IA',homeSoloDesc:'L’IA recita le battute partner',homePartnerTitle:'Con un partner',homePartnerDesc:'Invita qualcuno a dare la replica',homeFooterText:'WebRTC peer-to-peer · Nessun dato salvato',partnerChoiceTitle:'Sessione partner',partnerCreateTitle:'Creo sessione (attore)',partnerCreateDesc:'Genera codice e invita un partner',partnerJoinTitle:'Mi unisco a una sessione',partnerJoinDesc:"Inserisci il codice dell'attore",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF o testo)',uploadLabel:'Trascina il PDF o fai clic',uploadSub:'Formato copione standard',myCharacterLabel:'Il mio personaggio',pasteScriptLabel:'Oppure incolla il testo',replyModeLabel:'Modalità battuta',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuale',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'Voce IA',voiceLanguageLabel:'Lingua voce',emotionLabel:'Emozione',speedLabel:'Velocità',speedSlowBtn:'Lento x0.7',speedNormalBtn:'Normale x1',speedFastBtn:'Veloce x1.6',launchAiBtn:'Avvia sessione 🦾',setupPartnerTitle:'Con un partner',sessionCodeLabel:'Codice sessione',sessionCodeHint:'Condividi questo codice',copyCodeBtn:'📋 Copia codice',copyLinkBtn:'🔗 Copia link',shareBtn:'📤 Condividi',launchPartnerBtn:'Avvia sessione 🎬',joinScreenTitle:'Unisciti a una sessione',joinCodeLabel:'Codice sessione',joinCodePlaceholder:"Inserisci il codice dell'attore",joinSessionBtn:'Unisciti 🎙️',prompterEmptyText:'Nessun testo caricato',sessionVoiceLabel:'🦾 Voce:',prevBtn:'◀ Prec',nextBtn:'Succ ▶',quitBtn:'Esci',modeHintAi:'L’IA legge automaticamente le battute partner.',modeHintManual:'Avanza manualmente con i pulsanti.',modeHintAuto:'L’IA avanza dopo 1.5s di silenzio.',toastEmotion:'Emozione',toastSpeed:'Velocità',toastVoice:'Voce',toastAccent:'Lingua voce',toastLanguage:'Lingua sito',toastVoiceFallback:'Usata voce di backup'},
   zh:{homeSubtitle:'试镜工作室',siteLanguageLabel:'网站语言',homeSoloTitle:'单人 + AI',homeSoloDesc:'AI 朗读对手台词',homePartnerTitle:'与搭档',homePartnerDesc:'邀请他人一起对词',homeFooterText:'点对点 WebRTC · 不保存数据',partnerChoiceTitle:'搭档会话',partnerCreateTitle:'创建会话（演员）',partnerCreateDesc:'生成代码并邀请搭档',partnerJoinTitle:'加入会话（搭档）',partnerJoinDesc:'输入演员代码',setupAiTitle:'单人 + AI',scriptLabel:'剧本（PDF 或文本）',uploadLabel:'拖放 PDF 或点击上传',uploadSub:'标准剧本格式',myCharacterLabel:'我的角色',pasteScriptLabel:'或粘贴文本',replyModeLabel:'台词模式',modeAiBtn:'🦾 AI 语音',modeManBtn:'✋ 手动',modeAutoBtn:'🎤 自动',voiceSectionLabel:'AI 语音',voiceLanguageLabel:'语音语言',emotionLabel:'情绪',speedLabel:'速度',speedSlowBtn:'慢速 x0.7',speedNormalBtn:'正常 x1',speedFastBtn:'快速 x1.6',launchAiBtn:'开始会话 🦾',setupPartnerTitle:'与搭档',sessionCodeLabel:'会话代码',sessionCodeHint:'把代码发给搭档',copyCodeBtn:'📋 复制代码',copyLinkBtn:'🔗 复制链接',shareBtn:'📤 分享',launchPartnerBtn:'开始会话 🎬',joinScreenTitle:'加入会话',joinCodeLabel:'会话代码',joinCodePlaceholder:'输入演员代码',joinSessionBtn:'加入 🎙️',prompterEmptyText:'尚未加载文本',sessionVoiceLabel:'🦾 语音:',prevBtn:'◀ 上一条',nextBtn:'下一条 ▶',quitBtn:'退出',modeHintAi:'AI 自动朗读对手台词。',modeHintManual:'使用按钮手动推进。',modeHintAuto:'静音 1.5 秒后自动推进。',toastEmotion:'情绪',toastSpeed:'速度',toastVoice:'语音',toastAccent:'语音语言',toastLanguage:'网站语言',toastVoiceFallback:'已使用备用语音'},
@@ -719,6 +721,7 @@ function applyUILanguage(){
   setTextById('uploadSub2','uploadSub');
   setTextById('myCharacterLabel1','myCharacterLabel');
   setTextById('myCharacterLabel2','myCharacterLabel');
+  setTextById('partnerReadsLabel1','partnerReadsLabel');
   setTextById('pasteScriptLabel1','pasteScriptLabel');
   setTextById('pasteScriptLabel2','pasteScriptLabel');
   setTextById('replyModeLabel','replyModeLabel');
@@ -753,6 +756,7 @@ function applyUILanguage(){
     [...emo.options].forEach((o,idx)=>{if(labels[idx])o.textContent=labels[idx];});
   }
   document.getElementById('modeHint').textContent=modeHintText(mode);
+  if(pdfScript.length&&selectedChar)renderPartnerAssignment(1);
 }
 function changeUILanguage(languageId,silent){
   const safe=UI_LANGUAGES.some(l=>l.id===languageId)?languageId:'fr';
@@ -844,7 +848,7 @@ function loadSettings(){
 }
 
 class VoiceActivityDetector{
-  constructor({speechThreshold=0.015,silenceDuration=1500,onSpeechEnd}={}){
+  constructor({speechThreshold=0.012,silenceDuration=1500,onSpeechEnd}={}){
     this.speechThreshold=speechThreshold;
     this.silenceDuration=silenceDuration;
     this.onSpeechEnd=typeof onSpeechEnd==='function'?onSpeechEnd:()=>{};
@@ -1378,15 +1382,48 @@ function parsePDFScript(text){
   return res;
 }
 function getChars(){const c={};for(const{char}of pdfScript)c[char]=(c[char]||0)+1;return Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([char,count])=>({char,count}))}
+function renderPartnerAssignment(n){
+  if(n!==1)return;
+  const wrap=document.getElementById('partnerAssignWrap1');
+  const grid=document.getElementById('partnerCharGrid1');
+  const hint=document.getElementById('partnerAssignHint1');
+  if(!wrap||!grid||!hint)return;
+  if(!pdfScript.length||!selectedChar){wrap.style.display='none';return}
+  const otherChars=[...new Set(pdfScript.map(s=>s.char))].filter(c=>c!==selectedChar);
+  wrap.style.display='block';
+  grid.innerHTML='';
+  const allEl=document.createElement('div');
+  allEl.className='char-item partner-all-chip'+(soloPartnerMode==='all'?' selected':'');
+  allEl.textContent=t('partnerAllOthersBtn');
+  allEl.onclick=()=>{soloPartnerMode='all';soloPartnerChar=null;renderPartnerAssignment(1)};
+  grid.appendChild(allEl);
+  otherChars.forEach(ch=>{
+    const el=document.createElement('div');
+    el.className='char-item'+(soloPartnerMode==='single'&&soloPartnerChar===ch?' selected':'');
+    const cnt=pdfScript.filter(s=>s.char===ch).length;
+    el.innerHTML=`${ch}<span class="cc">(${cnt})</span>`;
+    el.onclick=()=>{soloPartnerMode='single';soloPartnerChar=ch;renderPartnerAssignment(1)};
+    grid.appendChild(el);
+  });
+  hint.textContent=soloPartnerMode==='all'?t('partnerHintAll'):t('partnerHintDuo');
+}
 function renderChars(n,chars){
   const g=document.getElementById('charGrid'+n);g.innerHTML='';
-  chars.forEach(({char,count})=>{const el=document.createElement('div');el.className='char-item';el.innerHTML=`${char}<span class="cc">(${count})</span>`;el.onclick=()=>{selectedChar=char;g.querySelectorAll('.char-item').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');showToast('Tu joues '+char)};g.appendChild(el)});
+  chars.forEach(({char,count})=>{const el=document.createElement('div');el.className='char-item';el.innerHTML=`${char}<span class="cc">(${count})</span>`;el.onclick=()=>{selectedChar=char;soloPartnerMode='all';soloPartnerChar=null;g.querySelectorAll('.char-item').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');showToast('Tu joues '+char);if(n===1)renderPartnerAssignment(1)};g.appendChild(el)});
+  if(n===1)renderPartnerAssignment(1);
 }
-function clearPDF(n){pdfScript=[];selectedChar=null;document.getElementById('uploadZone'+n).style.display='block';document.getElementById('uploadOk'+n).style.display='none';document.getElementById('charSection'+n).style.display='none';document.getElementById('setupStatus'+n).textContent='';document.getElementById('pdfInput'+n).value=''}
+function clearPDF(n){pdfScript=[];selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;document.getElementById('uploadZone'+n).style.display='block';document.getElementById('uploadOk'+n).style.display='none';document.getElementById('charSection'+n).style.display='none';if(n===1){const w=document.getElementById('partnerAssignWrap1');if(w)w.style.display='none'}document.getElementById('setupStatus'+n).textContent='';document.getElementById('pdfInput'+n).value=''}
 
 // ── Prompter ──
 function buildLines(n){
-  if(pdfScript.length>0&&selectedChar)return pdfScript.map(s=>({text:s.line,type:s.char===selectedChar?'actor':'partner',char:s.char}));
+  if(pdfScript.length>0&&selectedChar){
+    let rows=pdfScript;
+    if(n===1&&soloPartnerMode==='single'&&soloPartnerChar){
+      const keep=new Set([selectedChar,soloPartnerChar]);
+      rows=pdfScript.filter(s=>keep.has(s.char));
+    }
+    return rows.map(s=>({text:s.line,type:s.char===selectedChar?'actor':'partner',char:s.char}));
+  }
   if(pdfScript.length>0)return pdfScript.map(s=>({text:s.char+': '+s.line,type:'actor',char:s.char}));
   const t=document.getElementById('scriptInput'+n).value;if(!t||!t.trim())return[];
   return t.split('\n').filter(l=>l.trim()).map(l=>{const tr=l.trim();const isP=/^(PARTENAIRE|PARTNER|P)\s*:/i.test(tr);let clean=tr;if(/^(PARTENAIRE|PARTNER|P|MOI|ME|ACTEUR|ACTOR|A)\s*:/i.test(tr))clean=tr.replace(/^[^:]+:\s*/,'');return{text:clean,type:isP?'partner':'actor'}});
@@ -1397,9 +1434,9 @@ function renderPrompter(){
   a.innerHTML=prompterLines.map((l,i)=>{const cls=['prompter-line'];if(i===prompterIndex)cls.push('active');if(l.type==='partner')cls.push('partner-line');const pfx=l.type==='partner'?'🎙️ ':'🎬 ';const ch=l.char?`<b>${l.char}:</b> `:'';return`<div class="${cls.join(' ')}">${pfx}${ch}${l.text}</div>`}).join('');
   const act=a.querySelector('.prompter-line.active');if(act)act.scrollIntoView({behavior:'smooth',block:'center'});
 }
-function ensureVAD(){
-  if(!vad)vad=new VoiceActivityDetector({speechThreshold:0.015,silenceDuration:1500,onSpeechEnd:onAutoSpeechEnd});
-  return vad;
+function computeSilenceMsForActorLine(line){
+  const txt=String(line&&line.text||'');
+  return Math.min(4500,1100+Math.floor(txt.length*36));
 }
 function stopAutoVAD(){if(vad)vad.stop()}
 function cancelSpeechFlow(){
@@ -1414,7 +1451,10 @@ async function armAutoVADForActorLine(){
   if(!line||line.type!=='actor'||!localStream)return;
   const tracks=localStream.getAudioTracks();
   if(!tracks.length||!tracks[0].enabled)return;
-  await ensureVAD().start(new MediaStream(tracks));
+  stopAutoVAD();
+  const silenceMs=computeSilenceMsForActorLine(line);
+  vad=new VoiceActivityDetector({speechThreshold:0.012,silenceDuration:silenceMs,onSpeechEnd:onAutoSpeechEnd});
+  await vad.start(new MediaStream(tracks));
 }
 function onAutoSpeechEnd(){
   if(mode!=='auto'||sessionMode!=='ai')return;
@@ -1581,6 +1621,7 @@ function setupCallHandlers(c){call=c;call.on('stream',s=>{document.getElementByI
 
 // ── START SESSIONS ──
 async function startAiSession(){
+  if(pdfScript.length>0&&!selectedChar){showToast(t('pickCharacterFirst'));return}
   role='actor';sessionMode='ai';
   voiceSpeed=getCurrentVoiceSpeed();
   selectedEmotion=document.getElementById('emotionSelect').value||selectedEmotion;
@@ -1632,7 +1673,7 @@ function endSession(){
   document.getElementById('localVideo').srcObject=null;document.getElementById('remoteAudio').srcObject=null;
   document.getElementById('noVideoMsg').style.display='flex';document.getElementById('noVideoMsg').textContent='Caméra en attente…';
   document.getElementById('aiPanel').classList.remove('active');
-  hideOverlay();isMicOn=true;isCamOn=true;prompterLines=[];prompterIndex=0;pdfScript=[];selectedChar=null;showScreen('home');
+  hideOverlay();isMicOn=true;isCamOn=true;prompterLines=[];prompterIndex=0;pdfScript=[];selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;showScreen('home');
 }
 function cancelConnection(){hideOverlay();if(!conn||!conn.open)endSession()}
 
