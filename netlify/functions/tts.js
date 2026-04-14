@@ -1,112 +1,180 @@
-export default async (req, context) => {
-  if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405 });
+function toText(value) {
+  if (typeof value === 'string') return value;
+  if (value == null) return '';
+  if (typeof value === 'object') {
+    if (typeof value.message === 'string') return value.message;
+    if (typeof value.detail === 'string') return value.detail;
+    try {
+      return JSON.stringify(value);
+    } catch (e) {
+      return String(value);
+    }
   }
-  const rawKey =
-    (globalThis.Netlify && Netlify.env && typeof Netlify.env.get === "function" ? Netlify.env.get("ELEVENLABS_API_KEY") : "") ||
-    process.env.ELEVENLABS_API_KEY ||
-    "";
-  const apiKey = String(rawKey).trim().replace(/^['"]|['"]$/g, "").replace(/^Bearer\s+/i, "");
-  if (!apiKey) {
-    return new Response(JSON.stringify({ error: "No API key" }), { status: 500, headers: { "Content-Type": "application/json" } });
-  }
-  let body;
-  try { body = await req.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
-  const { text, voiceId, modelId, emotion, speed, languageCode } = body;
-  if (!text || !voiceId) return new Response("Missing text or voiceId", { status: 400 });
-  const cleanVoiceId = String(voiceId).trim();
-  const cleanEmotion = String(emotion || "neutral").trim().toLowerCase();
-  const cleanSpeed = Number.isFinite(Number(speed)) ? Number(speed) : 1;
-  const emotionSettingsMap = {
-    neutral: { stability: 0.58, similarity_boost: 0.76, style: 0.25 },
-    excited: { stability: 0.2, similarity_boost: 0.7, style: 1.0 },
-    sad: { stability: 0.98, similarity_boost: 0.45, style: 0.0 },
-    angry: { stability: 0.15, similarity_boost: 0.88, style: 1.0 },
-    whisper: { stability: 1.0, similarity_boost: 0.4, style: 0.0 },
-  };
-  const baseVoiceSettings = emotionSettingsMap[cleanEmotion] || emotionSettingsMap.neutral;
-  const speedBoost = cleanSpeed > 1 ? Math.min(0.22, (cleanSpeed - 1) * 0.3) : 0;
-  const speedSlow = cleanSpeed < 1 ? Math.min(0.22, (1 - cleanSpeed) * 0.3) : 0;
-  const voiceSettings = {
-    stability: Math.max(0.1, Math.min(1, baseVoiceSettings.stability + speedBoost - speedSlow)),
-    similarity_boost: Math.max(0.1, Math.min(1, baseVoiceSettings.similarity_boost + speedSlow * 0.5)),
-    style: Math.max(0, Math.min(1, baseVoiceSettings.style + speedBoost)),
-  };
-  const voiceCandidates = [cleanVoiceId];
-  const requestedModelId = String(modelId || "").trim();
-  const cleanLanguageCode = String(languageCode || "").trim().toLowerCase();
-  const modelCandidates = [];
-  if (requestedModelId) modelCandidates.push(requestedModelId);
-  modelCandidates.push("eleven_multilingual_v2");
-  if (!modelCandidates.includes("eleven_flash_v2_5")) modelCandidates.push("eleven_flash_v2_5");
+  return String(value);
+}
 
-  async function callElevenLabs(model, candidateVoiceId) {
-    return fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(candidateVoiceId)}`, {
-      method: "POST",
-      headers: { "xi-api-key": apiKey, "Content-Type": "application/json", Accept: "audio/mpeg" },
-      body: JSON.stringify({
-        text,
-        model_id: model,
-        ...(cleanLanguageCode ? { language_code: cleanLanguageCode } : {}),
-        voice_settings: voiceSettings
-      })
-    });
+exports.handler = async (event) => {
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers: {
+        'Content-Type': 'application/json',
+        Allow: 'POST',
+      },
+      body: JSON.stringify({ error: 'Method not allowed' }),
+    };
   }
 
-  let r = null;
-  let usedModel = null;
-  let usedVoiceId = cleanVoiceId;
-  let lastDetailsText = "";
-  let lastDetailsJson = null;
-  outer: for (const candidateVoiceId of voiceCandidates) {
+  try {
+    const rawKey = String(process.env.ELEVENLABS_API_KEY || '').trim();
+    const apiKey = rawKey.replace(/^['"]|['"]$/g, '').replace(/^Bearer\s+/i, '');
+    if (!apiKey) {
+      return {
+        statusCode: 500,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Missing ELEVENLABS_API_KEY' }),
+      };
+    }
+
+    const payload = JSON.parse(event.body || '{}');
+    const text = typeof payload.text === 'string' ? payload.text.trim() : '';
+    const voiceId = typeof payload.voiceId === 'string' ? payload.voiceId.trim() : '';
+    const emotion = typeof payload.emotion === 'string' ? payload.emotion.trim().toLowerCase() : 'neutral';
+    const speed = Number.isFinite(Number(payload.speed)) ? Number(payload.speed) : 1;
+    const languageCode = typeof payload.languageCode === 'string' ? payload.languageCode.trim().toLowerCase() : '';
+    const modelId = typeof payload.modelId === 'string' ? payload.modelId.trim() : '';
+
+    if (!text || !voiceId) {
+      return {
+        statusCode: 400,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Missing text or voiceId' }),
+      };
+    }
+
+    const emotionMap = {
+      neutral: { stability: 0.62, similarity_boost: 0.74, style: 0.18 },
+      excited: { stability: 0.22, similarity_boost: 0.72, style: 1.0 },
+      sad: { stability: 0.96, similarity_boost: 0.42, style: 0.02 },
+      angry: { stability: 0.14, similarity_boost: 0.9, style: 1.0 },
+      // Lower similarity + very high stability gives softer, breathier whisper output.
+      whisper: { stability: 1.0, similarity_boost: 0.2, style: 0.0 },
+    };
+    const base = emotionMap[emotion] || emotionMap.neutral;
+    const speedBoost = speed > 1 ? Math.min(0.22, (speed - 1) * 0.3) : 0;
+    const speedSlow = speed < 1 ? Math.min(0.22, (1 - speed) * 0.3) : 0;
+    const voiceSettings = {
+      stability: Math.max(0.1, Math.min(1, base.stability + speedBoost - speedSlow)),
+      similarity_boost: Math.max(0.1, Math.min(1, base.similarity_boost + speedSlow * 0.5)),
+      style: Math.max(0, Math.min(1, base.style + speedBoost)),
+    };
+
+    const modelCandidates = [];
+    if (modelId) modelCandidates.push(modelId);
+    if (!modelCandidates.includes('eleven_multilingual_v2')) modelCandidates.push('eleven_multilingual_v2');
+    if (!modelCandidates.includes('eleven_flash_v2_5')) modelCandidates.push('eleven_flash_v2_5');
+    const languageCandidates = languageCode ? [languageCode, ''] : [''];
+
+    const attempts = [];
+    let lastStatus = 502;
+    let lastDetail = 'ElevenLabs request failed';
+
     for (const candidateModel of modelCandidates) {
-      r = await callElevenLabs(candidateModel, candidateVoiceId);
-      if (r.ok) {
-        usedModel = candidateModel;
-        usedVoiceId = candidateVoiceId;
-        break outer;
+      for (const candidateLang of languageCandidates) {
+        const body = {
+          text,
+          model_id: candidateModel,
+          voice_settings: voiceSettings,
+        };
+        if (candidateLang) body.language_code = candidateLang;
+
+        const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'xi-api-key': apiKey,
+            Accept: 'audio/mpeg',
+          },
+          body: JSON.stringify(body),
+        });
+
+        if (response.ok) {
+          const audioBuffer = await response.arrayBuffer();
+          return {
+            statusCode: 200,
+            isBase64Encoded: true,
+            headers: {
+              'Content-Type': 'audio/mpeg',
+              'Cache-Control': 'no-store',
+              'X-Elevenlabs-Model': candidateModel,
+              'X-Elevenlabs-Language': candidateLang || 'default',
+            },
+            body: Buffer.from(audioBuffer).toString('base64'),
+          };
+        }
+
+        let rawDetail = '';
+        let parsed = null;
+        try {
+          rawDetail = await response.text();
+          parsed = rawDetail ? JSON.parse(rawDetail) : null;
+        } catch (e) {
+          parsed = null;
+        }
+        const detail = toText(
+          (parsed && (parsed.detail || parsed.message || parsed.error)) || rawDetail || `ElevenLabs error ${response.status}`
+        );
+
+        lastStatus = response.status;
+        lastDetail = detail;
+        attempts.push({
+          status: response.status,
+          model: candidateModel,
+          language: candidateLang || 'default',
+          detail,
+        });
+
+        // Auth/scope errors are definitive: stop retrying.
+        if (response.status === 401 || response.status === 403) {
+          const authHint =
+            response.status === 401
+              ? 'Check ELEVENLABS_API_KEY validity and text_to_speech permission.'
+              : 'Key exists but lacks permission. Enable text_to_speech scope.';
+          return {
+            statusCode: 502,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              error: `ElevenLabs error ${response.status}`,
+              details: detail,
+              hint: authHint,
+              attempts,
+            }),
+          };
+        }
       }
-      if (r.status !== 404) break;
-      try { lastDetailsText = await r.text(); } catch { lastDetailsText = ""; }
-      try { lastDetailsJson = lastDetailsText ? JSON.parse(lastDetailsText) : null; } catch { lastDetailsJson = null; }
     }
-  }
 
-  if (!r || !r.ok) {
-    let detailsText = lastDetailsText;
-    let detailsJson = lastDetailsJson;
-    if (!detailsText) {
-      try { detailsText = await r.text(); } catch { detailsText = ""; }
-    }
-    if (!detailsJson) {
-      try { detailsJson = detailsText ? JSON.parse(detailsText) : null; } catch { detailsJson = null; }
-    }
-    const detailMsg =
-      (detailsJson && (detailsJson.detail || detailsJson.message || detailsJson.error)) ||
-      detailsText ||
-      "";
     const hint =
-      r.status === 401 && /text_to_speech|permission|unauthorized/i.test(detailMsg)
-        ? "Check ElevenLabs key scope: enable text_to_speech permission."
-        : r.status === 404
-        ? "Voice/model not found for this exact voice. Verify this voiceId is available on your ElevenLabs account."
-        : "";
-    return new Response(
-      JSON.stringify({ error: "ElevenLabs error " + r.status, details: detailMsg, hint }),
-      { status: 502, headers: { "Content-Type": "application/json" } }
-    );
+      lastStatus === 404
+        ? 'Voice/model/language combination unavailable. Try another accent/voice.'
+        : lastStatus === 422
+        ? 'Language not supported by this voice. The backend already retried without language_code.'
+        : '';
+    return {
+      statusCode: 502,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        error: `ElevenLabs error ${lastStatus}`,
+        details: lastDetail,
+        hint,
+        attempts,
+      }),
+    };
+  } catch (error) {
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: toText(error && error.message ? error.message : error || 'Unexpected error') }),
+    };
   }
-  return new Response(await r.arrayBuffer(), {
-    status: 200,
-    headers: {
-      "Content-Type": "audio/mpeg",
-      "X-Elevenlabs-Model": usedModel || "",
-      "X-Elevenlabs-Voice": usedVoiceId || cleanVoiceId
-    }
-  });
-};
-
-export const config = {
-  path: "/api/tts",
-  method: "POST"
 };
