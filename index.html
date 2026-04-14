@@ -406,19 +406,25 @@ function setElevenLabsBackoff(ms,reason){
 const ICE_SERVERS=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:'stun:stun2.l.google.com:19302'}];
 
 const ELEVEN_VOICE_IDS={
-  serena:'4J31DrhygVjvFsoj7BsM',
-  daniel:'qNkzaJoHLLdpvgh5tISm',
-  rachel:'kwajW3Xh5svCeKU5ky2S',
-  antoni:'u0TsaWvt0v8migutHM3M',
-  bella:'pBZVCk298iJlHAcHQwLr',
-  adam:'pBZVCk298iJlHAcHQwLr',
-  lily:'kwajW3Xh5svCeKU5ky2S',
+  // ElevenLabs account voices (user-provided mapping):
+  // pBZ… Leonie (soothing, eloquent)
+  // kwaj… Dmitry (clear, energetic)
+  // qNk… Carter (rich, smooth, rugged)
+  // u0T… Ghizlaine (smooth, distinctive, calm)
+  // 4J31… Eduardo (Brazilian, clear, pro)
+  serena:'pBZVCk298iJlHAcHQwLr',
+  daniel:'kwajW3Xh5svCeKU5ky2S',
+  rachel:'pBZVCk298iJlHAcHQwLr',
+  antoni:'4J31DrhygVjvFsoj7BsM',
+  bella:'u0TsaWvt0v8migutHM3M',
+  adam:'4J31DrhygVjvFsoj7BsM',
+  lily:'u0TsaWvt0v8migutHM3M',
   james:'qNkzaJoHLLdpvgh5tISm',
-  charlotte:'4J31DrhygVjvFsoj7BsM',
-  george:'u0TsaWvt0v8migutHM3M',
-  dorothy:'pBZVCk298iJlHAcHQwLr',
-  glinda:'4J31DrhygVjvFsoj7BsM',
-  domi:'pBZVCk298iJlHAcHQwLr',
+  charlotte:'pBZVCk298iJlHAcHQwLr',
+  george:'kwajW3Xh5svCeKU5ky2S',
+  dorothy:'u0TsaWvt0v8migutHM3M',
+  glinda:'pBZVCk298iJlHAcHQwLr',
+  domi:'u0TsaWvt0v8migutHM3M',
 };
 const VOICE_ALIAS_GENDER={
   serena:'female',
@@ -478,7 +484,7 @@ const VOICE_LOCALES=[
   ]},
   {id:'korean',label:'Korean 🇰🇷',languageCode:'ko',profiles:[
     {id:'ko-seoul',voice:'lily',fallback:['serena','charlotte'],label:'Minji',tag:'🇰🇷 Seoul',gender:'female',languageCode:'ko-kr'},
-    {id:'ko-busan',voice:'james',fallback:['adam','george'],label:'Jisoo',tag:'🇰🇷 Busan',gender:'male',languageCode:'ko-kr'},
+    {id:'ko-busan',voice:'james',fallback:['adam','george'],label:'Junho',tag:'🇰🇷 Busan',gender:'male',languageCode:'ko-kr'},
     {id:'ko-incheon',voice:'daniel',fallback:['adam','james'],label:'Hyunwoo',tag:'🇰🇷 Incheon',gender:'male',languageCode:'ko-kr'},
   ]},
   {id:'greek',label:'Greek 🇬🇷',languageCode:'el',profiles:[
