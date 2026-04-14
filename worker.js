@@ -27,8 +27,12 @@ async function fetchAccountFallbackVoiceId(apiKey, attemptedVoiceId) {
     if (!response.ok) return "";
     const payload = await response.json().catch(() => null);
     const voices = payload && Array.isArray(payload.voices) ? payload.voices : [];
-    const first = voices.find((v) => v && typeof v.voice_id === "string" && v.voice_id && v.voice_id !== attemptedVoiceId);
-    return first && first.voice_id ? first.voice_id : "";
+    const candidates = voices
+      .filter((v) => v && typeof v.voice_id === "string" && v.voice_id && v.voice_id !== attemptedVoiceId)
+      .map((v) => v.voice_id);
+    if (!candidates.length) return "";
+    const index = Math.floor(Math.random() * candidates.length);
+    return candidates[index] || "";
   } catch (e) {
     return "";
   }
@@ -53,11 +57,11 @@ async function handleTTS(request, env) {
     if (!text || !voiceId) return json({ error: "Missing text or voiceId" }, 400);
 
     const emotionMap = {
-      neutral: { stability: 0.62, similarity_boost: 0.74, style: 0.18 },
-      excited: { stability: 0.22, similarity_boost: 0.72, style: 1.0 },
-      sad:     { stability: 0.96, similarity_boost: 0.42, style: 0.02 },
-      angry:   { stability: 0.14, similarity_boost: 0.9,  style: 1.0 },
-      whisper: { stability: 1.0,  similarity_boost: 0.2,  style: 0.0 },
+      neutral: { stability: 0.58, similarity_boost: 0.74, style: 0.28, use_speaker_boost: true },
+      excited: { stability: 0.18, similarity_boost: 0.82, style: 0.95, use_speaker_boost: true },
+      sad:     { stability: 0.9,  similarity_boost: 0.46, style: 0.06, use_speaker_boost: true },
+      angry:   { stability: 0.12, similarity_boost: 0.88, style: 1.0,  use_speaker_boost: true },
+      whisper: { stability: 0.94, similarity_boost: 0.28, style: 0.0,  use_speaker_boost: false },
     };
     const base = emotionMap[emotion] || emotionMap.neutral;
     const speedBoost = speed > 1 ? Math.min(0.22, (speed - 1) * 0.3) : 0;
@@ -66,6 +70,7 @@ async function handleTTS(request, env) {
       stability:        Math.max(0.1, Math.min(1, base.stability + speedBoost - speedSlow)),
       similarity_boost: Math.max(0.1, Math.min(1, base.similarity_boost + speedSlow * 0.5)),
       style:            Math.max(0,   Math.min(1, base.style + speedBoost)),
+      use_speaker_boost: Boolean(base.use_speaker_boost),
     };
 
     const modelCandidates = [];
