@@ -123,13 +123,6 @@ input[type="file"]{display:none}
 .spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.2);border-top-color:var(--white);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;top:1.2rem;left:50%;transform:translateX(-50%);background:var(--navy);color:var(--white);padding:.65rem 1.2rem;border-radius:var(--radius);font-size:.82rem;font-weight:700;box-shadow:var(--shadow-lg);z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90vw;text-align:center}.toast.show{opacity:1}
 .loading-overlay{display:none;position:fixed;inset:0;z-index:150;background:rgba(0,26,77,.7);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:.8rem;color:var(--white)}.loading-overlay.active{display:flex}.loading-overlay p{font-size:.9rem;font-weight:700}
-.lang-popup{display:none;position:fixed;left:50%;bottom:1rem;transform:translateX(-50%);z-index:240;width:min(92vw,480px);background:rgba(8,30,26,.96);border:1.5px solid #5db89b;border-radius:14px;padding:.8rem .85rem;box-shadow:var(--shadow-lg)}
-.lang-popup.active{display:block}
-.lang-popup p{font-size:.83rem;color:#e9faf3;line-height:1.35}
-.lang-popup-actions{margin-top:.6rem;display:flex;gap:.5rem}
-.lang-popup-actions button{flex:1;border-radius:10px;padding:.5rem .6rem;border:1px solid transparent;font-family:'DM Sans',sans-serif;font-size:.79rem;font-weight:700;cursor:pointer}
-.lang-popup-actions .confirm{background:#2f8f74;color:#fff}
-.lang-popup-actions .dismiss{background:transparent;color:#c8e7dc;border-color:#4d9c84}
 
 @media(min-width:768px){#home{padding:3rem}.home-inner{max-width:520px}.logo h1{font-size:3.2rem}.session-body{flex-direction:row}.video-area{flex:3}.prompter-area{flex:2;max-height:none;border-top:none;border-left:1px solid rgba(255,255,255,.08)}}
 </style>
@@ -138,13 +131,6 @@ input[type="file"]{display:none}
 <div id="toast" class="toast"></div>
 <div id="loadingOverlay" class="loading-overlay"><div class="spinner"></div><p id="loadingMsg">Chargement…</p></div>
 <div id="connectOverlay" class="overlay"><div class="spinner"></div><h3 id="overlayTitle">Connexion…</h3><p id="overlayMsg"></p><button class="btn btn-secondary" onclick="cancelConnection()" style="margin-top:.5rem">Annuler</button></div>
-<div id="languageSuggestionPopup" class="lang-popup">
-  <p id="languageSuggestionText"></p>
-  <div class="lang-popup-actions">
-    <button class="confirm" id="languageSuggestionApplyBtn" onclick="acceptLanguageSuggestion()">Appliquer</button>
-    <button class="dismiss" id="languageSuggestionDismissBtn" onclick="dismissLanguageSuggestion(true)">Fermer</button>
-  </div>
-</div>
 
 <!-- ═══ HOME ═══ -->
 <div id="home" class="screen active">
@@ -315,13 +301,11 @@ const useElevenLabs=true;
 const pauseBetweenLines=500;
 const SETTINGS_KEY='castwing_user_settings_v3';
 const ELEVEN_ACCOUNT_BACKOFF_MS=5*60*1000;
-const LANGUAGE_SUGGESTION_DISMISS_KEY='castwing_lang_suggestion_dismissed_v1';
 let ttsEndpointCache='';
 let elevenLabsTemporarilyDisabled=false;
 let elevenLabsFallbackNotified=false;
 let elevenLabsBackoffTimer=null;
 let elevenLabsDisableReason='';
-let suggestedUILanguage='';
 const unavailableElevenVoiceIds=new Set();
 const unavailableVoiceToastShown=new Set();
 
@@ -522,12 +506,14 @@ const UI_LANGUAGES=[
   {id:'es',label:'Español'},
   {id:'it',label:'Italiano'},
   {id:'zh',label:'中文'},
+  {id:'ko',label:'한국어'},
+  {id:'ja',label:'日本語'},
+  {id:'sq',label:'Shqip'},
+  {id:'hr',label:'Hrvatski'},
+  {id:'el',label:'Ελληνικά'},
   {id:'ar',label:'العربية'},
-  {id:'he',label:'עברית'},
   {id:'de',label:'Deutsch'},
   {id:'pt',label:'Português'},
-  {id:'ja',label:'日本語'},
-  {id:'ru',label:'Русский'},
 ];
 const UI_I18N={
   fr:{homeSubtitle:"Studio d'audition",siteLanguageLabel:'Langue du site',homeSoloTitle:'Solo + IA',homeSoloDesc:"L'IA donne la réplique avec une voix",homePartnerTitle:'Avec un partenaire',homePartnerDesc:"Inviter quelqu'un à donner la réplique",homeFooterText:'WebRTC pair-à-pair · Aucune donnée stockée',partnerChoiceTitle:'Session partenaire',partnerCreateTitle:'Je crée la session (acteur)',partnerCreateDesc:'Générer un code et inviter un partenaire',partnerJoinTitle:'Je rejoins une session (partenaire)',partnerJoinDesc:"Entrer le code de l'acteur",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF ou texte)',uploadLabel:'Glisse ton PDF ici ou clique',uploadSub:'Format scénario standard',myCharacterLabel:'Mon personnage',pasteScriptLabel:'Ou colle le texte',replyModeLabel:'Mode réplique',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuel',modeAutoBtn:'🎤 Auto',voiceSectionLabel:"Voix de l'IA",voiceLanguageLabel:'Langue / accents',emotionLabel:'Émotion',speedLabel:'Vitesse',speedSlowBtn:'Lent x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rapide x1.6',launchAiBtn:'Lancer la session 🦾',setupPartnerTitle:'Avec un partenaire',sessionCodeLabel:'Ton code de session',sessionCodeHint:'Partage ce code à ton partenaire',copyCodeBtn:'📋 Copier code',copyLinkBtn:'🔗 Copier lien',shareBtn:'📤 Partager',launchPartnerBtn:'Lancer la session 🎬',joinScreenTitle:'Rejoindre une session',joinCodeLabel:'Code de session',joinCodePlaceholder:"Entre le code de l'acteur",joinSessionBtn:'Rejoindre 🎙️',prompterEmptyText:'Aucun texte chargé',sessionVoiceLabel:'🦾 Voix :',prevBtn:'◀ Préc',nextBtn:'Suiv ▶',quitBtn:'Quitter',modeHintAi:"L'IA lit les répliques du partenaire automatiquement.",modeHintManual:'Avance les répliques manuellement avec les boutons.',modeHintAuto:"L'IA lit le partenaire puis détecte ton silence (1,5s) pour avancer.",toastEmotion:'Émotion',toastSpeed:'Vitesse',toastVoice:'Voix',toastAccent:'Langue voix',toastLanguage:'Langue du site',toastVoiceFallback:'Voix de secours utilisée'},
@@ -546,7 +532,7 @@ const UI_EXTRA_I18N={
   en:{codeUnavailable:'Code unavailable',codeCopied:'Code copied',linkUnavailable:'Link unavailable',linkCopied:'Link copied',copyFailed:'Copy failed',shareUnavailable:'Sharing unavailable',shareTextCopied:'Text copied',joinCodePrefilled:'Code prefilled',joinCodeMissing:'Enter a code',waitingForPartner:'Waiting for partner…',waitingOverlayTitle:'Waiting…',waitingOverlayMessage:'Share code ',connection:'Connecting…',searching:'Looking for ',sessionNotFound:'Session not found.',connectionSlow:'Slow connection',disconnected:'Disconnected',partnerDisconnected:'Partner disconnected',error:'Error'},
   fr:{codeUnavailable:'Code indisponible',codeCopied:'Code copié',linkUnavailable:'Lien indisponible',linkCopied:'Lien copié',copyFailed:'Copie impossible',shareUnavailable:'Partage indisponible',shareTextCopied:'Texte copié',joinCodePrefilled:'Code prérempli',joinCodeMissing:'Entre un code',waitingForPartner:'En attente du partenaire…',waitingOverlayTitle:'En attente…',waitingOverlayMessage:'Partage le code ',connection:'Connexion…',searching:'Recherche de ',sessionNotFound:'Session introuvable.',connectionSlow:'Connexion lente',disconnected:'Déconnecté',partnerDisconnected:'Partenaire déconnecté',error:'Erreur'},
 };
-const TTS_LANGS=['fr','en','es','it','de','pt','ar','zh','he','ja','ru'];
+const TTS_LANGS=['fr','en','es','it','de','pt','ar','zh','ja','ko','sq','hr','el'];
 
 function resolveVoiceId(id){
   return ELEVEN_VOICE_IDS[id]||ELEVEN_VOICE_IDS.serena;
@@ -727,7 +713,6 @@ function applyUILanguage(){
     [...emo.options].forEach((o,idx)=>{if(labels[idx])o.textContent=labels[idx];});
   }
   document.getElementById('modeHint').textContent=modeHintText(mode);
-  if(suggestedUILanguage)updateLanguageSuggestionPopupText(suggestedUILanguage);
 }
 function changeUILanguage(languageId,silent){
   const safe=UI_LANGUAGES.some(l=>l.id===languageId)?languageId:'fr';
@@ -767,7 +752,7 @@ async function detectPreferredUILanguage(){
     if(rsp.ok){
       const geo=await rsp.json().catch(()=>null);
       const country=geo&&geo.country?String(geo.country).toUpperCase():'';
-      if(country&&countryMap[country]&&countryMap[country]!==selectedUILanguage)return countryMap[country];
+      if(country&&countryMap[country]&&countryMap[country]!==selectedUILanguage&&UI_LANGUAGES.some(l=>l.id===countryMap[country]))return countryMap[country];
       const acceptLanguage=geo&&geo.acceptLanguage?String(geo.acceptLanguage):'';
       const accepted=acceptLanguage.split(',').map(v=>v.split(';')[0].trim()).filter(Boolean);
       for(const lang of accepted){
@@ -785,7 +770,7 @@ async function detectPreferredUILanguage(){
       const text=await rsp.text();
       const locLine=text.split('\n').find(line=>line.startsWith('loc='));
       const country=locLine?locLine.replace('loc=','').trim().toUpperCase():'';
-      if(country&&countryMap[country]&&countryMap[country]!==selectedUILanguage)return countryMap[country];
+      if(country&&countryMap[country]&&countryMap[country]!==selectedUILanguage&&UI_LANGUAGES.some(l=>l.id===countryMap[country]))return countryMap[country];
     }
   }catch(e){}
   const langs=[...(navigator.languages||[]),navigator.language].filter(Boolean);
@@ -794,46 +779,6 @@ async function detectPreferredUILanguage(){
     if(mapped&&mapped!==selectedUILanguage)return mapped;
   }
   return '';
-}
-function getLanguageSuggestionText(langId){
-  const lang=UI_LANGUAGES.find(l=>l.id===langId);
-  const label=lang?lang.label:langId;
-  if(selectedUILanguage==='fr')return `Traduire automatiquement le site en ${label} ?`;
-  return `Translate the website to ${label}?`;
-}
-function updateLanguageSuggestionPopupText(targetLang){
-  const textEl=document.getElementById('languageSuggestionText');
-  const applyBtn=document.getElementById('languageSuggestionApplyBtn');
-  const dismissBtn=document.getElementById('languageSuggestionDismissBtn');
-  if(textEl)textEl.textContent=getLanguageSuggestionText(targetLang);
-  if(applyBtn)applyBtn.textContent=selectedUILanguage==='fr'?'Appliquer':'Apply';
-  if(dismissBtn)dismissBtn.textContent=selectedUILanguage==='fr'?'Fermer':'Dismiss';
-}
-function dismissLanguageSuggestion(remember){
-  const popup=document.getElementById('languageSuggestionPopup');
-  if(popup)popup.classList.remove('active');
-  if(remember){
-    try{localStorage.setItem(LANGUAGE_SUGGESTION_DISMISS_KEY,'1');}catch(e){}
-  }
-}
-function acceptLanguageSuggestion(){
-  if(!suggestedUILanguage)return;
-  const target=suggestedUILanguage;
-  suggestedUILanguage='';
-  dismissLanguageSuggestion(true);
-  changeUILanguage(target,false);
-}
-async function maybeSuggestUILanguage(){
-  try{
-    const dismissed=localStorage.getItem(LANGUAGE_SUGGESTION_DISMISS_KEY)==='1';
-    if(dismissed)return;
-  }catch(e){}
-  const detected=await detectPreferredUILanguage();
-  if(!detected||detected===selectedUILanguage)return;
-  suggestedUILanguage=detected;
-  updateLanguageSuggestionPopupText(detected);
-  const popup=document.getElementById('languageSuggestionPopup');
-  if(popup)popup.classList.add('active');
 }
 function persistSettings(){
   const payload={
@@ -1561,7 +1506,7 @@ function endSession(){
 }
 function cancelConnection(){hideOverlay();if(!conn||!conn.open)endSession()}
 
-document.addEventListener('DOMContentLoaded',()=>{
+document.addEventListener('DOMContentLoaded',async ()=>{
   const saved=loadSettings();
   if(saved){
     if(saved.uiLang&&UI_LANGUAGES.some(l=>l.id===saved.uiLang))selectedUILanguage=saved.uiLang;
@@ -1573,6 +1518,10 @@ document.addEventListener('DOMContentLoaded',()=>{
     else voiceSpeed=SPEED_DEFAULT;
     if(saved.mode&&['ai','manual','auto'].includes(saved.mode))mode=saved.mode;
   }
+  if(!(saved&&saved.uiLang&&UI_LANGUAGES.some(l=>l.id===saved.uiLang))){
+    const detected=await detectPreferredUILanguage();
+    if(detected&&UI_LANGUAGES.some(l=>l.id===detected))selectedUILanguage=detected;
+  }
   loadVoices();
   initSiteLanguageSelect();
   applyUILanguage();
@@ -1582,7 +1531,6 @@ document.addEventListener('DOMContentLoaded',()=>{
   const emo=document.getElementById('emotionSelect');
   if(emo)emo.value=selectedEmotion;
   setMode(mode);
-  setTimeout(()=>{maybeSuggestUILanguage();},500);
   if(!applyJoinCodeFromURL())showScreen('home');
 });
 </script>
