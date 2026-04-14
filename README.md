@@ -2,7 +2,7 @@
 
 A browser-based audition/rehearsal studio for actors. Load a screenplay (PDF or pasted text), pick your character, and rehearse with an AI partner that reads the other lines aloud — or invite a real partner over WebRTC.
 
-**Live:** https://castwing.sersoub-w.workers.dev
+**Live:** https://cast-wing.com
 
 ## Features
 
@@ -50,6 +50,16 @@ A browser-based audition/rehearsal studio for actors. Load a screenplay (PDF or 
 
 ## Architecture
 
+### Repo workflow (important)
+
+- `main` is the deployment branch and the only branch that should be used for production changes.
+- Cloudflare deploys from `main`; pushing to feature branches will not update production unless you open/merge a PR into `main`.
+- The production runtime needs all of these files present on `main`:
+  - `index.html`
+  - `worker.js`
+  - `wrangler.toml`
+  - `functions/api/tts.js` (if using Pages Functions path)
+
 ### File structure
 
 ```
@@ -95,16 +105,25 @@ The frontend (`fetchTTSFromBestEndpoint`) auto-detects the correct endpoint:
 
 ## Deployment
 
-### Cloudflare Workers (current — free tier)
+### Choose one Cloudflare mode
 
-The app is deployed as a Cloudflare Worker with static assets.
+You can deploy this repo in two Cloudflare-compatible ways. Use one as primary and keep config consistent.
+
+1. **Cloudflare Workers** (recommended for this repo shape)
+2. **Cloudflare Pages + Functions**
+
+In both modes, `ELEVENLABS_API_KEY` must be configured in Cloudflare settings.
+
+### Cloudflare Workers (recommended)
+
+The app is deployed as a Worker with static assets.
 
 **Config** (`wrangler.toml`):
 - `main = "worker.js"` — Worker entry point handling `/api/tts` and asset serving.
 - `[assets] directory = "."` — serves `index.html` and other static files.
 
-**Environment secret**:
-- `ELEVENLABS_API_KEY` — set in the Cloudflare dashboard under the Worker's Settings > Variables and Secrets.
+**Environment secret (required):**
+- `ELEVENLABS_API_KEY` — set in Worker Settings -> Variables and Secrets.
 
 **Deploy via CLI**:
 ```sh
@@ -114,13 +133,13 @@ npx wrangler deploy
 **Deploy via Git** (if connected):
 Push to the configured branch and Cloudflare auto-deploys.
 
-### Cloudflare Pages (alternative — free tier)
+### Cloudflare Pages (alternative)
 
 If deployed as a Cloudflare Pages project instead of a Worker:
 - Build command: *(empty)*
 - Build output directory: `.`
 - The `functions/api/tts.js` file is auto-detected as a Pages Function at `/api/tts`.
-- Set `ELEVENLABS_API_KEY` in Pages project settings.
+- Set `ELEVENLABS_API_KEY` in Pages project Settings -> Environment Variables.
 
 ### Netlify (legacy)
 
@@ -146,6 +165,14 @@ For local TTS testing with `wrangler dev`, create a `.dev.vars` file:
 ```
 ELEVENLABS_API_KEY=your_key_here
 ```
+
+### Production troubleshooting
+
+- `POST /api/tts` returns `404`:
+  - On Workers mode, verify `worker.js` and `wrangler.toml` are present on `main` and deployment is from latest `main`.
+  - On Pages mode, verify `functions/api/tts.js` exists and Pages Functions are enabled.
+- `POST /api/tts` returns `{"error":"Missing ELEVENLABS_API_KEY"}`:
+  - Add `ELEVENLABS_API_KEY` in Cloudflare (Worker or Pages, matching your deployment mode), then redeploy.
 
 ## Key technical details
 
