@@ -1,0 +1,6 @@
+.DS_Store
+.local/
+.mamba/
+.wrangler/
+.dev.vars
+.tmp-deploy/
