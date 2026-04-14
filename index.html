@@ -285,6 +285,7 @@ let autoAdvanceTimer=null,lastAutoSpokenIndex=-1,activeSpeechToken=0;
 let ttsAudio=null,vad=null;
 
 const useElevenLabs=true;
+const TTS_ENDPOINTS=['/.netlify/functions/tts','/api/tts'];
 const pauseBetweenLines=500;
 const SETTINGS_KEY='castwing_user_settings_v3';
 
@@ -821,7 +822,7 @@ function cancelTTSPlayback(){
     ttsAudio=null;
   }
 }
-async function speakWithElevenLabs(text,preset,token,cb){
+async function speakWithElevenLabs(text,preset,style,token,cb){
   try{
     if(!preset||!preset.voiceId)throw new Error('Missing ElevenLabs voiceId');
     const speed=getCurrentVoiceSpeed();
@@ -829,22 +830,37 @@ async function speakWithElevenLabs(text,preset,token,cb){
     let blob=null;
     let usedFallback=false;
     let lastErr='';
+    let lastStatus=0;
     for(let i=0;i<voiceCandidates.length;i++){
       const voiceId=voiceCandidates[i];
-      const rsp=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,voiceId,modelId:preset.modelId||'eleven_multilingual_v2',emotion:selectedEmotion,speed,languageCode:preset.languageCode||getCurrentLanguageCode()})});
-      if(rsp.ok){
-        blob=await rsp.blob();
-        usedFallback=i>0;
+      for(let endpointIndex=0;endpointIndex<TTS_ENDPOINTS.length;endpointIndex++){
+        const endpoint=TTS_ENDPOINTS[endpointIndex];
+        let rsp=null;
+        try{
+          rsp=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,voiceId,modelId:preset.modelId||'eleven_multilingual_v2',emotion:selectedEmotion,speed,languageCode:preset.languageCode||getCurrentLanguageCode()})});
+        }catch(fetchErr){
+          lastStatus=0;
+          lastErr='Network error'+(fetchErr&&fetchErr.message?' · '+fetchErr.message:'');
+          continue;
+        }
+        if(rsp.ok){
+          blob=await rsp.blob();
+          usedFallback=i>0;
+          break;
+        }
+        let err='';
+        try{
+          const j=await rsp.json();
+          if(j&&j.details)err=typeof j.details==='string'?j.details:JSON.stringify(j.details);
+          else if(j&&j.error)err=typeof j.error==='string'?j.error:JSON.stringify(j.error);
+        }catch(e){}
+        lastStatus=rsp.status;
+        lastErr=endpoint+' HTTP '+rsp.status+(err?' · '+err:'');
+        if(rsp.status===404&&endpointIndex<TTS_ENDPOINTS.length-1)continue;
         break;
       }
-      let err='';
-      try{
-        const j=await rsp.json();
-        if(j&&j.details)err=typeof j.details==='string'?j.details:JSON.stringify(j.details);
-        else if(j&&j.error)err=typeof j.error==='string'?j.error:JSON.stringify(j.error);
-      }catch(e){}
-      lastErr='HTTP '+rsp.status+(err?' · '+err:'');
-      if(rsp.status!==502&&rsp.status!==404)break;
+      if(blob)break;
+      if(lastStatus&&lastStatus!==502&&lastStatus!==404)break;
     }
     if(!blob)throw new Error(lastErr||'TTS error');
     if(usedFallback)showToast(t('toastVoiceFallback'),2500);
@@ -859,8 +875,8 @@ async function speakWithElevenLabs(text,preset,token,cb){
     try{await audio.play()}catch(e){done()}
   }catch(e){
     if(token===activeSpeechToken){
-      showToast(t('error')+': '+(e&&e.message?e.message:'TTS error'),4500);
-      if(cb)cb();
+      // Fallback to browser speech to keep audition flow working if cloud TTS is unavailable.
+      speakWithBrowser(text,preset,style,token,cb);
     }
   }
 }
@@ -879,10 +895,10 @@ function speakWithBrowser(text,preset,style,token,cb){
 function aiSpeak(text,cb){
   if(!text){if(cb)cb();return}
   const preset=selectedVoice||VOICE_PRESETS[0];
+  const style=getSpeechStyle(preset);
   const token=++activeSpeechToken;
   cancelTTSPlayback();
-  if(useElevenLabs){speakWithElevenLabs(text,preset,token,cb);return}
-  const style=getSpeechStyle(preset);
+  if(useElevenLabs){speakWithElevenLabs(text,preset,style,token,cb);return}
   speakWithBrowser(text,preset,style,token,cb);
 }
 

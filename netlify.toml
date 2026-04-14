@@ -1,2 +1,7 @@
 [build]
   functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/tts"
+  to = "/.netlify/functions/tts"
+  status = 200
