@@ -62,9 +62,10 @@ input[type="file"]{display:none}
 
 /* CHAR */
 .char-grid{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.4rem}
-.char-item{padding:.5rem .9rem;border-radius:var(--radius);border:1.5px solid var(--border);background:#f4faf7;color:#0f2a24;cursor:pointer;transition:all .2s;font-size:.82rem;font-weight:700}
-.char-item:hover{border-color:var(--blue)}.char-item.selected{background:var(--blue);color:var(--white);border-color:var(--blue)}
-.char-item .cc{font-weight:400;font-size:.72rem;opacity:.75;margin-left:.3rem;color:#3d5c52}
+.char-grid .char-item{padding:.5rem .9rem;border-radius:var(--radius);border:1.5px solid var(--border);background:#f4faf7;color:#0f2a24 !important;cursor:pointer;transition:all .2s;font-size:.82rem;font-weight:700;opacity:1}
+.char-grid .char-item:hover{border-color:var(--blue)}
+.char-grid .char-item.selected{background:var(--blue);color:var(--white) !important;border-color:var(--blue)}
+.char-grid .char-item .cc{font-weight:400;font-size:.72rem;opacity:.75;margin-left:.3rem;color:#3d5c52 !important}
 .char-item.selected .cc{color:rgba(255,255,255,.85)}
 
 /* MODE TOGGLE */
@@ -443,126 +444,51 @@ const VOICE_ALIAS_GENDER={
   george:'male',
 };
 const VOICE_LOCALES=[
-  {id:'arabic',label:'Arabic 🇲🇦',languageCode:'ar',profiles:[
-    {id:'ar-ma',voice:'daniel',fallback:['adam','james'],label:'Yassine',tag:'🇲🇦 Moroccan (Darija)',gender:'male',languageCode:'ar-ma'},
-    {id:'ar-eg',voice:'bella',fallback:['charlotte','serena'],label:'Mariam',tag:'🇪🇬 Egyptian',gender:'female',languageCode:'ar-eg'},
-    {id:'ar-dz',voice:'antoni',fallback:['adam','daniel'],label:'Samir',tag:'🇩🇿 Algerian',gender:'male',languageCode:'ar-dz'},
-    {id:'ar-sa',voice:'adam',fallback:['antoni','james'],label:'Faisal',tag:'🇸🇦 Saudi',gender:'male',languageCode:'ar-sa'},
-    {id:'ar-msa',voice:'charlotte',fallback:['serena','bella'],label:'Nour',tag:'🌍 Modern Standard',gender:'female',languageCode:'ar'},
+  {id:'french',label:'Français 🇫🇷',languageCode:'fr',profiles:[
+    {id:'fr-f',voice:'serena',fallback:['charlotte','lily'],label:'Camille',tag:'Standard',gender:'female',languageCode:'fr-fr'},
+    {id:'fr-m',voice:'daniel',fallback:['james','adam'],label:'Lucas',tag:'Standard',gender:'male',languageCode:'fr-fr'},
   ]},
-  {id:'chinese',label:'Chinese 🇨🇳',languageCode:'zh',profiles:[
-    {id:'zh-mandarin',voice:'charlotte',fallback:['bella','serena'],label:'Mei',tag:'🇨🇳 Mandarin',gender:'female',languageCode:'zh-cn'},
-    {id:'zh-cantonese',voice:'james',fallback:['adam','george'],label:'Jiahao',tag:'🇭🇰 Cantonese',gender:'male',languageCode:'zh-hk'},
-    {id:'zh-taiwan',voice:'bella',fallback:['charlotte','serena'],label:'Yating',tag:'🇹🇼 Taiwan Mandarin',gender:'female',languageCode:'zh-tw'},
+  {id:'english',label:'English 🇺🇸',languageCode:'en',profiles:[
+    {id:'en-us-m',voice:'adam',fallback:['james','george'],label:'Mason',tag:'US',gender:'male',languageCode:'en-us'},
+    {id:'en-us-f',voice:'bella',fallback:['charlotte','serena'],label:'Taylor',tag:'US',gender:'female',languageCode:'en-us'},
+    {id:'en-gb-m',voice:'daniel',fallback:['adam','james'],label:'Oliver',tag:'UK',gender:'male',languageCode:'en-gb'},
+    {id:'en-gb-f',voice:'charlotte',fallback:['lily','serena'],label:'Emma',tag:'UK',gender:'female',languageCode:'en-gb'},
   ]},
-  {id:'english',label:'English (Global) 🇬🇧',languageCode:'en',profiles:[
-    {id:'en-us',voice:'adam',fallback:['james','george'],label:'Mason',tag:'🇺🇸 American',gender:'male',languageCode:'en-us'},
-    {id:'en-texas',voice:'james',fallback:['adam','george'],label:'Wyatt',tag:'🇺🇸 Texan',gender:'male',languageCode:'en-us'},
-    {id:'en-uk',voice:'daniel',fallback:['adam','george'],label:'Oliver',tag:'🇬🇧 British RP',gender:'male',languageCode:'en-gb'},
-    {id:'en-au',voice:'george',fallback:['james','adam'],label:'Lachlan',tag:'🇦🇺 Australian',gender:'male',languageCode:'en-au'},
-    {id:'en-african',voice:'domi',fallback:['charlotte','lily'],label:'Adaeze',tag:'🇳🇬 West African',gender:'female',languageCode:'en-ng'},
+  {id:'spanish',label:'Español 🇪🇸',languageCode:'es',profiles:[
+    {id:'es-f',voice:'dorothy',fallback:['bella','charlotte'],label:'Valentina',tag:'Standard',gender:'female',languageCode:'es-es'},
+    {id:'es-m',voice:'antoni',fallback:['adam','james'],label:'Diego',tag:'Standard',gender:'male',languageCode:'es-es'},
   ]},
-  {id:'french',label:'French (Global) 🇫🇷',languageCode:'fr',profiles:[
-    {id:'fr-fr',voice:'serena',fallback:['charlotte','lily'],label:'Camille',tag:'🇫🇷 France',gender:'female',languageCode:'fr-fr'},
-    {id:'fr-be',voice:'daniel',fallback:['george','adam'],label:'Bastien',tag:'🇧🇪 Belgium',gender:'male',languageCode:'fr-be'},
-    {id:'fr-ch',voice:'serena',fallback:['charlotte','lily'],label:'Léa',tag:'🇨🇭 Switzerland',gender:'female',languageCode:'fr-ch'},
-    {id:'fr-qc',voice:'daniel',fallback:['george','adam'],label:'Émile',tag:'🇨🇦 Québec',gender:'male',languageCode:'fr-ca'},
+  {id:'german',label:'Deutsch 🇩🇪',languageCode:'de',profiles:[
+    {id:'de-f',voice:'lily',fallback:['serena','charlotte'],label:'Hannah',tag:'Standard',gender:'female',languageCode:'de-de'},
+    {id:'de-m',voice:'antoni',fallback:['adam','george'],label:'Emil',tag:'Standard',gender:'male',languageCode:'de-de'},
   ]},
-  {id:'german',label:'German 🇩🇪',languageCode:'de',profiles:[
-    {id:'de-de',voice:'antoni',fallback:['adam','george'],label:'Emil',tag:'🇩🇪 Germany',gender:'male',languageCode:'de-de'},
-    {id:'de-at',voice:'adam',fallback:['antoni','george'],label:'Lukas',tag:'🇦🇹 Austria',gender:'male',languageCode:'de-at'},
-    {id:'de-ch',voice:'charlotte',fallback:['lily','serena'],label:'Leonie',tag:'🇨🇭 Swiss German',gender:'female',languageCode:'de-ch'},
+  {id:'italian',label:'Italiano 🇮🇹',languageCode:'it',profiles:[
+    {id:'it-f',voice:'bella',fallback:['charlotte','lily'],label:'Giulia',tag:'Standard',gender:'female',languageCode:'it-it'},
+    {id:'it-m',voice:'daniel',fallback:['adam','james'],label:'Leonardo',tag:'Standard',gender:'male',languageCode:'it-it'},
   ]},
-  {id:'italian',label:'Italian 🇮🇹',languageCode:'it',profiles:[
-    {id:'it-rome',voice:'daniel',fallback:['antoni','adam'],label:'Leonardo',tag:'🇮🇹 Rome',gender:'male',languageCode:'it-it'},
-    {id:'it-milan',voice:'bella',fallback:['charlotte','lily'],label:'Giulia',tag:'🇮🇹 Milan',gender:'female',languageCode:'it-it'},
-    {id:'it-naples',voice:'antoni',fallback:['daniel','adam'],label:'Salvatore',tag:'🇮🇹 Naples',gender:'male',languageCode:'it-it'},
+  {id:'portuguese',label:'Português 🇵🇹',languageCode:'pt',profiles:[
+    {id:'pt-f',voice:'glinda',fallback:['serena','charlotte'],label:'Beatriz',tag:'Standard',gender:'female',languageCode:'pt-pt'},
+    {id:'pt-m',voice:'antoni',fallback:['adam','james'],label:'João',tag:'Standard',gender:'male',languageCode:'pt-pt'},
   ]},
-  {id:'japanese',label:'Japanese 🇯🇵',languageCode:'ja',profiles:[
-    {id:'ja-tokyo',voice:'adam',fallback:['james','george'],label:'Haruto',tag:'🇯🇵 Tokyo',gender:'male',languageCode:'ja-jp'},
-    {id:'ja-osaka',voice:'charlotte',fallback:['bella','lily'],label:'Yui',tag:'🇯🇵 Osaka',gender:'female',languageCode:'ja-jp'},
-    {id:'ja-kyoto',voice:'james',fallback:['adam','george'],label:'Sota',tag:'🇯🇵 Kyoto',gender:'male',languageCode:'ja-jp'},
+  {id:'arabic',label:'Arabic 🇸🇦',languageCode:'ar',profiles:[
+    {id:'ar-f',voice:'charlotte',fallback:['bella','serena'],label:'Nour',tag:'Standard',gender:'female',languageCode:'ar'},
+    {id:'ar-m',voice:'adam',fallback:['antoni','james'],label:'Karim',tag:'Standard',gender:'male',languageCode:'ar'},
   ]},
-  {id:'korean',label:'Korean 🇰🇷',languageCode:'ko',profiles:[
-    {id:'ko-seoul',voice:'lily',fallback:['serena','charlotte'],label:'Minji',tag:'🇰🇷 Seoul',gender:'female',languageCode:'ko-kr'},
-    {id:'ko-busan',voice:'james',fallback:['adam','george'],label:'Junho',tag:'🇰🇷 Busan',gender:'male',languageCode:'ko-kr'},
-    {id:'ko-incheon',voice:'daniel',fallback:['adam','james'],label:'Hyunwoo',tag:'🇰🇷 Incheon',gender:'male',languageCode:'ko-kr'},
+  {id:'chinese',label:'中文 🇨🇳',languageCode:'zh',profiles:[
+    {id:'zh-f',voice:'charlotte',fallback:['bella','serena'],label:'Mei',tag:'Mandarin',gender:'female',languageCode:'zh-cn'},
+    {id:'zh-m',voice:'james',fallback:['adam','george'],label:'Wei',tag:'Mandarin',gender:'male',languageCode:'zh-cn'},
   ]},
-  {id:'greek',label:'Greek 🇬🇷',languageCode:'el',profiles:[
-    {id:'el-athens',voice:'daniel',fallback:['antoni','adam'],label:'Nikos',tag:'🇬🇷 Athens',gender:'male',languageCode:'el-gr'},
-    {id:'el-thessaloniki',voice:'lily',fallback:['serena','charlotte'],label:'Eleni',tag:'🇬🇷 Thessaloniki',gender:'female',languageCode:'el-gr'},
-    {id:'el-cyprus',voice:'bella',fallback:['charlotte','lily'],label:'Sofia',tag:'🇨🇾 Cypriot',gender:'female',languageCode:'el-cy'},
+  {id:'japanese',label:'日本語 🇯🇵',languageCode:'ja',profiles:[
+    {id:'ja-f',voice:'charlotte',fallback:['lily','bella'],label:'Yui',tag:'Standard',gender:'female',languageCode:'ja-jp'},
+    {id:'ja-m',voice:'adam',fallback:['james','george'],label:'Haruto',tag:'Standard',gender:'male',languageCode:'ja-jp'},
   ]},
-  {id:'albanian',label:'Albanian 🇦🇱',languageCode:'sq',profiles:[
-    {id:'sq-al',voice:'adam',fallback:['daniel','james'],label:'Arber',tag:'🇦🇱 Albanian',gender:'male',languageCode:'sq-al'},
-    {id:'sq-xk',voice:'charlotte',fallback:['lily','serena'],label:'Elira',tag:'🇽🇰 Kosovar',gender:'female',languageCode:'sq-xk'},
-    {id:'sq-mk',voice:'george',fallback:['adam','james'],label:'Dritan',tag:'🇲🇰 North Macedonia',gender:'male',languageCode:'sq-mk'},
-  ]},
-  {id:'serbocroatian',label:'Serbo-Croatian 🇭🇷',languageCode:'hr',profiles:[
-    {id:'hr-hr',voice:'antoni',fallback:['adam','daniel'],label:'Marko',tag:'🇭🇷 Croatian',gender:'male',languageCode:'hr-hr'},
-    {id:'hr-ba',voice:'dorothy',fallback:['bella','glinda'],label:'Lejla',tag:'🇧🇦 Bosnian',gender:'female',languageCode:'bs-ba'},
-    {id:'hr-rs',voice:'james',fallback:['adam','george'],label:'Stefan',tag:'🇷🇸 Serbian',gender:'male',languageCode:'sr-rs'},
-  ]},
-  {id:'finnish',label:'Finnish 🇫🇮',languageCode:'fi',profiles:[
-    {id:'fi-helsinki',voice:'charlotte',fallback:['serena','lily'],label:'Aino',tag:'🇫🇮 Helsinki',gender:'female',languageCode:'fi-fi'},
-    {id:'fi-tampere',voice:'daniel',fallback:['james','adam'],label:'Elias',tag:'🇫🇮 Tampere',gender:'male',languageCode:'fi-fi'},
-    {id:'fi-turku',voice:'george',fallback:['adam','james'],label:'Otto',tag:'🇫🇮 Turku',gender:'male',languageCode:'fi-fi'},
-  ]},
-  {id:'danish',label:'Danish 🇩🇰',languageCode:'da',profiles:[
-    {id:'da-copenhagen',voice:'charlotte',fallback:['bella','serena'],label:'Freja',tag:'🇩🇰 Copenhagen',gender:'female',languageCode:'da-dk'},
-    {id:'da-aarhus',voice:'james',fallback:['daniel','adam'],label:'Magnus',tag:'🇩🇰 Aarhus',gender:'male',languageCode:'da-dk'},
-    {id:'da-odense',voice:'adam',fallback:['antoni','george'],label:'Noah',tag:'🇩🇰 Odense',gender:'male',languageCode:'da-dk'},
-  ]},
-  {id:'swedish',label:'Swedish 🇸🇪',languageCode:'sv',profiles:[
-    {id:'sv-stockholm',voice:'lily',fallback:['charlotte','serena'],label:'Ebba',tag:'🇸🇪 Stockholm',gender:'female',languageCode:'sv-se'},
-    {id:'sv-gothenburg',voice:'daniel',fallback:['james','george'],label:'Viktor',tag:'🇸🇪 Gothenburg',gender:'male',languageCode:'sv-se'},
-    {id:'sv-malmo',voice:'adam',fallback:['antoni','james'],label:'Oscar',tag:'🇸🇪 Malmö',gender:'male',languageCode:'sv-se'},
-  ]},
-  {id:'norwegian',label:'Norwegian 🇳🇴',languageCode:'no',profiles:[
-    {id:'no-oslo',voice:'serena',fallback:['charlotte','lily'],label:'Ingrid',tag:'🇳🇴 Oslo',gender:'female',languageCode:'nb-no'},
-    {id:'no-bergen',voice:'james',fallback:['daniel','adam'],label:'Lars',tag:'🇳🇴 Bergen',gender:'male',languageCode:'nb-no'},
-    {id:'no-trondheim',voice:'george',fallback:['adam','james'],label:'Henrik',tag:'🇳🇴 Trondheim',gender:'male',languageCode:'nb-no'},
-  ]},
-  {id:'latvian',label:'Latvian 🇱🇻',languageCode:'lv',profiles:[
-    {id:'lv-riga',voice:'charlotte',fallback:['serena','bella'],label:'Laura',tag:'🇱🇻 Riga',gender:'female',languageCode:'lv-lv'},
-    {id:'lv-daugavpils',voice:'daniel',fallback:['james','adam'],label:'Rihards',tag:'🇱🇻 Daugavpils',gender:'male',languageCode:'lv-lv'},
-    {id:'lv-liepaja',voice:'adam',fallback:['antoni','george'],label:'Mārtiņš',tag:'🇱🇻 Liepāja',gender:'male',languageCode:'lv-lv'},
-  ]},
-  {id:'estonian',label:'Estonian 🇪🇪',languageCode:'et',profiles:[
-    {id:'et-tallinn',voice:'lily',fallback:['charlotte','serena'],label:'Kadri',tag:'🇪🇪 Tallinn',gender:'female',languageCode:'et-ee'},
-    {id:'et-tartu',voice:'james',fallback:['daniel','adam'],label:'Karl',tag:'🇪🇪 Tartu',gender:'male',languageCode:'et-ee'},
-    {id:'et-narva',voice:'george',fallback:['adam','james'],label:'Joonas',tag:'🇪🇪 Narva',gender:'male',languageCode:'et-ee'},
+  {id:'korean',label:'한국어 🇰🇷',languageCode:'ko',profiles:[
+    {id:'ko-f',voice:'lily',fallback:['serena','charlotte'],label:'Minji',tag:'Standard',gender:'female',languageCode:'ko-kr'},
+    {id:'ko-m',voice:'james',fallback:['adam','george'],label:'Junho',tag:'Standard',gender:'male',languageCode:'ko-kr'},
   ]},
   {id:'hindi',label:'Hindi 🇮🇳',languageCode:'hi',profiles:[
-    {id:'hi-delhi',voice:'charlotte',fallback:['serena','bella'],label:'Ananya',tag:'🇮🇳 Delhi',gender:'female',languageCode:'hi-in'},
-    {id:'hi-mumbai',voice:'adam',fallback:['antoni','james'],label:'Rohan',tag:'🇮🇳 Mumbai',gender:'male',languageCode:'hi-in'},
-    {id:'hi-bangalore',voice:'daniel',fallback:['james','george'],label:'Arjun',tag:'🇮🇳 Bangalore',gender:'male',languageCode:'hi-in'},
-  ]},
-  {id:'dutch',label:'Dutch 🇳🇱',languageCode:'nl',profiles:[
-    {id:'nl-amsterdam',voice:'charlotte',fallback:['lily','serena'],label:'Sophie',tag:'🇳🇱 Amsterdam',gender:'female',languageCode:'nl-nl'},
-    {id:'nl-rotterdam',voice:'daniel',fallback:['adam','james'],label:'Daan',tag:'🇳🇱 Rotterdam',gender:'male',languageCode:'nl-nl'},
-    {id:'nl-antwerp',voice:'james',fallback:['george','adam'],label:'Sem',tag:'🇧🇪 Antwerp (NL)',gender:'male',languageCode:'nl-be'},
-  ]},
-  {id:'polish',label:'Polish 🇵🇱',languageCode:'pl',profiles:[
-    {id:'pl-warsaw',voice:'charlotte',fallback:['serena','bella'],label:'Zuzanna',tag:'🇵🇱 Warsaw',gender:'female',languageCode:'pl-pl'},
-    {id:'pl-krakow',voice:'adam',fallback:['antoni','james'],label:'Kacper',tag:'🇵🇱 Kraków',gender:'male',languageCode:'pl-pl'},
-    {id:'pl-gdansk',voice:'daniel',fallback:['james','george'],label:'Mikołaj',tag:'🇵🇱 Gdańsk',gender:'male',languageCode:'pl-pl'},
-  ]},
-  {id:'czech',label:'Czech 🇨🇿',languageCode:'cs',profiles:[
-    {id:'cs-prague',voice:'lily',fallback:['charlotte','serena'],label:'Tereza',tag:'🇨🇿 Prague',gender:'female',languageCode:'cs-cz'},
-    {id:'cs-brno',voice:'james',fallback:['daniel','adam'],label:'Jakub',tag:'🇨🇿 Brno',gender:'male',languageCode:'cs-cz'},
-    {id:'cs-ostrava',voice:'george',fallback:['adam','james'],label:'Matěj',tag:'🇨🇿 Ostrava',gender:'male',languageCode:'cs-cz'},
-  ]},
-  {id:'portuguese',label:'Portuguese 🇵🇹',languageCode:'pt',profiles:[
-    {id:'pt-br',voice:'antoni',fallback:['daniel','adam'],label:'Miguel',tag:'🇧🇷 Brazilian',gender:'male',languageCode:'pt-br'},
-    {id:'pt-pt',voice:'antoni',fallback:['daniel','adam'],label:'João',tag:'🇵🇹 European',gender:'male',languageCode:'pt-pt'},
-    {id:'pt-ao',voice:'daniel',fallback:['antoni','adam'],label:'Mateus',tag:'🇦🇴 Angolan',gender:'male',languageCode:'pt-ao'},
-  ]},
-  {id:'spanish',label:'Spanish (Global) 🇪🇸',languageCode:'es',profiles:[
-    {id:'es-mx',voice:'antoni',fallback:['daniel','adam'],label:'Santiago',tag:'🇲🇽 Mexican',gender:'male',languageCode:'es-mx'},
-    {id:'es-ar',voice:'dorothy',fallback:['glinda','bella'],label:'Valentina',tag:'🇦🇷 Argentinian',gender:'female',languageCode:'es-ar'},
-    {id:'es-co',voice:'bella',fallback:['glinda','charlotte'],label:'Camila',tag:'🇨🇴 Colombian',gender:'female',languageCode:'es-co'},
-    {id:'es-es',voice:'antoni',fallback:['daniel','adam'],label:'Hugo',tag:'🇪🇸 Castilian',gender:'male',languageCode:'es-es'},
+    {id:'hi-f',voice:'charlotte',fallback:['bella','serena'],label:'Ananya',tag:'Standard',gender:'female',languageCode:'hi-in'},
+    {id:'hi-m',voice:'adam',fallback:['antoni','james'],label:'Rohan',tag:'Standard',gender:'male',languageCode:'hi-in'},
   ]},
 ];
 let VOICE_PRESETS=[];
@@ -584,28 +510,11 @@ const PREVIEW_TEXT_BY_LANG={
   pt:'Ola, eu sou {name}.',
   it:'Ciao, sono {name}.',
   de:'Hallo, ich bin {name}.',
-  fi:'Hei, olen {name}.',
-  da:'Hej, jeg er {name}.',
-  sv:'Hej, jag är {name}.',
-  no:'Hei, jeg er {name}.',
-  lv:'Sveiki, es esmu {name}.',
-  et:'Tere, mina olen {name}.',
-  pl:'Cześć, jestem {name}.',
-  cs:'Ahoj, jsem {name}.',
-  nl:'Hallo, ik ben {name}.',
-  sq:'Pershendetje, une jam {name}.',
   ar:'Marhaban, ana {name}.',
-  tr:'Merhaba, ben {name}.',
   hi:'Namaste, main {name} hoon.',
-  ur:'Assalam, main {name} hoon.',
-  bn:'Nomoskar, ami {name}.',
   zh:'Ni hao, wo shi {name}.',
   ja:'Konnichiwa, watashi wa {name} desu.',
   ko:'Annyeong, jeoneun {name} imnida.',
-  el:'Geia, eimai o {name}.',
-  hr:'Bok, ja sam {name}.',
-  id:'Halo, saya {name}.',
-  tl:'Kumusta, ako si {name}.',
 };
 
 const UI_LANGUAGES=[
@@ -616,55 +525,29 @@ const UI_LANGUAGES=[
   {id:'zh',label:'中文'},
   {id:'ko',label:'한국어'},
   {id:'ja',label:'日本語'},
-  {id:'sq',label:'Shqip'},
-  {id:'hr',label:'Hrvatski'},
-  {id:'el',label:'Ελληνικά'},
   {id:'ar',label:'العربية'},
   {id:'de',label:'Deutsch'},
   {id:'pt',label:'Português'},
-  {id:'fi',label:'Suomi'},
-  {id:'da',label:'Dansk'},
-  {id:'sv',label:'Svenska'},
-  {id:'no',label:'Norsk'},
-  {id:'lv',label:'Latviešu'},
-  {id:'et',label:'Eesti'},
   {id:'hi',label:'हिन्दी'},
-  {id:'nl',label:'Nederlands'},
-  {id:'pl',label:'Polski'},
-  {id:'cs',label:'Čeština'},
 ];
 const UI_I18N={
-  fr:{homeSubtitle:"Studio d'audition",siteLanguageLabel:'Langue du site',homeSoloTitle:'Solo + IA',homeSoloDesc:"L'IA donne la réplique avec une voix",homePartnerTitle:'Avec un partenaire',homePartnerDesc:"Inviter quelqu'un à donner la réplique",homeFooterText:'WebRTC pair-à-pair · Aucune donnée stockée',partnerChoiceTitle:'Session partenaire',partnerCreateTitle:'Je crée la session (acteur)',partnerCreateDesc:'Générer un code et inviter un partenaire',partnerJoinTitle:'Je rejoins une session (partenaire)',partnerJoinDesc:"Entrer le code de l'acteur",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF ou texte)',uploadLabel:'Glisse ton PDF ici ou clique',uploadSub:'Format scénario standard',myCharacterLabel:'Mon personnage',pasteScriptLabel:'Ou colle le texte',replyModeLabel:'Mode réplique',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuel',modeAutoBtn:'🎤 Auto',voiceSectionLabel:"Voix de l'IA",voiceLanguageLabel:'Langue / accents',emotionLabel:'Émotion',speedLabel:'Vitesse',speedSlowBtn:'Lent x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rapide x1.6',launchAiBtn:'Lancer la session 🦾',setupPartnerTitle:'Avec un partenaire',sessionCodeLabel:'Ton code de session',sessionCodeHint:'Partage ce code à ton partenaire',copyCodeBtn:'📋 Copier code',copyLinkBtn:'🔗 Copier lien',shareBtn:'📤 Partager',launchPartnerBtn:'Lancer la session 🎬',joinScreenTitle:'Rejoindre une session',joinCodeLabel:'Code de session',joinCodePlaceholder:"Entre le code de l'acteur",joinSessionBtn:'Rejoindre 🎙️',prompterEmptyText:'Aucun texte chargé',sessionVoiceLabel:'🦾 Voix :',prevBtn:'◀ Préc',nextBtn:'Suiv ▶',quitBtn:'Quitter',modeHintAi:"L'IA lit les répliques du partenaire automatiquement.",modeHintManual:'Avance les répliques manuellement avec les boutons.',modeHintAuto:"L'IA lit le partenaire puis détecte ton silence (1,5s) pour avancer.",toastEmotion:'Émotion',toastSpeed:'Vitesse',toastVoice:'Voix',toastAccent:'Langue voix',toastLanguage:'Langue du site',toastVoiceFallback:'Voix de secours utilisée'},
-  en:{homeSubtitle:'Audition studio',siteLanguageLabel:'Website language',homeSoloTitle:'Solo + AI',homeSoloDesc:'AI reads the partner lines',homePartnerTitle:'With a partner',homePartnerDesc:'Invite someone to read lines with you',homeFooterText:'Peer-to-peer WebRTC · No stored data',partnerChoiceTitle:'Partner session',partnerCreateTitle:'Create session (actor)',partnerCreateDesc:'Generate a code and invite a partner',partnerJoinTitle:'Join session (partner)',partnerJoinDesc:"Enter the actor's code",setupAiTitle:'Solo + AI',scriptLabel:'Script (PDF or text)',uploadLabel:'Drop your PDF here or click',uploadSub:'Standard screenplay format',myCharacterLabel:'My character',pasteScriptLabel:'Or paste text',replyModeLabel:'Reply mode',modeAiBtn:'🦾 Voice AI',modeManBtn:'✋ Manual',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'AI voice',voiceLanguageLabel:'Language / accents',emotionLabel:'Emotion',speedLabel:'Speed',speedSlowBtn:'Slow x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Fast x1.6',launchAiBtn:'Start session 🦾',setupPartnerTitle:'With a partner',sessionCodeLabel:'Your session code',sessionCodeHint:'Share this code with your partner',copyCodeBtn:'📋 Copy code',copyLinkBtn:'🔗 Copy link',shareBtn:'📤 Share',launchPartnerBtn:'Start session 🎬',joinScreenTitle:'Join a session',joinCodeLabel:'Session code',joinCodePlaceholder:"Enter actor's code",joinSessionBtn:'Join 🎙️',prompterEmptyText:'No script loaded',sessionVoiceLabel:'🦾 Voice:',prevBtn:'◀ Prev',nextBtn:'Next ▶',quitBtn:'Quit',modeHintAi:'AI reads partner lines automatically.',modeHintManual:'Advance lines manually with the buttons.',modeHintAuto:'AI reads partner lines and advances after 1.5s silence.',toastEmotion:'Emotion',toastSpeed:'Speed',toastVoice:'Voice',toastAccent:'Voice language',toastLanguage:'Website language',toastVoiceFallback:'Backup voice used'},
-  es:{homeSubtitle:'Estudio de audición',siteLanguageLabel:'Idioma del sitio',homeSoloTitle:'Solo + IA',homeSoloDesc:'La IA da la réplica con voz',homePartnerTitle:'Con un compañero',homePartnerDesc:'Invita a alguien para dar la réplica',homeFooterText:'WebRTC punto a punto · Sin datos guardados',partnerChoiceTitle:'Sesión con compañero',partnerCreateTitle:'Creo la sesión (actor)',partnerCreateDesc:'Generar código e invitar a un compañero',partnerJoinTitle:'Me uno a una sesión (compañero)',partnerJoinDesc:'Ingresar el código del actor',setupAiTitle:'Solo + IA',scriptLabel:'Guion (PDF o texto)',uploadLabel:'Arrastra tu PDF aquí o haz clic',uploadSub:'Formato estándar de guion',myCharacterLabel:'Mi personaje',pasteScriptLabel:'O pega el texto',replyModeLabel:'Modo de réplica',modeAiBtn:'🦾 IA vocal',modeManBtn:'✋ Manual',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'Voz de IA',voiceLanguageLabel:'Idioma / acentos',emotionLabel:'Emoción',speedLabel:'Velocidad',speedSlowBtn:'Lento x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rápido x1.6',launchAiBtn:'Iniciar sesión 🦾',setupPartnerTitle:'Con un compañero',sessionCodeLabel:'Tu código de sesión',sessionCodeHint:'Comparte este código',copyCodeBtn:'📋 Copiar código',copyLinkBtn:'🔗 Copiar enlace',shareBtn:'📤 Compartir',launchPartnerBtn:'Iniciar sesión 🎬',joinScreenTitle:'Unirse a una sesión',joinCodeLabel:'Código de sesión',joinCodePlaceholder:'Ingresa el código del actor',joinSessionBtn:'Unirse 🎙️',prompterEmptyText:'Ningún texto cargado',sessionVoiceLabel:'🦾 Voz:',prevBtn:'◀ Ant',nextBtn:'Sig ▶',quitBtn:'Salir',modeHintAi:'La IA lee las líneas del compañero automáticamente.',modeHintManual:'Avanza manualmente con los botones.',modeHintAuto:'La IA lee y avanza tras 1.5s de silencio.',toastEmotion:'Emoción',toastSpeed:'Velocidad',toastVoice:'Voz',toastAccent:'Idioma de voz',toastLanguage:'Idioma del sitio',toastVoiceFallback:'Voz de respaldo usada'},
-  it:{homeSubtitle:'Studio di audizione',siteLanguageLabel:'Lingua del sito',homeSoloTitle:'Solo + IA',homeSoloDesc:'L’IA recita le battute partner',homePartnerTitle:'Con un partner',homePartnerDesc:'Invita qualcuno a dare la replica',homeFooterText:'WebRTC peer-to-peer · Nessun dato salvato',partnerChoiceTitle:'Sessione partner',partnerCreateTitle:'Creo sessione (attore)',partnerCreateDesc:'Genera codice e invita un partner',partnerJoinTitle:'Mi unisco a una sessione',partnerJoinDesc:"Inserisci il codice dell'attore",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF o testo)',uploadLabel:'Trascina il PDF o fai clic',uploadSub:'Formato copione standard',myCharacterLabel:'Il mio personaggio',pasteScriptLabel:'Oppure incolla il testo',replyModeLabel:'Modalità battuta',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuale',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'Voce IA',voiceLanguageLabel:'Lingua / accenti',emotionLabel:'Emozione',speedLabel:'Velocità',speedSlowBtn:'Lento x0.7',speedNormalBtn:'Normale x1',speedFastBtn:'Veloce x1.6',launchAiBtn:'Avvia sessione 🦾',setupPartnerTitle:'Con un partner',sessionCodeLabel:'Codice sessione',sessionCodeHint:'Condividi questo codice',copyCodeBtn:'📋 Copia codice',copyLinkBtn:'🔗 Copia link',shareBtn:'📤 Condividi',launchPartnerBtn:'Avvia sessione 🎬',joinScreenTitle:'Unisciti a una sessione',joinCodeLabel:'Codice sessione',joinCodePlaceholder:"Inserisci il codice dell'attore",joinSessionBtn:'Unisciti 🎙️',prompterEmptyText:'Nessun testo caricato',sessionVoiceLabel:'🦾 Voce:',prevBtn:'◀ Prec',nextBtn:'Succ ▶',quitBtn:'Esci',modeHintAi:'L’IA legge automaticamente le battute partner.',modeHintManual:'Avanza manualmente con i pulsanti.',modeHintAuto:'L’IA avanza dopo 1.5s di silenzio.',toastEmotion:'Emozione',toastSpeed:'Velocità',toastVoice:'Voce',toastAccent:'Lingua voce',toastLanguage:'Lingua sito',toastVoiceFallback:'Usata voce di backup'},
-  zh:{homeSubtitle:'试镜工作室',siteLanguageLabel:'网站语言',homeSoloTitle:'单人 + AI',homeSoloDesc:'AI 朗读对手台词',homePartnerTitle:'与搭档',homePartnerDesc:'邀请他人一起对词',homeFooterText:'点对点 WebRTC · 不保存数据',partnerChoiceTitle:'搭档会话',partnerCreateTitle:'创建会话（演员）',partnerCreateDesc:'生成代码并邀请搭档',partnerJoinTitle:'加入会话（搭档）',partnerJoinDesc:'输入演员代码',setupAiTitle:'单人 + AI',scriptLabel:'剧本（PDF 或文本）',uploadLabel:'拖放 PDF 或点击上传',uploadSub:'标准剧本格式',myCharacterLabel:'我的角色',pasteScriptLabel:'或粘贴文本',replyModeLabel:'台词模式',modeAiBtn:'🦾 AI 语音',modeManBtn:'✋ 手动',modeAutoBtn:'🎤 自动',voiceSectionLabel:'AI 语音',voiceLanguageLabel:'语言 / 口音',emotionLabel:'情绪',speedLabel:'速度',speedSlowBtn:'慢速 x0.7',speedNormalBtn:'正常 x1',speedFastBtn:'快速 x1.6',launchAiBtn:'开始会话 🦾',setupPartnerTitle:'与搭档',sessionCodeLabel:'会话代码',sessionCodeHint:'把代码发给搭档',copyCodeBtn:'📋 复制代码',copyLinkBtn:'🔗 复制链接',shareBtn:'📤 分享',launchPartnerBtn:'开始会话 🎬',joinScreenTitle:'加入会话',joinCodeLabel:'会话代码',joinCodePlaceholder:'输入演员代码',joinSessionBtn:'加入 🎙️',prompterEmptyText:'尚未加载文本',sessionVoiceLabel:'🦾 语音:',prevBtn:'◀ 上一条',nextBtn:'下一条 ▶',quitBtn:'退出',modeHintAi:'AI 自动朗读对手台词。',modeHintManual:'使用按钮手动推进。',modeHintAuto:'静音 1.5 秒后自动推进。',toastEmotion:'情绪',toastSpeed:'速度',toastVoice:'语音',toastAccent:'语音语言',toastLanguage:'网站语言',toastVoiceFallback:'已使用备用语音'},
-  ar:{homeSubtitle:'استوديو الأداء',siteLanguageLabel:'لغة الموقع',homeSoloTitle:'منفرد + ذكاء اصطناعي',homeSoloDesc:'الذكاء الاصطناعي يقرأ دور الطرف الآخر',homePartnerTitle:'مع شريك',homePartnerDesc:'ادعُ شخصًا للقراءة معك',homeFooterText:'اتصال WebRTC مباشر · بلا تخزين بيانات',partnerChoiceTitle:'جلسة الشريك',partnerCreateTitle:'إنشاء جلسة (ممثل)',partnerCreateDesc:'أنشئ رمزًا وادعُ شريكًا',partnerJoinTitle:'انضمام إلى جلسة',partnerJoinDesc:'أدخل رمز الممثل',setupAiTitle:'منفرد + ذكاء اصطناعي',scriptLabel:'النص (PDF أو نص)',uploadLabel:'اسحب ملف PDF أو انقر',uploadSub:'تنسيق سيناريو قياسي',myCharacterLabel:'شخصيتي',pasteScriptLabel:'أو الصق النص',replyModeLabel:'وضع الرد',modeAiBtn:'🦾 ذكاء صوتي',modeManBtn:'✋ يدوي',modeAutoBtn:'🎤 تلقائي',voiceSectionLabel:'صوت الذكاء الاصطناعي',voiceLanguageLabel:'اللغة / اللهجات',emotionLabel:'المشاعر',speedLabel:'السرعة',speedSlowBtn:'بطيء x0.7',speedNormalBtn:'عادي x1',speedFastBtn:'سريع x1.6',launchAiBtn:'بدء الجلسة 🦾',setupPartnerTitle:'مع شريك',sessionCodeLabel:'رمز الجلسة',sessionCodeHint:'شارك الرمز مع شريكك',copyCodeBtn:'📋 نسخ الرمز',copyLinkBtn:'🔗 نسخ الرابط',shareBtn:'📤 مشاركة',launchPartnerBtn:'بدء الجلسة 🎬',joinScreenTitle:'الانضمام إلى جلسة',joinCodeLabel:'رمز الجلسة',joinCodePlaceholder:'أدخل رمز الممثل',joinSessionBtn:'انضمام 🎙️',prompterEmptyText:'لا يوجد نص محمّل',sessionVoiceLabel:'🦾 الصوت:',prevBtn:'◀ السابق',nextBtn:'التالي ▶',quitBtn:'إنهاء',modeHintAi:'الذكاء الاصطناعي يقرأ الردود تلقائيًا.',modeHintManual:'تقدم يدويًا عبر الأزرار.',modeHintAuto:'يتقدم تلقائيًا بعد 1.5 ثانية صمت.',toastEmotion:'المشاعر',toastSpeed:'السرعة',toastVoice:'الصوت',toastAccent:'لغة الصوت',toastLanguage:'لغة الموقع',toastVoiceFallback:'تم استخدام صوت احتياطي'},
-  he:{homeSubtitle:'אולפן אודישן',siteLanguageLabel:'שפת האתר',homeSoloTitle:'סולו + AI',homeSoloDesc:'ה-AI מקריא את הטקסט של הפרטנר',homePartnerTitle:'עם פרטנר',homePartnerDesc:'הזמן מישהו לקרוא איתך',homeFooterText:'WebRTC עמית לעמית · ללא שמירת נתונים',partnerChoiceTitle:'סשן פרטנר',partnerCreateTitle:'יצירת סשן (שחקן)',partnerCreateDesc:'צור קוד והזמן פרטנר',partnerJoinTitle:'הצטרפות לסשן',partnerJoinDesc:'הזן את קוד השחקן',setupAiTitle:'סולו + AI',scriptLabel:'תסריט (PDF או טקסט)',uploadLabel:'גרור PDF או לחץ',uploadSub:'פורמט תסריט סטנדרטי',myCharacterLabel:'הדמות שלי',pasteScriptLabel:'או הדבק טקסט',replyModeLabel:'מצב תגובה',modeAiBtn:'🦾 AI קולי',modeManBtn:'✋ ידני',modeAutoBtn:'🎤 אוטומטי',voiceSectionLabel:'קול AI',voiceLanguageLabel:'שפה / מבטאים',emotionLabel:'רגש',speedLabel:'מהירות',speedSlowBtn:'איטי x0.7',speedNormalBtn:'רגיל x1',speedFastBtn:'מהיר x1.6',launchAiBtn:'התחל סשן 🦾',setupPartnerTitle:'עם פרטנר',sessionCodeLabel:'קוד הסשן',sessionCodeHint:'שתף את הקוד',copyCodeBtn:'📋 העתק קוד',copyLinkBtn:'🔗 העתק קישור',shareBtn:'📤 שתף',launchPartnerBtn:'התחל סשן 🎬',joinScreenTitle:'הצטרפות לסשן',joinCodeLabel:'קוד סשן',joinCodePlaceholder:'הזן קוד שחקן',joinSessionBtn:'הצטרף 🎙️',prompterEmptyText:'לא נטען טקסט',sessionVoiceLabel:'🦾 קול:',prevBtn:'◀ קודם',nextBtn:'הבא ▶',quitBtn:'יציאה',modeHintAi:'ה-AI מקריא את שורות הפרטנר אוטומטית.',modeHintManual:'התקדם ידנית בעזרת הכפתורים.',modeHintAuto:'התקדמות אוטומטית לאחר 1.5 שניות שקט.',toastEmotion:'רגש',toastSpeed:'מהירות',toastVoice:'קול',toastAccent:'שפת קול',toastLanguage:'שפת האתר',toastVoiceFallback:'נעשה שימוש בקול חלופי'},
-  de:{homeSubtitle:'Casting-Studio',siteLanguageLabel:'Website-Sprache',homeSoloTitle:'Solo + KI',homeSoloDesc:'KI spricht die Partnerzeilen',homePartnerTitle:'Mit Partner',homePartnerDesc:'Jemanden zum Mitspielen einladen',homeFooterText:'Peer-to-Peer WebRTC · Keine Datenspeicherung',partnerChoiceTitle:'Partnersitzung',partnerCreateTitle:'Sitzung erstellen (Schauspieler)',partnerCreateDesc:'Code erzeugen und Partner einladen',partnerJoinTitle:'Sitzung beitreten',partnerJoinDesc:'Code des Schauspielers eingeben',setupAiTitle:'Solo + KI',scriptLabel:'Skript (PDF oder Text)',uploadLabel:'PDF hier ablegen oder klicken',uploadSub:'Standard-Drehbuchformat',myCharacterLabel:'Meine Rolle',pasteScriptLabel:'Oder Text einfügen',replyModeLabel:'Antwortmodus',modeAiBtn:'🦾 Sprach-KI',modeManBtn:'✋ Manuell',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'KI-Stimme',voiceLanguageLabel:'Sprache / Akzente',emotionLabel:'Emotion',speedLabel:'Tempo',speedSlowBtn:'Langsam x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Schnell x1.6',launchAiBtn:'Sitzung starten 🦾',setupPartnerTitle:'Mit Partner',sessionCodeLabel:'Sitzungscode',sessionCodeHint:'Code mit Partner teilen',copyCodeBtn:'📋 Code kopieren',copyLinkBtn:'🔗 Link kopieren',shareBtn:'📤 Teilen',launchPartnerBtn:'Sitzung starten 🎬',joinScreenTitle:'Sitzung beitreten',joinCodeLabel:'Sitzungscode',joinCodePlaceholder:'Code eingeben',joinSessionBtn:'Beitreten 🎙️',prompterEmptyText:'Kein Text geladen',sessionVoiceLabel:'🦾 Stimme:',prevBtn:'◀ Zurück',nextBtn:'Weiter ▶',quitBtn:'Beenden',modeHintAi:'KI liest Partnerzeilen automatisch.',modeHintManual:'Mit den Buttons manuell weiter.',modeHintAuto:'Automatisch nach 1,5 s Stille.',toastEmotion:'Emotion',toastSpeed:'Tempo',toastVoice:'Stimme',toastAccent:'Stimmensprache',toastLanguage:'Website-Sprache',toastVoiceFallback:'Ersatzstimme verwendet'},
-  pt:{homeSubtitle:'Estúdio de audição',siteLanguageLabel:'Idioma do site',homeSoloTitle:'Solo + IA',homeSoloDesc:'A IA fala as falas do parceiro',homePartnerTitle:'Com parceiro',homePartnerDesc:'Convide alguém para contracenar',homeFooterText:'WebRTC ponto a ponto · Sem dados salvos',partnerChoiceTitle:'Sessão de parceiro',partnerCreateTitle:'Criar sessão (ator)',partnerCreateDesc:'Gerar código e convidar parceiro',partnerJoinTitle:'Entrar em sessão',partnerJoinDesc:'Digite o código do ator',setupAiTitle:'Solo + IA',scriptLabel:'Roteiro (PDF ou texto)',uploadLabel:'Arraste o PDF ou clique',uploadSub:'Formato padrão de roteiro',myCharacterLabel:'Meu personagem',pasteScriptLabel:'Ou cole o texto',replyModeLabel:'Modo de fala',modeAiBtn:'🦾 IA vocal',modeManBtn:'✋ Manual',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'Voz da IA',voiceLanguageLabel:'Idioma / sotaques',emotionLabel:'Emoção',speedLabel:'Velocidade',speedSlowBtn:'Lento x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rápido x1.6',launchAiBtn:'Iniciar sessão 🦾',setupPartnerTitle:'Com parceiro',sessionCodeLabel:'Código da sessão',sessionCodeHint:'Compartilhe o código',copyCodeBtn:'📋 Copiar código',copyLinkBtn:'🔗 Copiar link',shareBtn:'📤 Compartilhar',launchPartnerBtn:'Iniciar sessão 🎬',joinScreenTitle:'Entrar na sessão',joinCodeLabel:'Código da sessão',joinCodePlaceholder:'Digite o código do ator',joinSessionBtn:'Entrar 🎙️',prompterEmptyText:'Nenhum texto carregado',sessionVoiceLabel:'🦾 Voz:',prevBtn:'◀ Ant',nextBtn:'Próx ▶',quitBtn:'Sair',modeHintAi:'A IA lê as falas do parceiro automaticamente.',modeHintManual:'Avance manualmente com os botões.',modeHintAuto:'Avança após 1,5s de silêncio.',toastEmotion:'Emoção',toastSpeed:'Velocidade',toastVoice:'Voz',toastAccent:'Idioma da voz',toastLanguage:'Idioma do site',toastVoiceFallback:'Voz reserva usada'},
-  ja:{homeSubtitle:'オーディションスタジオ',siteLanguageLabel:'サイト言語',homeSoloTitle:'ソロ + AI',homeSoloDesc:'AI が相手役の台詞を読み上げます',homePartnerTitle:'パートナーと',homePartnerDesc:'相手役を招待する',homeFooterText:'P2P WebRTC · データ保存なし',partnerChoiceTitle:'パートナーセッション',partnerCreateTitle:'セッション作成（俳優）',partnerCreateDesc:'コードを作成して招待',partnerJoinTitle:'セッション参加',partnerJoinDesc:'俳優コードを入力',setupAiTitle:'ソロ + AI',scriptLabel:'台本（PDF/テキスト）',uploadLabel:'PDF をドラッグまたはクリック',uploadSub:'標準脚本フォーマット',myCharacterLabel:'自分の役',pasteScriptLabel:'またはテキスト貼り付け',replyModeLabel:'進行モード',modeAiBtn:'🦾 AI音声',modeManBtn:'✋ 手動',modeAutoBtn:'🎤 自動',voiceSectionLabel:'AI 音声',voiceLanguageLabel:'言語 / アクセント',emotionLabel:'感情',speedLabel:'速度',speedSlowBtn:'遅い x0.7',speedNormalBtn:'標準 x1',speedFastBtn:'速い x1.6',launchAiBtn:'セッション開始 🦾',setupPartnerTitle:'パートナーと',sessionCodeLabel:'セッションコード',sessionCodeHint:'コードを共有してください',copyCodeBtn:'📋 コードコピー',copyLinkBtn:'🔗 リンクコピー',shareBtn:'📤 共有',launchPartnerBtn:'セッション開始 🎬',joinScreenTitle:'セッション参加',joinCodeLabel:'セッションコード',joinCodePlaceholder:'俳優コードを入力',joinSessionBtn:'参加 🎙️',prompterEmptyText:'台本が未読込です',sessionVoiceLabel:'🦾 音声:',prevBtn:'◀ 前',nextBtn:'次 ▶',quitBtn:'終了',modeHintAi:'AI が相手役を自動で読み上げます。',modeHintManual:'ボタンで手動進行します。',modeHintAuto:'1.5秒の無音後に自動進行します。',toastEmotion:'感情',toastSpeed:'速度',toastVoice:'音声',toastAccent:'音声言語',toastLanguage:'サイト言語',toastVoiceFallback:'予備音声を使用しました'},
-  ru:{homeSubtitle:'Студия прослушиваний',siteLanguageLabel:'Язык сайта',homeSoloTitle:'Соло + ИИ',homeSoloDesc:'ИИ озвучивает реплики партнера',homePartnerTitle:'С партнером',homePartnerDesc:'Пригласите партнера на реплики',homeFooterText:'WebRTC peer-to-peer · Данные не хранятся',partnerChoiceTitle:'Партнерская сессия',partnerCreateTitle:'Создать сессию (актер)',partnerCreateDesc:'Сгенерировать код и пригласить',partnerJoinTitle:'Присоединиться к сессии',partnerJoinDesc:'Введите код актера',setupAiTitle:'Соло + ИИ',scriptLabel:'Сценарий (PDF или текст)',uploadLabel:'Перетащите PDF или нажмите',uploadSub:'Стандартный формат сценария',myCharacterLabel:'Мой персонаж',pasteScriptLabel:'Или вставьте текст',replyModeLabel:'Режим реплик',modeAiBtn:'🦾 Голос ИИ',modeManBtn:'✋ Ручной',modeAutoBtn:'🎤 Авто',voiceSectionLabel:'Голос ИИ',voiceLanguageLabel:'Язык / акценты',emotionLabel:'Эмоция',speedLabel:'Скорость',speedSlowBtn:'Медленно x0.7',speedNormalBtn:'Нормально x1',speedFastBtn:'Быстро x1.6',launchAiBtn:'Начать сессию 🦾',setupPartnerTitle:'С партнером',sessionCodeLabel:'Код сессии',sessionCodeHint:'Поделитесь кодом с партнером',copyCodeBtn:'📋 Копировать код',copyLinkBtn:'🔗 Копировать ссылку',shareBtn:'📤 Поделиться',launchPartnerBtn:'Начать сессию 🎬',joinScreenTitle:'Войти в сессию',joinCodeLabel:'Код сессии',joinCodePlaceholder:'Введите код актера',joinSessionBtn:'Войти 🎙️',prompterEmptyText:'Текст не загружен',sessionVoiceLabel:'🦾 Голос:',prevBtn:'◀ Назад',nextBtn:'Далее ▶',quitBtn:'Выйти',modeHintAi:'ИИ автоматически читает реплики партнера.',modeHintManual:'Листайте вручную кнопками.',modeHintAuto:'Автопереход после 1.5 с тишины.',toastEmotion:'Эмоция',toastSpeed:'Скорость',toastVoice:'Голос',toastAccent:'Язык голоса',toastLanguage:'Язык сайта',toastVoiceFallback:'Использован резервный голос'},
+  fr:{homeSubtitle:"Studio d'audition",siteLanguageLabel:'Langue du site',homeSoloTitle:'Solo + IA',homeSoloDesc:"L'IA donne la réplique avec une voix",homePartnerTitle:'Avec un partenaire',homePartnerDesc:"Inviter quelqu'un à donner la réplique",homeFooterText:'WebRTC pair-à-pair · Aucune donnée stockée',partnerChoiceTitle:'Session partenaire',partnerCreateTitle:'Je crée la session (acteur)',partnerCreateDesc:'Générer un code et inviter un partenaire',partnerJoinTitle:'Je rejoins une session (partenaire)',partnerJoinDesc:"Entrer le code de l'acteur",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF ou texte)',uploadLabel:'Glisse ton PDF ici ou clique',uploadSub:'Format scénario standard',myCharacterLabel:'Mon personnage',pasteScriptLabel:'Ou colle le texte',replyModeLabel:'Mode réplique',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuel',modeAutoBtn:'🎤 Auto',voiceSectionLabel:"Voix de l'IA",voiceLanguageLabel:'Langue voix',emotionLabel:'Émotion',speedLabel:'Vitesse',speedSlowBtn:'Lent x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rapide x1.6',launchAiBtn:'Lancer la session 🦾',setupPartnerTitle:'Avec un partenaire',sessionCodeLabel:'Ton code de session',sessionCodeHint:'Partage ce code à ton partenaire',copyCodeBtn:'📋 Copier code',copyLinkBtn:'🔗 Copier lien',shareBtn:'📤 Partager',launchPartnerBtn:'Lancer la session 🎬',joinScreenTitle:'Rejoindre une session',joinCodeLabel:'Code de session',joinCodePlaceholder:"Entre le code de l'acteur",joinSessionBtn:'Rejoindre 🎙️',prompterEmptyText:'Aucun texte chargé',sessionVoiceLabel:'🦾 Voix :',prevBtn:'◀ Préc',nextBtn:'Suiv ▶',quitBtn:'Quitter',modeHintAi:"L'IA lit les répliques du partenaire automatiquement.",modeHintManual:'Avance les répliques manuellement avec les boutons.',modeHintAuto:"L'IA lit le partenaire puis détecte ton silence (1,5s) pour avancer.",toastEmotion:'Émotion',toastSpeed:'Vitesse',toastVoice:'Voix',toastAccent:'Langue voix',toastLanguage:'Langue du site',toastVoiceFallback:'Voix de secours utilisée'},
+  en:{homeSubtitle:'Audition studio',siteLanguageLabel:'Website language',homeSoloTitle:'Solo + AI',homeSoloDesc:'AI reads the partner lines',homePartnerTitle:'With a partner',homePartnerDesc:'Invite someone to read lines with you',homeFooterText:'Peer-to-peer WebRTC · No stored data',partnerChoiceTitle:'Partner session',partnerCreateTitle:'Create session (actor)',partnerCreateDesc:'Generate a code and invite a partner',partnerJoinTitle:'Join session (partner)',partnerJoinDesc:"Enter the actor's code",setupAiTitle:'Solo + AI',scriptLabel:'Script (PDF or text)',uploadLabel:'Drop your PDF here or click',uploadSub:'Standard screenplay format',myCharacterLabel:'My character',pasteScriptLabel:'Or paste text',replyModeLabel:'Reply mode',modeAiBtn:'🦾 Voice AI',modeManBtn:'✋ Manual',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'AI voice',voiceLanguageLabel:'Voice language',emotionLabel:'Emotion',speedLabel:'Speed',speedSlowBtn:'Slow x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Fast x1.6',launchAiBtn:'Start session 🦾',setupPartnerTitle:'With a partner',sessionCodeLabel:'Your session code',sessionCodeHint:'Share this code with your partner',copyCodeBtn:'📋 Copy code',copyLinkBtn:'🔗 Copy link',shareBtn:'📤 Share',launchPartnerBtn:'Start session 🎬',joinScreenTitle:'Join a session',joinCodeLabel:'Session code',joinCodePlaceholder:"Enter actor's code",joinSessionBtn:'Join 🎙️',prompterEmptyText:'No script loaded',sessionVoiceLabel:'🦾 Voice:',prevBtn:'◀ Prev',nextBtn:'Next ▶',quitBtn:'Quit',modeHintAi:'AI reads partner lines automatically.',modeHintManual:'Advance lines manually with the buttons.',modeHintAuto:'AI reads partner lines and advances after 1.5s silence.',toastEmotion:'Emotion',toastSpeed:'Speed',toastVoice:'Voice',toastAccent:'Voice language',toastLanguage:'Website language',toastVoiceFallback:'Backup voice used'},
+  es:{homeSubtitle:'Estudio de audición',siteLanguageLabel:'Idioma del sitio',homeSoloTitle:'Solo + IA',homeSoloDesc:'La IA da la réplica con voz',homePartnerTitle:'Con un compañero',homePartnerDesc:'Invita a alguien para dar la réplica',homeFooterText:'WebRTC punto a punto · Sin datos guardados',partnerChoiceTitle:'Sesión con compañero',partnerCreateTitle:'Creo la sesión (actor)',partnerCreateDesc:'Generar código e invitar a un compañero',partnerJoinTitle:'Me uno a una sesión (compañero)',partnerJoinDesc:'Ingresar el código del actor',setupAiTitle:'Solo + IA',scriptLabel:'Guion (PDF o texto)',uploadLabel:'Arrastra tu PDF aquí o haz clic',uploadSub:'Formato estándar de guion',myCharacterLabel:'Mi personaje',pasteScriptLabel:'O pega el texto',replyModeLabel:'Modo de réplica',modeAiBtn:'🦾 IA vocal',modeManBtn:'✋ Manual',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'Voz de IA',voiceLanguageLabel:'Idioma de voz',emotionLabel:'Emoción',speedLabel:'Velocidad',speedSlowBtn:'Lento x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rápido x1.6',launchAiBtn:'Iniciar sesión 🦾',setupPartnerTitle:'Con un compañero',sessionCodeLabel:'Tu código de sesión',sessionCodeHint:'Comparte este código',copyCodeBtn:'📋 Copiar código',copyLinkBtn:'🔗 Copiar enlace',shareBtn:'📤 Compartir',launchPartnerBtn:'Iniciar sesión 🎬',joinScreenTitle:'Unirse a una sesión',joinCodeLabel:'Código de sesión',joinCodePlaceholder:'Ingresa el código del actor',joinSessionBtn:'Unirse 🎙️',prompterEmptyText:'Ningún texto cargado',sessionVoiceLabel:'🦾 Voz:',prevBtn:'◀ Ant',nextBtn:'Sig ▶',quitBtn:'Salir',modeHintAi:'La IA lee las líneas del compañero automáticamente.',modeHintManual:'Avanza manualmente con los botones.',modeHintAuto:'La IA lee y avanza tras 1.5s de silencio.',toastEmotion:'Emoción',toastSpeed:'Velocidad',toastVoice:'Voz',toastAccent:'Idioma de voz',toastLanguage:'Idioma del sitio',toastVoiceFallback:'Voz de respaldo usada'},
+  it:{homeSubtitle:'Studio di audizione',siteLanguageLabel:'Lingua del sito',homeSoloTitle:'Solo + IA',homeSoloDesc:'L’IA recita le battute partner',homePartnerTitle:'Con un partner',homePartnerDesc:'Invita qualcuno a dare la replica',homeFooterText:'WebRTC peer-to-peer · Nessun dato salvato',partnerChoiceTitle:'Sessione partner',partnerCreateTitle:'Creo sessione (attore)',partnerCreateDesc:'Genera codice e invita un partner',partnerJoinTitle:'Mi unisco a una sessione',partnerJoinDesc:"Inserisci il codice dell'attore",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF o testo)',uploadLabel:'Trascina il PDF o fai clic',uploadSub:'Formato copione standard',myCharacterLabel:'Il mio personaggio',pasteScriptLabel:'Oppure incolla il testo',replyModeLabel:'Modalità battuta',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuale',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'Voce IA',voiceLanguageLabel:'Lingua voce',emotionLabel:'Emozione',speedLabel:'Velocità',speedSlowBtn:'Lento x0.7',speedNormalBtn:'Normale x1',speedFastBtn:'Veloce x1.6',launchAiBtn:'Avvia sessione 🦾',setupPartnerTitle:'Con un partner',sessionCodeLabel:'Codice sessione',sessionCodeHint:'Condividi questo codice',copyCodeBtn:'📋 Copia codice',copyLinkBtn:'🔗 Copia link',shareBtn:'📤 Condividi',launchPartnerBtn:'Avvia sessione 🎬',joinScreenTitle:'Unisciti a una sessione',joinCodeLabel:'Codice sessione',joinCodePlaceholder:"Inserisci il codice dell'attore",joinSessionBtn:'Unisciti 🎙️',prompterEmptyText:'Nessun testo caricato',sessionVoiceLabel:'🦾 Voce:',prevBtn:'◀ Prec',nextBtn:'Succ ▶',quitBtn:'Esci',modeHintAi:'L’IA legge automaticamente le battute partner.',modeHintManual:'Avanza manualmente con i pulsanti.',modeHintAuto:'L’IA avanza dopo 1.5s di silenzio.',toastEmotion:'Emozione',toastSpeed:'Velocità',toastVoice:'Voce',toastAccent:'Lingua voce',toastLanguage:'Lingua sito',toastVoiceFallback:'Usata voce di backup'},
+  zh:{homeSubtitle:'试镜工作室',siteLanguageLabel:'网站语言',homeSoloTitle:'单人 + AI',homeSoloDesc:'AI 朗读对手台词',homePartnerTitle:'与搭档',homePartnerDesc:'邀请他人一起对词',homeFooterText:'点对点 WebRTC · 不保存数据',partnerChoiceTitle:'搭档会话',partnerCreateTitle:'创建会话（演员）',partnerCreateDesc:'生成代码并邀请搭档',partnerJoinTitle:'加入会话（搭档）',partnerJoinDesc:'输入演员代码',setupAiTitle:'单人 + AI',scriptLabel:'剧本（PDF 或文本）',uploadLabel:'拖放 PDF 或点击上传',uploadSub:'标准剧本格式',myCharacterLabel:'我的角色',pasteScriptLabel:'或粘贴文本',replyModeLabel:'台词模式',modeAiBtn:'🦾 AI 语音',modeManBtn:'✋ 手动',modeAutoBtn:'🎤 自动',voiceSectionLabel:'AI 语音',voiceLanguageLabel:'语音语言',emotionLabel:'情绪',speedLabel:'速度',speedSlowBtn:'慢速 x0.7',speedNormalBtn:'正常 x1',speedFastBtn:'快速 x1.6',launchAiBtn:'开始会话 🦾',setupPartnerTitle:'与搭档',sessionCodeLabel:'会话代码',sessionCodeHint:'把代码发给搭档',copyCodeBtn:'📋 复制代码',copyLinkBtn:'🔗 复制链接',shareBtn:'📤 分享',launchPartnerBtn:'开始会话 🎬',joinScreenTitle:'加入会话',joinCodeLabel:'会话代码',joinCodePlaceholder:'输入演员代码',joinSessionBtn:'加入 🎙️',prompterEmptyText:'尚未加载文本',sessionVoiceLabel:'🦾 语音:',prevBtn:'◀ 上一条',nextBtn:'下一条 ▶',quitBtn:'退出',modeHintAi:'AI 自动朗读对手台词。',modeHintManual:'使用按钮手动推进。',modeHintAuto:'静音 1.5 秒后自动推进。',toastEmotion:'情绪',toastSpeed:'速度',toastVoice:'语音',toastAccent:'语音语言',toastLanguage:'网站语言',toastVoiceFallback:'已使用备用语音'},
+  ar:{homeSubtitle:'استوديو الأداء',siteLanguageLabel:'لغة الموقع',homeSoloTitle:'منفرد + ذكاء اصطناعي',homeSoloDesc:'الذكاء الاصطناعي يقرأ دور الطرف الآخر',homePartnerTitle:'مع شريك',homePartnerDesc:'ادعُ شخصًا للقراءة معك',homeFooterText:'اتصال WebRTC مباشر · بلا تخزين بيانات',partnerChoiceTitle:'جلسة الشريك',partnerCreateTitle:'إنشاء جلسة (ممثل)',partnerCreateDesc:'أنشئ رمزًا وادعُ شريكًا',partnerJoinTitle:'انضمام إلى جلسة',partnerJoinDesc:'أدخل رمز الممثل',setupAiTitle:'منفرد + ذكاء اصطناعي',scriptLabel:'النص (PDF أو نص)',uploadLabel:'اسحب ملف PDF أو انقر',uploadSub:'تنسيق سيناريو قياسي',myCharacterLabel:'شخصيتي',pasteScriptLabel:'أو الصق النص',replyModeLabel:'وضع الرد',modeAiBtn:'🦾 ذكاء صوتي',modeManBtn:'✋ يدوي',modeAutoBtn:'🎤 تلقائي',voiceSectionLabel:'صوت الذكاء الاصطناعي',voiceLanguageLabel:'لغة الصوت',emotionLabel:'المشاعر',speedLabel:'السرعة',speedSlowBtn:'بطيء x0.7',speedNormalBtn:'عادي x1',speedFastBtn:'سريع x1.6',launchAiBtn:'بدء الجلسة 🦾',setupPartnerTitle:'مع شريك',sessionCodeLabel:'رمز الجلسة',sessionCodeHint:'شارك الرمز مع شريكك',copyCodeBtn:'📋 نسخ الرمز',copyLinkBtn:'🔗 نسخ الرابط',shareBtn:'📤 مشاركة',launchPartnerBtn:'بدء الجلسة 🎬',joinScreenTitle:'الانضمام إلى جلسة',joinCodeLabel:'رمز الجلسة',joinCodePlaceholder:'أدخل رمز الممثل',joinSessionBtn:'انضمام 🎙️',prompterEmptyText:'لا يوجد نص محمّل',sessionVoiceLabel:'🦾 الصوت:',prevBtn:'◀ السابق',nextBtn:'التالي ▶',quitBtn:'إنهاء',modeHintAi:'الذكاء الاصطناعي يقرأ الردود تلقائيًا.',modeHintManual:'تقدم يدويًا عبر الأزرار.',modeHintAuto:'يتقدم تلقائيًا بعد 1.5 ثانية صمت.',toastEmotion:'المشاعر',toastSpeed:'السرعة',toastVoice:'الصوت',toastAccent:'لغة الصوت',toastLanguage:'لغة الموقع',toastVoiceFallback:'تم استخدام صوت احتياطي'},
+  de:{homeSubtitle:'Casting-Studio',siteLanguageLabel:'Website-Sprache',homeSoloTitle:'Solo + KI',homeSoloDesc:'KI spricht die Partnerzeilen',homePartnerTitle:'Mit Partner',homePartnerDesc:'Jemanden zum Mitspielen einladen',homeFooterText:'Peer-to-Peer WebRTC · Keine Datenspeicherung',partnerChoiceTitle:'Partnersitzung',partnerCreateTitle:'Sitzung erstellen (Schauspieler)',partnerCreateDesc:'Code erzeugen und Partner einladen',partnerJoinTitle:'Sitzung beitreten',partnerJoinDesc:'Code des Schauspielers eingeben',setupAiTitle:'Solo + KI',scriptLabel:'Skript (PDF oder Text)',uploadLabel:'PDF hier ablegen oder klicken',uploadSub:'Standard-Drehbuchformat',myCharacterLabel:'Meine Rolle',pasteScriptLabel:'Oder Text einfügen',replyModeLabel:'Antwortmodus',modeAiBtn:'🦾 Sprach-KI',modeManBtn:'✋ Manuell',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'KI-Stimme',voiceLanguageLabel:'Stimmensprache',emotionLabel:'Emotion',speedLabel:'Tempo',speedSlowBtn:'Langsam x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Schnell x1.6',launchAiBtn:'Sitzung starten 🦾',setupPartnerTitle:'Mit Partner',sessionCodeLabel:'Sitzungscode',sessionCodeHint:'Code mit Partner teilen',copyCodeBtn:'📋 Code kopieren',copyLinkBtn:'🔗 Link kopieren',shareBtn:'📤 Teilen',launchPartnerBtn:'Sitzung starten 🎬',joinScreenTitle:'Sitzung beitreten',joinCodeLabel:'Sitzungscode',joinCodePlaceholder:'Code eingeben',joinSessionBtn:'Beitreten 🎙️',prompterEmptyText:'Kein Text geladen',sessionVoiceLabel:'🦾 Stimme:',prevBtn:'◀ Zurück',nextBtn:'Weiter ▶',quitBtn:'Beenden',modeHintAi:'KI liest Partnerzeilen automatisch.',modeHintManual:'Mit den Buttons manuell weiter.',modeHintAuto:'Automatisch nach 1,5 s Stille.',toastEmotion:'Emotion',toastSpeed:'Tempo',toastVoice:'Stimme',toastAccent:'Stimmensprache',toastLanguage:'Website-Sprache',toastVoiceFallback:'Ersatzstimme verwendet'},
+  pt:{homeSubtitle:'Estúdio de audição',siteLanguageLabel:'Idioma do site',homeSoloTitle:'Solo + IA',homeSoloDesc:'A IA fala as falas do parceiro',homePartnerTitle:'Com parceiro',homePartnerDesc:'Convide alguém para contracenar',homeFooterText:'WebRTC ponto a ponto · Sem dados salvos',partnerChoiceTitle:'Sessão de parceiro',partnerCreateTitle:'Criar sessão (ator)',partnerCreateDesc:'Gerar código e convidar parceiro',partnerJoinTitle:'Entrar em sessão',partnerJoinDesc:'Digite o código do ator',setupAiTitle:'Solo + IA',scriptLabel:'Roteiro (PDF ou texto)',uploadLabel:'Arraste o PDF ou clique',uploadSub:'Formato padrão de roteiro',myCharacterLabel:'Meu personagem',pasteScriptLabel:'Ou cole o texto',replyModeLabel:'Modo de fala',modeAiBtn:'🦾 IA vocal',modeManBtn:'✋ Manual',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'Voz da IA',voiceLanguageLabel:'Idioma da voz',emotionLabel:'Emoção',speedLabel:'Velocidade',speedSlowBtn:'Lento x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rápido x1.6',launchAiBtn:'Iniciar sessão 🦾',setupPartnerTitle:'Com parceiro',sessionCodeLabel:'Código da sessão',sessionCodeHint:'Compartilhe o código',copyCodeBtn:'📋 Copiar código',copyLinkBtn:'🔗 Copiar link',shareBtn:'📤 Compartilhar',launchPartnerBtn:'Iniciar sessão 🎬',joinScreenTitle:'Entrar na sessão',joinCodeLabel:'Código da sessão',joinCodePlaceholder:'Digite o código do ator',joinSessionBtn:'Entrar 🎙️',prompterEmptyText:'Nenhum texto carregado',sessionVoiceLabel:'🦾 Voz:',prevBtn:'◀ Ant',nextBtn:'Próx ▶',quitBtn:'Sair',modeHintAi:'A IA lê as falas do parceiro automaticamente.',modeHintManual:'Avance manualmente com os botões.',modeHintAuto:'Avança após 1,5s de silêncio.',toastEmotion:'Emoção',toastSpeed:'Velocidade',toastVoice:'Voz',toastAccent:'Idioma da voz',toastLanguage:'Idioma do site',toastVoiceFallback:'Voz reserva usada'},
+  ja:{homeSubtitle:'オーディションスタジオ',siteLanguageLabel:'サイト言語',homeSoloTitle:'ソロ + AI',homeSoloDesc:'AI が相手役の台詞を読み上げます',homePartnerTitle:'パートナーと',homePartnerDesc:'相手役を招待する',homeFooterText:'P2P WebRTC · データ保存なし',partnerChoiceTitle:'パートナーセッション',partnerCreateTitle:'セッション作成（俳優）',partnerCreateDesc:'コードを作成して招待',partnerJoinTitle:'セッション参加',partnerJoinDesc:'俳優コードを入力',setupAiTitle:'ソロ + AI',scriptLabel:'台本（PDF/テキスト）',uploadLabel:'PDF をドラッグまたはクリック',uploadSub:'標準脚本フォーマット',myCharacterLabel:'自分の役',pasteScriptLabel:'またはテキスト貼り付け',replyModeLabel:'進行モード',modeAiBtn:'🦾 AI音声',modeManBtn:'✋ 手動',modeAutoBtn:'🎤 自動',voiceSectionLabel:'AI 音声',voiceLanguageLabel:'音声の言語',emotionLabel:'感情',speedLabel:'速度',speedSlowBtn:'遅い x0.7',speedNormalBtn:'標準 x1',speedFastBtn:'速い x1.6',launchAiBtn:'セッション開始 🦾',setupPartnerTitle:'パートナーと',sessionCodeLabel:'セッションコード',sessionCodeHint:'コードを共有してください',copyCodeBtn:'📋 コードコピー',copyLinkBtn:'🔗 リンクコピー',shareBtn:'📤 共有',launchPartnerBtn:'セッション開始 🎬',joinScreenTitle:'セッション参加',joinCodeLabel:'セッションコード',joinCodePlaceholder:'俳優コードを入力',joinSessionBtn:'参加 🎙️',prompterEmptyText:'台本が未読込です',sessionVoiceLabel:'🦾 音声:',prevBtn:'◀ 前',nextBtn:'次 ▶',quitBtn:'終了',modeHintAi:'AI が相手役を自動で読み上げます。',modeHintManual:'ボタンで手動進行します。',modeHintAuto:'1.5秒の無音後に自動進行します。',toastEmotion:'感情',toastSpeed:'速度',toastVoice:'音声',toastAccent:'音声言語',toastLanguage:'サイト言語',toastVoiceFallback:'予備音声を使用しました'},
 };
-UI_I18N.ko={...UI_I18N.en,homeSubtitle:'오디션 스튜디오',siteLanguageLabel:'사이트 언어',homeSoloTitle:'솔로 + AI',homeSoloDesc:'AI가 상대 대사를 읽어줍니다',homePartnerTitle:'파트너와 함께',homePartnerDesc:'함께 리딩할 파트너를 초대하세요',voiceSectionLabel:'AI 음성',voiceLanguageLabel:'언어 / 억양',emotionLabel:'감정',speedLabel:'속도',toastLanguage:'사이트 언어'};
-UI_I18N.sq={...UI_I18N.en,homeSubtitle:'Studio audicioni',siteLanguageLabel:'Gjuha e faqes',homeSoloTitle:'Solo + AI',homeSoloDesc:'AI lexon replikat e partnerit',homePartnerTitle:'Me partner',homePartnerDesc:'Fto dikë të lexojë me ty',voiceSectionLabel:'Zëri AI',voiceLanguageLabel:'Gjuha / thekset',emotionLabel:'Emocioni',speedLabel:'Shpejtësia',toastLanguage:'Gjuha e faqes'};
-UI_I18N.hr={...UI_I18N.en,homeSubtitle:'Audicijski studio',siteLanguageLabel:'Jezik stranice',homeSoloTitle:'Solo + AI',homeSoloDesc:'AI čita replike partnera',homePartnerTitle:'S partnerom',homePartnerDesc:'Pozovi nekoga da čita s tobom',voiceSectionLabel:'AI glas',voiceLanguageLabel:'Jezik / naglasci',emotionLabel:'Emocija',speedLabel:'Brzina',toastLanguage:'Jezik stranice'};
-UI_I18N.el={...UI_I18N.en,homeSubtitle:'Στούντιο ακρόασης',siteLanguageLabel:'Γλώσσα ιστότοπου',homeSoloTitle:'Solo + AI',homeSoloDesc:'Το AI διαβάζει τις ατάκες του συμπαίκτη',homePartnerTitle:'Με συμπαίκτη',homePartnerDesc:'Προσκάλεσε κάποιον να διαβάσει μαζί σου',voiceSectionLabel:'Φωνή AI',voiceLanguageLabel:'Γλώσσα / προφορές',emotionLabel:'Συναίσθημα',speedLabel:'Ταχύτητα',toastLanguage:'Γλώσσα ιστότοπου'};
-UI_I18N.fi={...UI_I18N.en,homeSubtitle:'Koelutila',siteLanguageLabel:'Sivuston kieli',toastLanguage:'Sivuston kieli'};
-UI_I18N.da={...UI_I18N.en,homeSubtitle:'Auditionsstudio',siteLanguageLabel:'Websprog',toastLanguage:'Websprog'};
-UI_I18N.sv={...UI_I18N.en,homeSubtitle:'Auditionsstudio',siteLanguageLabel:'Webbplatsens språk',toastLanguage:'Webbplatsens språk'};
-UI_I18N.no={...UI_I18N.en,homeSubtitle:'Auditionsstudio',siteLanguageLabel:'Nettstedsspråk',toastLanguage:'Nettstedsspråk'};
-UI_I18N.lv={...UI_I18N.en,homeSubtitle:'Izklausīšanas studija',siteLanguageLabel:'Vietnes valoda',toastLanguage:'Vietnes valoda'};
-UI_I18N.et={...UI_I18N.en,homeSubtitle:'Kuulamisstuudio',siteLanguageLabel:'Veebisaidi keel',toastLanguage:'Veebisaidi keel'};
+UI_I18N.ko={...UI_I18N.en,homeSubtitle:'오디션 스튜디오',siteLanguageLabel:'사이트 언어',homeSoloTitle:'솔로 + AI',homeSoloDesc:'AI가 상대 대사를 읽어줍니다',homePartnerTitle:'파트너와 함께',homePartnerDesc:'함께 리딩할 파트너를 초대하세요',voiceSectionLabel:'AI 음성',voiceLanguageLabel:'음성 언어',emotionLabel:'감정',speedLabel:'속도',toastLanguage:'사이트 언어'};
 UI_I18N.hi={...UI_I18N.en,homeSubtitle:'ऑडिशन स्टूडियो',siteLanguageLabel:'साइट भाषा',toastLanguage:'साइट भाषा'};
-UI_I18N.nl={...UI_I18N.en,homeSubtitle:'Auditionstudio',siteLanguageLabel:'Websitetaal',toastLanguage:'Websitetaal'};
-UI_I18N.pl={...UI_I18N.en,homeSubtitle:'Studio castingu',siteLanguageLabel:'Język strony',toastLanguage:'Język strony'};
-UI_I18N.cs={...UI_I18N.en,homeSubtitle:'Castingové studio',siteLanguageLabel:'Jazyk webu',toastLanguage:'Jazyk webu'};
 const UI_EXTRA_I18N={
   en:{codeUnavailable:'Code unavailable',codeCopied:'Code copied',linkUnavailable:'Link unavailable',linkCopied:'Link copied',copyFailed:'Copy failed',shareUnavailable:'Sharing unavailable',shareTextCopied:'Text copied',joinCodePrefilled:'Code prefilled',joinCodeMissing:'Enter a code',waitingForPartner:'Waiting for partner…',waitingOverlayTitle:'Waiting…',waitingOverlayMessage:'Share code ',connection:'Connecting…',searching:'Looking for ',sessionNotFound:'Session not found.',connectionSlow:'Slow connection',disconnected:'Disconnected',partnerDisconnected:'Partner disconnected',error:'Error'},
   fr:{codeUnavailable:'Code indisponible',codeCopied:'Code copié',linkUnavailable:'Lien indisponible',linkCopied:'Lien copié',copyFailed:'Copie impossible',shareUnavailable:'Partage indisponible',shareTextCopied:'Texte copié',joinCodePrefilled:'Code prérempli',joinCodeMissing:'Entre un code',waitingForPartner:'En attente du partenaire…',waitingOverlayTitle:'En attente…',waitingOverlayMessage:'Partage le code ',connection:'Connexion…',searching:'Recherche de ',sessionNotFound:'Session introuvable.',connectionSlow:'Connexion lente',disconnected:'Déconnecté',partnerDisconnected:'Partenaire déconnecté',error:'Erreur'},
 };
-const TTS_LANGS=['fr','en','es','it','de','pt','ar','zh','ja','ko','sq','hr','el','fi','da','sv','no','nb','nn','lv','et','hi','nl','pl','cs'];
+const TTS_LANGS=['fr','en','es','it','de','pt','ar','zh','ja','ko','hi'];
 
 function resolveVoiceId(id){
   return ELEVEN_VOICE_IDS[id]||ELEVEN_VOICE_IDS.serena;
@@ -708,11 +591,11 @@ function ts(text){
 }
 function getEmotionLabel(key){
   const map={
-    neutral:{fr:'Neutre',en:'Neutral',es:'Neutral',it:'Neutro',zh:'中性',ar:'محايد',he:'נייטרלי',de:'Neutral',pt:'Neutro',ja:'ニュートラル',ru:'Нейтрально'},
-    excited:{fr:'Excité',en:'Excited',es:'Emocionado',it:'Eccitato',zh:'兴奋',ar:'متحمس',he:'נרגש',de:'Aufgeregt',pt:'Animado',ja:'興奮',ru:'Взволнованно'},
-    sad:{fr:'Triste',en:'Sad',es:'Triste',it:'Triste',zh:'悲伤',ar:'حزين',he:'עצוב',de:'Traurig',pt:'Triste',ja:'悲しい',ru:'Грустно'},
-    angry:{fr:'En colère',en:'Angry',es:'Enfadado',it:'Arrabbiato',zh:'愤怒',ar:'غاضب',he:'כועס',de:'Wütend',pt:'Com raiva',ja:'怒り',ru:'Зло'},
-    whisper:{fr:'Chuchoté',en:'Whisper',es:'Susurrado',it:'Sussurrato',zh:'耳语',ar:'هامس',he:'בלחש',de:'Flüsternd',pt:'Sussurrado',ja:'ささやき',ru:'Шепот'},
+    neutral:{fr:'Neutre',en:'Neutral',es:'Neutral',it:'Neutro',zh:'中性',ar:'محايد',de:'Neutral',pt:'Neutro',ja:'ニュートラル',ko:'중립',hi:'तटस्थ'},
+    excited:{fr:'Excité',en:'Excited',es:'Emocionado',it:'Eccitato',zh:'兴奋',ar:'متحمس',de:'Aufgeregt',pt:'Animado',ja:'興奮',ko:'흥분',hi:'उत्साहित'},
+    sad:{fr:'Triste',en:'Sad',es:'Triste',it:'Triste',zh:'悲伤',ar:'حزين',de:'Traurig',pt:'Triste',ja:'悲しい',ko:'슬픔',hi:'उदास'},
+    angry:{fr:'En colère',en:'Angry',es:'Enfadado',it:'Arrabbiato',zh:'愤怒',ar:'غاضب',de:'Wütend',pt:'Com raiva',ja:'怒り',ko:'화남',hi:'गुस्सा'},
+    whisper:{fr:'Chuchoté',en:'Whisper',es:'Susurrado',it:'Sussurrato',zh:'耳语',ar:'هامس',de:'Flüsternd',pt:'Sussurrado',ja:'ささやき',ko:'속삭임',hi:'फुसफुसाहट'},
   };
   const row=map[key];
   if(!row)return key;
@@ -814,7 +697,7 @@ function initSiteLanguageSelect(){
 }
 function applyUILanguage(){
   document.documentElement.lang=selectedUILanguage;
-  document.documentElement.dir=(selectedUILanguage==='ar'||selectedUILanguage==='he')?'rtl':'ltr';
+  document.documentElement.dir=selectedUILanguage==='ar'?'rtl':'ltr';
   setTextById('homeSubtitle','homeSubtitle');
   setTextById('siteLanguageLabel','siteLanguageLabel');
   setTextById('homeSoloTitle','homeSoloTitle');
@@ -884,24 +767,20 @@ function changeUILanguage(languageId,silent){
   }
 }
 function getLanguageSuggestionCountryMap(){
+  const en='en';
   return{
     FR:'fr',BE:'fr',CH:'fr',CA:'fr',LU:'fr',MC:'fr',
     GB:'en',IE:'en',US:'en',AU:'en',NZ:'en',NG:'en',ZA:'en',KE:'en',GH:'en',IN:'en',PK:'en',BD:'en',
     ES:'es',MX:'es',AR:'es',CO:'es',PE:'es',CL:'es',UY:'es',VE:'es',EC:'es',
     IT:'it',
-    DE:'de',AT:'de',
+    DE:'de',AT:'de',LI:'de',
     PT:'pt',BR:'pt',AO:'pt',MZ:'pt',
     JP:'ja',
     KR:'ko',
-    FI:'fi',DK:'da',SE:'sv',NO:'no',LV:'lv',EE:'et',
-    IN:'hi',NL:'nl',PL:'pl',CZ:'cs',
     CN:'zh',TW:'zh',HK:'zh',SG:'zh',
-    GR:'el',CY:'el',
-    AL:'sq',XK:'sq',
-    HR:'hr',BA:'hr',RS:'hr',ME:'hr',
-    AE:'ar',SA:'ar',MA:'ar',DZ:'ar',EG:'ar',TN:'ar',JO:'ar',QA:'ar',
-    IL:'he',
-    RU:'ru',BY:'ru',KZ:'ru',
+    AE:'ar',SA:'ar',MA:'ar',DZ:'ar',EG:'ar',TN:'ar',JO:'ar',QA:'ar',KW:'ar',BH:'ar',OM:'ar',YE:'ar',IQ:'ar',LB:'ar',LY:'ar',SD:'ar',SO:'ar',DJ:'ar',MR:'ar',
+    NP:'hi',LK:'en',
+    FI:en,DK:en,SE:en,NO:en,IS:en,LV:en,EE:en,LT:en,NL:en,PL:en,CZ:en,SK:en,HU:en,RO:en,BG:en,HR:en,SI:en,BA:en,RS:en,ME:en,MK:en,AL:en,XK:en,GR:en,CY:en,TR:en,UA:en,RU:en,BY:en,KZ:en,IL:en,
   };
 }
 function mapLanguageCodeToUI(code){
