@@ -19,7 +19,7 @@ body{min-height:100vh;min-height:100dvh;font-family:'DM Sans',sans-serif;backgro
 /* HOME */
 #home{justify-content:center;align-items:center;padding:2rem 1.5rem;background:radial-gradient(90% 120% at 50% 0%,#1f5a4e 0%,#123c34 45%,#0a2722 100%)}
 .home-inner{max-width:460px;width:100%;display:flex;flex-direction:column;align-items:center;gap:2rem}
-.logo{text-align:center}.logo h1{font-size:2.6rem;font-weight:700;color:var(--white);letter-spacing:-.02em;line-height:1.1;margin-bottom:.35rem}.logo h1 span{color:#7fd8bb;font-style:italic}.logo p{font-size:.8rem;color:#bfd9cf;letter-spacing:.12em;text-transform:uppercase;font-weight:500}
+.logo{text-align:center}.logo h1{font-size:2.6rem;font-weight:700;color:var(--white);letter-spacing:-.02em;line-height:1.1;margin-bottom:.35rem;display:flex;align-items:center;justify-content:center;gap:.28rem}.logo h1 span{color:#7fd8bb;font-style:italic}.logo .logo-rec-dot{display:inline-flex;align-items:center;justify-content:center;width:1.02rem;height:1.02rem;border-radius:50%;background:#c1121f;box-shadow:0 0 0 2px rgba(255,255,255,.08),0 0 16px rgba(193,18,31,.45);font-size:.4rem;letter-spacing:.05em;color:#fff;font-weight:700;line-height:1;transform:translateY(.02rem)}.logo p{font-size:.8rem;color:#bfd9cf;letter-spacing:.12em;text-transform:uppercase;font-weight:500}
 .home-cards{width:100%;display:flex;flex-direction:column;gap:.85rem}
 .hcard{background:rgba(8,31,27,.72);border:1.5px solid rgba(143,198,180,.22);border-radius:var(--radius-lg);padding:1.4rem 1.3rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:1rem}
 .hcard:hover{border-color:#5eb89b;box-shadow:var(--shadow);transform:translateY(-2px)}.hcard:active{transform:translateY(0)}
@@ -131,7 +131,7 @@ input[type="file"]{display:none}
 <!-- ═══ HOME ═══ -->
 <div id="home" class="screen active">
   <div class="home-inner">
-    <div class="logo"><h1>Cast<span>wing</span></h1><p id="homeSubtitle">Studio d'audition</p></div>
+    <div class="logo"><h1>Cast<span class="logo-rec-dot">REC</span><span>wing</span></h1><p id="homeSubtitle">Studio d'audition</p></div>
     <div class="setup-card" style="width:100%;padding:.85rem 1rem">
       <label id="siteLanguageLabel">Langue du site</label>
       <select id="siteLanguageSelect" onchange="changeUILanguage(this.value)"></select>
@@ -297,6 +297,7 @@ let ttsEndpointCache='';
 let elevenLabsTemporarilyDisabled=false;
 let elevenLabsFallbackNotified=false;
 let elevenLabsBackoffTimer=null;
+let elevenLabsDisableReason='';
 const unavailableElevenVoiceIds=new Set();
 const unavailableVoiceToastShown=new Set();
 
@@ -338,6 +339,10 @@ function isElevenLabsAccountBlocked(status,details){
     || msg.includes('elevenlabs error 401')
     || msg.includes('elevenlabs error 403');
 }
+function isElevenLabsConfigMissing(details){
+  const msg=(details||'').toLowerCase();
+  return msg.includes('missing elevenlabs_api_key');
+}
 function extractElevenLabsStatus(httpStatus,errorPayload,detail){
   if(httpStatus!==502)return httpStatus;
   const regex=/elevenlabs error\s+(\d{3})/i;
@@ -353,6 +358,11 @@ function extractElevenLabsStatus(httpStatus,errorPayload,detail){
   return httpStatus;
 }
 function getElevenLabsFallbackMessage(){
+  if(elevenLabsDisableReason==='missing_key'){
+    return selectedUILanguage==='fr'
+      ? "Configuration ElevenLabs manquante (ELEVENLABS_API_KEY). Voix navigateur activée."
+      : 'ElevenLabs is not configured (missing ELEVENLABS_API_KEY). Using browser voice.';
+  }
   return selectedUILanguage==='fr'
     ? 'ElevenLabs indisponible, voix navigateur activée'
     : 'ElevenLabs unavailable, using browser voice';
@@ -363,8 +373,9 @@ function getUnavailableVoiceMessage(label){
     ? `Voix indisponible: ${name}. Voix de secours utilisée`
     : `Voice unavailable: ${name}. Using backup voice`;
 }
-function setElevenLabsBackoff(ms){
+function setElevenLabsBackoff(ms,reason){
   elevenLabsTemporarilyDisabled=true;
+  elevenLabsDisableReason=reason||elevenLabsDisableReason||'temporary';
   if(elevenLabsBackoffTimer){
     clearTimeout(elevenLabsBackoffTimer);
     elevenLabsBackoffTimer=null;
@@ -372,6 +383,7 @@ function setElevenLabsBackoff(ms){
   const delay=Math.max(1000,Number(ms)||ELEVEN_ACCOUNT_BACKOFF_MS);
   elevenLabsBackoffTimer=setTimeout(()=>{
     elevenLabsTemporarilyDisabled=false;
+    elevenLabsDisableReason='';
     elevenLabsFallbackNotified=false;
     elevenLabsBackoffTimer=null;
   },delay);
@@ -946,8 +958,12 @@ async function speakWithElevenLabs(text,preset,token,cb){
       }catch(e){}
       lastErr='HTTP '+rsp.status+(err?' · '+err:'');
       const upstreamStatus=extractElevenLabsStatus(rsp.status,errorPayload,err);
+      if(isElevenLabsConfigMissing(err)){
+        setElevenLabsBackoff(24*60*60*1000,'missing_key');
+        break;
+      }
       if(isElevenLabsAccountBlocked(upstreamStatus,err)){
-        setElevenLabsBackoff(ELEVEN_ACCOUNT_BACKOFF_MS);
+        setElevenLabsBackoff(ELEVEN_ACCOUNT_BACKOFF_MS,'account_blocked');
         break;
       }
       if(upstreamStatus===404){
@@ -974,11 +990,9 @@ async function speakWithElevenLabs(text,preset,token,cb){
     audio.onended=done;
     audio.onerror=done;
     try{await audio.play()}catch(e){done()}
+    return true;
   }catch(e){
-    if(token===activeSpeechToken){
-      showToast(t('error')+': '+(e&&e.message?e.message:'TTS error'),4500);
-      if(cb)cb();
-    }
+    return false;
   }
 }
 function speakWithBrowser(text,preset,style,token,cb){
@@ -993,12 +1007,19 @@ function speakWithBrowser(text,preset,style,token,cb){
   u.onerror=done;
   speechSynthesis.speak(u);
 }
-function aiSpeak(text,cb){
+async function aiSpeak(text,cb){
   if(!text){if(cb)cb();return}
   const preset=selectedVoice||VOICE_PRESETS[0];
   const token=++activeSpeechToken;
   cancelTTSPlayback();
-  if(useElevenLabs){speakWithElevenLabs(text,preset,token,cb);return}
+  if(useElevenLabs&&!elevenLabsTemporarilyDisabled){
+    const ok=await speakWithElevenLabs(text,preset,token,cb);
+    if(ok||token!==activeSpeechToken)return;
+  }
+  if(useElevenLabs&&elevenLabsTemporarilyDisabled&&!elevenLabsFallbackNotified){
+    elevenLabsFallbackNotified=true;
+    showToast(getElevenLabsFallbackMessage(),5000);
+  }
   const style=getSpeechStyle(preset);
   speakWithBrowser(text,preset,style,token,cb);
 }
