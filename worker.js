@@ -16,6 +16,24 @@ function json(body, status = 200) {
   });
 }
 
+async function fetchAccountFallbackVoiceId(apiKey, attemptedVoiceId) {
+  try {
+    const response = await fetch("https://api.elevenlabs.io/v1/voices", {
+      headers: {
+        "xi-api-key": apiKey,
+        "Content-Type": "application/json",
+      },
+    });
+    if (!response.ok) return "";
+    const payload = await response.json().catch(() => null);
+    const voices = payload && Array.isArray(payload.voices) ? payload.voices : [];
+    const first = voices.find((v) => v && typeof v.voice_id === "string" && v.voice_id && v.voice_id !== attemptedVoiceId);
+    return first && first.voice_id ? first.voice_id : "";
+  } catch (e) {
+    return "";
+  }
+}
+
 async function handleTTS(request, env) {
   try {
     const apiKey = String(env.ELEVENLABS_API_KEY || "")
@@ -57,56 +75,74 @@ async function handleTTS(request, env) {
     const languageCandidates = languageCode ? [languageCode, ""] : [""];
 
     const attempts = [];
+    const voiceCandidates = [voiceId];
+    let accountFallbackVoiceId = "";
     let lastStatus = 502;
     let lastDetail = "ElevenLabs request failed";
 
-    for (const candidateModel of modelCandidates) {
-      for (const candidateLang of languageCandidates) {
-        const body = { text, model_id: candidateModel, voice_settings: voiceSettings };
-        if (candidateLang) body.language_code = candidateLang;
+    for (const candidateVoice of voiceCandidates) {
+      for (const candidateModel of modelCandidates) {
+        for (const candidateLang of languageCandidates) {
+          const body = { text, model_id: candidateModel, voice_settings: voiceSettings };
+          if (candidateLang) body.language_code = candidateLang;
 
-        const response = await fetch(
-          `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "xi-api-key": apiKey, Accept: "audio/mpeg" },
-            body: JSON.stringify(body),
+          const response = await fetch(
+            `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(candidateVoice)}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "xi-api-key": apiKey, Accept: "audio/mpeg" },
+              body: JSON.stringify(body),
+            }
+          );
+
+          if (response.ok) {
+            return new Response(response.body, {
+              status: 200,
+              headers: {
+                "Content-Type": "audio/mpeg",
+                "Cache-Control": "no-store",
+                "X-Elevenlabs-Model": candidateModel,
+                "X-Elevenlabs-Language": candidateLang || "default",
+                "X-Elevenlabs-Voice": candidateVoice,
+              },
+            });
           }
-        );
 
-        if (response.ok) {
-          return new Response(response.body, {
-            status: 200,
-            headers: {
-              "Content-Type": "audio/mpeg",
-              "Cache-Control": "no-store",
-              "X-Elevenlabs-Model": candidateModel,
-              "X-Elevenlabs-Language": candidateLang || "default",
-            },
+          const rawDetail = await response.text().catch(() => "");
+          let parsed = null;
+          try { parsed = rawDetail ? JSON.parse(rawDetail) : null; } catch (e) { parsed = null; }
+          const detail = toText(
+            (parsed && (parsed.detail || parsed.message || parsed.error)) || rawDetail || `ElevenLabs error ${response.status}`
+          );
+          lastStatus = response.status;
+          lastDetail = detail;
+          attempts.push({
+            status: response.status,
+            voice: candidateVoice,
+            model: candidateModel,
+            language: candidateLang || "default",
+            detail,
           });
-        }
 
-        const rawDetail = await response.text().catch(() => "");
-        let parsed = null;
-        try { parsed = rawDetail ? JSON.parse(rawDetail) : null; } catch (e) { parsed = null; }
-        const detail = toText(
-          (parsed && (parsed.detail || parsed.message || parsed.error)) || rawDetail || `ElevenLabs error ${response.status}`
-        );
-        lastStatus = response.status;
-        lastDetail = detail;
-        attempts.push({ status: response.status, model: candidateModel, language: candidateLang || "default", detail });
+          if (response.status === 404 && candidateVoice === voiceId) {
+            if (!accountFallbackVoiceId) accountFallbackVoiceId = await fetchAccountFallbackVoiceId(apiKey, voiceId);
+            if (accountFallbackVoiceId && !voiceCandidates.includes(accountFallbackVoiceId)) {
+              voiceCandidates.push(accountFallbackVoiceId);
+            }
+          }
 
-        if (response.status === 401 || response.status === 403) {
-          const authHint = response.status === 401
-            ? "Check ELEVENLABS_API_KEY validity and text_to_speech permission."
-            : "Key exists but lacks permission. Enable text_to_speech scope.";
-          return json({ error: `ElevenLabs error ${response.status}`, details: detail, hint: authHint, attempts }, 502);
+          if (response.status === 401 || response.status === 403) {
+            const authHint = response.status === 401
+              ? "Check ELEVENLABS_API_KEY validity and text_to_speech permission."
+              : "Key exists but lacks permission. Enable text_to_speech scope.";
+            return json({ error: `ElevenLabs error ${response.status}`, details: detail, hint: authHint, attempts }, 502);
+          }
         }
       }
     }
 
     const hint = lastStatus === 404
-      ? "Voice/model/language combination unavailable. Try another accent/voice."
+      ? "Voice/model/language unavailable on this account. The backend attempted account voice fallback."
       : lastStatus === 422
         ? "Language not supported by this voice. The backend already retried without language_code."
         : "";
@@ -120,11 +156,17 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    if (url.pathname === "/api/geo" && request.method === "GET") {
+      const country = (request.cf && request.cf.country) ? request.cf.country : "";
+      const acceptLanguage = request.headers.get("Accept-Language") || "";
+      return json({ country, acceptLanguage });
+    }
+
     if (url.pathname === "/api/tts" && request.method === "POST") {
       return handleTTS(request, env);
     }
 
-    if (url.pathname === "/api/tts") {
+    if (url.pathname === "/api/tts" || url.pathname === "/api/geo") {
       return json({ error: "Method not allowed" }, 405);
     }
 

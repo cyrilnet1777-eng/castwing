@@ -763,6 +763,20 @@ function mapLanguageCodeToUI(code){
 async function detectPreferredUILanguage(){
   const countryMap=getLanguageSuggestionCountryMap();
   try{
+    const rsp=await fetch('/api/geo',{cache:'no-store'});
+    if(rsp.ok){
+      const geo=await rsp.json().catch(()=>null);
+      const country=geo&&geo.country?String(geo.country).toUpperCase():'';
+      if(country&&countryMap[country]&&countryMap[country]!==selectedUILanguage)return countryMap[country];
+      const acceptLanguage=geo&&geo.acceptLanguage?String(geo.acceptLanguage):'';
+      const accepted=acceptLanguage.split(',').map(v=>v.split(';')[0].trim()).filter(Boolean);
+      for(const lang of accepted){
+        const mapped=mapLanguageCodeToUI(lang);
+        if(mapped&&mapped!==selectedUILanguage)return mapped;
+      }
+    }
+  }catch(e){}
+  try{
     const controller=new AbortController();
     const timer=setTimeout(()=>controller.abort(),2500);
     const rsp=await fetch('https://www.cloudflare.com/cdn-cgi/trace',{cache:'no-store',signal:controller.signal});
