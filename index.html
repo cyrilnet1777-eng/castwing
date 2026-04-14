@@ -917,7 +917,14 @@ async function speakWithElevenLabs(text,preset,token,cb){
     for(let i=0;i<voiceCandidates.length;i++){
       const voiceId=voiceCandidates[i];
       if(unavailableElevenVoiceIds.has(voiceId))continue;
-      const rsp=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,voiceId,modelId:preset.modelId||'eleven_multilingual_v2',emotion:selectedEmotion,speed,languageCode:preset.languageCode||getCurrentLanguageCode()})});
+      const {response:rsp}=await fetchTTSFromBestEndpoint({
+        text,
+        voiceId,
+        modelId:preset.modelId||'eleven_multilingual_v2',
+        emotion:selectedEmotion,
+        speed,
+        languageCode:preset.languageCode||getCurrentLanguageCode()
+      });
       if(rsp.ok){
         blob=await rsp.blob();
         usedFallback=i>0;
