@@ -287,6 +287,90 @@ let ttsAudio=null,vad=null;
 const useElevenLabs=true;
 const pauseBetweenLines=500;
 const SETTINGS_KEY='castwing_user_settings_v3';
+const ELEVEN_ACCOUNT_BACKOFF_MS=5*60*1000;
+let ttsEndpointCache='';
+let elevenLabsTemporarilyDisabled=false;
+let elevenLabsFallbackNotified=false;
+let elevenLabsBackoffTimer=null;
+const unavailableElevenVoiceIds=new Set();
+const unavailableVoiceToastShown=new Set();
+
+function getTTSEndpointCandidates(){
+  const host=(window.location.hostname||'').toLowerCase();
+  const netlifyFn='/.netlify/functions/tts';
+  const apiRoute='/api/tts';
+  if(host.endsWith('.netlify.app'))return [netlifyFn,apiRoute];
+  return [apiRoute,netlifyFn];
+}
+
+async function fetchTTSFromBestEndpoint(payload){
+  const primary=ttsEndpointCache?[ttsEndpointCache]:[];
+  const candidates=getTTSEndpointCandidates().filter(ep=>!primary.includes(ep));
+  const endpoints=[...primary,...candidates];
+  let lastResponse=null,lastEndpoint='';
+  for(const endpoint of endpoints){
+    const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    lastResponse=response;
+    lastEndpoint=endpoint;
+    if(response.status===404){
+      if(ttsEndpointCache===endpoint)ttsEndpointCache='';
+      continue;
+    }
+    if(response.ok)ttsEndpointCache=endpoint;
+    return {response,endpoint};
+  }
+  if(lastResponse)return {response:lastResponse,endpoint:lastEndpoint};
+  throw new Error('No TTS endpoint reachable');
+}
+function isElevenLabsAccountBlocked(status,details){
+  const msg=(details||'').toLowerCase();
+  if(status===401||status===403)return true;
+  return msg.includes('unusual activity')
+    || msg.includes('free tier usage disabled')
+    || msg.includes('account blocked')
+    || msg.includes('billing')
+    || msg.includes('permission')
+    || msg.includes('elevenlabs error 401')
+    || msg.includes('elevenlabs error 403');
+}
+function extractElevenLabsStatus(httpStatus,errorPayload,detail){
+  if(httpStatus!==502)return httpStatus;
+  const regex=/elevenlabs error\s+(\d{3})/i;
+  const fromError=String(errorPayload&&errorPayload.error||'').match(regex);
+  if(fromError)return Number(fromError[1]);
+  const fromDetail=String(detail||'').match(regex);
+  if(fromDetail)return Number(fromDetail[1]);
+  const attempts=errorPayload&&Array.isArray(errorPayload.attempts)?errorPayload.attempts:[];
+  for(let i=attempts.length-1;i>=0;i--){
+    const s=Number(attempts[i]&&attempts[i].status);
+    if(Number.isFinite(s))return s;
+  }
+  return httpStatus;
+}
+function getElevenLabsFallbackMessage(){
+  return selectedUILanguage==='fr'
+    ? 'ElevenLabs indisponible, voix navigateur activée'
+    : 'ElevenLabs unavailable, using browser voice';
+}
+function getUnavailableVoiceMessage(label){
+  const name=label||'Voice';
+  return selectedUILanguage==='fr'
+    ? `Voix indisponible: ${name}. Voix de secours utilisée`
+    : `Voice unavailable: ${name}. Using backup voice`;
+}
+function setElevenLabsBackoff(ms){
+  elevenLabsTemporarilyDisabled=true;
+  if(elevenLabsBackoffTimer){
+    clearTimeout(elevenLabsBackoffTimer);
+    elevenLabsBackoffTimer=null;
+  }
+  const delay=Math.max(1000,Number(ms)||ELEVEN_ACCOUNT_BACKOFF_MS);
+  elevenLabsBackoffTimer=setTimeout(()=>{
+    elevenLabsTemporarilyDisabled=false;
+    elevenLabsFallbackNotified=false;
+    elevenLabsBackoffTimer=null;
+  },delay);
+}
 
 const ICE_SERVERS=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:'stun:stun2.l.google.com:19302'}];
 
@@ -828,9 +912,11 @@ async function speakWithElevenLabs(text,preset,token,cb){
     const voiceCandidates=[preset.voiceId,...(preset.fallbackVoiceIds||[])];
     let blob=null;
     let usedFallback=false;
+    let selectedVoiceUnavailable=false;
     let lastErr='';
     for(let i=0;i<voiceCandidates.length;i++){
       const voiceId=voiceCandidates[i];
+      if(unavailableElevenVoiceIds.has(voiceId))continue;
       const rsp=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,voiceId,modelId:preset.modelId||'eleven_multilingual_v2',emotion:selectedEmotion,speed,languageCode:preset.languageCode||getCurrentLanguageCode()})});
       if(rsp.ok){
         blob=await rsp.blob();
@@ -838,16 +924,35 @@ async function speakWithElevenLabs(text,preset,token,cb){
         break;
       }
       let err='';
+      let errorPayload=null;
       try{
-        const j=await rsp.json();
-        if(j&&j.details)err=typeof j.details==='string'?j.details:JSON.stringify(j.details);
-        else if(j&&j.error)err=typeof j.error==='string'?j.error:JSON.stringify(j.error);
+        errorPayload=await rsp.json();
+        const detail=errorPayload&&errorPayload.details?(typeof errorPayload.details==='string'?errorPayload.details:JSON.stringify(errorPayload.details)):'';
+        const headline=errorPayload&&errorPayload.error?(typeof errorPayload.error==='string'?errorPayload.error:JSON.stringify(errorPayload.error)):'';
+        const hint=errorPayload&&errorPayload.hint?(typeof errorPayload.hint==='string'?errorPayload.hint:JSON.stringify(errorPayload.hint)):'';
+        err=[headline,detail,hint].filter(Boolean).join(' · ');
       }catch(e){}
       lastErr='HTTP '+rsp.status+(err?' · '+err:'');
-      if(rsp.status!==502&&rsp.status!==404)break;
+      const upstreamStatus=extractElevenLabsStatus(rsp.status,errorPayload,err);
+      if(isElevenLabsAccountBlocked(upstreamStatus,err)){
+        setElevenLabsBackoff(ELEVEN_ACCOUNT_BACKOFF_MS);
+        break;
+      }
+      if(upstreamStatus===404){
+        unavailableElevenVoiceIds.add(voiceId);
+        if(i===0)selectedVoiceUnavailable=true;
+        continue;
+      }
+      if(upstreamStatus===422||upstreamStatus===429||upstreamStatus>=500||upstreamStatus===502){
+        continue;
+      }
+      break;
     }
     if(!blob)throw new Error(lastErr||'TTS error');
-    if(usedFallback)showToast(t('toastVoiceFallback'),2500);
+    if(usedFallback){
+      if(selectedVoiceUnavailable)showToast(getUnavailableVoiceMessage(preset.label),3500);
+      else showToast(t('toastVoiceFallback'),2500);
+    }
     if(token!==activeSpeechToken){return}
     const url=URL.createObjectURL(blob);
     const audio=new Audio(url);
