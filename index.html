@@ -127,9 +127,9 @@ input[type="file"]{display:none}
 .status-dot.waiting{background:var(--warning)}.status-dot.disconnected{background:var(--danger);animation:none}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
 .session-body{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
-.video-area{flex:1;display:flex;align-items:stretch;justify-content:center;min-height:0;padding:.5rem;position:relative;background:#000}
-.video-container{position:relative;width:100%;max-width:720px;border-radius:var(--radius);overflow:hidden;background:#111}
-.video-container video{width:100%;height:100%;object-fit:cover;display:block}
+.video-area{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:.5rem;position:relative;background:#000}
+.video-container{position:relative;width:100%;max-width:720px;aspect-ratio:16/9;border-radius:var(--radius);overflow:hidden;background:#111}
+.video-container video{width:100%;height:100%;object-fit:contain;display:block;background:#000}
 .video-container .no-video{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.85rem;color:rgba(255,255,255,.4);font-weight:500}
 .video-controls{position:absolute;bottom:.8rem;left:50%;transform:translateX(-50%);display:flex;gap:.5rem;z-index:5}
 .vctrl{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);border:1.5px solid rgba(255,255,255,.15);color:#fff;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
@@ -186,7 +186,7 @@ input[type="file"]{display:none}
 .emotion-locked{opacity:.55}
 .emotion-locked option[value="neutral"]{opacity:1}
 
-@media(min-width:768px){#home{padding:3rem}.home-inner{max-width:520px}.logo h1{font-size:3.2rem}.session-body{flex-direction:row}.video-area{flex:3;align-items:stretch}.video-container{max-width:none}.prompter-area{flex:2;max-height:none;border-top:none;border-left:1px solid rgba(255,255,255,.08)}}
+@media(min-width:768px){#home{padding:3rem}.home-inner{max-width:520px}.logo h1{font-size:3.2rem}.session-body{flex-direction:row}.video-area{flex:3}.prompter-area{flex:2;max-height:none;border-top:none;border-left:1px solid rgba(255,255,255,.08)}}
 </style>
 </head>
 <body>
@@ -412,7 +412,12 @@ input[type="file"]{display:none}
 <audio id="remoteAudio" autoplay></audio>
 
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+try{
+  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}catch(e){
+  console.warn('pdf.js worker init failed, using main thread',e);
+  pdfjsLib.GlobalWorkerOptions.workerSrc='';
+}
 
 let role='actor',sessionMode='ai',mode='ai';
 let peer=null,conn=null,call=null,localStream=null,mediaRecorder=null,recordedChunks=[];
@@ -1940,9 +1945,27 @@ function stripPdfWatermarkNoise(text,pageCount,fileName){
 async function processPDF(n,file){
   setLoading(true,t('pdfReading'));
   try{
-    const buf=await file.arrayBuffer();const pdf=await pdfjsLib.getDocument({data:buf}).promise;const pageTexts=[];
+    let buf;
+    if(typeof file.arrayBuffer==='function'){
+      buf=await file.arrayBuffer();
+    }else{
+      buf=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsArrayBuffer(file)});
+    }
+    let pdf=null;
+    try{
+      pdf=await pdfjsLib.getDocument({data:buf}).promise;
+    }catch(workerErr){
+      console.warn('PDF worker failed, retrying without worker:',workerErr);
+      pdfjsLib.GlobalWorkerOptions.workerSrc='';
+      pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
+    }
+    const pageTexts=[];
     for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const ct=await pg.getTextContent();pageTexts.push(extractPageText(ct))}
     const rawText=pageTexts.join('\n').replace(/\u00A0/g,' ');
+    if(!rawText||rawText.trim().length<10){
+      showToast('PDF vide ou non lisible – essaie de coller le texte directement',5000);
+      setLoading(false);return;
+    }
     let cleanText=rawText;
     let parsedScript=[];
     try{
@@ -1958,16 +1981,21 @@ async function processPDF(n,file){
     document.getElementById('uploadZone'+n).style.display='none';
     document.getElementById('uploadOk'+n).style.display='flex';
     document.getElementById('fileName'+n).textContent=file.name;
-    if(pdfScript.length>0&&chars.length>0){renderChars(n,chars);document.getElementById('charSection'+n).style.display='block';document.getElementById('setupStatus'+n).textContent=pdfScript.length+' '+t('pdfLinesDetected')}
-    else{
+    if(pdfScript.length>0&&chars.length>0){
+      renderChars(n,chars);
+      document.getElementById('charSection'+n).style.display='block';
+      document.getElementById('setupStatus'+n).textContent=pdfScript.length+' '+t('pdfLinesDetected');
+      showToast(chars.length+' personnages détectés',3000);
+    }else{
       pdfScript=[];
       document.getElementById('charSection'+n).style.display='none';
       document.getElementById('scriptInput'+n).value=cleanText||rawText;
       document.getElementById('setupStatus'+n).textContent=t('pdfImportedRaw');
+      showToast('Aucun dialogue structuré trouvé – texte importé brut',4000);
     }
   }catch(e){
     console.error('PDF read error:',e);
-    showToast(t('pdfReadError'));
+    showToast('Erreur lecture PDF : '+(e&&e.message?e.message:'format non supporté')+'. Essaie de coller le texte.',6000);
   }
   setLoading(false);
 }

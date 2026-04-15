@@ -250,6 +250,11 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    if (url.protocol === "http:" && url.hostname !== "localhost" && url.hostname !== "127.0.0.1") {
+      url.protocol = "https:";
+      return Response.redirect(url.toString(), 301);
+    }
+
     if (url.pathname === "/api/geo" && request.method === "GET") {
       const country = (request.cf && request.cf.country) ? request.cf.country : "";
       const acceptLanguage = request.headers.get("Accept-Language") || "";
