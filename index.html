@@ -1769,6 +1769,7 @@ function isLikelyCharacterName(candidate){
     'AUSSI','TRÈS','TROP','TANT','QUAND','AVANT','APRÈS','APRES','DEPUIS',
     'FLASH','BANG','NOIR','BLANC','BLANCHE','ROUGE','SUITE','PAUSE','NOTE','NOTES',
     'VOIX','TEMPS','LIEU','SOIR','MATIN','DEBUT','DÉBUT','CONT','CONT D',
+    'RETOUR','FONDU','FONDU AU NOIR','RETOUR PRÉSENT','RETOUR PRESENT',
     'HERE','THERE','THAT','THIS','THEN','WHEN','WHAT','WHERE','WHICH','ABOUT',
     'FROM','INTO','OVER','JUST','LIKE','BACK','DOWN','ONLY','SOME','THEM','THEY','BEEN',
     'THE','AND','NOT','ARE','WAS','HIS','HER','HAS','HAD','BUT','ALL','CAN','ONE','TWO'
@@ -1787,7 +1788,7 @@ function isLikelyCharacterName(candidate){
 function isLikelyStageDirectionLine(line){
   const key=normalizeScriptLine(line);
   if(!key)return true;
-  if(/^\(?\s*(?:INT|EXT|EST|INT\.|EXT\.|SCENE|SCÈNE|SEQUENCE|SÉQUENCE|CUT TO|FADE|FONDU|MUSIQUE|MUSIC|SFX|FX|TRANSITION|ACTE|ACT|EPISODE|ÉPISODE)\b/.test(key))return true;
+  if(/^\(?\s*(?:INT|EXT|EST|INT\.|EXT\.|SCENE|SCÈNE|SEQUENCE|SÉQUENCE|CUT TO|FADE|FONDU|MUSIQUE|MUSIC|SFX|FX|TRANSITION|ACTE|ACT|EPISODE|ÉPISODE|RETOUR|NOIR|FONDU AU NOIR|RETOUR PRÉSENT|RETOUR PRESENT)\b/.test(key))return true;
   if(/^(?:\(|\[).+(?:\)|\])$/.test(String(line||'').trim()))return true;
   if(/^[-–—]\s*/.test(String(line||'').trim()))return true;
   return false;
@@ -1883,8 +1884,28 @@ function stripPdfWatermarkNoise(text,pageCount,fileName){
     const canBeTitle=words>=2&&pKey.length>=14;
     if(canBeTitle&&count>=Math.max(4,Math.ceil(pages*0.45)))noisyPrefixes.add(pKey);
   }
+  const speakerCues=new Set();
+  const capsNameRx=/^[A-ZÀ-ÖØ-Þ]+(?:\s+[A-ZÀ-ÖØ-Þ]+){0,4}$/;
+  for(let i=0;i<lines.length;i++){
+    const l=lines[i];
+    if(!l)continue;
+    const key=normalizeScriptLine(l);
+    if(!key||!capsNameRx.test(key))continue;
+    if(screenplayTokens.has(key))continue;
+    if(!isLikelyCharacterName(key))continue;
+    for(let j=i+1;j<lines.length;j++){
+      const next=lines[j];
+      if(!next)continue;
+      const nk=normalizeScriptLine(next);
+      if(nk&&nk!==nk.toUpperCase()){
+        speakerCues.add(key);
+      }
+      break;
+    }
+  }
   for(const [key,count] of freq.entries()){
     if(!key)continue;
+    if(speakerCues.has(key))continue;
     if(fileNameKeys.size&&fileNameKeys.has(key)&&count>=2)noise.add(key);
     if(count<strongRepeatThreshold)continue;
     if(screenplayTokens.has(key))continue;
@@ -1892,7 +1913,7 @@ function stripPdfWatermarkNoise(text,pageCount,fileName){
     const looksLikeNameWatermark=wordCount>=2&&key.length<=72&&!/[.:;!?]/.test(key);
     if(looksLikeWatermarkLine(key)&&looksLikeNameWatermark)noise.add(key);
     if(count>=repeatThreshold&&looksLikeNameWatermark&&key.length<=48)noise.add(key);
-    if(count>=2&&/^[A-ZÀ-ÖØ-Þ]+(?:\s+[A-ZÀ-ÖØ-Þ]+){1,3}$/.test(key))noise.add(key);
+    if(count>=2&&capsNameRx.test(key)&&!isLikelyCharacterName(key))noise.add(key);
   }
   const cleaned=[];
   let prev='';
@@ -1975,14 +1996,27 @@ function parsePDFScript(text){
   text=(text||'').normalize('NFC').replace(/\u00A0/g,' ');
   const lines=text.split('\n'),res=[];
   const nameFreq=new Map();
-  lines.forEach(raw=>{
+  const capsRx=/^[A-ZÀ-ÖØ-Þ]+(?:\s+[A-ZÀ-ÖØ-Þ]+){0,4}$/;
+  const speakerFollowed=new Set();
+  lines.forEach((raw,idx)=>{
     const key=normalizeScriptLine(raw);
     if(!key)return;
-    if(/^[A-ZÀ-ÖØ-Þ]+(?:\s+[A-ZÀ-ÖØ-Þ]+){1,3}$/.test(key)&&isLikelyCharacterName(key)){
+    if(capsRx.test(key)&&isLikelyCharacterName(key)){
       nameFreq.set(key,(nameFreq.get(key)||0)+1);
+      for(let j=idx+1;j<lines.length;j++){
+        const nxt=String(lines[j]||'').trim();
+        if(!nxt)continue;
+        const nk=normalizeScriptLine(nxt);
+        if(nk&&nk!==nk.toUpperCase())speakerFollowed.add(key);
+        break;
+      }
     }
   });
-  const suspectNameWatermarks=new Set([...nameFreq.entries()].filter(([,count])=>count>=2).map(([k])=>k));
+  const suspectNameWatermarks=new Set(
+    [...nameFreq.entries()]
+      .filter(([k,count])=>count>=2&&!speakerFollowed.has(k))
+      .map(([k])=>k)
+  );
   const{charInlineRx,charDashOnlyRx,charAloneRx}=buildSpeakerRegexes();
   const didasRx=/^\s*[\(\[].+[\)\]]\s*$/;
   const sceneRx=/^(INT[\.\s\/]|EXT[\.\s\/]|SÉQUENCE\b|SEQUENCE\b|TRANSITION\b|FONDU\b|FADE\b|CUT TO\b|NOIR\b|SCÈNE\b|SCENE\b|ACTE\b|ACT\b|EPISODE\b|ÉPISODE\b)/i;
