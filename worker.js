@@ -250,7 +250,12 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    if (url.protocol === "http:" && url.hostname !== "localhost" && url.hostname !== "127.0.0.1") {
+    let clientScheme = url.protocol.replace(":", "");
+    try {
+      const cfv = request.headers.get("cf-visitor");
+      if (cfv) { const p = JSON.parse(cfv); if (p && p.scheme) clientScheme = p.scheme; }
+    } catch (_) {}
+    if (clientScheme === "http" && url.hostname !== "localhost" && url.hostname !== "127.0.0.1") {
       url.protocol = "https:";
       return Response.redirect(url.toString(), 301);
     }
