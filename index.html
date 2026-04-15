@@ -2032,7 +2032,11 @@ function extractPageText(textContent){
   }
   return [...rows.entries()]
     .sort((a,b)=>b[0]-a[0])
-    .map(([,items])=>items.sort((a,b)=>a.x-b.x).map(i=>i.str).join(' ').replace(/\s{2,}/g,' ').trim())
+    .map(([,items])=>{
+      let line=items.sort((a,b)=>a.x-b.x).map(i=>i.str).join(' ').replace(/\s{2,}/g,' ').trim();
+      line=line.replace(/\b((?:[A-ZÀ-Þ]\s){2,}[A-ZÀ-Þ])\b/g,m=>m.replace(/\s/g,''));
+      return line;
+    })
     .filter(Boolean)
     .join('\n');
 }
@@ -2082,45 +2086,72 @@ function guessWatermarkNameKeysFromFileName(fileName){
   return keys;
 }
 
+function cleanCharacterName(raw){
+  let name=String(raw||'').trim();
+  name=name.replace(/\s*\(CONT'?D?\)\s*/gi,'').trim();
+  name=name.replace(/\s*\(SUITE\)\s*/gi,'').trim();
+  name=name.replace(/\s*\(V\.?O\.?\)\s*/gi,'').trim();
+  name=name.replace(/\s*\(O\.?S\.?\)\s*/gi,'').trim();
+  name=name.replace(/\s*\(OFF\)\s*/gi,'').trim();
+  name=name.replace(/\s*\(O\.?C\.?\)\s*/gi,'').trim();
+  if(/^(?:[A-ZÀ-Þ]\s){2,}[A-ZÀ-Þ]$/i.test(name)){
+    name=name.replace(/\s/g,'');
+  }
+  const halves=name.split(/\s{2,}/);
+  if(halves.length===2&&normalizeScriptLine(halves[0])===normalizeScriptLine(halves[1])){
+    name=halves[0].trim();
+  }
+  if(name.length>4){
+    const half=Math.floor(name.length/2);
+    const a=name.slice(0,half).trim(),b=name.slice(half).trim();
+    if(a&&b&&normalizeScriptLine(a)===normalizeScriptLine(b))name=a;
+  }
+  return name.trim();
+}
+const BLOCKED_SCREENPLAY_TOKENS=new Set([
+  'CUT','CUT TO','FADE','FADE IN','FADE OUT','FADE TO','DISSOLVE','SPLIT','MATCH','MATCH CUT',
+  'SMASH CUT','JUMP CUT','CROSS CUT','INTERCUT','TIME CUT','HARD CUT',
+  'INTERMISSION','FIN','END','NOIR','BLACK','TITLE','CREDITS','MONTAGE','FLASHBACK',
+  'SCENE','SCÈNE','SAISON','EPISODE','ÉPISODE','OPERATION','OPÉRATION','RETOUR','PRESENT','PRÉSENT',
+  'INT','EXT','JOUR','NUIT','INTERIEUR','INTÉRIEUR','EXTERIEUR','EXTÉRIEUR','LART','CRIME','L ART DU CRIME',
+  'CONTINUED','CONTINUOUS','CONTINUING','MORE','CONT','CONT D','CONTD',
+  'TRANSITION','OPENING','CLOSING','PROLOGUE','EPILOGUE','LATER','MOMENTS LATER','SAME TIME',
+  'ANGLE ON','CLOSE ON','WIDE ON','PUSH IN','PULL BACK','PAN','TILT','ZOOM','TRACKING',
+  'SUPER','SUPERIMPOSE','TITLE CARD','CHYRON','LOWER THIRD','SUBTITLE','CAPTION',
+  'MUSIC','MUSIQUE','SFX','SOUND','SON','SILENCE','BEAT','PAUSE',
+  'MAIS','PLUS','AVEC','DANS','POUR','SANS','CHEZ','VERS','SOUS','ENTRE','COMME',
+  'QUI','QUE','QUOI','DONT','TOUT','TOUS','TOUTE','RIEN','BIEN','DONC','ENCORE','ALORS',
+  'ELLE','ELLES','NOUS','VOUS','LEUR','LEURS','CETTE','AUTRE','AUTRES','NOTRE','VOTRE',
+  'OUI','NON','PAS','DIS','DIT','FAIT','DIRE','VOIR','ETRE','ÊTRE','FAIRE','AVOIR',
+  'AUSSI','TRÈS','TROP','TANT','QUAND','AVANT','APRÈS','APRES','DEPUIS',
+  'FLASH','BANG','NOIR','BLANC','BLANCHE','ROUGE','SUITE','NOTE','NOTES',
+  'VOIX','TEMPS','LIEU','SOIR','MATIN','DEBUT','DÉBUT',
+  'RETOUR','FONDU','FONDU AU NOIR','RETOUR PRÉSENT','RETOUR PRESENT',
+  'HERE','THERE','THAT','THIS','THEN','WHEN','WHAT','WHERE','WHICH','ABOUT',
+  'FROM','INTO','OVER','JUST','LIKE','BACK','DOWN','ONLY','SOME','THEM','THEY','BEEN',
+  'THE','AND','NOT','ARE','WAS','HIS','HER','HAS','HAD','BUT','ALL','CAN','ONE','TWO',
+  'MEANWHILE','RESUME','SERIES OF SHOTS','BACK TO SCENE','BACK TO'
+]);
 function isLikelyCharacterName(candidate){
-  const key=normalizeScriptLine(candidate);
+  const cleaned=cleanCharacterName(candidate);
+  const key=normalizeScriptLine(cleaned);
   if(!key)return false;
   if(/\d/.test(key))return false;
   const words=key.split(/\s+/).filter(Boolean);
   if(!words.length||words.length>4)return false;
   if(key.length<3||key.length>40)return false;
-
-  const blockedTokens=new Set([
-    'CUT','FADE','DISSOLVE','SPLIT','MATCH','INTERMISSION','FIN','END','NOIR','BLACK','TITLE','CREDITS','MONTAGE',
-    'SCENE','SCÈNE','SAISON','EPISODE','ÉPISODE','OPERATION','OPÉRATION','RETOUR','PRESENT','PRÉSENT',
-    'INT','EXT','JOUR','NUIT','INTERIEUR','INTÉRIEUR','EXTERIEUR','EXTÉRIEUR','LART','CRIME','L ART DU CRIME',
-    'MAIS','PLUS','AVEC','DANS','POUR','SANS','CHEZ','VERS','SOUS','ENTRE','COMME',
-    'QUI','QUE','QUOI','DONT','TOUT','TOUS','TOUTE','RIEN','BIEN','DONC','ENCORE','ALORS',
-    'ELLE','ELLES','NOUS','VOUS','LEUR','LEURS','CETTE','AUTRE','AUTRES','NOTRE','VOTRE',
-    'OUI','NON','PAS','DIS','DIT','FAIT','DIRE','VOIR','ETRE','ÊTRE','FAIRE','AVOIR',
-    'AUSSI','TRÈS','TROP','TANT','QUAND','AVANT','APRÈS','APRES','DEPUIS',
-    'FLASH','BANG','NOIR','BLANC','BLANCHE','ROUGE','SUITE','PAUSE','NOTE','NOTES',
-    'VOIX','TEMPS','LIEU','SOIR','MATIN','DEBUT','DÉBUT','CONT','CONT D',
-    'RETOUR','FONDU','FONDU AU NOIR','RETOUR PRÉSENT','RETOUR PRESENT',
-    'HERE','THERE','THAT','THIS','THEN','WHEN','WHAT','WHERE','WHICH','ABOUT',
-    'FROM','INTO','OVER','JUST','LIKE','BACK','DOWN','ONLY','SOME','THEM','THEY','BEEN',
-    'THE','AND','NOT','ARE','WAS','HIS','HER','HAS','HAD','BUT','ALL','CAN','ONE','TWO'
-  ]);
-  if(blockedTokens.has(key))return false;
-  if(words.some(w=>blockedTokens.has(w)&&words.length===1))return false;
-
+  if(BLOCKED_SCREENPLAY_TOKENS.has(key))return false;
+  if(words.some(w=>BLOCKED_SCREENPLAY_TOKENS.has(w)&&words.length===1))return false;
   const frElisionRx=/^(?:L|D|N|S|C|J|M|T|QU|QUELQU|LORSQU|PUISQU|JUSQU|QUOIQU|AUJOURD)['']/i;
   if(frElisionRx.test(key))return false;
-
   if(words.length===1&&key.length<=3)return false;
-
   if(key.startsWith("L'ART")||key.startsWith('L ART DU CRIME'))return false;
   return true;
 }
 function isLikelyStageDirectionLine(line){
   const key=normalizeScriptLine(line);
   if(!key)return true;
-  if(/^\(?\s*(?:INT|EXT|EST|INT\.|EXT\.|SCENE|SCÈNE|SEQUENCE|SÉQUENCE|CUT TO|FADE|FONDU|MUSIQUE|MUSIC|SFX|FX|TRANSITION|ACTE|ACT|EPISODE|ÉPISODE|RETOUR|NOIR|FONDU AU NOIR|RETOUR PRÉSENT|RETOUR PRESENT)\b/.test(key))return true;
+  if(/^\(?\s*(?:INT|EXT|EST|INT\.|EXT\.|SCENE|SCÈNE|SEQUENCE|SÉQUENCE|CUT TO|CUT|FADE|FADE IN|FADE OUT|FONDU|MUSIQUE|MUSIC|SFX|FX|TRANSITION|ACTE|ACT|EPISODE|ÉPISODE|RETOUR|NOIR|FONDU AU NOIR|RETOUR PRÉSENT|RETOUR PRESENT|MATCH CUT|SMASH CUT|JUMP CUT|HARD CUT|INTERCUT|DISSOLVE|CONTINUED|CONTINUOUS|MORE)\s*$/i.test(key))return true;
   if(/^(?:\(|\[).+(?:\)|\])$/.test(String(line||'').trim()))return true;
   if(/^[-–—]\s*/.test(String(line||'').trim()))return true;
   return false;
@@ -2177,12 +2208,15 @@ function rescueMultiSpeakerFromLines(lines,suspectNameWatermarks){
     if(!l){cur=null;continue}
     if(isLikelyStageDirectionLine(l))continue;
     const inline=splitSpeakerInlineLine(l);
-    if(inline&&isLikelySpeakerCue(inline.speaker)&&!isBlocked(inline.speaker)){
-      cur=inline.speaker.trim();
-      if(inline.content&&!isLikelyStageDirectionLine(inline.content))out.push({char:cur,line:inline.content.trim()});
-      continue;
+    if(inline){
+      const cleanSp=cleanCharacterName(inline.speaker);
+      if(isLikelySpeakerCue(cleanSp)&&!isBlocked(cleanSp)){
+        cur=cleanSp;
+        if(inline.content&&!isLikelyStageDirectionLine(inline.content))out.push({char:cur,line:inline.content.trim()});
+        continue;
+      }
     }
-    const maybeSpeaker=l.replace(/\s*[:：–—]+\s*$/,'').trim();
+    const maybeSpeaker=cleanCharacterName(l.replace(/\s*[:：–—]+\s*$/,'').trim());
     if(isLikelySpeakerCue(maybeSpeaker)&&!isBlocked(maybeSpeaker)){
       let next='';
       for(let j=i+1;j<lines.length;j++){
@@ -2418,9 +2452,10 @@ function parsePDFScript(text){
   const capsRx=/^[A-ZÀ-ÖØ-Þ]+(?:\s+[A-ZÀ-ÖØ-Þ]+){0,4}$/;
   const speakerFollowed=new Set();
   lines.forEach((raw,idx)=>{
-    const key=normalizeScriptLine(raw);
+    const cleaned=cleanCharacterName(raw.trim());
+    const key=normalizeScriptLine(cleaned);
     if(!key)return;
-    if(capsRx.test(key)&&isLikelyCharacterName(key)){
+    if(capsRx.test(key)&&isLikelyCharacterName(cleaned)){
       nameFreq.set(key,(nameFreq.get(key)||0)+1);
       for(let j=idx+1;j<lines.length;j++){
         const nxt=String(lines[j]||'').trim();
@@ -2437,7 +2472,7 @@ function parsePDFScript(text){
   );
   const{charInlineRx,charDashOnlyRx,charAloneRx}=buildSpeakerRegexes();
   const didasRx=/^\s*[\(\[].+[\)\]]\s*$/;
-  const sceneRx=/^(INT[\.\s\/]|EXT[\.\s\/]|SÉQUENCE\b|SEQUENCE\b|TRANSITION\b|FONDU\b|FADE\b|CUT TO\b|NOIR\b|SCÈNE\b|SCENE\b|ACTE\b|ACT\b|EPISODE\b|ÉPISODE\b)/i;
+  const sceneRx=/^(INT[\.\s\/]|EXT[\.\s\/]|SÉQUENCE\b|SEQUENCE\b|TRANSITION\b|FONDU\b|FADE\b|FADE IN\b|FADE OUT\b|CUT\b|CUT TO\b|MATCH CUT\b|SMASH CUT\b|JUMP CUT\b|HARD CUT\b|INTERCUT\b|DISSOLVE\b|NOIR\b|SCÈNE\b|SCENE\b|ACTE\b|ACT\b|EPISODE\b|ÉPISODE\b|CONTINUED\b|CONTINUOUS\b|MORE\b)/i;
   const pageRx=/^\d{1,4}\s*\.?\s*$/;
   let cur=null;
   for(const raw of lines){
@@ -2448,19 +2483,22 @@ function parsePDFScript(text){
     if(didasRx.test(l))continue;
     if(isLikelyStageDirectionLine(l))continue;
     const inline=splitSpeakerInlineLine(l);
-    if(inline&&isLikelySpeakerCue(inline.speaker)&&!suspectNameWatermarks.has(normalizeScriptLine(inline.speaker))){
-      cur=inline.speaker;
-      if(inline.content&&!isLikelyStageDirectionContent(inline.content))res.push({char:cur,line:inline.content});
-      continue;
+    if(inline){
+      const cleanSpeaker=cleanCharacterName(inline.speaker);
+      if(isLikelySpeakerCue(cleanSpeaker)&&!suspectNameWatermarks.has(normalizeScriptLine(cleanSpeaker))){
+        cur=cleanSpeaker;
+        if(inline.content&&!isLikelyStageDirectionContent(inline.content))res.push({char:cur,line:inline.content});
+        continue;
+      }
     }
     const normalized=normalizeScriptLine(l);
     if(suspectNameWatermarks.has(normalized)){cur=null;continue}
     let m=charInlineRx.exec(l);
-    if(m){const name=m[1].trim();const dial=m[2].trim();if(name.length>=2&&isLikelySpeakerCue(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;if(!isLikelyStageDirectionContent(dial))res.push({char:cur,line:dial});continue}}
+    if(m){const name=cleanCharacterName(m[1].trim());const dial=m[2].trim();if(name.length>=2&&isLikelySpeakerCue(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;if(!isLikelyStageDirectionContent(dial))res.push({char:cur,line:dial});continue}}
     m=charDashOnlyRx.exec(l);
-    if(m){const name=m[1].trim();if(name.length>=2&&isLikelySpeakerCue(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;continue}}
+    if(m){const name=cleanCharacterName(m[1].trim());if(name.length>=2&&isLikelySpeakerCue(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;continue}}
     m=charAloneRx.exec(l);
-    if(m){const name=m[1].trim();if(name.length>=2&&isLikelySpeakerCue(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;continue}}
+    if(m){const name=cleanCharacterName(m[1].trim());if(name.length>=2&&isLikelySpeakerCue(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;continue}}
     if(cur&&l.length>1&&!/^\s*[\(\[]/.test(l)&&!isLikelyStageDirectionContent(l))res.push({char:cur,line:l});
   }
   const uniqPrimary=new Set(res.map(v=>v.char)).size;
@@ -2493,7 +2531,7 @@ function parsePDFScript(text){
           if(!content)continue;
           const m=speakerInlineRx.exec(content);
           if(m){
-            const nm=m[1].trim();
+            const nm=cleanCharacterName(m[1].trim());
             const words=nm.split(/\s+/).filter(Boolean).length;
             if(nm===nm.toUpperCase()&&words<=4&&isLikelyCharacterName(nm)){
               curAlt=nm;
@@ -2506,6 +2544,12 @@ function parsePDFScript(text){
         if(alt.length>=4&&uniq>=2)return alt;
       }
     }
+  }
+  const nameMap=new Map();
+  for(const entry of res){
+    const norm=normalizeScriptLine(entry.char);
+    if(!nameMap.has(norm))nameMap.set(norm,entry.char);
+    entry.char=nameMap.get(norm);
   }
   return res;
 }
