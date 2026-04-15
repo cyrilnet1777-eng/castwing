@@ -2102,7 +2102,13 @@ function buildLines(n){
   }
   if(pdfScript.length>0)return pdfScript.map(s=>({text:s.char+': '+s.line,type:'actor',char:s.char}));
   const t=document.getElementById('scriptInput'+n).value;if(!t||!t.trim())return[];
-  return t.split('\n').filter(l=>l.trim()).map(l=>{const tr=l.trim();const isP=/^(PARTENAIRE|PARTNER|P)\s*:/i.test(tr);let clean=tr;if(/^(PARTENAIRE|PARTNER|P|MOI|ME|ACTEUR|ACTOR|A)\s*:/i.test(tr))clean=tr.replace(/^[^:]+:\s*/,'');return{text:clean,type:isP?'partner':'actor'}});
+  const rawLines=t.split('\n').filter(l=>l.trim());
+  const dialogueRx=/^(PARTENAIRE|PARTNER|P|MOI|ME|ACTEUR|ACTOR|A)\s*:/i;
+  const hasDialogueStructure=rawLines.some(l=>dialogueRx.test(l.trim()));
+  if(!hasDialogueStructure){
+    return rawLines.map(l=>({text:l.trim(),type:'partner'}));
+  }
+  return rawLines.map(l=>{const tr=l.trim();const isP=/^(PARTENAIRE|PARTNER|P)\s*:/i.test(tr);let clean=tr;if(dialogueRx.test(tr))clean=tr.replace(/^[^:]+:\s*/,'');return{text:clean,type:isP?'partner':'actor'}});
 }
 function renderPrompter(){
   const a=document.getElementById('prompterArea');
