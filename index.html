@@ -11,13 +11,31 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#092620;--blue:#2f8f74;--blue-hover:#24745e;--navy:#0a1f1b;--navy-light:#10352d;--white:#ffffff;--cream:#10362f;--border:#2e5a4f;--border-light:#376a5f;--shadow:0 2px 14px rgba(0,0,0,.28);--shadow-lg:0 8px 32px rgba(0,0,0,.4);--radius:10px;--radius-lg:16px;--text-dark:#f3fbf7;--text-muted:#9ebdb2;--success:#22c55e;--danger:#d62020;--warning:#f59e0b}
+:root{
+  --bg-1:#071614;--bg-2:#0b2a27;--bg-3:#0e3e3b;
+  --bg:var(--bg-1);--blue:#39e7d0;--blue-hover:#1fb9a5;--navy:#081d1b;--navy-light:#10352d;--white:#f6fffd;--cream:#10362f;
+  --border:rgba(210,255,245,.18);--border-light:rgba(210,255,245,.24);
+  --shadow:0 2px 14px rgba(0,0,0,.28);--shadow-lg:0 8px 32px rgba(0,0,0,.4);
+  --radius:10px;--radius-lg:16px;
+  --text-dark:#f6fffd;--text-muted:rgba(246,255,253,.58);
+  --success:#22c55e;--danger:#ff4b4b;--warning:#f59e0b
+}
 html{height:100%;-webkit-text-size-adjust:100%}
-body{min-height:100vh;min-height:100dvh;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text-dark);line-height:1.5;font-weight:500;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body{
+  min-height:100vh;min-height:100dvh;font-family:'DM Sans',sans-serif;color:var(--text-dark);line-height:1.5;font-weight:500;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+  background:
+    radial-gradient(circle at 18% 18%,rgba(96,255,230,.18),transparent 24%),
+    radial-gradient(circle at 82% 22%,rgba(66,225,206,.14),transparent 22%),
+    radial-gradient(circle at 50% 62%,rgba(61,245,214,.10),transparent 28%),
+    linear-gradient(180deg,var(--bg-3) 0%,var(--bg-2) 42%,var(--bg-1) 100%)
+}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at center,transparent 45%,rgba(0,0,0,.20) 100%);z-index:0}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.06;mix-blend-mode:soft-light;background-image:linear-gradient(rgba(255,255,255,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);background-size:4px 4px,4px 4px;z-index:0}
+.screen{position:relative;z-index:1}
 .screen{display:none;flex-direction:column;min-height:100vh;min-height:100dvh}.screen.active{display:flex}
 
 /* HOME */
-#home{justify-content:center;align-items:center;padding:2rem 1.5rem;background:radial-gradient(90% 120% at 50% 0%,#1f5a4e 0%,#123c34 45%,#0a2722 100%)}
+#home{justify-content:center;align-items:center;padding:2rem 1.5rem;background:transparent}
 .home-inner{max-width:460px;width:100%;display:flex;flex-direction:column;align-items:center;gap:1.25rem}
 .home-top-row{width:100%;display:flex;justify-content:flex-end}
 .site-lang-mini{display:flex;align-items:center;gap:.4rem;padding:.25rem .45rem;border-radius:10px;background:rgba(8,30,26,.82);border:1px solid rgba(124,201,177,.3)}
@@ -36,9 +54,10 @@ body{min-height:100vh;min-height:100dvh;font-family:'DM Sans',sans-serif;backgro
 .home-footer{font-size:.72rem;color:#b3cec4;text-align:center}
 
 /* SETUP */
-#setupAi,#setupPartner,#joinScreen{padding:1.5rem;justify-content:flex-start;gap:1.2rem;overflow-y:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(180deg,#133e35 0%,#0c2e28 100%)}
+#setupAi,#setupPartner,#joinScreen{padding:1.5rem;justify-content:flex-start;gap:1.2rem;overflow-y:auto;-webkit-overflow-scrolling:touch;background:transparent}
 .setup-header{display:flex;align-items:center;gap:.8rem}
-.back-btn{background:none;border:none;cursor:pointer;font-size:1.4rem;color:var(--blue);padding:.3rem}
+.back-btn{background:rgba(7,22,20,.72);border:1px solid rgba(210,255,245,.28);cursor:pointer;font-size:1.25rem;color:#f6fffd;padding:.25rem .5rem;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.28),0 0 20px rgba(61,245,214,.12)}
+.back-btn:hover{background:rgba(7,22,20,.9);border-color:rgba(127,247,231,.40)}
 .setup-header h2{font-size:1.3rem;font-weight:700;color:var(--white)}
 .setup-card{background:rgba(11,38,33,.84);border:1.5px solid rgba(128,188,169,.22);border-radius:var(--radius-lg);padding:1.5rem;box-shadow:var(--shadow);margin-bottom:1rem}
 .setup-card label{display:block;font-size:.82rem;font-weight:700;color:#d5eee4;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em}
@@ -71,8 +90,8 @@ input[type="file"]{display:none}
 
 /* MODE TOGGLE */
 .mode-toggle{display:flex;gap:.5rem;margin-top:.4rem}
-.mode-opt{flex:1;padding:.7rem .5rem;border-radius:var(--radius);border:1.5px solid var(--border);background:rgba(7,30,26,.92);text-align:center;cursor:pointer;font-size:.82rem;font-weight:700;color:#d9efe7;transition:all .2s}
-.mode-opt:hover{border-color:#6ac5a9}.mode-opt.active{background:var(--blue);color:var(--white);border-color:var(--blue)}
+.mode-opt{flex:1;padding:.7rem .5rem;border-radius:var(--radius);border:1.5px solid var(--border);background:rgba(7,22,20,.72);text-align:center;cursor:pointer;font-size:.82rem;font-weight:700;color:#d9efe7;transition:all .2s}
+.mode-opt:hover{border-color:rgba(127,247,231,.30)}.mode-opt.active{background:linear-gradient(180deg,#3fe9d3,#1fb9a5);color:#04211d;border-color:#7ff7e7}
 .mode-hint{font-size:.75rem;color:var(--text-muted);margin-top:.4rem}
 
 .speed-slider-wrap{margin-top:.45rem}
@@ -92,7 +111,7 @@ input[type="file"]{display:none}
 
 /* BUTTONS */
 .btn{display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.85rem 1.5rem;border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;border:none;transition:all .2s;text-transform:uppercase;letter-spacing:.04em}
-.btn-primary{background:var(--blue);color:var(--white);box-shadow:0 4px 14px rgba(47,143,116,.4)}.btn-primary:hover{background:var(--blue-hover);transform:translateY(-1px)}.btn-primary:active{transform:translateY(0)}
+.btn-primary{background:linear-gradient(180deg,#3fe9d3,#1fb9a5);color:#04211d;box-shadow:0 4px 14px rgba(61,245,214,.28)}.btn-primary:hover{background:linear-gradient(180deg,#52efdb,#24c8b2);transform:translateY(-1px)}.btn-primary:active{transform:translateY(0)}
 .btn-secondary{background:rgba(8,30,26,.88);color:#d8efe5;border:1.5px solid #5eb89c}.btn-secondary:hover{background:rgba(20,66,56,.9)}
 .btn-danger{background:var(--danger);color:var(--white)}.btn-danger:hover{background:#dc2626}
 .btn-full{width:100%}
@@ -429,6 +448,17 @@ const ELEVEN_VOICE_IDS={
   dorothy:'u0TsaWvt0v8migutHM3M',
   glinda:'pBZVCk298iJlHAcHQwLr',
   domi:'u0TsaWvt0v8migutHM3M',
+  edward:'goT3UYdM9bhm0n2lmKQx',
+  mitsuki:'gARvXPexe5VF3cKZBian',
+  austin:'Bj9UqZbhQsanLzgalpEG',
+  eliza:'bICR68fw9p7rUiAEAgn6',
+  morgane:'ZYOBieLaunTiQrTrvNQq',
+  elen:'TPIitICAZ8CqlGZ81AKm',
+  antonio:'j22UF9K5KYGQ9ZWqYCA3',
+  eda:'mBUB5zYuPwfVE6DTcEjf',
+  ahmet:'ZsYcqahfiS2dy4J6XYC5',
+  omar:'xvhpbk8otnNHtT3fjCpr',
+  salma:'B5xxC4eQoOFJnY4R5XkI',
 };
 const VOICE_ALIAS_GENDER={
   serena:'female',
@@ -444,53 +474,64 @@ const VOICE_ALIAS_GENDER={
   adam:'male',
   james:'male',
   george:'male',
+  edward:'male',
+  mitsuki:'female',
+  austin:'male',
+  eliza:'female',
+  morgane:'female',
+  elen:'female',
+  antonio:'male',
+  eda:'female',
+  ahmet:'male',
+  omar:'male',
+  salma:'female',
 };
 const VOICE_LOCALES=[
   {id:'french',label:'Français 🇫🇷',languageCode:'fr',profiles:[
-    {id:'fr-f',voice:'serena',fallback:['charlotte','lily'],label:'Camille',tag:'Standard',gender:'female',languageCode:'fr-fr'},
-    {id:'fr-m',voice:'daniel',fallback:['james','adam'],label:'Lucas',tag:'Standard',gender:'male',languageCode:'fr-fr'},
+    {id:'fr-f',voice:'morgane',fallback:['eliza','serena'],label:'Camille',tag:'Standard',gender:'female',languageCode:'fr-fr'},
+    {id:'fr-m',voice:'edward',fallback:['antonio','daniel'],label:'Lucas',tag:'Standard',gender:'male',languageCode:'fr-fr'},
   ]},
   {id:'english',label:'English 🇺🇸',languageCode:'en',profiles:[
-    {id:'en-us-m',voice:'adam',fallback:['james','george'],label:'Mason',tag:'US',gender:'male',languageCode:'en-us'},
-    {id:'en-us-f',voice:'bella',fallback:['charlotte','serena'],label:'Taylor',tag:'US',gender:'female',languageCode:'en-us'},
-    {id:'en-gb-m',voice:'daniel',fallback:['adam','james'],label:'Oliver',tag:'UK',gender:'male',languageCode:'en-gb'},
-    {id:'en-gb-f',voice:'charlotte',fallback:['lily','serena'],label:'Emma',tag:'UK',gender:'female',languageCode:'en-gb'},
+    {id:'en-us-m',voice:'austin',fallback:['edward','adam'],label:'Mason',tag:'US',gender:'male',languageCode:'en-us'},
+    {id:'en-us-f',voice:'eliza',fallback:['salma','bella'],label:'Taylor',tag:'US',gender:'female',languageCode:'en-us'},
+    {id:'en-gb-m',voice:'edward',fallback:['daniel','james'],label:'Oliver',tag:'UK',gender:'male',languageCode:'en-gb'},
+    {id:'en-gb-f',voice:'elen',fallback:['morgane','charlotte'],label:'Emma',tag:'UK',gender:'female',languageCode:'en-gb'},
   ]},
   {id:'spanish',label:'Español 🇪🇸',languageCode:'es',profiles:[
-    {id:'es-f',voice:'dorothy',fallback:['bella','charlotte'],label:'Valentina',tag:'Standard',gender:'female',languageCode:'es-es'},
-    {id:'es-m',voice:'antoni',fallback:['adam','james'],label:'Diego',tag:'Standard',gender:'male',languageCode:'es-es'},
+    {id:'es-f',voice:'salma',fallback:['dorothy','eliza'],label:'Valentina',tag:'Standard',gender:'female',languageCode:'es-es'},
+    {id:'es-m',voice:'antonio',fallback:['antoni','austin'],label:'Diego',tag:'Standard',gender:'male',languageCode:'es-es'},
   ]},
   {id:'german',label:'Deutsch 🇩🇪',languageCode:'de',profiles:[
-    {id:'de-f',voice:'lily',fallback:['serena','charlotte'],label:'Hannah',tag:'Standard',gender:'female',languageCode:'de-de'},
-    {id:'de-m',voice:'antoni',fallback:['adam','george'],label:'Emil',tag:'Standard',gender:'male',languageCode:'de-de'},
+    {id:'de-f',voice:'eda',fallback:['lily','elen'],label:'Hannah',tag:'Standard',gender:'female',languageCode:'de-de'},
+    {id:'de-m',voice:'austin',fallback:['ahmet','antoni'],label:'Emil',tag:'Standard',gender:'male',languageCode:'de-de'},
   ]},
   {id:'italian',label:'Italiano 🇮🇹',languageCode:'it',profiles:[
-    {id:'it-f',voice:'bella',fallback:['charlotte','lily'],label:'Giulia',tag:'Standard',gender:'female',languageCode:'it-it'},
-    {id:'it-m',voice:'daniel',fallback:['adam','james'],label:'Leonardo',tag:'Standard',gender:'male',languageCode:'it-it'},
+    {id:'it-f',voice:'elen',fallback:['bella','morgane'],label:'Giulia',tag:'Standard',gender:'female',languageCode:'it-it'},
+    {id:'it-m',voice:'antonio',fallback:['daniel','antoni'],label:'Leonardo',tag:'Standard',gender:'male',languageCode:'it-it'},
   ]},
   {id:'portuguese',label:'Português 🇵🇹',languageCode:'pt',profiles:[
-    {id:'pt-f',voice:'glinda',fallback:['serena','charlotte'],label:'Beatriz',tag:'Standard',gender:'female',languageCode:'pt-pt'},
-    {id:'pt-m',voice:'antoni',fallback:['adam','james'],label:'João',tag:'Standard',gender:'male',languageCode:'pt-pt'},
+    {id:'pt-f',voice:'eda',fallback:['glinda','salma'],label:'Beatriz',tag:'Standard',gender:'female',languageCode:'pt-pt'},
+    {id:'pt-m',voice:'austin',fallback:['antoni','omar'],label:'João',tag:'Standard',gender:'male',languageCode:'pt-pt'},
   ]},
   {id:'arabic',label:'Arabic 🇸🇦',languageCode:'ar',profiles:[
-    {id:'ar-f',voice:'charlotte',fallback:['bella','serena'],label:'Nour',tag:'Standard',gender:'female',languageCode:'ar'},
-    {id:'ar-m',voice:'adam',fallback:['antoni','james'],label:'Karim',tag:'Standard',gender:'male',languageCode:'ar'},
+    {id:'ar-f',voice:'salma',fallback:['charlotte','eliza'],label:'Nour',tag:'Standard',gender:'female',languageCode:'ar'},
+    {id:'ar-m',voice:'omar',fallback:['ahmet','adam'],label:'Karim',tag:'Standard',gender:'male',languageCode:'ar'},
   ]},
   {id:'chinese',label:'中文 🇨🇳',languageCode:'zh',profiles:[
-    {id:'zh-f',voice:'charlotte',fallback:['bella','serena'],label:'Mei',tag:'Mandarin',gender:'female',languageCode:'zh-cn'},
-    {id:'zh-m',voice:'james',fallback:['adam','george'],label:'Wei',tag:'Mandarin',gender:'male',languageCode:'zh-cn'},
+    {id:'zh-f',voice:'mitsuki',fallback:['charlotte','lily'],label:'Mei',tag:'Mandarin',gender:'female',languageCode:'zh-cn'},
+    {id:'zh-m',voice:'austin',fallback:['james','edward'],label:'Wei',tag:'Mandarin',gender:'male',languageCode:'zh-cn'},
   ]},
   {id:'japanese',label:'日本語 🇯🇵',languageCode:'ja',profiles:[
-    {id:'ja-f',voice:'charlotte',fallback:['lily','bella'],label:'Yui',tag:'Standard',gender:'female',languageCode:'ja-jp'},
-    {id:'ja-m',voice:'adam',fallback:['james','george'],label:'Haruto',tag:'Standard',gender:'male',languageCode:'ja-jp'},
+    {id:'ja-f',voice:'mitsuki',fallback:['elen','charlotte'],label:'Yui',tag:'Standard',gender:'female',languageCode:'ja-jp'},
+    {id:'ja-m',voice:'edward',fallback:['adam','james'],label:'Haruto',tag:'Standard',gender:'male',languageCode:'ja-jp'},
   ]},
   {id:'korean',label:'한국어 🇰🇷',languageCode:'ko',profiles:[
-    {id:'ko-f',voice:'lily',fallback:['serena','charlotte'],label:'Minji',tag:'Standard',gender:'female',languageCode:'ko-kr'},
-    {id:'ko-m',voice:'james',fallback:['adam','george'],label:'Junho',tag:'Standard',gender:'male',languageCode:'ko-kr'},
+    {id:'ko-f',voice:'eda',fallback:['lily','eliza'],label:'Minji',tag:'Standard',gender:'female',languageCode:'ko-kr'},
+    {id:'ko-m',voice:'ahmet',fallback:['james','omar'],label:'Junho',tag:'Standard',gender:'male',languageCode:'ko-kr'},
   ]},
   {id:'hindi',label:'Hindi 🇮🇳',languageCode:'hi',profiles:[
-    {id:'hi-f',voice:'charlotte',fallback:['bella','serena'],label:'Ananya',tag:'Standard',gender:'female',languageCode:'hi-in'},
-    {id:'hi-m',voice:'adam',fallback:['antoni','james'],label:'Rohan',tag:'Standard',gender:'male',languageCode:'hi-in'},
+    {id:'hi-f',voice:'salma',fallback:['eda','charlotte'],label:'Ananya',tag:'Standard',gender:'female',languageCode:'hi-in'},
+    {id:'hi-m',voice:'omar',fallback:['ahmet','adam'],label:'Rohan',tag:'Standard',gender:'male',languageCode:'hi-in'},
   ]},
 ];
 let VOICE_PRESETS=[];
@@ -549,6 +590,17 @@ const UI_EXTRA_I18N={
   en:{codeUnavailable:'Code unavailable',codeCopied:'Code copied',linkUnavailable:'Link unavailable',linkCopied:'Link copied',copyFailed:'Copy failed',shareUnavailable:'Sharing unavailable',shareTextCopied:'Text copied',joinCodePrefilled:'Code prefilled',joinCodeMissing:'Enter a code',waitingForPartner:'Waiting for partner…',waitingOverlayTitle:'Waiting…',waitingOverlayMessage:'Share code ',connection:'Connecting…',searching:'Looking for ',sessionNotFound:'Session not found.',connectionSlow:'Slow connection',disconnected:'Disconnected',partnerDisconnected:'Partner disconnected',error:'Error'},
   fr:{codeUnavailable:'Code indisponible',codeCopied:'Code copié',linkUnavailable:'Lien indisponible',linkCopied:'Lien copié',copyFailed:'Copie impossible',shareUnavailable:'Partage indisponible',shareTextCopied:'Texte copié',joinCodePrefilled:'Code prérempli',joinCodeMissing:'Entre un code',waitingForPartner:'En attente du partenaire…',waitingOverlayTitle:'En attente…',waitingOverlayMessage:'Partage le code ',connection:'Connexion…',searching:'Recherche de ',sessionNotFound:'Session introuvable.',connectionSlow:'Connexion lente',disconnected:'Déconnecté',partnerDisconnected:'Partenaire déconnecté',error:'Erreur'},
 };
+const UI_FALLBACK_TRANSLATIONS={
+  partnerReadsLabel:{es:'La IA lee las líneas de:',it:'L’IA legge le battute di:',zh:'AI 朗读以下角色台词：',ko:'AI가 읽을 상대 역할:',ja:'AI が読む相手役:',ar:'الذكاء الاصطناعي يقرأ دور:',de:'KI liest die Zeilen von:',pt:'A IA lê as falas de:',hi:'AI इन किरदारों की लाइनें पढ़े:'},
+  partnerAllOthersBtn:{es:'Todos los demás personajes',it:'Tutti gli altri personaggi',zh:'所有其他角色',ko:'다른 모든 캐릭터',ja:'他のすべてのキャラクター',ar:'جميع الشخصيات الأخرى',de:'Alle anderen Figuren',pt:'Todos os outros personagens',hi:'बाकी सभी किरदार'},
+  partnerHintAll:{es:'La IA interpreta todos los personajes excepto el tuyo.',it:'L’IA interpreta tutti i ruoli tranne il tuo.',zh:'AI 扮演除你以外的所有角色。',ko:'AI가 당신 역할을 제외한 모든 배역을 읽습니다.',ja:'AI はあなた以外の全役を読みます。',ar:'الذكاء الاصطناعي يلعب كل الأدوار ما عدا دورك.',de:'Die KI spricht alle Rollen außer deiner.',pt:'A IA faz todas as falas, exceto as suas.',hi:'AI आपके किरदार को छोड़कर बाकी सभी भूमिकाएँ पढ़ेगा।'},
+  partnerHintDuo:{es:'Modo dúo: solo líneas entre tú y este personaje.',it:'Modalità duo: solo battute tra te e questo personaggio.',zh:'双人模式：仅保留你与该角色的对话。',ko:'듀오 모드: 나와 이 캐릭터의 대사만 유지합니다.',ja:'デュオモード：あなたとこの役の台詞のみ。',ar:'وضع ثنائي: فقط الحوارات بينك وبين هذه الشخصية.',de:'Duo-Modus: nur Dialoge zwischen dir und dieser Figur.',pt:'Modo duo: apenas falas entre você e este personagem.',hi:'डुओ मोड: केवल आप और इस किरदार के बीच की लाइनें।'},
+  pickCharacterFirst:{es:'Elige primero tu personaje',it:'Scegli prima il tuo personaggio',zh:'请先选择你的角色',ko:'먼저 내 캐릭터를 선택하세요',ja:'先に自分の役を選んでください',ar:'اختر شخصيتك أولًا',de:'Wähle zuerst deine Figur',pt:'Escolha primeiro seu personagem',hi:'पहले अपना किरदार चुनें'},
+  pdfReading:{en:'Reading script…',es:'Leyendo guion…',it:'Lettura copione…',zh:'读取剧本中…',ko:'대본 읽는 중…',ja:'台本を読み込み中…',ar:'جارٍ قراءة النص…',de:'Skript wird gelesen…',pt:'Lendo roteiro…',hi:'स्क्रिप्ट पढ़ी जा रही है…'},
+  pdfLinesDetected:{en:'lines detected',es:'líneas detectadas',it:'battute rilevate',zh:'条台词已识别',ko:'개 대사 감지됨',ja:'行を検出',ar:'سطرًا تم اكتشافه',de:'Zeilen erkannt',pt:'falas detectadas',hi:'पंक्तियाँ मिलीं'},
+  pdfImportedRaw:{en:'Text imported (raw)',es:'Texto importado (sin procesar)',it:'Testo importato (grezzo)',zh:'已导入文本（原始）',ko:'텍스트 가져옴(원문)',ja:'テキストを読み込み（生データ）',ar:'تم استيراد النص (خام)',de:'Text importiert (roh)',pt:'Texto importado (bruto)',hi:'टेक्स्ट आयात किया गया (रॉ)'},
+  pdfReadError:{en:'PDF reading error',es:'Error al leer el PDF',it:'Errore lettura PDF',zh:'PDF 读取错误',ko:'PDF 읽기 오류',ja:'PDF 読み込みエラー',ar:'خطأ في قراءة PDF',de:'Fehler beim Lesen der PDF',pt:'Erro ao ler PDF',hi:'PDF पढ़ने में त्रुटि'},
+};
 const TTS_LANGS=['fr','en','es','it','de','pt','ar','zh','ja','ko','hi'];
 
 function resolveVoiceId(id){
@@ -557,7 +609,8 @@ function resolveVoiceId(id){
 function t(key){
   const langPack=UI_I18N[selectedUILanguage]||UI_I18N.en;
   const extra=UI_EXTRA_I18N[selectedUILanguage]||UI_EXTRA_I18N.en||{};
-  return langPack[key]||extra[key]||UI_I18N.en[key]||(UI_EXTRA_I18N.en&&UI_EXTRA_I18N.en[key])||key;
+  const fallback=(UI_FALLBACK_TRANSLATIONS[key]&&UI_FALLBACK_TRANSLATIONS[key][selectedUILanguage])||'';
+  return langPack[key]||extra[key]||fallback||UI_I18N.en[key]||(UI_EXTRA_I18N.en&&UI_EXTRA_I18N.en[key])||key;
 }
 function ts(text){
   if(!text)return text;
@@ -1281,11 +1334,23 @@ function looksLikeWatermarkLine(line){
   return upperRatio>0.65||specials>=2;
 }
 
-function guessWatermarkNameKeyFromFileName(fileName){
+function guessWatermarkNameKeysFromFileName(fileName){
   const base=String(fileName||'').replace(/\.[^.]+$/,'');
-  const m=base.match(/[_\s-]+([A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ\s.'’-]{2,})$/u);
-  if(!m)return '';
-  return normalizeScriptLine(m[1]);
+  if(!base)return new Set();
+  const keys=new Set();
+  const chunks=base.split(/[_-]+/).map(v=>v.trim()).filter(Boolean);
+  chunks.forEach((chunk,idx)=>{
+    if(idx===0)return;
+    if(chunk.length<3)return;
+    const k=normalizeScriptLine(chunk);
+    if(k.split(/\s+/).length>=2)keys.add(k);
+  });
+  const tail=base.match(/[_\s-]+([A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ\s.'’-]{2,})$/u);
+  if(tail){
+    const k=normalizeScriptLine(tail[1]);
+    if(k)keys.add(k);
+  }
+  return keys;
 }
 
 function stripPdfWatermarkNoise(text,pageCount,fileName){
@@ -1298,20 +1363,21 @@ function stripPdfWatermarkNoise(text,pageCount,fileName){
     freq.set(key,(freq.get(key)||0)+1);
   }
   const pages=Math.max(1,Number(pageCount)||1);
-  const repeatThreshold=Math.max(2,Math.ceil(pages*0.35));
-  const strongRepeatThreshold=Math.max(3,Math.ceil(pages*0.55));
-  const fileNameKey=guessWatermarkNameKeyFromFileName(fileName);
+  const repeatThreshold=Math.max(2,Math.ceil(pages*0.20));
+  const strongRepeatThreshold=Math.max(3,Math.ceil(pages*0.40));
+  const fileNameKeys=guessWatermarkNameKeysFromFileName(fileName);
   const screenplayTokens=new Set(['CUT','FADE','DISSOLVE','SPLIT','MATCH','INTERMISSION','FIN','END','NOIR','BLACK','TITLE','CREDITS','MONTAGE']);
   const noise=new Set();
   for(const [key,count] of freq.entries()){
     if(!key)continue;
-    if(fileNameKey&&key===fileNameKey&&count>=2)noise.add(key);
+    if(fileNameKeys.size&&fileNameKeys.has(key)&&count>=2)noise.add(key);
     if(count<strongRepeatThreshold)continue;
     if(screenplayTokens.has(key))continue;
     const wordCount=key.split(/\s+/).filter(Boolean).length;
     const looksLikeNameWatermark=wordCount>=2&&key.length<=72&&!/[.:;!?]/.test(key);
     if(looksLikeWatermarkLine(key)&&looksLikeNameWatermark)noise.add(key);
     if(count>=repeatThreshold&&looksLikeNameWatermark&&key.length<=48)noise.add(key);
+    if(count>=2&&/^[A-ZÀ-ÖØ-Þ]+(?:\s+[A-ZÀ-ÖØ-Þ]+){1,3}$/.test(key))noise.add(key);
   }
   const cleaned=[];
   let prev='';
@@ -1331,7 +1397,7 @@ function stripPdfWatermarkNoise(text,pageCount,fileName){
 }
 
 async function processPDF(n,file){
-  setLoading(true,'Lecture du script…');
+  setLoading(true,t('pdfReading'));
   try{
     const buf=await file.arrayBuffer();const pdf=await pdfjsLib.getDocument({data:buf}).promise;const pageTexts=[];
     for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const ct=await pg.getTextContent();pageTexts.push(extractPageText(ct))}
@@ -1342,20 +1408,29 @@ async function processPDF(n,file){
     document.getElementById('uploadZone'+n).style.display='none';
     document.getElementById('uploadOk'+n).style.display='flex';
     document.getElementById('fileName'+n).textContent=file.name;
-    if(pdfScript.length>0&&chars.length>0){renderChars(n,chars);document.getElementById('charSection'+n).style.display='block';document.getElementById('setupStatus'+n).textContent=pdfScript.length+' répliques détectées'}
+    if(pdfScript.length>0&&chars.length>0){renderChars(n,chars);document.getElementById('charSection'+n).style.display='block';document.getElementById('setupStatus'+n).textContent=pdfScript.length+' '+t('pdfLinesDetected')}
     else{
       pdfScript=[];
       document.getElementById('charSection'+n).style.display='none';
       document.getElementById('scriptInput'+n).value=cleanText||rawText;
-      document.getElementById('setupStatus'+n).textContent='Texte importé (brut)';
+      document.getElementById('setupStatus'+n).textContent=t('pdfImportedRaw');
     }
-  }catch(e){showToast('Erreur lecture PDF')}
+  }catch(e){showToast(t('pdfReadError'))}
   setLoading(false);
 }
 
 function parsePDFScript(text){
   text=(text||'').normalize('NFC').replace(/\u00A0/g,' ');
   const lines=text.split('\n'),res=[];
+  const nameFreq=new Map();
+  lines.forEach(raw=>{
+    const key=normalizeScriptLine(raw);
+    if(!key)return;
+    if(/^[A-ZÀ-ÖØ-Þ]+(?:\s+[A-ZÀ-ÖØ-Þ]+){1,3}$/.test(key)){
+      nameFreq.set(key,(nameFreq.get(key)||0)+1);
+    }
+  });
+  const suspectNameWatermarks=new Set([...nameFreq.entries()].filter(([,count])=>count>=2).map(([k])=>k));
   const UP='A-ZÀÂÄÆÇÉÈÊËÎÏÔÖŒÙÛÜŸÑ';
   const name='['+UP+']['+UP+'\\s\\-\\.\\\'’]{0,40}';
   const charInlineRx=new RegExp('^('+name+')\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*(.+)$');
@@ -1371,12 +1446,14 @@ function parsePDFScript(text){
     if(pageRx.test(l))continue;
     if(sceneRx.test(l))continue;
     if(didasRx.test(l))continue;
+    const normalized=normalizeScriptLine(l);
+    if(suspectNameWatermarks.has(normalized)){cur=null;continue}
     let m=charInlineRx.exec(l);
-    if(m){const name=m[1].trim();if(name.length>=2&&name===name.toUpperCase()){cur=name;res.push({char:cur,line:m[2].trim()});continue}}
+    if(m){const name=m[1].trim();if(name.length>=2&&name===name.toUpperCase()&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;res.push({char:cur,line:m[2].trim()});continue}}
     m=charDashOnlyRx.exec(l);
-    if(m){const name=m[1].trim();if(name.length>=2&&name===name.toUpperCase()){cur=name;continue}}
+    if(m){const name=m[1].trim();if(name.length>=2&&name===name.toUpperCase()&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;continue}}
     m=charAloneRx.exec(l);
-    if(m){const name=m[1].trim();if(name.length>=2&&name===name.toUpperCase()){cur=name;continue}}
+    if(m){const name=m[1].trim();if(name.length>=2&&name===name.toUpperCase()&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;continue}}
     if(cur&&l.length>1&&!/^\s*[\(\[]/.test(l))res.push({char:cur,line:l});
   }
   return res;
@@ -1677,6 +1754,23 @@ function endSession(){
 }
 function cancelConnection(){hideOverlay();if(!conn||!conn.open)endSession()}
 
+function initCardTilt(){
+  const isTouch=window.matchMedia('(pointer: coarse)').matches;
+  if(isTouch)return;
+  const cards=document.querySelectorAll('.hcard,.setup-card,.mode-opt,.voice-item,.upload-zone');
+  cards.forEach(card=>{
+    card.addEventListener('mousemove',e=>{
+      const rect=card.getBoundingClientRect();
+      const x=e.clientX-rect.left;
+      const y=e.clientY-rect.top;
+      const rx=((y/rect.height)-0.5)*-3;
+      const ry=((x/rect.width)-0.5)*3;
+      card.style.transform=`translateY(-2px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+    });
+    card.addEventListener('mouseleave',()=>{card.style.transform='';});
+  });
+}
+
 document.addEventListener('DOMContentLoaded',async ()=>{
   const saved=loadSettings();
   if(saved){
@@ -1702,6 +1796,7 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   const emo=document.getElementById('emotionSelect');
   if(emo)emo.value=selectedEmotion;
   setMode(mode);
+  initCardTilt();
   if(!applyJoinCodeFromURL())showScreen('home');
 });
 </script>
