@@ -1783,8 +1783,52 @@ function isSpeakerCueCase(name){
   const n=String(name||'').trim();
   if(!n)return false;
   const hasLatinCase=/[A-Za-zÀ-ÖØ-öø-ÿ]/.test(n);
-  if(hasLatinCase)return n===n.toUpperCase();
+  if(hasLatinCase){
+    if(n===n.toUpperCase())return true;
+    const words=n.split(/\s+/).filter(Boolean);
+    if(!words.length||words.length>4)return false;
+    const titleWordRx=/^[A-ZÀ-ÖØ-Þ][a-zà-öø-ÿ]*(?:['’\-][A-Za-zÀ-ÖØ-öø-ÿ]+)*$/u;
+    if(words.every(w=>titleWordRx.test(w)))return true;
+    return false;
+  }
   return true;
+}
+function isLikelySpeakerCue(name){
+  const n=String(name||'').trim();
+  if(!n)return false;
+  if(/[.!?]/.test(n))return false;
+  if(!isLikelyCharacterName(n))return false;
+  return isSpeakerCueCase(n);
+}
+function rescueMultiSpeakerFromLines(lines,suspectNameWatermarks){
+  const out=[];
+  let cur=null;
+  const isBlocked=s=>suspectNameWatermarks.has(normalizeScriptLine(s));
+  for(let i=0;i<lines.length;i++){
+    const l=String(lines[i]||'').trim().replace(/^[\u2022•*\-–—]\s*/,'').replace(/\s{2,}/g,' ');
+    if(!l){cur=null;continue}
+    if(isLikelyStageDirectionLine(l))continue;
+    const inline=splitSpeakerInlineLine(l);
+    if(inline&&isLikelySpeakerCue(inline.speaker)&&!isBlocked(inline.speaker)){
+      cur=inline.speaker.trim();
+      if(inline.content&&!isLikelyStageDirectionLine(inline.content))out.push({char:cur,line:inline.content.trim()});
+      continue;
+    }
+    const maybeSpeaker=l.replace(/\s*[:：\-–—]+\s*$/,'').trim();
+    if(isLikelySpeakerCue(maybeSpeaker)&&!isBlocked(maybeSpeaker)){
+      let next='';
+      for(let j=i+1;j<lines.length;j++){
+        next=String(lines[j]||'').trim().replace(/\s{2,}/g,' ');
+        if(next)break;
+      }
+      if(next&&!splitSpeakerInlineLine(next)&&!isLikelyStageDirectionLine(next)&&!/^\s*[\(\[]/.test(next)){
+        cur=maybeSpeaker;
+        continue;
+      }
+    }
+    if(cur&&l.length>1&&!/^\s*[\(\[]/.test(l)&&!splitSpeakerInlineLine(l))out.push({char:cur,line:l});
+  }
+  return out;
 }
 
 function stripPdfWatermarkNoise(text,pageCount,fileName){
@@ -1854,8 +1898,17 @@ async function processPDF(n,file){
     const buf=await file.arrayBuffer();const pdf=await pdfjsLib.getDocument({data:buf}).promise;const pageTexts=[];
     for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const ct=await pg.getTextContent();pageTexts.push(extractPageText(ct))}
     const rawText=pageTexts.join('\n').replace(/\u00A0/g,' ');
-    const cleanText=stripPdfWatermarkNoise(rawText,pdf.numPages,file&&file.name?file.name:'');
-    pdfScript=parsePDFScript(cleanText||rawText);
+    let cleanText=rawText;
+    let parsedScript=[];
+    try{
+      cleanText=stripPdfWatermarkNoise(rawText,pdf.numPages,file&&file.name?file.name:'');
+      parsedScript=parsePDFScript(cleanText||rawText);
+    }catch(parseErr){
+      console.warn('PDF parser fallback:',parseErr);
+      cleanText=rawText;
+      parsedScript=[];
+    }
+    pdfScript=parsedScript;
     const chars=getChars();
     document.getElementById('uploadZone'+n).style.display='none';
     document.getElementById('uploadOk'+n).style.display='flex';
@@ -1867,8 +1920,30 @@ async function processPDF(n,file){
       document.getElementById('scriptInput'+n).value=cleanText||rawText;
       document.getElementById('setupStatus'+n).textContent=t('pdfImportedRaw');
     }
-  }catch(e){showToast(t('pdfReadError'))}
+  }catch(e){
+    console.error('PDF read error:',e);
+    showToast(t('pdfReadError'));
+  }
   setLoading(false);
+}
+
+function buildSpeakerRegexes(){
+  try{
+    const name='([\\p{L}][\\p{L}\\s\\-\\.\\\'’]{0,40})';
+    return{
+      charInlineRx:new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*(.+)$','u'),
+      charDashOnlyRx:new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*$','u'),
+      charAloneRx:new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*:?\\s*$','u'),
+    };
+  }catch(_err){
+    const UP='A-Za-zÀ-ÖØ-öø-ÿ';
+    const name='(['+UP+']['+UP+'\\s\\-\\.\\\'’]{0,40})';
+    return{
+      charInlineRx:new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*(.+)$'),
+      charDashOnlyRx:new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*$'),
+      charAloneRx:new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*:?\\s*$'),
+    };
+  }
 }
 
 function parsePDFScript(text){
@@ -1883,10 +1958,7 @@ function parsePDFScript(text){
     }
   });
   const suspectNameWatermarks=new Set([...nameFreq.entries()].filter(([,count])=>count>=2).map(([k])=>k));
-  const name='([\\p{L}][\\p{L}\\s\\-\\.\\\'’]{0,40})';
-  const charInlineRx=new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*(.+)$','u');
-  const charDashOnlyRx=new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*$','u');
-  const charAloneRx=new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*:?\\s*$','u');
+  const{charInlineRx,charDashOnlyRx,charAloneRx}=buildSpeakerRegexes();
   const didasRx=/^\s*[\(\[].+[\)\]]\s*$/;
   const sceneRx=/^(INT[\.\s\/]|EXT[\.\s\/]|SÉQUENCE\b|SEQUENCE\b|TRANSITION\b|FONDU\b|FADE\b|CUT TO\b|NOIR\b|SCÈNE\b|SCENE\b|ACTE\b|ACT\b|EPISODE\b|ÉPISODE\b)/i;
   const pageRx=/^\d{1,4}\s*\.?\s*$/;
@@ -1899,7 +1971,7 @@ function parsePDFScript(text){
     if(didasRx.test(l))continue;
     if(isLikelyStageDirectionLine(l))continue;
     const inline=splitSpeakerInlineLine(l);
-    if(inline&&isLikelyCharacterName(inline.speaker)&&isSpeakerCueCase(inline.speaker)&&!suspectNameWatermarks.has(normalizeScriptLine(inline.speaker))){
+    if(inline&&isLikelySpeakerCue(inline.speaker)&&!suspectNameWatermarks.has(normalizeScriptLine(inline.speaker))){
       cur=inline.speaker;
       if(inline.content)res.push({char:cur,line:inline.content});
       continue;
@@ -1907,12 +1979,18 @@ function parsePDFScript(text){
     const normalized=normalizeScriptLine(l);
     if(suspectNameWatermarks.has(normalized)){cur=null;continue}
     let m=charInlineRx.exec(l);
-    if(m){const name=m[1].trim();if(name.length>=2&&isSpeakerCueCase(name)&&isLikelyCharacterName(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;res.push({char:cur,line:m[2].trim()});continue}}
+    if(m){const name=m[1].trim();if(name.length>=2&&isLikelySpeakerCue(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;res.push({char:cur,line:m[2].trim()});continue}}
     m=charDashOnlyRx.exec(l);
-    if(m){const name=m[1].trim();if(name.length>=2&&isSpeakerCueCase(name)&&isLikelyCharacterName(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;continue}}
+    if(m){const name=m[1].trim();if(name.length>=2&&isLikelySpeakerCue(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;continue}}
     m=charAloneRx.exec(l);
-    if(m){const name=m[1].trim();if(name.length>=2&&isSpeakerCueCase(name)&&isLikelyCharacterName(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;continue}}
+    if(m){const name=m[1].trim();if(name.length>=2&&isLikelySpeakerCue(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;continue}}
     if(cur&&l.length>1&&!/^\s*[\(\[]/.test(l))res.push({char:cur,line:l});
+  }
+  const uniqPrimary=new Set(res.map(v=>v.char)).size;
+  const rescued=rescueMultiSpeakerFromLines(lines,suspectNameWatermarks);
+  const uniqRescued=new Set(rescued.map(v=>v.char)).size;
+  if((uniqPrimary<2&&uniqRescued>=2&&rescued.length>=2)||(uniqRescued>uniqPrimary&&rescued.length>=Math.max(4,res.length))){
+    return rescued;
   }
   if(res.length){
     const counts={};
