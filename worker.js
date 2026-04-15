@@ -271,6 +271,13 @@ export default {
       return new Response(null, { status: 204 });
     }
 
-    return env.ASSETS.fetch(request);
+    const assetResponse = await env.ASSETS.fetch(request);
+    if (url.pathname === "/" || url.pathname === "/index.html") {
+      const newResponse = new Response(assetResponse.body, assetResponse);
+      newResponse.headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+      newResponse.headers.set("Pragma", "no-cache");
+      return newResponse;
+    }
+    return assetResponse;
   },
 };
