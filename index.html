@@ -54,9 +54,6 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.06;mi
 .hcard-text h3{font-size:1rem;font-weight:700;color:var(--white);margin-bottom:.15rem}.hcard-text p{font-size:.82rem;color:#a8c6bb;font-weight:400}
 .join-link{font-size:.78rem;color:var(--text-muted);text-align:center}
 .join-link a{color:#83d1b8;cursor:pointer;text-decoration:underline;font-weight:700}
-.home-voices{text-align:center;margin-top:.3rem;padding:.55rem .8rem;background:rgba(8,31,27,.5);border:1px solid rgba(143,198,180,.15);border-radius:10px}
-.hv-label{display:block;font-size:.68rem;color:rgba(191,217,207,.7);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem}
-.hv-flags{font-size:1.15rem;letter-spacing:.25rem;line-height:1.6}
 .home-footer{font-size:.72rem;color:#b3cec4;text-align:center}
 
 /* SETUP */
@@ -220,10 +217,6 @@ input[type="file"]{display:none}
         <div class="hcard-icon blue">🎬</div>
         <div class="hcard-text"><h3 id="homePartnerTitle">Avec un partenaire</h3><p id="homePartnerDesc">Inviter quelqu'un à donner la réplique</p></div>
       </div>
-    </div>
-    <div class="home-voices" id="homeVoicesRow">
-      <span class="hv-label" id="homeVoicesLabel">Voix IA disponibles</span>
-      <span class="hv-flags">🇫🇷 🇺🇸 🇬🇧 🇪🇸 🇩🇪 🇮🇹 🇵🇹 🇸🇦 🇨🇳 🇯🇵 🇰🇷 🇹🇷 🇷🇺 🇮🇳</span>
     </div>
     <div class="home-footer" id="homeFooterText">WebRTC pair-à-pair · Aucune donnée stockée</div>
   </div>
@@ -791,19 +784,19 @@ const PREVIEW_TEXT_BY_LANG={
 };
 
 const UI_LANGUAGES=[
-  {id:'fr',label:'Français'},
-  {id:'en',label:'English'},
-  {id:'es',label:'Español'},
-  {id:'it',label:'Italiano'},
-  {id:'zh',label:'中文'},
-  {id:'ko',label:'한국어'},
-  {id:'ja',label:'日本語'},
-  {id:'ar',label:'العربية'},
-  {id:'de',label:'Deutsch'},
-  {id:'pt',label:'Português'},
-  {id:'hi',label:'हिन्दी'},
-  {id:'tr',label:'Türkçe'},
-  {id:'ru',label:'Русский'},
+  {id:'fr',label:'Français',flag:'🇫🇷'},
+  {id:'en',label:'English',flag:'🇬🇧'},
+  {id:'es',label:'Español',flag:'🇪🇸'},
+  {id:'it',label:'Italiano',flag:'🇮🇹'},
+  {id:'zh',label:'中文',flag:'🇨🇳'},
+  {id:'ko',label:'한국어',flag:'🇰🇷'},
+  {id:'ja',label:'日本語',flag:'🇯🇵'},
+  {id:'ar',label:'العربية',flag:'🇸🇦'},
+  {id:'de',label:'Deutsch',flag:'🇩🇪'},
+  {id:'pt',label:'Português',flag:'🇵🇹'},
+  {id:'hi',label:'हिन्दी',flag:'🇮🇳'},
+  {id:'tr',label:'Türkçe',flag:'🇹🇷'},
+  {id:'ru',label:'Русский',flag:'🇷🇺'},
 ];
 const UI_I18N={
   fr:{homeSubtitle:"Studio d'audition",siteLanguageLabel:'Langue du site',homeVoicesLabel:'Voix IA disponibles',homeSoloTitle:'Solo + IA',homeSoloDesc:"L'IA donne la réplique avec une voix",homePartnerTitle:'Avec un partenaire',homePartnerDesc:"Inviter quelqu'un à donner la réplique",homeFooterText:'WebRTC pair-à-pair · Aucune donnée stockée',partnerChoiceTitle:'Session partenaire',partnerCreateTitle:'Je crée la session (acteur)',partnerCreateDesc:'Générer un code et inviter un partenaire',partnerJoinTitle:'Je rejoins une session (partenaire)',partnerJoinDesc:"Entrer le code de l'acteur",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF ou texte)',uploadLabel:'Glisse ton PDF ici ou clique',uploadSub:'Format scénario standard',myCharacterLabel:'Mon personnage',partnerReadsLabel:'IA lit les répliques de :',partnerAllOthersBtn:'Tous les autres personnages',partnerHintAll:'L’IA joue tous les rôles sauf le tien.',partnerHintDuo:'Mode duo : uniquement les échanges entre toi et ce personnage.',pickCharacterFirst:'Choisis d’abord ton personnage',pasteScriptLabel:'Ou colle le texte',replyModeLabel:'Mode réplique',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuel',modeAutoBtn:'🎤 Auto',voiceSectionLabel:"Voix de l'IA",voiceLanguageLabel:'Langue voix',emotionLabel:'Émotion',speedLabel:'Vitesse',speedSlowBtn:'Lent x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rapide x1.6',launchAiBtn:'Lancer la session 🦾',setupPartnerTitle:'Avec un partenaire',sessionCodeLabel:'Ton code de session',sessionCodeHint:'Partage ce code à ton partenaire',copyCodeBtn:'📋 Copier code',copyLinkBtn:'🔗 Copier lien',shareBtn:'📤 Partager',launchPartnerBtn:'Lancer la session 🎬',joinScreenTitle:'Rejoindre une session',joinCodeLabel:'Code de session',joinCodePlaceholder:"Entre le code de l'acteur",joinSessionBtn:'Rejoindre 🎙️',prompterEmptyText:'Aucun texte chargé',sessionVoiceLabel:'🦾 Voix :',prevBtn:'◀ Préc',nextBtn:'Suiv ▶',quitBtn:'Quitter',modeHintAi:"L'IA lit les répliques du partenaire automatiquement.",modeHintManual:'Avance les répliques manuellement avec les boutons.',modeHintAuto:"L'IA lit le partenaire puis détecte la fin de ta phrase (silence) pour avancer — durée adaptée à la longueur de ta réplique.",toastEmotion:'Émotion',toastSpeed:'Vitesse',toastVoice:'Voix',toastAccent:'Langue voix',toastLanguage:'Langue du site',toastVoiceFallback:'Voix de secours utilisée'},
@@ -1012,7 +1005,7 @@ function initSiteLanguageSelect(){
   UI_LANGUAGES.forEach(l=>{
     const opt=document.createElement('option');
     opt.value=l.id;
-    opt.textContent=l.label;
+    opt.textContent=(l.flag?l.flag+' ':'')+l.label;
     if(l.id===selectedUILanguage)opt.selected=true;
     select.appendChild(opt);
   });
@@ -1027,7 +1020,6 @@ function applyUILanguage(){
   setTextById('authMiniBtn','authMiniBtn');
   setTextById('homePartnerTitle','homePartnerTitle');
   setTextById('homePartnerDesc','homePartnerDesc');
-  setTextById('homeVoicesLabel','homeVoicesLabel');
   setTextById('homeFooterText','homeFooterText');
   setTextById('partnerChoiceTitle','partnerChoiceTitle');
   setTextById('partnerCreateTitle','partnerCreateTitle');
