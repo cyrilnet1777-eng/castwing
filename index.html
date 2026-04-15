@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Castwing — Studio d'Audition</title>
+<meta name="description" content="Répète tes scènes sans dépendre de personne. Ton partenaire de jeu, toujours disponible.">
+<meta property="og:title" content="Castwing — Rejoins ma session">
+<meta property="og:description" content="Ton partenaire de jeu IA, toujours disponible. Répète tes scènes, enregistre tes auditions.">
+<meta property="og:image" content="https://cast-wing.com/og-image.svg">
+<meta property="og:url" content="https://cast-wing.com">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Castwing">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Castwing — Studio d'Audition">
+<meta name="twitter:description" content="Ton partenaire de jeu IA, toujours disponible.">
+<meta name="twitter:image" content="https://cast-wing.com/og-image.svg">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
@@ -463,6 +474,27 @@ let soloPartnerMode='all',soloPartnerChar=null;
 let autoAdvanceTimer=null,lastAutoSpokenIndex=-1,activeSpeechToken=0;
 let ttsAudio=null,vad=null;
 let takeNumber=0,currentScriptName='';
+
+const SFX={
+  swoosh:'/sounds/swoosh.mp3',
+  rise:'/sounds/cinematic-rise.mp3',
+  freeze:'/sounds/freeze.mp3',
+  glitch:'/sounds/glitch.mp3',
+  ambienceValley:'/sounds/ambience-valley.mp3',
+  ambienceHorror:'/sounds/ambience-horror.mp3',
+  ambienceOffice:'/sounds/ambience-office.mp3',
+};
+const sfxCache={};
+function playSfx(key,vol=0.5){
+  const src=SFX[key];if(!src)return;
+  try{
+    if(!sfxCache[key])sfxCache[key]=new Audio(src);
+    const a=sfxCache[key];
+    a.volume=Math.min(1,Math.max(0,vol));
+    a.currentTime=0;
+    a.play().catch(()=>{});
+  }catch(e){}
+}
 let authFlowToken='',authPendingEmail='';
 let userAccess={email:'',verified:false,provider:'',paid:false,usageMs:0,cooldownUntil:0,lastTick:0};
 let usageTimer=null;
@@ -589,6 +621,7 @@ function showPaywallModal(){
   cancelSpeechFlow();
   freezeTimer();
   dismissPaywall();
+  playSfx('freeze',0.45);
   const tier=getUserTier();
   const pl=getPlan();
   const cooldownEnd=pl.cooldownUntil||0;
@@ -656,6 +689,7 @@ function showClapperboard(){
   </div>`;
   overlay.addEventListener('click',()=>overlay.remove());
   document.body.appendChild(overlay);
+  playSfx('rise',0.4);
   setTimeout(()=>{if(overlay.parentElement)overlay.remove()},3000);
 }
 function buyPaygBlock(){
@@ -1437,6 +1471,7 @@ async function verifyEmailCode(){
     onUserSignedIn({id:authPendingEmail});
     document.getElementById('authStatusText').textContent=t('authVerified');
     showToast(t('authVerified'));
+    playSfx('swoosh',0.5);
     closeAuthModal();
   }catch(e){showToast('Auth offline');}
 }
@@ -1449,6 +1484,7 @@ function socialLogin(provider){
     updateAuthMiniButton();
     onUserSignedIn({id:provider});
     showToast(`${provider} login ✅`);
+    playSfx('swoosh',0.5);
     closeAuthModal();
   }
 }
@@ -1934,16 +1970,16 @@ function toggleSetupCamera(){
 }
 function goSetupPartner(){showScreen('setupPartner');document.getElementById('mySessionCode').textContent=genCode();initDragDrop('uploadZone2')}
 function getPartnerCode(){const code=(document.getElementById('mySessionCode').textContent||'').trim();return code&&code!=='—'?code:''}
-function getJoinLink(){const code=getPartnerCode();if(!code)return '';return window.location.origin+window.location.pathname+'?join='+encodeURIComponent(code)}
-function getPartnerShareText(){const code=getPartnerCode();if(!code)return '';const link=getJoinLink();return '🎬 Rejoins ma session Castwing\nCode: '+code+'\nLien direct: '+link}
+function getJoinLink(){const code=getPartnerCode();if(!code)return '';return 'https://cast-wing.com/?join='+encodeURIComponent(code)}
+function getPartnerShareText(){const code=getPartnerCode();if(!code)return '';return '🎬 Rejoins-moi sur Castwing\n'+getJoinLink()}
 async function copyToClipboard(text){if(!text)return false;try{if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(text);return true}}catch(e){}const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand('copy')}catch(e){}document.body.removeChild(ta);return ok}
 async function copyPartnerCode(){const code=getPartnerCode();if(!code){showToast(t('codeUnavailable'));return}const ok=await copyToClipboard(code);showToast(ok?t('codeCopied')+' ✅':t('copyFailed'))}
 async function copyPartnerLink(){const link=getJoinLink();if(!link){showToast(t('linkUnavailable'));return}const ok=await copyToClipboard(link);showToast(ok?t('linkCopied')+' ✅':t('copyFailed'))}
 async function shareVia(channel){
   const text=getPartnerShareText();const link=getJoinLink();if(!text||!link){showToast(t('codeUnavailable'));return}
-  if(channel==='native'&&navigator.share){try{await navigator.share({title:'Session Castwing',text,url:link});return}catch(e){}}
+  if(channel==='native'&&navigator.share){try{await navigator.share({title:'Castwing — Rejoins ma session',text:'🎬 Rejoins-moi sur Castwing',url:link});return}catch(e){}}
   if(channel==='whatsapp'){window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');return}
-  if(channel==='telegram'){window.open('https://t.me/share/url?url='+encodeURIComponent(link)+'&text='+encodeURIComponent('🎬 Rejoins ma session Castwing (code '+getPartnerCode()+')'),'_blank');return}
+  if(channel==='telegram'){window.open('https://t.me/share/url?url='+encodeURIComponent(link)+'&text='+encodeURIComponent('🎬 Rejoins-moi sur Castwing'),'_blank');return}
   if(channel==='wechat'){await copyToClipboard(text);window.open('https://web.wechat.com/','_blank');showToast(t('shareTextCopied'));return}
   const ok=await copyToClipboard(text);showToast(ok?t('shareTextCopied')+' ✅':t('shareUnavailable'))}
 function applyJoinCodeFromURL(){
@@ -1951,8 +1987,9 @@ function applyJoinCodeFromURL(){
   const raw=(params.get('join')||params.get('code')||'').toUpperCase();
   const clean=raw.replace(/[^A-Z0-9]/g,'').slice(0,10);if(!clean)return false;
   const input=document.getElementById('joinCodeInput');if(input)input.value=clean;
-  showScreen('joinScreen');showToast(t('joinCodePrefilled')+': '+clean,4000);
+  showScreen('joinScreen');
   try{window.history.replaceState(null,'',window.location.pathname)}catch(e){}
+  setTimeout(()=>{joinAsPartner()},600);
   return true;
 }
 
@@ -2862,7 +2899,7 @@ function handleDataMessage(d){
   }
 }
 function setupDataConnection(c){
-  conn=c;conn.on('open',()=>{setStatus('','Connecté');hideOverlay();showToast('Partenaire connecté !');if(role==='actor'&&prompterLines.length>0)conn.send({type:'script',lines:prompterLines,index:prompterIndex});if(role==='partner')conn.send({type:'ready'})});
+  conn=c;conn.on('open',()=>{setStatus('','Connecté');hideOverlay();showToast('Partenaire connecté !');playSfx('swoosh',0.45);if(role==='actor'&&prompterLines.length>0)conn.send({type:'script',lines:prompterLines,index:prompterIndex});if(role==='partner')conn.send({type:'ready'})});
   conn.on('data',handleDataMessage);
   conn.on('close',()=>{
     setStatus('disconnected','Déconnecté');showToast(tt('partnerDisconnected','Partenaire déconnecté'),4000);
