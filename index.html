@@ -134,7 +134,11 @@ input[type="file"]{display:none}
 .video-container .no-video{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.85rem;color:rgba(255,255,255,.4);font-weight:500}
 .video-controls{position:absolute;bottom:.8rem;left:50%;transform:translateX(-50%);display:flex;gap:.5rem;z-index:5}
 .vctrl{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);border:1.5px solid rgba(255,255,255,.15);color:#fff;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
-.vctrl:hover{background:rgba(0,0,0,.75)}.vctrl.recording{background:var(--danger);border-color:var(--danger);animation:pulse-rec 1.2s ease infinite}
+.vctrl svg{width:20px;height:20px;fill:currentColor}
+.vctrl:hover{background:rgba(0,0,0,.75)}
+.vctrl.recording{background:var(--danger);border-color:var(--danger);animation:pulse-rec 1.2s ease infinite}
+.vctrl .rec-dot{width:14px;height:14px;border-radius:50%;background:#c1121f;box-shadow:0 0 8px rgba(193,18,31,.6)}
+.vctrl.recording .rec-dot{width:16px;height:16px;border-radius:3px;background:#fff;box-shadow:none}
 @keyframes pulse-rec{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}50%{box-shadow:0 0 0 10px rgba(239,68,68,0)}}
 .prompter-area{flex-shrink:0;max-height:35vh;background:rgba(0,26,77,.92);border-top:1px solid rgba(255,255,255,.08);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem 1.2rem}
 .prompter-line{font-size:1rem;line-height:1.7;font-weight:500;color:rgba(255,255,255,.5);margin-bottom:.3rem;transition:all .2s ease;padding:.25rem .4rem;border-radius:6px;cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -310,7 +314,7 @@ input[type="file"]{display:none}
           <div class="hcard-text"><h3 id="partnerCreateTitle">Je crée la session (acteur)</h3><p id="partnerCreateDesc">Générer un code et inviter un partenaire</p></div>
         </div>
         <div class="hcard" onclick="goJoin()">
-          <div class="hcard-icon navy">🎙️</div>
+          <div class="hcard-icon navy">🎬</div>
           <div class="hcard-text"><h3 id="partnerJoinTitle">Je rejoins une session (partenaire)</h3><p id="partnerJoinDesc">Entrer le code de l'acteur</p></div>
         </div>
       </div>
@@ -338,7 +342,7 @@ input[type="file"]{display:none}
       <div class="mode-opt" id="modeAutoBtn" onclick="setMode('auto')">🎤 Auto</div>
     </div>
     <div class="mode-toggle">
-      <div class="mode-opt" id="setupCamBtn" onclick="toggleSetupCamera()">📷 Caméra ON</div>
+      <div class="mode-opt" id="setupCamBtn" onclick="toggleSetupCamera()"><svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;vertical-align:middle;margin-right:4px"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>Caméra ON</div>
     </div>
     <div class="mode-hint" id="modeHint">L'IA lit les répliques du partenaire automatiquement.</div>
     <div class="voice-section active" id="voiceSection">
@@ -422,7 +426,7 @@ input[type="file"]{display:none}
   <div id="creditBadge" style="position:fixed;top:12px;right:52px;background:rgba(0,0,0,.6);color:#fff;padding:4px 10px;border-radius:12px;font-size:13px;font-family:'DM Sans',sans-serif;z-index:1000;display:none;pointer-events:none">⏱ <span id="creditCount">60:00</span></div>
   <div class="session-top"><div class="status"><div class="status-dot waiting" id="statusDot"></div><span id="statusText">En attente…</span></div><button class="back-btn" onclick="endSession()" style="color:#fff;font-size:1rem">✕</button></div>
   <div class="session-body">
-    <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><video id="remoteVideo" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:contain;background:#000"></video><div class="no-video" id="noVideoMsg">Caméra en attente…</div><div class="video-controls"><button class="vctrl" id="btnMic" onclick="toggleMic()">🎙️</button><button class="vctrl" id="btnRec" onclick="toggleRecording()">⏺</button><button class="vctrl" id="btnCam" onclick="toggleCam()">📷</button></div></div></div>
+    <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><video id="remoteVideo" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:contain;background:#000"></video><div class="no-video" id="noVideoMsg">Caméra en attente…</div><div class="video-controls"><button class="vctrl" id="btnMic" onclick="toggleMic()"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/></svg></button><button class="vctrl" id="btnRec" onclick="toggleRecording()"><span class="rec-dot"></span></button><button class="vctrl" id="btnCam" onclick="toggleCam()"><svg viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg></button></div></div></div>
     <div class="prompter-area" id="prompterArea"><div class="prompter-empty" id="prompterEmptyText">Aucun texte chargé</div></div>
   </div>
   <div class="ai-panel" id="aiPanel"><span class="ai-label" id="sessionVoiceLabel">🦾 Voix :</span><select id="sessionVoiceSelect" onchange="changeSessionVoice()"></select></div>
@@ -1969,7 +1973,8 @@ function syncSessionModeButtons(){
 function updateSetupCameraButton(){
   const btn=document.getElementById('setupCamBtn');
   if(!btn)return;
-  btn.textContent=isCamOn?'📷 Caméra ON':'📷 Caméra OFF';
+  const svgIcon='<svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;vertical-align:middle;margin-right:4px"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>';
+  btn.innerHTML=svgIcon+(isCamOn?'Caméra ON':'Caméra OFF');
 }
 function setSessionSpeed(v){setVoiceSpeed(v,false);}
 function switchSessionMode(nextMode){
@@ -2791,12 +2796,12 @@ async function ensureSessionStream(){
     return localStream;
   }catch(e){
     document.getElementById('noVideoMsg').style.display='flex';
-    document.getElementById('noVideoMsg').textContent='🎙️ '+tt('micDenied','Micro refusé — vérifie les permissions');
+    document.getElementById('noVideoMsg').textContent=tt('micDenied','Micro refusé — vérifie les permissions');
     showToast(tt('micDenied','Micro refusé — vérifie les permissions'),5000);
     return null;
   }
 }
-function toggleMic(){if(!localStream)return;isMicOn=!isMicOn;localStream.getAudioTracks().forEach(t=>t.enabled=isMicOn);document.getElementById('btnMic').textContent=isMicOn?'🎙️':'🔇';showToast(isMicOn?'Micro activé':'Micro coupé')}
+function toggleMic(){if(!localStream)return;isMicOn=!isMicOn;localStream.getAudioTracks().forEach(t=>t.enabled=isMicOn);const btn=document.getElementById('btnMic');btn.innerHTML=isMicOn?'<svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/></svg>':'<svg viewBox="0 0 24 24"><path d="M19 11h-2a5 5 0 0 1-1.08 3.13l1.45 1.45A6.97 6.97 0 0 0 19 11zM12 14a3 3 0 0 0 2.82-2H12v2zm-1 3.93V21h2v-3.07c.34-.04.67-.11 1-.2l-1.55-1.55c-.15.01-.3.02-.45.02a5 5 0 0 1-5-5H5a7 7 0 0 0 6 6.93zM3.71 3.56L2.29 4.97l7.03 7.03H9.3A3 3 0 0 0 12 14c.09 0 .18 0 .27-.02l1.46 1.46a5.02 5.02 0 0 1-1.73.49V21h-2v-3.07L12 17.93 3.71 3.56zM12 4a3 3 0 0 0-3 3v4.17l6-6V5a3 3 0 0 0-3-3z"/><line x1="3" y1="3" x2="21" y2="21" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>';btn.style.opacity=isMicOn?'1':'.5';showToast(isMicOn?'Micro activé':'Micro coupé')}
 async function toggleCam(){
   if(!localStream){
     const stream=await ensureSessionStream();
@@ -2805,7 +2810,7 @@ async function toggleCam(){
   isCamOn=!isCamOn;
   if(!isCamOn){
     localStream.getVideoTracks().forEach(t=>t.enabled=false);
-    document.getElementById('btnCam').textContent='📷❌';
+    const camBtn=document.getElementById('btnCam');camBtn.innerHTML='<svg viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>';camBtn.style.opacity='.5';
     document.getElementById('noVideoMsg').style.display='flex';
     document.getElementById('noVideoMsg').textContent='Caméra désactivée';
     updateSetupCameraButton();
@@ -2817,9 +2822,9 @@ async function toggleCam(){
     await startCamera();
     tracks=localStream?localStream.getVideoTracks():[];
   }
-  if(!tracks.length){showToast('Caméra indisponible',3500);isCamOn=false;document.getElementById('btnCam').textContent='📷❌';updateSetupCameraButton();return}
+  if(!tracks.length){showToast('Caméra indisponible',3500);isCamOn=false;const cb=document.getElementById('btnCam');cb.style.opacity='.5';updateSetupCameraButton();return}
   tracks.forEach(t=>t.enabled=true);
-  document.getElementById('btnCam').textContent='📷';
+  const camBtnOn=document.getElementById('btnCam');camBtnOn.innerHTML='<svg viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>';camBtnOn.style.opacity='1';
   document.getElementById('noVideoMsg').style.display='none';
   updateSetupCameraButton();
   showToast('Caméra activée');
@@ -2833,10 +2838,10 @@ function startRecording(){
   try{mediaRecorder=new MediaRecorder(localStream,{mimeType:MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm'});
   mediaRecorder.ondataavailable=e=>{if(e.data.size>0)recordedChunks.push(e.data)};
   mediaRecorder.onstop=()=>{const b=new Blob(recordedChunks,{type:'video/webm'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`castwing-${Date.now()}.webm`;a.click();URL.revokeObjectURL(u);showToast('Audition téléchargée !')};
-  mediaRecorder.start(1000);isRecording=true;document.getElementById('btnRec').classList.add('recording');document.getElementById('btnRec').textContent='⏹';showToast('Enregistrement…')}
+  mediaRecorder.start(1000);isRecording=true;document.getElementById('btnRec').classList.add('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';showToast('Enregistrement…')}
   catch(e){showToast('Erreur enregistrement')}
 }
-function stopRecording(){if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').textContent='⏺'}
+function stopRecording(){if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>'}
 
 // ── WebRTC ──
 function createPeer(id){return new Peer(id,{config:{iceServers:ICE_SERVERS}})}
