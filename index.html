@@ -208,15 +208,15 @@ input[type="file"]{display:none}
 <!-- ═══ HOME ═══ -->
 <div id="home" class="screen active">
   <div class="home-inner">
-    <div class="logo"><h1>Cast<span class="logo-rec-dot">REC</span><span>wing</span></h1><p id="homeSubtitle" style="max-width:300px;margin:0 auto">Rehearse your scenes without depending on anyone.</p></div>
-    <p id="homeHook" style="text-align:center;font-size:.82rem;color:#7fd8bb;font-weight:500;margin:-.4rem 0 .2rem">Your acting partner is always available.</p>
+    <div class="logo"><h1>Cast<span class="logo-rec-dot">REC</span><span>wing</span></h1></div>
+    <p id="homeHook" style="text-align:center;font-size:.85rem;color:#7fd8bb;font-weight:500;margin:-.2rem 0 .4rem">Your acting partner is always available.</p>
     <div class="home-cards">
       <div class="hcard" onclick="goSetupAi()">
-        <div class="hcard-icon navy">🎭</div>
+        <div class="hcard-icon navy">🦾</div>
         <div class="hcard-text"><h3 id="homeSoloTitle">Start a scene</h3><p id="homeSoloDesc">Solo with AI or manual reading</p></div>
       </div>
       <div class="hcard" onclick="handlePartnerClick()">
-        <div class="hcard-icon blue">🎬</div>
+        <div class="hcard-icon blue">🎭</div>
         <div class="hcard-text"><h3 id="homePartnerTitle">Rehearse with a partner</h3><p id="homePartnerDesc">Invite someone to play the scene for real</p></div>
       </div>
     </div>
@@ -401,7 +401,7 @@ input[type="file"]{display:none}
   <div id="creditBadge" style="position:fixed;top:12px;right:52px;background:rgba(0,0,0,.6);color:#fff;padding:4px 10px;border-radius:12px;font-size:13px;font-family:'DM Sans',sans-serif;z-index:1000;display:none;pointer-events:none">⏱ <span id="creditCount">60:00</span></div>
   <div class="session-top"><div class="status"><div class="status-dot waiting" id="statusDot"></div><span id="statusText">En attente…</span></div><button class="back-btn" onclick="endSession()" style="color:#fff;font-size:1rem">✕</button></div>
   <div class="session-body">
-    <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><div class="no-video" id="noVideoMsg">Caméra en attente…</div><div class="video-controls"><button class="vctrl" id="btnMic" onclick="toggleMic()">🎙️</button><button class="vctrl" id="btnRec" onclick="toggleRecording()">⏺</button><button class="vctrl" id="btnCam" onclick="toggleCam()">📷</button></div></div></div>
+    <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><video id="remoteVideo" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:contain;background:#000"></video><div class="no-video" id="noVideoMsg">Caméra en attente…</div><div class="video-controls"><button class="vctrl" id="btnMic" onclick="toggleMic()">🎙️</button><button class="vctrl" id="btnRec" onclick="toggleRecording()">⏺</button><button class="vctrl" id="btnCam" onclick="toggleCam()">📷</button></div></div></div>
     <div class="prompter-area" id="prompterArea"><div class="prompter-empty" id="prompterEmptyText">Aucun texte chargé</div></div>
   </div>
   <div class="ai-panel" id="aiPanel"><span class="ai-label" id="sessionVoiceLabel">🦾 Voix :</span><select id="sessionVoiceSelect" onchange="changeSessionVoice()"></select></div>
@@ -981,7 +981,7 @@ const UI_FALLBACK_TRANSLATIONS={
   partnerGateDesc:{fr:'Inscris-toi gratuitement pour débloquer le mode partenaire.',en:'Sign up for free to unlock partner mode.',es:'Regístrate gratis para desbloquear el modo compañero.',it:'Iscriviti gratis per sbloccare la modalità partner.',zh:'免费注册以解锁搭档模式。',ko:'무료로 가입하여 파트너 모드를 잠금 해제하세요.',ja:'無料登録でパートナーモードを解除。',ar:'سجّل مجانًا لفتح وضع الشريك.',de:'Melde dich kostenlos an, um den Partnermodus freizuschalten.',pt:'Cadastre-se grátis para desbloquear o modo parceiro.',hi:'पार्टनर मोड अनलॉक करने के लिए मुफ़्त में साइन अप करें।',tr:'Partner modunu açmak için ücretsiz kaydolun.',ru:'Зарегистрируйтесь бесплатно, чтобы разблокировать режим партнёра.'},
   partnerGateSignup:{fr:'Créer un compte',en:'Create account',es:'Crear cuenta',it:'Crea account',zh:'创建帐户',ko:'계정 만들기',ja:'アカウント作成',ar:'إنشاء حساب',de:'Konto erstellen',pt:'Criar conta',hi:'अकाउंट बनाएं',tr:'Hesap oluştur',ru:'Создать аккаунт'},
   partnerGateSolo:{fr:'Continuer seul',en:'Continue solo',es:'Continuar solo',it:'Continua da solo',zh:'独自继续',ko:'혼자 계속',ja:'ソロで続ける',ar:'متابعة منفردًا',de:'Alleine fortfahren',pt:'Continuar sozinho',hi:'अकेले जारी रखें',tr:'Yalnız devam et',ru:'Продолжить одному'},
-  homeHook:{fr:'Ton partenaire de jeu est toujours disponible.',en:'Your acting partner is always available.',es:'Tu compañero de actuación siempre está disponible.',it:'Il tuo partner di scena è sempre disponibile.',zh:'你的表演搭档随时待命。',ko:'당신의 연기 파트너는 언제나 준비되어 있습니다.',ja:'あなたの演技パートナーはいつでも利用可能です。',ar:'شريكك في التمثيل متاح دائمًا.',de:'Dein Schauspielpartner ist immer verfügbar.',pt:'Seu parceiro de cena está sempre disponível.',hi:'आपका एक्टिंग पार्टनर हमेशा उपलब्ध है।',tr:'Oyunculuk partneriniz her zaman hazır.',ru:'Ваш партнёр по сцене всегда доступен.'},
+  homeHook:{fr:'Ton partenaire de jeu, toujours disponible.',en:'Your acting partner, always available.',es:'Tu compañero de actuación, siempre disponible.',it:'Il tuo partner di scena, sempre disponibile.',zh:'你的表演搭档，随时待命。',ko:'당신의 연기 파트너, 언제나 준비.',ja:'あなたの演技パートナー、いつでも。',ar:'شريكك في التمثيل، متاح دائمًا.',de:'Dein Schauspielpartner, immer verfügbar.',pt:'Seu parceiro de cena, sempre disponível.',hi:'आपका एक्टिंग पार्टनर, हमेशा उपलब्ध।',tr:'Oyunculuk partnerin, her zaman hazır.',ru:'Ваш партнёр по сцене, всегда доступен.'},
   homeCastingReady:{fr:'Prêt à envoyer au casting.',en:'Ready to send to casting.',es:'Listo para enviar al casting.',it:'Pronto da inviare al casting.',zh:'准备发送给选角。',ko:'캐스팅에 보낼 준비 완료.',ja:'キャスティングに送る準備ができました。',ar:'جاهز للإرسال إلى الكاستينغ.',de:'Bereit zum Senden an das Casting.',pt:'Pronto para enviar ao casting.',hi:'कास्टिंग को भेजने के लिए तैयार।',tr:'Casting\'e göndermeye hazır.',ru:'Готово к отправке на кастинг.'},
   referralReward:{fr:'+30 min offertes ! Merci du partage.',en:'+30 min free! Thanks for sharing.',es:'+30 min gratis. ¡Gracias por compartir!',it:'+30 min gratis! Grazie per aver condiviso.',zh:'赠送30分钟！感谢分享。',ko:'+30분 무료! 공유해 주셔서 감사합니다.',ja:'+30分無料！シェアありがとうございます。',ar:'+30 دقيقة مجانية! شكرًا للمشاركة.',de:'+30 Min geschenkt! Danke fürs Teilen.',pt:'+30 min grátis! Obrigado por compartilhar.',hi:'+30 मिनट मुफ़्त! शेयर करने के लिए धन्यवाद।',tr:'+30 dk hediye! Paylaştığınız için teşekkürler.',ru:'+30 мин бесплатно! Спасибо за рекомендацию.'},
 };
@@ -1147,7 +1147,6 @@ function syncLangSelectDisplay(select){
 function applyUILanguage(){
   document.documentElement.lang=selectedUILanguage;
   document.documentElement.dir=selectedUILanguage==='ar'?'rtl':'ltr';
-  setTextById('homeSubtitle','homeSubtitle');
   setTextById('homeHook','homeHook');
   setTextById('homeCastingReady','homeCastingReady');
   setTextById('siteLanguageLabel','siteLanguageLabel');
@@ -2738,7 +2737,21 @@ function setupDataConnection(c){
   conn=c;conn.on('open',()=>{setStatus('','Connecté');hideOverlay();showToast('Partenaire connecté !');if(role==='actor'&&prompterLines.length>0)conn.send({type:'script',lines:prompterLines,index:prompterIndex});if(role==='partner')conn.send({type:'ready'})});
   conn.on('data',handleDataMessage);conn.on('close',()=>{setStatus('disconnected','Déconnecté');showToast('Partenaire déconnecté')});conn.on('error',e=>showToast('Erreur : '+e.message));
 }
-function setupCallHandlers(c){call=c;call.on('stream',s=>{document.getElementById('remoteAudio').srcObject=s});call.on('error',e=>console.error('Call error:',e))}
+function setupCallHandlers(c){
+  call=c;
+  call.on('stream',s=>{
+    document.getElementById('remoteAudio').srcObject=s;
+    const hasVideo=s.getVideoTracks().length>0;
+    if(hasVideo&&role==='partner'){
+      const rv=document.getElementById('remoteVideo');
+      const lv=document.getElementById('localVideo');
+      rv.srcObject=s;rv.style.display='block';
+      lv.style.display='none';
+      document.getElementById('noVideoMsg').style.display='none';
+    }
+  });
+  call.on('error',e=>console.error('Call error:',e));
+}
 
 // ── START SESSIONS ──
 async function startAiSession(){
@@ -2808,7 +2821,9 @@ function endSession(){
   if(connectionTimeout)clearTimeout(connectionTimeout);cancelSpeechFlow();
   if(isRecording)stopRecording();if(call){call.close();call=null}if(conn){conn.close();conn=null}if(peer){peer.destroy();peer=null}
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null}
-  document.getElementById('localVideo').srcObject=null;document.getElementById('remoteAudio').srcObject=null;
+  document.getElementById('localVideo').srcObject=null;document.getElementById('localVideo').style.display='';
+  document.getElementById('remoteVideo').srcObject=null;document.getElementById('remoteVideo').style.display='none';
+  document.getElementById('remoteAudio').srcObject=null;
   document.getElementById('noVideoMsg').style.display='flex';document.getElementById('noVideoMsg').textContent='Caméra en attente…';
   document.getElementById('aiPanel').classList.remove('active');
   hideTimerBadge();
