@@ -38,9 +38,12 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.06;mi
 #home{justify-content:center;align-items:center;padding:2rem 1.5rem;background:transparent}
 .home-inner{max-width:460px;width:100%;display:flex;flex-direction:column;align-items:center;gap:1.25rem}
 .home-top-row{width:100%;display:flex;justify-content:flex-end}
+.home-top-row .top-actions{display:flex;align-items:center;gap:.55rem}
 .site-lang-mini{display:flex;align-items:center;gap:.4rem;padding:.25rem .45rem;border-radius:10px;background:rgba(8,30,26,.82);border:1px solid rgba(124,201,177,.3)}
 .site-lang-mini .lang-globe{font-size:.9rem;line-height:1;opacity:.9}
 .site-lang-mini select{border:none;background:transparent;color:#e6f6ef;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:600;outline:none;padding-right:.35rem}
+.auth-mini-btn{border:1px solid rgba(127,247,231,.3);background:rgba(7,22,20,.72);color:#e8fffb;border-radius:10px;padding:.35rem .65rem;font-size:.78rem;font-weight:700;cursor:pointer}
+.auth-mini-btn:hover{border-color:rgba(127,247,231,.55);background:rgba(7,22,20,.9)}
 .logo{text-align:center}.logo h1{font-size:2.6rem;font-weight:700;color:var(--white);letter-spacing:-.02em;line-height:1.1;margin-bottom:.35rem;display:flex;align-items:center;justify-content:center;gap:.24rem}.logo h1 span{color:#7fd8bb;font-style:italic}.logo .logo-rec-dot{display:inline-flex;align-items:center;justify-content:center;min-width:.8rem;height:.8rem;padding:0 .14rem;border-radius:999px;background:rgba(193,18,31,.9);box-shadow:0 0 0 1px rgba(255,255,255,.18),0 0 8px rgba(193,18,31,.35);font-size:.31rem;letter-spacing:.04em;color:#fff;font-weight:700;line-height:1;transform:translateY(-.04rem)}.logo p{font-size:.8rem;color:#bfd9cf;letter-spacing:.12em;text-transform:uppercase;font-weight:500}
 .home-cards{width:100%;display:flex;flex-direction:column;gap:.85rem}
 .hcard{background:rgba(8,31,27,.72);border:1.5px solid rgba(143,198,180,.22);border-radius:var(--radius-lg);padding:1.4rem 1.3rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:1rem}
@@ -149,6 +152,20 @@ input[type="file"]{display:none}
 .spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.2);border-top-color:var(--white);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;top:1.2rem;left:50%;transform:translateX(-50%);background:var(--navy);color:var(--white);padding:.65rem 1.2rem;border-radius:var(--radius);font-size:.82rem;font-weight:700;box-shadow:var(--shadow-lg);z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90vw;text-align:center}.toast.show{opacity:1}
 .loading-overlay{display:none;position:fixed;inset:0;z-index:150;background:rgba(0,26,77,.7);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:.8rem;color:var(--white)}.loading-overlay.active{display:flex}.loading-overlay p{font-size:.9rem;font-weight:700}
+.auth-modal,.paywall-modal{display:none;position:fixed;inset:0;z-index:180;background:rgba(0,18,20,.72);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:1rem}
+.auth-modal.active,.paywall-modal.active{display:flex}
+.auth-card,.paywall-card{width:min(480px,94vw);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02)),rgba(7,22,20,.84);border:1px solid rgba(127,247,231,.28);border-radius:16px;padding:1rem;box-shadow:0 22px 60px rgba(0,0,0,.34),0 0 34px rgba(61,245,214,.16)}
+.auth-card h3,.paywall-card h3{font-size:1rem;color:#f6fffd;margin-bottom:.55rem}
+.auth-sub,.paywall-sub{font-size:.8rem;color:#bcd8d1;margin-bottom:.75rem}
+.auth-row{display:flex;gap:.5rem}
+.auth-row input{flex:1}
+.auth-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}
+.auth-social{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem}
+.auth-social .mode-opt{flex:1 1 30%}
+.pay-options{display:grid;grid-template-columns:1fr;gap:.5rem;margin-top:.7rem}
+.pay-lock{font-size:.76rem;color:#95bbb0;margin-top:.35rem}
+.emotion-locked{opacity:.55}
+.emotion-locked option[value="neutral"]{opacity:1}
 
 @media(min-width:768px){#home{padding:3rem}.home-inner{max-width:520px}.logo h1{font-size:3.2rem}.session-body{flex-direction:row}.video-area{flex:3}.prompter-area{flex:2;max-height:none;border-top:none;border-left:1px solid rgba(255,255,255,.08)}}
 </style>
@@ -162,9 +179,12 @@ input[type="file"]{display:none}
 <div id="home" class="screen active">
   <div class="home-inner">
     <div class="home-top-row">
-      <div class="site-lang-mini">
-        <span class="lang-globe" aria-hidden="true">🌐</span>
-        <select id="siteLanguageSelect" onchange="changeUILanguage(this.value)" aria-label="Langue du site"></select>
+      <div class="top-actions">
+        <div class="site-lang-mini">
+          <span class="lang-globe" aria-hidden="true">🌐</span>
+          <select id="siteLanguageSelect" onchange="changeUILanguage(this.value)" aria-label="Langue du site"></select>
+        </div>
+        <button class="auth-mini-btn" id="authMiniBtn" onclick="openAuthModal()">Login / Sign up</button>
       </div>
     </div>
     <div class="logo"><h1>Cast<span class="logo-rec-dot">REC</span><span>wing</span></h1><p id="homeSubtitle">Studio d'audition</p></div>
@@ -179,6 +199,48 @@ input[type="file"]{display:none}
       </div>
     </div>
     <div class="home-footer" id="homeFooterText">WebRTC pair-à-pair · Aucune donnée stockée</div>
+  </div>
+</div>
+
+<div id="authModal" class="auth-modal">
+  <div class="auth-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem">
+      <h3 id="authTitle">Connexion / Inscription</h3>
+      <button class="back-btn" onclick="closeAuthModal()" aria-label="Close">✕</button>
+    </div>
+    <p class="auth-sub" id="authSubtitle">Vérifie ton email avec un code pour sécuriser l’accès.</p>
+    <div class="auth-row">
+      <input id="authEmailInput" type="email" placeholder="email@domaine.com">
+      <button class="mode-opt" id="authSendCodeBtn" onclick="requestEmailCode()">Envoyer code</button>
+    </div>
+    <div class="auth-row" style="margin-top:.5rem">
+      <input id="authCodeInput" type="text" maxlength="6" placeholder="123456">
+      <button class="mode-opt" id="authVerifyCodeBtn" onclick="verifyEmailCode()">Vérifier</button>
+    </div>
+    <div class="auth-social">
+      <div class="mode-opt" onclick="socialLogin('google')" id="authGoogleBtn">Google</div>
+      <div class="mode-opt" onclick="socialLogin('apple')" id="authAppleBtn">Apple</div>
+      <div class="mode-opt" onclick="socialLogin('email')" id="authEmailBtn">Email only</div>
+    </div>
+    <p class="pay-lock" id="authStatusText"></p>
+  </div>
+</div>
+
+<div id="paywallModal" class="paywall-modal">
+  <div class="paywall-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem">
+      <h3 id="paywallTitle">Accès limité</h3>
+      <button class="back-btn" onclick="closePaywallModal()" aria-label="Close">✕</button>
+    </div>
+    <p class="paywall-sub" id="paywallSub">20 minutes gratuites utilisées. Attends 1h ou débloque maintenant pour 1$.</p>
+    <div class="pay-options">
+      <button class="mode-opt" id="payAppleBtn" onclick="startPayment('apple')">Payer 1$ (Apple Pay)</button>
+      <button class="mode-opt" id="payGoogleBtn" onclick="startPayment('google')">Payer 1$ (Google Pay)</button>
+      <button class="mode-opt" id="payCardBtn" onclick="startPayment('card')">Payer 1$ (Carte)</button>
+      <button class="mode-opt" id="paidConfirmBtn" onclick="confirmPaidUnlock()">J’ai payé — débloquer</button>
+      <button class="mode-opt" id="waitOneHourBtn" onclick="activateCooldown()">Attendre 1 heure</button>
+    </div>
+    <p class="pay-lock" id="paywallStatusText"></p>
   </div>
 </div>
 
@@ -325,10 +387,17 @@ let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',
 let soloPartnerMode='all',soloPartnerChar=null;
 let autoAdvanceTimer=null,lastAutoSpokenIndex=-1,activeSpeechToken=0;
 let ttsAudio=null,vad=null;
+let authFlowToken='',authPendingEmail='';
+let userAccess={email:'',verified:false,provider:'',paid:false,usageMs:0,cooldownUntil:0,lastTick:0};
+let usageTimer=null;
 
 const useElevenLabs=true;
 const pauseBetweenLines=500;
 const SETTINGS_KEY='castwing_user_settings_v3';
+const ACCESS_KEY='castwing_user_access_v1';
+const FREE_LIMIT_MS=20*60*1000;
+const COOLDOWN_MS=60*60*1000;
+const PAYMENT_LINK_URL='https://buy.stripe.com/test_00g8wQfNw5Yk6jS5kk';
 const ELEVEN_ACCOUNT_BACKOFF_MS=5*60*1000;
 let ttsEndpointCache='';
 let elevenLabsTemporarilyDisabled=false;
@@ -488,50 +557,58 @@ const VOICE_ALIAS_GENDER={
 };
 const VOICE_LOCALES=[
   {id:'french',label:'Français 🇫🇷',languageCode:'fr',profiles:[
-    {id:'fr-f',voice:'morgane',fallback:['eliza','serena'],label:'Camille',tag:'Standard',gender:'female',languageCode:'fr-fr'},
-    {id:'fr-m',voice:'edward',fallback:['antonio','daniel'],label:'Lucas',tag:'Standard',gender:'male',languageCode:'fr-fr'},
+    {id:'fr-f',voice:'charlotte',fallback:['morgane','serena'],label:'Camille',tag:'Standard',gender:'female',languageCode:'fr-fr'},
+    {id:'fr-m',voice:'austin',fallback:['edward','antonio'],label:'Lucas',tag:'Standard',gender:'male',languageCode:'fr-fr'},
   ]},
   {id:'english',label:'English 🇺🇸',languageCode:'en',profiles:[
     {id:'en-us-m',voice:'austin',fallback:['edward','adam'],label:'Mason',tag:'US',gender:'male',languageCode:'en-us'},
-    {id:'en-us-f',voice:'eliza',fallback:['salma','bella'],label:'Taylor',tag:'US',gender:'female',languageCode:'en-us'},
-    {id:'en-gb-m',voice:'edward',fallback:['daniel','james'],label:'Oliver',tag:'UK',gender:'male',languageCode:'en-gb'},
-    {id:'en-gb-f',voice:'elen',fallback:['morgane','charlotte'],label:'Emma',tag:'UK',gender:'female',languageCode:'en-gb'},
+    {id:'en-us-f',voice:'charlotte',fallback:['eliza','salma'],label:'Taylor',tag:'US',gender:'female',languageCode:'en-us'},
+    {id:'en-gb-m',voice:'austin',fallback:['edward','daniel'],label:'Oliver',tag:'UK',gender:'male',languageCode:'en-gb'},
+    {id:'en-gb-f',voice:'charlotte',fallback:['elen','morgane'],label:'Emma',tag:'UK',gender:'female',languageCode:'en-gb'},
   ]},
   {id:'spanish',label:'Español 🇪🇸',languageCode:'es',profiles:[
-    {id:'es-f',voice:'salma',fallback:['dorothy','eliza'],label:'Valentina',tag:'Standard',gender:'female',languageCode:'es-es'},
-    {id:'es-m',voice:'antonio',fallback:['antoni','austin'],label:'Diego',tag:'Standard',gender:'male',languageCode:'es-es'},
+    {id:'es-f',voice:'charlotte',fallback:['salma','dorothy'],label:'Valentina',tag:'Standard',gender:'female',languageCode:'es-es'},
+    {id:'es-m',voice:'austin',fallback:['antonio','antoni'],label:'Diego',tag:'Standard',gender:'male',languageCode:'es-es'},
   ]},
   {id:'german',label:'Deutsch 🇩🇪',languageCode:'de',profiles:[
-    {id:'de-f',voice:'eda',fallback:['lily','elen'],label:'Hannah',tag:'Standard',gender:'female',languageCode:'de-de'},
+    {id:'de-f',voice:'charlotte',fallback:['eda','lily'],label:'Hannah',tag:'Standard',gender:'female',languageCode:'de-de'},
     {id:'de-m',voice:'austin',fallback:['ahmet','antoni'],label:'Emil',tag:'Standard',gender:'male',languageCode:'de-de'},
   ]},
   {id:'italian',label:'Italiano 🇮🇹',languageCode:'it',profiles:[
-    {id:'it-f',voice:'elen',fallback:['bella','morgane'],label:'Giulia',tag:'Standard',gender:'female',languageCode:'it-it'},
-    {id:'it-m',voice:'antonio',fallback:['daniel','antoni'],label:'Leonardo',tag:'Standard',gender:'male',languageCode:'it-it'},
+    {id:'it-f',voice:'charlotte',fallback:['elen','bella'],label:'Giulia',tag:'Standard',gender:'female',languageCode:'it-it'},
+    {id:'it-m',voice:'austin',fallback:['antonio','daniel'],label:'Leonardo',tag:'Standard',gender:'male',languageCode:'it-it'},
   ]},
   {id:'portuguese',label:'Português 🇵🇹',languageCode:'pt',profiles:[
-    {id:'pt-f',voice:'eda',fallback:['glinda','salma'],label:'Beatriz',tag:'Standard',gender:'female',languageCode:'pt-pt'},
-    {id:'pt-m',voice:'austin',fallback:['antoni','omar'],label:'João',tag:'Standard',gender:'male',languageCode:'pt-pt'},
+    {id:'pt-f',voice:'charlotte',fallback:['eda','glinda'],label:'Beatriz',tag:'Standard',gender:'female',languageCode:'pt-pt'},
+    {id:'pt-m',voice:'austin',fallback:['antonio','antoni'],label:'João',tag:'Standard',gender:'male',languageCode:'pt-pt'},
   ]},
   {id:'arabic',label:'Arabic 🇸🇦',languageCode:'ar',profiles:[
     {id:'ar-f',voice:'salma',fallback:['charlotte','eliza'],label:'Nour',tag:'Standard',gender:'female',languageCode:'ar'},
     {id:'ar-m',voice:'omar',fallback:['ahmet','adam'],label:'Karim',tag:'Standard',gender:'male',languageCode:'ar'},
   ]},
   {id:'chinese',label:'中文 🇨🇳',languageCode:'zh',profiles:[
-    {id:'zh-f',voice:'mitsuki',fallback:['charlotte','lily'],label:'Mei',tag:'Mandarin',gender:'female',languageCode:'zh-cn'},
-    {id:'zh-m',voice:'austin',fallback:['james','edward'],label:'Wei',tag:'Mandarin',gender:'male',languageCode:'zh-cn'},
+    {id:'zh-f',voice:'charlotte',fallback:['mitsuki','lily'],label:'Mei',tag:'Mandarin',gender:'female',languageCode:'zh-cn'},
+    {id:'zh-m',voice:'austin',fallback:['edward','james'],label:'Wei',tag:'Mandarin',gender:'male',languageCode:'zh-cn'},
   ]},
   {id:'japanese',label:'日本語 🇯🇵',languageCode:'ja',profiles:[
-    {id:'ja-f',voice:'mitsuki',fallback:['elen','charlotte'],label:'Yui',tag:'Standard',gender:'female',languageCode:'ja-jp'},
-    {id:'ja-m',voice:'edward',fallback:['adam','james'],label:'Haruto',tag:'Standard',gender:'male',languageCode:'ja-jp'},
+    {id:'ja-f',voice:'charlotte',fallback:['mitsuki','elen'],label:'Yui',tag:'Standard',gender:'female',languageCode:'ja-jp'},
+    {id:'ja-m',voice:'austin',fallback:['edward','adam'],label:'Haruto',tag:'Standard',gender:'male',languageCode:'ja-jp'},
   ]},
   {id:'korean',label:'한국어 🇰🇷',languageCode:'ko',profiles:[
-    {id:'ko-f',voice:'eda',fallback:['lily','eliza'],label:'Minji',tag:'Standard',gender:'female',languageCode:'ko-kr'},
-    {id:'ko-m',voice:'ahmet',fallback:['james','omar'],label:'Junho',tag:'Standard',gender:'male',languageCode:'ko-kr'},
+    {id:'ko-f',voice:'charlotte',fallback:['eda','lily'],label:'Minji',tag:'Standard',gender:'female',languageCode:'ko-kr'},
+    {id:'ko-m',voice:'austin',fallback:['ahmet','james'],label:'Junho',tag:'Standard',gender:'male',languageCode:'ko-kr'},
+  ]},
+  {id:'turkish',label:'Türkçe 🇹🇷',languageCode:'tr',profiles:[
+    {id:'tr-f',voice:'charlotte',fallback:['eliza','mitsuki'],label:'Defne',tag:'Standard',gender:'female',languageCode:'tr-tr'},
+    {id:'tr-m',voice:'austin',fallback:['ahmet','edward'],label:'Emir',tag:'Standard',gender:'male',languageCode:'tr-tr'},
+  ]},
+  {id:'russian',label:'Русский 🇷🇺',languageCode:'ru',profiles:[
+    {id:'ru-f',voice:'charlotte',fallback:['morgane','elen'],label:'Alina',tag:'Standard',gender:'female',languageCode:'ru-ru'},
+    {id:'ru-m',voice:'austin',fallback:['edward','daniel'],label:'Nikita',tag:'Standard',gender:'male',languageCode:'ru-ru'},
   ]},
   {id:'hindi',label:'Hindi 🇮🇳',languageCode:'hi',profiles:[
-    {id:'hi-f',voice:'salma',fallback:['eda','charlotte'],label:'Ananya',tag:'Standard',gender:'female',languageCode:'hi-in'},
-    {id:'hi-m',voice:'omar',fallback:['ahmet','adam'],label:'Rohan',tag:'Standard',gender:'male',languageCode:'hi-in'},
+    {id:'hi-f',voice:'charlotte',fallback:['salma','eda'],label:'Ananya',tag:'Standard',gender:'female',languageCode:'hi-in'},
+    {id:'hi-m',voice:'austin',fallback:['omar','ahmet'],label:'Rohan',tag:'Standard',gender:'male',languageCode:'hi-in'},
   ]},
 ];
 let VOICE_PRESETS=[];
@@ -584,8 +661,8 @@ const UI_I18N={
   pt:{homeSubtitle:'Estúdio de audição',siteLanguageLabel:'Idioma do site',homeSoloTitle:'Solo + IA',homeSoloDesc:'A IA fala as falas do parceiro',homePartnerTitle:'Com parceiro',homePartnerDesc:'Convide alguém para contracenar',homeFooterText:'WebRTC ponto a ponto · Sem dados salvos',partnerChoiceTitle:'Sessão de parceiro',partnerCreateTitle:'Criar sessão (ator)',partnerCreateDesc:'Gerar código e convidar parceiro',partnerJoinTitle:'Entrar em sessão',partnerJoinDesc:'Digite o código do ator',setupAiTitle:'Solo + IA',scriptLabel:'Roteiro (PDF ou texto)',uploadLabel:'Arraste o PDF ou clique',uploadSub:'Formato padrão de roteiro',myCharacterLabel:'Meu personagem',pasteScriptLabel:'Ou cole o texto',replyModeLabel:'Modo de fala',modeAiBtn:'🦾 IA vocal',modeManBtn:'✋ Manual',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'Voz da IA',voiceLanguageLabel:'Idioma da voz',emotionLabel:'Emoção',speedLabel:'Velocidade',speedSlowBtn:'Lento x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rápido x1.6',launchAiBtn:'Iniciar sessão 🦾',setupPartnerTitle:'Com parceiro',sessionCodeLabel:'Código da sessão',sessionCodeHint:'Compartilhe o código',copyCodeBtn:'📋 Copiar código',copyLinkBtn:'🔗 Copiar link',shareBtn:'📤 Compartilhar',launchPartnerBtn:'Iniciar sessão 🎬',joinScreenTitle:'Entrar na sessão',joinCodeLabel:'Código da sessão',joinCodePlaceholder:'Digite o código do ator',joinSessionBtn:'Entrar 🎙️',prompterEmptyText:'Nenhum texto carregado',sessionVoiceLabel:'🦾 Voz:',prevBtn:'◀ Ant',nextBtn:'Próx ▶',quitBtn:'Sair',modeHintAi:'A IA lê as falas do parceiro automaticamente.',modeHintManual:'Avance manualmente com os botões.',modeHintAuto:'Avança após 1,5s de silêncio.',toastEmotion:'Emoção',toastSpeed:'Velocidade',toastVoice:'Voz',toastAccent:'Idioma da voz',toastLanguage:'Idioma do site',toastVoiceFallback:'Voz reserva usada'},
   ja:{homeSubtitle:'オーディションスタジオ',siteLanguageLabel:'サイト言語',homeSoloTitle:'ソロ + AI',homeSoloDesc:'AI が相手役の台詞を読み上げます',homePartnerTitle:'パートナーと',homePartnerDesc:'相手役を招待する',homeFooterText:'P2P WebRTC · データ保存なし',partnerChoiceTitle:'パートナーセッション',partnerCreateTitle:'セッション作成（俳優）',partnerCreateDesc:'コードを作成して招待',partnerJoinTitle:'セッション参加',partnerJoinDesc:'俳優コードを入力',setupAiTitle:'ソロ + AI',scriptLabel:'台本（PDF/テキスト）',uploadLabel:'PDF をドラッグまたはクリック',uploadSub:'標準脚本フォーマット',myCharacterLabel:'自分の役',pasteScriptLabel:'またはテキスト貼り付け',replyModeLabel:'進行モード',modeAiBtn:'🦾 AI音声',modeManBtn:'✋ 手動',modeAutoBtn:'🎤 自動',voiceSectionLabel:'AI 音声',voiceLanguageLabel:'音声の言語',emotionLabel:'感情',speedLabel:'速度',speedSlowBtn:'遅い x0.7',speedNormalBtn:'標準 x1',speedFastBtn:'速い x1.6',launchAiBtn:'セッション開始 🦾',setupPartnerTitle:'パートナーと',sessionCodeLabel:'セッションコード',sessionCodeHint:'コードを共有してください',copyCodeBtn:'📋 コードコピー',copyLinkBtn:'🔗 リンクコピー',shareBtn:'📤 共有',launchPartnerBtn:'セッション開始 🎬',joinScreenTitle:'セッション参加',joinCodeLabel:'セッションコード',joinCodePlaceholder:'俳優コードを入力',joinSessionBtn:'参加 🎙️',prompterEmptyText:'台本が未読込です',sessionVoiceLabel:'🦾 音声:',prevBtn:'◀ 前',nextBtn:'次 ▶',quitBtn:'終了',modeHintAi:'AI が相手役を自動で読み上げます。',modeHintManual:'ボタンで手動進行します。',modeHintAuto:'1.5秒の無音後に自動進行します。',toastEmotion:'感情',toastSpeed:'速度',toastVoice:'音声',toastAccent:'音声言語',toastLanguage:'サイト言語',toastVoiceFallback:'予備音声を使用しました'},
 };
-UI_I18N.ko={...UI_I18N.en,homeSubtitle:'오디션 스튜디오',siteLanguageLabel:'사이트 언어',homeSoloTitle:'솔로 + AI',homeSoloDesc:'AI가 상대 대사를 읽어줍니다',homePartnerTitle:'파트너와 함께',homePartnerDesc:'함께 리딩할 파트너를 초대하세요',voiceSectionLabel:'AI 음성',voiceLanguageLabel:'음성 언어',emotionLabel:'감정',speedLabel:'속도',toastLanguage:'사이트 언어'};
-UI_I18N.hi={...UI_I18N.en,homeSubtitle:'ऑडिशन स्टूडियो',siteLanguageLabel:'साइट भाषा',toastLanguage:'साइट भाषा'};
+UI_I18N.ko={...UI_I18N.en,homeSubtitle:'오디션 스튜디오',siteLanguageLabel:'사이트 언어',homeSoloTitle:'솔로 + AI',homeSoloDesc:'AI가 상대 대사를 읽어줍니다',homePartnerTitle:'파트너와 함께',homePartnerDesc:'함께 리딩할 파트너를 초대하세요',uploadLabel:'PDF를 여기에 놓거나 클릭',uploadSub:'표준 대본 형식',pasteScriptLabel:'또는 텍스트 붙여넣기',voiceSectionLabel:'AI 음성',voiceLanguageLabel:'음성 언어',emotionLabel:'감정',speedLabel:'속도',modeHintAi:'AI가 상대 대사를 자동으로 읽습니다.',modeHintManual:'버튼으로 수동 진행합니다.',toastLanguage:'사이트 언어'};
+UI_I18N.hi={...UI_I18N.en,homeSubtitle:'ऑडिशन स्टूडियो',siteLanguageLabel:'साइट भाषा',uploadLabel:'अपना PDF यहां डालें या क्लिक करें',uploadSub:'मानक स्क्रीनप्ले फॉर्मेट',pasteScriptLabel:'या टेक्स्ट पेस्ट करें',modeHintAi:'AI पार्टनर की लाइनें खुद पढ़ेगा।',modeHintManual:'बटन से मैन्युअल आगे बढ़ें।',toastLanguage:'साइट भाषा'};
 const UI_EXTRA_I18N={
   en:{codeUnavailable:'Code unavailable',codeCopied:'Code copied',linkUnavailable:'Link unavailable',linkCopied:'Link copied',copyFailed:'Copy failed',shareUnavailable:'Sharing unavailable',shareTextCopied:'Text copied',joinCodePrefilled:'Code prefilled',joinCodeMissing:'Enter a code',waitingForPartner:'Waiting for partner…',waitingOverlayTitle:'Waiting…',waitingOverlayMessage:'Share code ',connection:'Connecting…',searching:'Looking for ',sessionNotFound:'Session not found.',connectionSlow:'Slow connection',disconnected:'Disconnected',partnerDisconnected:'Partner disconnected',error:'Error'},
   fr:{codeUnavailable:'Code indisponible',codeCopied:'Code copié',linkUnavailable:'Lien indisponible',linkCopied:'Lien copié',copyFailed:'Copie impossible',shareUnavailable:'Partage indisponible',shareTextCopied:'Texte copié',joinCodePrefilled:'Code prérempli',joinCodeMissing:'Entre un code',waitingForPartner:'En attente du partenaire…',waitingOverlayTitle:'En attente…',waitingOverlayMessage:'Partage le code ',connection:'Connexion…',searching:'Recherche de ',sessionNotFound:'Session introuvable.',connectionSlow:'Connexion lente',disconnected:'Déconnecté',partnerDisconnected:'Partenaire déconnecté',error:'Erreur'},
@@ -600,6 +677,30 @@ const UI_FALLBACK_TRANSLATIONS={
   pdfLinesDetected:{en:'lines detected',es:'líneas detectadas',it:'battute rilevate',zh:'条台词已识别',ko:'개 대사 감지됨',ja:'行を検出',ar:'سطرًا تم اكتشافه',de:'Zeilen erkannt',pt:'falas detectadas',hi:'पंक्तियाँ मिलीं'},
   pdfImportedRaw:{en:'Text imported (raw)',es:'Texto importado (sin procesar)',it:'Testo importato (grezzo)',zh:'已导入文本（原始）',ko:'텍스트 가져옴(원문)',ja:'テキストを読み込み（生データ）',ar:'تم استيراد النص (خام)',de:'Text importiert (roh)',pt:'Texto importado (bruto)',hi:'टेक्स्ट आयात किया गया (रॉ)'},
   pdfReadError:{en:'PDF reading error',es:'Error al leer el PDF',it:'Errore lettura PDF',zh:'PDF 读取错误',ko:'PDF 읽기 오류',ja:'PDF 読み込みエラー',ar:'خطأ في قراءة PDF',de:'Fehler beim Lesen der PDF',pt:'Erro ao ler PDF',hi:'PDF पढ़ने में त्रुटि'},
+  uploadLabel:{ko:'PDF를 여기에 놓거나 클릭',hi:'अपना PDF यहां डालें या क्लिक करें'},
+  uploadSub:{ko:'표준 대본 형식',hi:'मानक स्क्रीनप्ले फॉर्मेट'},
+  pasteScriptLabel:{ko:'또는 텍스트 붙여넣기',hi:'या टेक्स्ट पेस्ट करें'},
+  modeHintAi:{ko:'AI가 상대 대사를 자동으로 읽습니다.',hi:'AI पार्टनर की लाइनें खुद पढ़ेगा।'},
+  modeHintManual:{ko:'버튼으로 수동 진행합니다.',hi:'बटन से मैन्युअल आगे बढ़ें।'},
+  authMiniBtn:{fr:'Se connecter',en:'Login / Sign up',es:'Entrar / Registro',it:'Accedi / Iscriviti',zh:'登录 / 注册',ko:'로그인 / 가입',ja:'ログイン / 登録',ar:'تسجيل الدخول / إنشاء حساب',de:'Login / Registrieren',pt:'Entrar / Cadastro',hi:'लॉगिन / साइन अप'},
+  authTitle:{fr:'Connexion / Inscription',en:'Login / Sign up',es:'Iniciar sesión / Registro',it:'Accesso / Registrazione',zh:'登录 / 注册',ko:'로그인 / 가입',ja:'ログイン / 登録',ar:'تسجيل الدخول / إنشاء حساب',de:'Login / Registrieren',pt:'Entrar / Cadastro',hi:'लॉगिन / साइन अप'},
+  authSubtitle:{fr:'Vérifie ton email avec un code pour sécuriser l’accès.',en:'Verify your email with a code to secure access.',es:'Verifica tu email con un código para asegurar el acceso.',it:'Verifica la tua email con un codice per proteggere l’accesso.',zh:'使用邮箱验证码保护访问。',ko:'이메일 코드로 접근을 보호하세요.',ja:'メールコードでアクセスを保護します。',ar:'تحقق من بريدك برمز لتأمين الدخول.',de:'Bestätige deine E-Mail per Code für sicheren Zugriff.',pt:'Verifique seu e-mail com código para proteger o acesso.',hi:'एक्सेस सुरक्षित करने के लिए ईमेल कोड से सत्यापित करें।'},
+  authSendCodeBtn:{fr:'Envoyer code',en:'Send code',es:'Enviar código',it:'Invia codice',zh:'发送验证码',ko:'코드 보내기',ja:'コード送信',ar:'إرسال الرمز',de:'Code senden',pt:'Enviar código',hi:'कोड भेजें'},
+  authVerifyCodeBtn:{fr:'Vérifier',en:'Verify',es:'Verificar',it:'Verifica',zh:'验证',ko:'확인',ja:'確認',ar:'تحقق',de:'Prüfen',pt:'Verificar',hi:'सत्यापित करें'},
+  authGoogleBtn:{fr:'Google',en:'Google',es:'Google',it:'Google',zh:'Google',ko:'Google',ja:'Google',ar:'Google',de:'Google',pt:'Google',hi:'Google'},
+  authAppleBtn:{fr:'Apple',en:'Apple',es:'Apple',it:'Apple',zh:'Apple',ko:'Apple',ja:'Apple',ar:'Apple',de:'Apple',pt:'Apple',hi:'Apple'},
+  authEmailBtn:{fr:'Email',en:'Email only',es:'Solo email',it:'Solo email',zh:'仅邮箱',ko:'이메일만',ja:'メールのみ',ar:'البريد فقط',de:'Nur E-Mail',pt:'Somente e-mail',hi:'केवल ईमेल'},
+  paywallTitle:{fr:'Accès limité',en:'Access limited',es:'Acceso limitado',it:'Accesso limitato',zh:'访问受限',ko:'접근 제한',ja:'アクセス制限',ar:'وصول محدود',de:'Zugriff begrenzt',pt:'Acesso limitado',hi:'एक्सेस सीमित'},
+  paywallSub:{fr:'20 minutes gratuites utilisées. Attends 1h ou débloque maintenant pour 1$.',en:'20 free minutes used. Wait 1h or unlock now for $1.',es:'20 minutos gratis usados. Espera 1h o desbloquea por 1$.',it:'20 minuti gratuiti usati. Attendi 1h o sblocca ora per 1$.',zh:'20分钟免费已用完。等待1小时或付1美元立即解锁。',ko:'무료 20분이 끝났습니다. 1시간 대기 또는 1달러 결제로 즉시 해제하세요.',ja:'無料20分を使い切りました。1時間待つか1ドルで解除。',ar:'تم استخدام 20 دقيقة مجانية. انتظر ساعة أو افتح الآن مقابل 1$.',de:'20 Gratisminuten verbraucht. 1h warten oder für 1$ sofort entsperren.',pt:'20 minutos grátis usados. Espere 1h ou desbloqueie por 1$.',hi:'20 मिनट मुफ्त उपयोग पूरे। 1 घंटे प्रतीक्षा करें या 1$ देकर अनलॉक करें।'},
+  payAppleBtn:{fr:'Payer 1$ (Apple Pay)',en:'Pay $1 (Apple Pay)',es:'Pagar 1$ (Apple Pay)',it:'Paga 1$ (Apple Pay)',zh:'支付1美元（Apple Pay）',ko:'1달러 결제 (Apple Pay)',ja:'1ドル支払い (Apple Pay)',ar:'ادفع 1$ (Apple Pay)',de:'1$ zahlen (Apple Pay)',pt:'Pagar 1$ (Apple Pay)',hi:'1$ भुगतान (Apple Pay)'},
+  payGoogleBtn:{fr:'Payer 1$ (Google Pay)',en:'Pay $1 (Google Pay)',es:'Pagar 1$ (Google Pay)',it:'Paga 1$ (Google Pay)',zh:'支付1美元（Google Pay）',ko:'1달러 결제 (Google Pay)',ja:'1ドル支払い (Google Pay)',ar:'ادفع 1$ (Google Pay)',de:'1$ zahlen (Google Pay)',pt:'Pagar 1$ (Google Pay)',hi:'1$ भुगतान (Google Pay)'},
+  payCardBtn:{fr:'Payer 1$ (Carte)',en:'Pay $1 (Card)',es:'Pagar 1$ (Tarjeta)',it:'Paga 1$ (Carta)',zh:'支付1美元（银行卡）',ko:'1달러 결제 (카드)',ja:'1ドル支払い (カード)',ar:'ادفع 1$ (بطاقة)',de:'1$ zahlen (Karte)',pt:'Pagar 1$ (Cartão)',hi:'1$ भुगतान (कार्ड)'},
+  paidConfirmBtn:{fr:'J’ai payé — débloquer',en:'I paid — unlock',es:'Ya pagué — desbloquear',it:'Ho pagato — sblocca',zh:'我已支付 — 解锁',ko:'결제 완료 — 해제',ja:'支払い済み — 解除',ar:'دفعت — فتح',de:'Bezahlt — entsperren',pt:'Já paguei — desbloquear',hi:'मैंने भुगतान किया — अनलॉक'},
+  waitOneHourBtn:{fr:'Attendre 1 heure',en:'Wait 1 hour',es:'Esperar 1 hora',it:'Attendi 1 ora',zh:'等待1小时',ko:'1시간 기다리기',ja:'1時間待つ',ar:'انتظر ساعة',de:'1 Stunde warten',pt:'Esperar 1 hora',hi:'1 घंटा प्रतीक्षा करें'},
+  authCodeSent:{fr:'Code envoyé. Vérifie ta boîte mail.',en:'Code sent. Check your inbox.',es:'Código enviado. Revisa tu email.',it:'Codice inviato. Controlla la tua email.',zh:'验证码已发送，请查收邮箱。',ko:'코드를 보냈습니다. 메일함을 확인하세요.',ja:'コードを送信しました。メールを確認してください。',ar:'تم إرسال الرمز. تحقق من بريدك.',de:'Code gesendet. Bitte E-Mail prüfen.',pt:'Código enviado. Verifique seu e-mail.',hi:'कोड भेज दिया गया है। अपना ईमेल देखें।'},
+  authVerified:{fr:'Email vérifié ✅',en:'Email verified ✅',es:'Email verificado ✅',it:'Email verificata ✅',zh:'邮箱验证成功 ✅',ko:'이메일 인증 완료 ✅',ja:'メール認証完了 ✅',ar:'تم التحقق من البريد ✅',de:'E-Mail bestätigt ✅',pt:'E-mail verificado ✅',hi:'ईमेल सत्यापित ✅'},
+  authInvalidCode:{fr:'Code invalide',en:'Invalid code',es:'Código inválido',it:'Codice non valido',zh:'验证码无效',ko:'코드가 올바르지 않습니다',ja:'コードが無効です',ar:'رمز غير صالح',de:'Ungültiger Code',pt:'Código inválido',hi:'कोड अमान्य है'},
+  usageBlocked:{fr:'Limite atteinte. Attends 1h ou débloque à 1$.',en:'Limit reached. Wait 1h or unlock for $1.',es:'Límite alcanzado. Espera 1h o desbloquea por 1$.',it:'Limite raggiunto. Attendi 1h o sblocca con 1$.',zh:'已达上限。等待1小时或支付1美元解锁。',ko:'사용 한도 도달. 1시간 대기 또는 1달러 결제로 해제.',ja:'上限に達しました。1時間待つか1ドルで解除。',ar:'تم بلوغ الحد. انتظر ساعة أو افتح مقابل 1$.',de:'Limit erreicht. 1h warten oder für 1$ entsperren.',pt:'Limite atingido. Aguarde 1h ou desbloqueie por 1$.',hi:'सीमा पूरी। 1 घंटा प्रतीक्षा करें या 1$ देकर अनलॉक करें।'}
 };
 const TTS_LANGS=['fr','en','es','it','de','pt','ar','zh','ja','ko','hi'];
 
@@ -757,6 +858,7 @@ function applyUILanguage(){
   setTextById('siteLanguageLabel','siteLanguageLabel');
   setTextById('homeSoloTitle','homeSoloTitle');
   setTextById('homeSoloDesc','homeSoloDesc');
+  setTextById('authMiniBtn','authMiniBtn');
   setTextById('homePartnerTitle','homePartnerTitle');
   setTextById('homePartnerDesc','homePartnerDesc');
   setTextById('homeFooterText','homeFooterText');
@@ -801,6 +903,20 @@ function applyUILanguage(){
   setTextById('prevBtn','prevBtn');
   setTextById('nextBtn','nextBtn');
   setTextById('quitBtn','quitBtn');
+  setTextById('authTitle','authTitle');
+  setTextById('authSubtitle','authSubtitle');
+  setTextById('authSendCodeBtn','authSendCodeBtn');
+  setTextById('authVerifyCodeBtn','authVerifyCodeBtn');
+  setTextById('authGoogleBtn','authGoogleBtn');
+  setTextById('authAppleBtn','authAppleBtn');
+  setTextById('authEmailBtn','authEmailBtn');
+  setTextById('paywallTitle','paywallTitle');
+  setTextById('paywallSub','paywallSub');
+  setTextById('payAppleBtn','payAppleBtn');
+  setTextById('payGoogleBtn','payGoogleBtn');
+  setTextById('payCardBtn','payCardBtn');
+  setTextById('paidConfirmBtn','paidConfirmBtn');
+  setTextById('waitOneHourBtn','waitOneHourBtn');
   const joinInput=document.getElementById('joinCodeInput');
   if(joinInput)joinInput.placeholder=t('joinCodePlaceholder');
   const emo=document.getElementById('emotionSelect');
@@ -810,6 +926,7 @@ function applyUILanguage(){
   }
   document.getElementById('modeHint').textContent=modeHintText(mode);
   if(pdfScript.length&&selectedChar)renderPartnerAssignment(1);
+  updateAuthMiniButton();
 }
 function changeUILanguage(languageId,silent){
   const safe=UI_LANGUAGES.some(l=>l.id===languageId)?languageId:'fr';
@@ -898,6 +1015,150 @@ function loadSettings(){
     if(parsed&&typeof parsed==='object')return parsed;
   }catch(e){}
   return null;
+}
+
+function loadAccess(){
+  try{
+    const raw=localStorage.getItem(ACCESS_KEY);
+    if(!raw)return;
+    const parsed=JSON.parse(raw);
+    if(parsed&&typeof parsed==='object')userAccess={...userAccess,...parsed};
+  }catch(e){}
+}
+function persistAccess(){
+  try{localStorage.setItem(ACCESS_KEY,JSON.stringify(userAccess));}catch(e){}
+}
+function updateAuthMiniButton(){
+  const btn=document.getElementById('authMiniBtn');
+  if(!btn)return;
+  if(userAccess.verified){
+    const who=userAccess.email?userAccess.email.split('@')[0]:'User';
+    btn.textContent=`✓ ${who}`;
+    return;
+  }
+  btn.textContent=t('authMiniBtn');
+}
+function openAuthModal(){
+  document.getElementById('authStatusText').textContent='';
+  document.getElementById('authModal').classList.add('active');
+}
+function closeAuthModal(){document.getElementById('authModal').classList.remove('active')}
+function openPaywallModal(msg){
+  const el=document.getElementById('paywallStatusText');
+  if(el)el.textContent=msg||'';
+  document.getElementById('paywallModal').classList.add('active');
+}
+function closePaywallModal(){document.getElementById('paywallModal').classList.remove('active')}
+async function requestEmailCode(){
+  const email=(document.getElementById('authEmailInput').value||'').trim().toLowerCase();
+  if(!email||!/@/.test(email)){showToast('Email invalide');return}
+  authPendingEmail=email;
+  try{
+    const rsp=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'request_code',email})});
+    const out=await rsp.json().catch(()=>null);
+    if(!rsp.ok){showToast((out&&out.error)||'Auth error');return}
+    authFlowToken=String(out.token||'');
+    if(out.debugCode)showToast(`Code: ${out.debugCode}`,6000);
+    document.getElementById('authStatusText').textContent=t('authCodeSent');
+  }catch(e){showToast('Auth offline');}
+}
+async function verifyEmailCode(){
+  const code=(document.getElementById('authCodeInput').value||'').trim();
+  if(!authPendingEmail||!authFlowToken||code.length<4){showToast(t('authInvalidCode'));return}
+  try{
+    const rsp=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'verify_code',email:authPendingEmail,code,token:authFlowToken})});
+    const out=await rsp.json().catch(()=>null);
+    if(!rsp.ok||!(out&&out.ok)){showToast(t('authInvalidCode'));return}
+    userAccess.email=authPendingEmail;
+    userAccess.verified=true;
+    userAccess.provider='email';
+    persistAccess();
+    updateAuthMiniButton();
+    document.getElementById('authStatusText').textContent=t('authVerified');
+    showToast(t('authVerified'));
+    closeAuthModal();
+  }catch(e){showToast('Auth offline');}
+}
+function socialLogin(provider){
+  userAccess.provider=provider;
+  if(provider!=='email'){
+    userAccess.verified=true;
+    userAccess.email=`${provider}@castwing.user`;
+    persistAccess();
+    updateAuthMiniButton();
+    showToast(`${provider} login ✅`);
+    closeAuthModal();
+  }
+}
+function hasPaidAccess(){return Boolean(userAccess.paid);}
+function isUsageBlocked(){
+  if(hasPaidAccess())return false;
+  const now=Date.now();
+  if(userAccess.cooldownUntil&&now<Number(userAccess.cooldownUntil||0))return true;
+  return Number(userAccess.usageMs||0)>=FREE_LIMIT_MS;
+}
+function activateCooldown(){
+  userAccess.cooldownUntil=Date.now()+COOLDOWN_MS;
+  persistAccess();
+  openPaywallModal(t('usageBlocked'));
+}
+function startPayment(method){
+  const mode=method||'card';
+  if(PAYMENT_LINK_URL)window.open(PAYMENT_LINK_URL+(PAYMENT_LINK_URL.includes('?')?'&':'?')+'method='+encodeURIComponent(mode),'_blank','noopener');
+  showToast('Paiement ouvert');
+}
+function confirmPaidUnlock(){
+  userAccess.paid=true;
+  userAccess.cooldownUntil=0;
+  persistAccess();
+  updateEmotionLock();
+  closePaywallModal();
+  showToast('Paiement validé ✅');
+}
+function tickUsage(){
+  if(hasPaidAccess())return;
+  const now=Date.now();
+  if(!userAccess.lastTick)userAccess.lastTick=now;
+  const delta=Math.max(0,Math.min(5000,now-userAccess.lastTick));
+  userAccess.lastTick=now;
+  if(document.visibilityState==='visible')userAccess.usageMs=Number(userAccess.usageMs||0)+delta;
+  if(Number(userAccess.usageMs||0)>=FREE_LIMIT_MS&&!userAccess.cooldownUntil){
+    userAccess.cooldownUntil=Date.now()+COOLDOWN_MS;
+    openPaywallModal(t('usageBlocked'));
+  }
+  persistAccess();
+}
+function startUsageTracking(){
+  if(usageTimer)clearInterval(usageTimer);
+  userAccess.lastTick=Date.now();
+  usageTimer=setInterval(tickUsage,5000);
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden'){
+    tickUsage();
+  }else{
+    userAccess.lastTick=Date.now();
+  }
+});
+window.addEventListener('beforeunload',()=>{tickUsage();persistAccess();});
+function requireAccessOrPaywall(){
+  if(!userAccess.verified){openAuthModal();showToast(t('authSubtitle'));return false}
+  if(isUsageBlocked()){openPaywallModal(t('usageBlocked'));return false}
+  return true;
+}
+function updateEmotionLock(){
+  const emotionSelect=document.getElementById('emotionSelect');
+  if(!emotionSelect)return;
+  const locked=!hasPaidAccess();
+  emotionSelect.classList.toggle('emotion-locked',locked);
+  [...emotionSelect.options].forEach(opt=>{
+    if(opt.value==='neutral')opt.disabled=false;
+    else opt.disabled=locked;
+  });
+  if(locked&&emotionSelect.value!=='neutral'){
+    emotionSelect.value='neutral';
+    selectedEmotion='neutral';
+  }
 }
 
 class VoiceActivityDetector{
@@ -1049,6 +1310,13 @@ function getSpeechStyle(v){
   };
 }
 function setEmotion(key,silent){
+  if(!hasPaidAccess()&&key!=='neutral'){
+    selectedEmotion='neutral';
+    const emo=document.getElementById('emotionSelect');
+    if(emo)emo.value='neutral';
+    openPaywallModal(t('paywallSub'));
+    return;
+  }
   selectedEmotion=EMOTION_PRESETS[key]?key:'neutral';
   if(!silent)showToast(t('toastEmotion')+': '+EMOTION_PRESETS[selectedEmotion].label);
   persistSettings();
@@ -1241,6 +1509,7 @@ function goSetupAi(){
   initVoiceGrid();
   setVoiceSpeed(voiceSpeed,true);
   const emo=document.getElementById('emotionSelect');if(emo)emo.value=selectedEmotion;
+  updateEmotionLock();
   initDragDrop('uploadZone1');
 }
 function goSetupPartner(){showScreen('setupPartner');document.getElementById('mySessionCode').textContent=genCode();initDragDrop('uploadZone2')}
@@ -1698,6 +1967,7 @@ function setupCallHandlers(c){call=c;call.on('stream',s=>{document.getElementByI
 
 // ── START SESSIONS ──
 async function startAiSession(){
+  if(!requireAccessOrPaywall())return;
   if(pdfScript.length>0&&!selectedChar){showToast(t('pickCharacterFirst'));return}
   role='actor';sessionMode='ai';
   voiceSpeed=getCurrentVoiceSpeed();
@@ -1713,6 +1983,7 @@ async function startAiSession(){
 }
 
 async function startPartnerSession(){
+  if(!requireAccessOrPaywall())return;
   role='actor';sessionMode='partner';mode='manual';
   cancelSpeechFlow();
   const code=document.getElementById('mySessionCode').textContent;if(!code||code==='—')return;
@@ -1729,6 +2000,7 @@ async function startPartnerSession(){
 }
 
 async function joinAsPartner(){
+  if(!requireAccessOrPaywall())return;
   role='partner';sessionMode='partner';
   cancelSpeechFlow();
   const code=document.getElementById('joinCodeInput').value.trim().toUpperCase();if(!code){showToast('Entre un code');return}
@@ -1772,6 +2044,7 @@ function initCardTilt(){
 }
 
 document.addEventListener('DOMContentLoaded',async ()=>{
+  loadAccess();
   const saved=loadSettings();
   if(saved){
     if(saved.uiLang&&UI_LANGUAGES.some(l=>l.id===saved.uiLang))selectedUILanguage=saved.uiLang;
@@ -1790,13 +2063,17 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   loadVoices();
   initSiteLanguageSelect();
   applyUILanguage();
+  updateAuthMiniButton();
   initVoiceCountrySelect();
   applyLocaleVoices(selectedLocale,true,saved&&saved.voiceId?saved.voiceId:null);
   setVoiceSpeed(voiceSpeed,true);
   const emo=document.getElementById('emotionSelect');
   if(emo)emo.value=selectedEmotion;
+  updateEmotionLock();
   setMode(mode);
   initCardTilt();
+  startUsageTracking();
+  if(isUsageBlocked())openPaywallModal(t('usageBlocked'));
   if(!applyJoinCodeFromURL())showScreen('home');
 });
 </script>
