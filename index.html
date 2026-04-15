@@ -145,6 +145,10 @@ input[type="file"]{display:none}
 .ai-panel select{padding:.3rem .5rem;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:#fff;font-size:.75rem;font-family:'DM Sans',sans-serif;flex:1}
 .ai-panel .ai-label{color:rgba(120,160,255,.9);font-weight:700;white-space:nowrap}
 .session-bottom{display:flex;align-items:center;justify-content:center;gap:.6rem;padding:.6rem 1rem;background:rgba(0,26,77,.95);border-top:1px solid rgba(255,255,255,.1);flex-shrink:0}
+.session-inline-controls{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;justify-content:center}
+.session-inline-controls .mode-opt{min-width:96px;padding:.45rem .5rem;font-size:.74rem}
+.session-speed{display:flex;align-items:center;gap:.35rem}
+.session-speed input[type="range"]{width:130px}
 
 /* OVERLAYS */
 .overlay{display:none;position:fixed;inset:0;z-index:100;background:rgba(0,26,77,.85);backdrop-filter:blur(6px);flex-direction:column;align-items:center;justify-content:center;gap:1rem;color:var(--white)}.overlay.active{display:flex}
@@ -282,6 +286,9 @@ input[type="file"]{display:none}
       <div class="mode-opt" id="modeManBtn" onclick="setMode('manual')">✋ Manuel</div>
       <div class="mode-opt" id="modeAutoBtn" onclick="setMode('auto')">🎤 Auto</div>
     </div>
+    <div class="mode-toggle">
+      <div class="mode-opt" id="setupCamBtn" onclick="toggleSetupCamera()">📷 Caméra ON</div>
+    </div>
     <div class="mode-hint" id="modeHint">L'IA lit les répliques du partenaire automatiquement.</div>
     <div class="voice-section active" id="voiceSection">
       <label id="voiceSectionLabel">Voix de l'IA</label>
@@ -369,6 +376,15 @@ input[type="file"]{display:none}
   </div>
   <div class="ai-panel" id="aiPanel"><span class="ai-label" id="sessionVoiceLabel">🦾 Voix :</span><select id="sessionVoiceSelect" onchange="changeSessionVoice()"></select></div>
   <div class="session-bottom">
+    <div class="session-inline-controls">
+      <div class="mode-opt active" id="sessionModeAiBtn" onclick="switchSessionMode('ai')">🦾 IA</div>
+      <div class="mode-opt" id="sessionModeManualBtn" onclick="switchSessionMode('manual')">✋ Manuel</div>
+      <div class="mode-opt" id="sessionModeAutoBtn" onclick="switchSessionMode('auto')">🎤 Auto</div>
+      <div class="session-speed">
+        <span style="font-size:.72rem;color:#d1ebe2">⚡</span>
+        <input id="sessionSpeedSlider" type="range" min="0.7" max="1.6" step="0.05" value="1" oninput="setSessionSpeed(this.value)">
+      </div>
+    </div>
     <button class="btn btn-secondary" onclick="prompterPrev()" style="padding:.5rem .8rem;font-size:.75rem" id="prevBtn">◀ Préc</button>
     <button class="btn btn-secondary" onclick="prompterNext()" style="padding:.5rem .8rem;font-size:.75rem" id="nextBtn">Suiv ▶</button>
     <button class="btn btn-danger" onclick="endSession()" style="padding:.5rem .8rem;font-size:.75rem" id="quitBtn">Quitter</button>
@@ -1510,7 +1526,16 @@ function goSetupAi(){
   setVoiceSpeed(voiceSpeed,true);
   const emo=document.getElementById('emotionSelect');if(emo)emo.value=selectedEmotion;
   updateEmotionLock();
+  updateSetupCameraButton();
   initDragDrop('uploadZone1');
+}
+function toggleSetupCamera(){
+  isCamOn=!isCamOn;
+  updateSetupCameraButton();
+  showToast(isCamOn?'Caméra activée':'Caméra coupée');
+  if(localStream){
+    localStream.getVideoTracks().forEach(t=>t.enabled=isCamOn);
+  }
 }
 function goSetupPartner(){showScreen('setupPartner');document.getElementById('mySessionCode').textContent=genCode();initDragDrop('uploadZone2')}
 function getPartnerCode(){const code=(document.getElementById('mySessionCode').textContent||'').trim();return code&&code!=='—'?code:''}
@@ -1539,6 +1564,33 @@ function modeHintText(m){
   if(m==='ai')return t('modeHintAi');
   return t('modeHintManual');
 }
+function syncSessionModeButtons(){
+  const aiBtn=document.getElementById('sessionModeAiBtn');
+  const manBtn=document.getElementById('sessionModeManualBtn');
+  const autoBtn=document.getElementById('sessionModeAutoBtn');
+  if(aiBtn)aiBtn.classList.toggle('active',mode==='ai');
+  if(manBtn)manBtn.classList.toggle('active',mode==='manual');
+  if(autoBtn)autoBtn.classList.toggle('active',mode==='auto');
+}
+function updateSetupCameraButton(){
+  const btn=document.getElementById('setupCamBtn');
+  if(!btn)return;
+  btn.textContent=isCamOn?'📷 Caméra ON':'📷 Caméra OFF';
+}
+function setSessionSpeed(v){setVoiceSpeed(v,false);}
+function switchSessionMode(nextMode){
+  setMode(nextMode);
+  if(sessionMode!=='ai')return;
+  if(mode==='manual'){
+    cancelSpeechFlow();
+    setStatus('','Manuel');
+    document.getElementById('aiPanel').classList.remove('active');
+    return;
+  }
+  document.getElementById('aiPanel').classList.add('active');
+  setStatus('',mode==='auto'?'🎤 Auto prêt':'🦾 IA prête');
+  handleCurrentLineAutomation();
+}
 function setMode(m){
   mode=m;
   document.getElementById('modeAiBtn').classList.toggle('active',m==='ai');
@@ -1546,6 +1598,10 @@ function setMode(m){
   document.getElementById('modeAutoBtn').classList.toggle('active',m==='auto');
   document.getElementById('voiceSection').classList.toggle('active',m==='ai'||m==='auto');
   document.getElementById('modeHint').textContent=modeHintText(m);
+  syncSessionModeButtons();
+  const s=document.getElementById('sessionSpeedSlider');
+  if(s)s.value=String(voiceSpeed);
+  persistSettings();
 }
 
 // ── Drag & Drop PDF ──
@@ -1625,11 +1681,17 @@ function guessWatermarkNameKeysFromFileName(fileName){
 function stripPdfWatermarkNoise(text,pageCount,fileName){
   const lines=String(text||'').split('\n').map(l=>l.replace(/\u00A0/g,' ').trim());
   const freq=new Map();
+  const prefixFreq=new Map();
   for(const line of lines){
     if(!line)continue;
     const key=normalizeScriptLine(line);
     if(!key)continue;
     freq.set(key,(freq.get(key)||0)+1);
+    const pm=line.match(/^([^:：]{2,80})\s*[:：]\s*(.+)$/);
+    if(pm){
+      const pKey=normalizeScriptLine(pm[1]);
+      if(pKey)prefixFreq.set(pKey,(prefixFreq.get(pKey)||0)+1);
+    }
   }
   const pages=Math.max(1,Number(pageCount)||1);
   const repeatThreshold=Math.max(2,Math.ceil(pages*0.20));
@@ -1637,6 +1699,12 @@ function stripPdfWatermarkNoise(text,pageCount,fileName){
   const fileNameKeys=guessWatermarkNameKeysFromFileName(fileName);
   const screenplayTokens=new Set(['CUT','FADE','DISSOLVE','SPLIT','MATCH','INTERMISSION','FIN','END','NOIR','BLACK','TITLE','CREDITS','MONTAGE']);
   const noise=new Set();
+  const noisyPrefixes=new Set();
+  for(const [pKey,count] of prefixFreq.entries()){
+    const words=pKey.split(/\s+/).filter(Boolean).length;
+    const canBeTitle=words>=2&&pKey.length>=14;
+    if(canBeTitle&&count>=Math.max(4,Math.ceil(pages*0.45)))noisyPrefixes.add(pKey);
+  }
   for(const [key,count] of freq.entries()){
     if(!key)continue;
     if(fileNameKeys.size&&fileNameKeys.has(key)&&count>=2)noise.add(key);
@@ -1656,10 +1724,16 @@ function stripPdfWatermarkNoise(text,pageCount,fileName){
       prev='';
       continue;
     }
-    const key=normalizeScriptLine(line);
+    let candidate=line;
+    const pm=line.match(/^([^:：]{2,80})\s*[:：]\s*(.+)$/);
+    if(pm&&noisyPrefixes.has(normalizeScriptLine(pm[1]))){
+      candidate=pm[2].trim();
+      if(!candidate)continue;
+    }
+    const key=normalizeScriptLine(candidate);
     if(noise.has(key))continue;
-    if(key===prev&&looksLikeWatermarkLine(line))continue;
-    cleaned.push(line);
+    if(key===prev&&looksLikeWatermarkLine(candidate))continue;
+    cleaned.push(candidate);
     prev=key;
   }
   return cleaned.join('\n').replace(/\n{3,}/g,'\n\n').trim();
@@ -1724,6 +1798,44 @@ function parsePDFScript(text){
     m=charAloneRx.exec(l);
     if(m){const name=m[1].trim();if(name.length>=2&&name===name.toUpperCase()&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;continue}}
     if(cur&&l.length>1&&!/^\s*[\(\[]/.test(l))res.push({char:cur,line:l});
+  }
+  if(res.length){
+    const counts={};
+    res.forEach(r=>{counts[r.char]=(counts[r.char]||0)+1;});
+    const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+    const dominant=sorted[0];
+    if(dominant&&dominant[1]>=Math.max(8,Math.floor(res.length*0.6))){
+      const dominantChar=dominant[0];
+      const dominantWords=dominantChar.split(/\s+/).filter(Boolean).length;
+      const dominantLen=dominantChar.length;
+      if(dominantWords>=2&&dominantLen>=14){
+        const alt=[];
+        let curAlt='';
+        const dominantNorm=normalizeScriptLine(dominantChar);
+        const speakerInlineRx=new RegExp('^([A-ZÀÂÄÆÇÉÈÊËÎÏÔÖŒÙÛÜŸÑ][A-ZÀÂÄÆÇÉÈÊËÎÏÔÖŒÙÛÜŸÑ\\s\\-\\.\\\'’]{1,40})\\s*[:\\-–—\\.]\\s*(.+)$');
+        for(const raw of lines){
+          const l=raw.trim().replace(/\s{2,}/g,' ');
+          if(!l)continue;
+          const split=l.match(/^([^:：]{2,80})\s*[:：]\s*(.+)$/);
+          if(!split)continue;
+          if(normalizeScriptLine(split[1])!==dominantNorm)continue;
+          let content=split[2].trim();
+          if(!content)continue;
+          const m=speakerInlineRx.exec(content);
+          if(m){
+            const nm=m[1].trim();
+            const words=nm.split(/\s+/).filter(Boolean).length;
+            if(nm===nm.toUpperCase()&&words<=4){
+              curAlt=nm;
+              content=m[2].trim();
+            }
+          }
+          if(curAlt&&content)alt.push({char:curAlt,line:content});
+        }
+        const uniq=new Set(alt.map(v=>v.char)).size;
+        if(alt.length>=4&&uniq>=2)return alt;
+      }
+    }
   }
   return res;
 }
@@ -1905,6 +2017,20 @@ async function startCamera(){
   return null
 }
 async function ensureSessionStream(){
+  if(!isCamOn){
+    try{
+      if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null}
+      localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+      localStream.getAudioTracks().forEach(t=>t.enabled=isMicOn);
+      document.getElementById('localVideo').srcObject=null;
+      document.getElementById('noVideoMsg').style.display='flex';
+      document.getElementById('noVideoMsg').textContent='Caméra désactivée';
+      return localStream;
+    }catch(e){
+      showToast('Micro indisponible',4000);
+      return null;
+    }
+  }
   const cam=await startCamera();
   if(cam){
     const hasLiveAudio=cam.getAudioTracks().some(t=>t.readyState==='live');
@@ -1927,7 +2053,33 @@ async function ensureSessionStream(){
   }catch(e){showToast('Impossible d\'accéder au micro',5000);return null}
 }
 function toggleMic(){if(!localStream)return;isMicOn=!isMicOn;localStream.getAudioTracks().forEach(t=>t.enabled=isMicOn);document.getElementById('btnMic').textContent=isMicOn?'🎙️':'🔇';showToast(isMicOn?'Micro activé':'Micro coupé')}
-function toggleCam(){if(!localStream)return;isCamOn=!isCamOn;localStream.getVideoTracks().forEach(t=>t.enabled=isCamOn);document.getElementById('btnCam').textContent=isCamOn?'📷':'📷❌';showToast(isCamOn?'Caméra activée':'Caméra coupée')}
+async function toggleCam(){
+  if(!localStream){
+    const stream=await ensureSessionStream();
+    if(!stream){showToast('Caméra indisponible',3500);return}
+  }
+  isCamOn=!isCamOn;
+  if(!isCamOn){
+    localStream.getVideoTracks().forEach(t=>t.enabled=false);
+    document.getElementById('btnCam').textContent='📷❌';
+    document.getElementById('noVideoMsg').style.display='flex';
+    document.getElementById('noVideoMsg').textContent='Caméra désactivée';
+    updateSetupCameraButton();
+    showToast('Caméra coupée');
+    return;
+  }
+  let tracks=localStream.getVideoTracks();
+  if(!tracks.length||!tracks.some(t=>t.readyState==='live')){
+    await startCamera();
+    tracks=localStream?localStream.getVideoTracks():[];
+  }
+  if(!tracks.length){showToast('Caméra indisponible',3500);isCamOn=false;document.getElementById('btnCam').textContent='📷❌';updateSetupCameraButton();return}
+  tracks.forEach(t=>t.enabled=true);
+  document.getElementById('btnCam').textContent='📷';
+  document.getElementById('noVideoMsg').style.display='none';
+  updateSetupCameraButton();
+  showToast('Caméra activée');
+}
 
 // ── Recording ──
 function toggleRecording(){if(isRecording)stopRecording();else startRecording()}
@@ -2071,6 +2223,9 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   if(emo)emo.value=selectedEmotion;
   updateEmotionLock();
   setMode(mode);
+  updateSetupCameraButton();
+  const ss=document.getElementById('sessionSpeedSlider');
+  if(ss)ss.value=String(voiceSpeed);
   initCardTilt();
   startUsageTracking();
   if(isUsageBlocked())openPaywallModal(t('usageBlocked'));
