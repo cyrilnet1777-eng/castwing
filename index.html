@@ -1896,8 +1896,7 @@ function stripPdfWatermarkNoise(text,pageCount,fileName){
     for(let j=i+1;j<lines.length;j++){
       const next=lines[j];
       if(!next)continue;
-      const nk=normalizeScriptLine(next);
-      if(nk&&nk!==nk.toUpperCase()){
+      if(next!==next.toUpperCase()||/^\(/.test(next)){
         speakerCues.add(key);
       }
       break;
@@ -2006,8 +2005,7 @@ function parsePDFScript(text){
       for(let j=idx+1;j<lines.length;j++){
         const nxt=String(lines[j]||'').trim();
         if(!nxt)continue;
-        const nk=normalizeScriptLine(nxt);
-        if(nk&&nk!==nk.toUpperCase())speakerFollowed.add(key);
+        if(nxt!==nxt.toUpperCase()||/^\(/.test(nxt))speakerFollowed.add(key);
         break;
       }
     }
