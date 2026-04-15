@@ -1755,13 +1755,30 @@ function isLikelyCharacterName(candidate){
   const words=key.split(/\s+/).filter(Boolean);
   if(!words.length||words.length>4)return false;
   if(key.length<3||key.length>40)return false;
+
   const blockedTokens=new Set([
     'CUT','FADE','DISSOLVE','SPLIT','MATCH','INTERMISSION','FIN','END','NOIR','BLACK','TITLE','CREDITS','MONTAGE',
     'SCENE','SCÈNE','SAISON','EPISODE','ÉPISODE','OPERATION','OPÉRATION','RETOUR','PRESENT','PRÉSENT',
-    'INT','EXT','JOUR','NUIT','INTERIEUR','INTÉRIEUR','EXTERIEUR','EXTÉRIEUR','LART','CRIME','L ART DU CRIME'
+    'INT','EXT','JOUR','NUIT','INTERIEUR','INTÉRIEUR','EXTERIEUR','EXTÉRIEUR','LART','CRIME','L ART DU CRIME',
+    'MAIS','PLUS','AVEC','DANS','POUR','SANS','CHEZ','VERS','SOUS','ENTRE','COMME',
+    'QUI','QUE','QUOI','DONT','TOUT','TOUS','TOUTE','RIEN','BIEN','DONC','ENCORE','ALORS',
+    'ELLE','ELLES','NOUS','VOUS','LEUR','LEURS','CETTE','AUTRE','AUTRES','NOTRE','VOTRE',
+    'OUI','NON','PAS','DIS','DIT','FAIT','DIRE','VOIR','ETRE','ÊTRE','FAIRE','AVOIR',
+    'AUSSI','TRÈS','TROP','TANT','QUAND','AVANT','APRÈS','APRES','DEPUIS',
+    'FLASH','BANG','NOIR','BLANC','BLANCHE','ROUGE','SUITE','PAUSE','NOTE','NOTES',
+    'VOIX','TEMPS','LIEU','SOIR','MATIN','DEBUT','DÉBUT','CONT','CONT D',
+    'HERE','THERE','THAT','THIS','THEN','WHEN','WHAT','WHERE','WHICH','ABOUT',
+    'FROM','INTO','OVER','JUST','LIKE','BACK','DOWN','ONLY','SOME','THEM','THEY','BEEN',
+    'THE','AND','NOT','ARE','WAS','HIS','HER','HAS','HAD','BUT','ALL','CAN','ONE','TWO'
   ]);
   if(blockedTokens.has(key))return false;
-  if(words.some(w=>blockedTokens.has(w)))return false;
+  if(words.some(w=>blockedTokens.has(w)&&words.length===1))return false;
+
+  const frElisionRx=/^(?:L|D|N|S|C|J|M|T|QU|QUELQU|LORSQU|PUISQU|JUSQU|QUOIQU|AUJOURD)['']/i;
+  if(frElisionRx.test(key))return false;
+
+  if(words.length===1&&key.length<=3)return false;
+
   if(key.startsWith("L'ART")||key.startsWith('L ART DU CRIME'))return false;
   return true;
 }
@@ -1798,7 +1815,13 @@ function isLikelySpeakerCue(name){
   if(!n)return false;
   if(/[.!?]/.test(n))return false;
   if(!isLikelyCharacterName(n))return false;
-  return isSpeakerCueCase(n);
+  if(!isSpeakerCueCase(n))return false;
+  const words=n.split(/\s+/).filter(Boolean);
+  if(words.length===1){
+    const w=n.toUpperCase();
+    if(w.length<=4&&w!==n)return false;
+  }
+  return true;
 }
 function rescueMultiSpeakerFromLines(lines,suspectNameWatermarks){
   const out=[];
@@ -1814,7 +1837,7 @@ function rescueMultiSpeakerFromLines(lines,suspectNameWatermarks){
       if(inline.content&&!isLikelyStageDirectionLine(inline.content))out.push({char:cur,line:inline.content.trim()});
       continue;
     }
-    const maybeSpeaker=l.replace(/\s*[:：\-–—]+\s*$/,'').trim();
+    const maybeSpeaker=l.replace(/\s*[:：–—]+\s*$/,'').trim();
     if(isLikelySpeakerCue(maybeSpeaker)&&!isBlocked(maybeSpeaker)){
       let next='';
       for(let j=i+1;j<lines.length;j++){
@@ -1931,16 +1954,16 @@ function buildSpeakerRegexes(){
   try{
     const name='([\\p{L}][\\p{L}\\s\\-\\.\\\'’]{0,40})';
     return{
-      charInlineRx:new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*(.+)$','u'),
-      charDashOnlyRx:new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*$','u'),
+      charInlineRx:new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*[:–—]\\s*(.+)$','u'),
+      charDashOnlyRx:new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*[:–—]\\s*$','u'),
       charAloneRx:new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*:?\\s*$','u'),
     };
   }catch(_err){
     const UP='A-Za-zÀ-ÖØ-öø-ÿ';
     const name='(['+UP+']['+UP+'\\s\\-\\.\\\'’]{0,40})';
     return{
-      charInlineRx:new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*(.+)$'),
-      charDashOnlyRx:new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*$'),
+      charInlineRx:new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*[:–—]\\s*(.+)$'),
+      charDashOnlyRx:new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*[:–—]\\s*$'),
       charAloneRx:new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*:?\\s*$'),
     };
   }
@@ -2005,7 +2028,7 @@ function parsePDFScript(text){
         const alt=[];
         let curAlt='';
         const dominantNorm=normalizeScriptLine(dominantChar);
-        const speakerInlineRx=new RegExp('^([A-ZÀÂÄÆÇÉÈÊËÎÏÔÖŒÙÛÜŸÑ][A-ZÀÂÄÆÇÉÈÊËÎÏÔÖŒÙÛÜŸÑ\\s\\-\\.\\\'’]{1,40})\\s*[:\\-–—\\.]\\s*(.+)$');
+        const speakerInlineRx=new RegExp('^([A-ZÀÂÄÆÇÉÈÊËÎÏÔÖŒÙÛÜŸÑ][A-ZÀÂÄÆÇÉÈÊËÎÏÔÖŒÙÛÜŸÑ\\s\\-\\.\\\'’]{1,40})\\s*[:–—\\.]\\s*(.+)$');
         for(const raw of lines){
           const l=raw.trim().replace(/\s{2,}/g,' ');
           if(!l)continue;
