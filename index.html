@@ -1026,6 +1026,7 @@ const UI_FALLBACK_TRANSLATIONS={
   cameraDenied:{fr:'Caméra refusée — vérifie les permissions',en:'Camera denied — check permissions',es:'Cámara denegada',it:'Fotocamera negata',zh:'摄像头被拒绝',ko:'카메라 거부됨',ja:'カメラ拒否',ar:'الكاميرا مرفوضة',de:'Kamera verweigert',pt:'Câmera negada',hi:'कैमरा अस्वीकृत',tr:'Kamera reddedildi',ru:'Камера отклонена'},
   cameraUnavailable:{fr:'Caméra indisponible',en:'Camera unavailable',es:'Cámara no disponible',it:'Fotocamera non disponibile',zh:'摄像头不可用',ko:'카메라 사용 불가',ja:'カメラ利用不可',ar:'الكاميرا غير متاحة',de:'Kamera nicht verfügbar',pt:'Câmera indisponível',hi:'कैमरा अनुपलब्ध',tr:'Kamera kullanılamıyor',ru:'Камера недоступна'},
   micDenied:{fr:'Micro refusé — vérifie les permissions',en:'Mic denied — check permissions',es:'Micrófono denegado',it:'Microfono negato',zh:'麦克风被拒绝',ko:'마이크 거부됨',ja:'マイク拒否',ar:'الميكروفون مرفوض',de:'Mikro verweigert',pt:'Microfone negado',hi:'माइक अस्वीकृत',tr:'Mikrofon reddedildi',ru:'Микрофон отклонён'},
+  pdfWatermarkOnly:{fr:'Ce PDF ne contient que le filigrane NDA. Colle le texte du script manuellement.',en:'This PDF only contains the NDA watermark. Paste the script text manually.',es:'Este PDF solo contiene la marca de agua NDA. Pega el texto manualmente.',it:'Questo PDF contiene solo la filigrana NDA. Incolla il testo manualmente.',zh:'此PDF仅包含NDA水印。请手动粘贴脚本文本。',ko:'이 PDF에는 NDA 워터마크만 포함되어 있습니다. 텍스트를 수동으로 붙여넣으세요.',ja:'このPDFにはNDA透かしのみ含まれています。テキストを手動で貼り付けてください。',ar:'يحتوي هذا الملف على العلامة المائية فقط. الصق النص يدويًا.',de:'Diese PDF enthält nur das NDA-Wasserzeichen. Füge den Text manuell ein.',pt:'Este PDF contém apenas a marca d\'água NDA. Cole o texto manualmente.',hi:'इस PDF में केवल NDA वॉटरमार्क है। टेक्स्ट मैन्युअली पेस्ट करें।',tr:'Bu PDF yalnızca NDA filigranı içeriyor. Metni manuel olarak yapıştırın.',ru:'Этот PDF содержит только водяной знак NDA. Вставьте текст вручную.'},
   partnerGateTitle:{fr:'Crée un compte pour inviter un partenaire.',en:'Create an account to invite a partner.',es:'Crea una cuenta para invitar a un compañero.',it:'Crea un account per invitare un partner.',zh:'创建帐户以邀请搭档。',ko:'파트너를 초대하려면 계정을 만드세요.',ja:'パートナーを招待するにはアカウントを作成してください。',ar:'أنشئ حسابًا لدعوة شريك.',de:'Erstelle ein Konto, um einen Partner einzuladen.',pt:'Crie uma conta para convidar um parceiro.',hi:'पार्टनर को आमंत्रित करने के लिए अकाउंट बनाएं।',tr:'Partner davet etmek için hesap oluşturun.',ru:'Создайте аккаунт, чтобы пригласить партнёра.'},
   partnerGateDesc:{fr:'Inscris-toi gratuitement pour débloquer le mode partenaire.',en:'Sign up for free to unlock partner mode.',es:'Regístrate gratis para desbloquear el modo compañero.',it:'Iscriviti gratis per sbloccare la modalità partner.',zh:'免费注册以解锁搭档模式。',ko:'무료로 가입하여 파트너 모드를 잠금 해제하세요.',ja:'無料登録でパートナーモードを解除。',ar:'سجّل مجانًا لفتح وضع الشريك.',de:'Melde dich kostenlos an, um den Partnermodus freizuschalten.',pt:'Cadastre-se grátis para desbloquear o modo parceiro.',hi:'पार्टनर मोड अनलॉक करने के लिए मुफ़्त में साइन अप करें।',tr:'Partner modunu açmak için ücretsiz kaydolun.',ru:'Зарегистрируйтесь бесплатно, чтобы разблокировать режим партнёра.'},
   partnerGateSignup:{fr:'Créer un compte',en:'Create account',es:'Crear cuenta',it:'Crea account',zh:'创建帐户',ko:'계정 만들기',ja:'アカウント作成',ar:'إنشاء حساب',de:'Konto erstellen',pt:'Criar conta',hi:'अकाउंट बनाएं',tr:'Hesap oluştur',ru:'Создать аккаунт'},
@@ -2018,9 +2019,16 @@ function extractPageText(textContent){
   for(const it of textContent.items){
     const clean=(it.str||'').replace(/\u00A0/g,' ').trim();
     if(!clean)continue;
-    const yKey=Math.round((it.transform&&it.transform[5]?it.transform[5]:0)/2);
+    const tf=it.transform||[1,0,0,1,0,0];
+    const scaleX=Math.sqrt(tf[0]*tf[0]+tf[1]*tf[1]);
+    const scaleY=Math.sqrt(tf[2]*tf[2]+tf[3]*tf[3]);
+    const fontSize=Math.max(scaleX,scaleY);
+    const isRotated=Math.abs(tf[1])>0.1||Math.abs(tf[2])>0.1;
+    if(isRotated&&fontSize>18)continue;
+    if(fontSize>60)continue;
+    const yKey=Math.round((tf[5]||0)/2);
     if(!rows.has(yKey))rows.set(yKey,[]);
-    rows.get(yKey).push({x:it.transform&&it.transform[4]?it.transform[4]:0,str:clean});
+    rows.get(yKey).push({x:tf[4]||0,str:clean,fontSize});
   }
   return [...rows.entries()]
     .sort((a,b)=>b[0]-a[0])
@@ -2293,8 +2301,15 @@ async function processPDF(n,file){
     const pageTexts=[];
     for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const ct=await pg.getTextContent();pageTexts.push(extractPageText(ct))}
     const rawText=pageTexts.join('\n').replace(/\u00A0/g,' ');
-    if(!rawText||rawText.trim().length<10){
-      showToast('PDF vide ou non lisible – essaie de coller le texte directement',5000);
+    const meaningfulLines=rawText.split('\n').map(l=>l.trim()).filter(l=>l&&!/^-+\s*\d+\s*(of|de|sur|von|di)\s*\d+\s*-+$/i.test(l));
+    const uniqueLines=new Set(meaningfulLines);
+    const isOnlyWatermark=uniqueLines.size<=3&&rawText.trim().length>0;
+    if(!rawText||rawText.trim().length<10||isOnlyWatermark){
+      const msg=isOnlyWatermark
+        ?tt('pdfWatermarkOnly','Ce PDF ne contient que le filigrane NDA. Le texte du script est protégé. Colle le texte manuellement.')
+        :'PDF vide ou non lisible – essaie de coller le texte directement';
+      showToast(msg,6000);
+      document.getElementById('scriptInput'+n).focus();
       setLoading(false);return;
     }
     let cleanText=rawText;
