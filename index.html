@@ -188,6 +188,16 @@ input[type="file"]{display:none}
 .emotion-locked option[value="neutral"]{opacity:1}
 
 @media(min-width:768px){#home{padding:3rem}.home-inner{max-width:520px}.logo h1{font-size:3.2rem}.session-body{flex-direction:row}.video-area{flex:3}.prompter-area{flex:2;max-height:none;border-top:none;border-left:1px solid rgba(255,255,255,.08)}}
+.clap-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;z-index:10001;animation:clapIn .3s ease}
+.clap-card{background:#111;border:2px solid #333;border-radius:4px;padding:0;width:320px;max-width:90%;font-family:'DM Sans',sans-serif;overflow:hidden;box-shadow:0 0 60px rgba(0,0,0,.8)}
+.clap-top{background:repeating-linear-gradient(135deg,#222 0 12px,#111 12px 24px);padding:14px 18px 10px;border-bottom:3px solid #c1121f;display:flex;align-items:center;justify-content:space-between}
+.clap-top span{font-size:1.3rem;font-weight:800;color:#fff;letter-spacing:.04em}
+.clap-top small{font-size:.7rem;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.1em}
+.clap-body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:6px}
+.clap-row{display:flex;justify-content:space-between;font-size:.78rem}
+.clap-row .clap-label{color:#666;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-size:.65rem}
+.clap-row .clap-val{color:#e0e0e0;font-weight:700;text-align:right;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@keyframes clapIn{from{opacity:0;transform:scale(1.05)}to{opacity:1;transform:scale(1)}}
 </style>
 </head>
 <body>
@@ -428,6 +438,7 @@ let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',
 let soloPartnerMode='all',soloPartnerChar=null;
 let autoAdvanceTimer=null,lastAutoSpokenIndex=-1,activeSpeechToken=0;
 let ttsAudio=null,vad=null;
+let takeNumber=0,currentScriptName='';
 let authFlowToken='',authPendingEmail='';
 let userAccess={email:'',verified:false,provider:'',paid:false,usageMs:0,cooldownUntil:0,lastTick:0};
 let usageTimer=null;
@@ -552,29 +563,56 @@ function showPaywallModal(){
   const tier=getUserTier();
   const overlay=document.createElement('div');
   overlay.id='paywallOverlay';
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:10000';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;z-index:10000';
   const card=document.createElement('div');
-  card.style.cssText='background:#1a1a2e;color:#fff;border-radius:16px;padding:32px 24px;max-width:380px;width:90%;text-align:center;font-family:"DM Sans",sans-serif;box-shadow:0 8px 40px rgba(0,0,0,.6)';
-  let title=t('paywallTitle');
-  let sub=t('paywallSub');
-  let btns='';
-  if(tier==='free'){
-    const cooldownEnd=getPlan().cooldownUntil;
-    const waitMin=cooldownEnd?Math.ceil((cooldownEnd-Date.now())/60000):0;
-    sub=t('paywallFreeSub').replace('{min}',waitMin>0?waitMin:'~360');
-    btns=`<button onclick="buyPaygBlock()" style="padding:12px 20px;border-radius:10px;border:none;background:#4169e1;color:#fff;cursor:pointer;font-size:14px;font-weight:600;width:100%">${t('paywallContinueBtn')}</button>
-    <div style="font-size:12px;opacity:.6;margin-top:4px">+10 min · ${PAYG_PRICE}</div>
-    <button onclick="document.getElementById('paywallOverlay').remove();goHome()" style="padding:10px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#fff;cursor:pointer;font-size:13px;margin-top:6px">${t('paywallQuitBtn')}</button>`;
-  }else if(tier==='payg'){
-    btns=`<button onclick="buyPaygBlock()" style="padding:12px 20px;border-radius:10px;border:none;background:#4169e1;color:#fff;cursor:pointer;font-size:14px;font-weight:600;width:100%">${t('paywallContinueBtn')}</button>
-    <div style="font-size:12px;opacity:.6;margin-top:4px">+10 min · ${PAYG_PRICE}</div>
-    <button onclick="document.getElementById('paywallOverlay').remove();goHome()" style="padding:10px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#fff;cursor:pointer;font-size:13px;margin-top:6px">${t('paywallQuitBtn')}</button>`;
-  }else{
-    btns=`<button onclick="document.getElementById('paywallOverlay').remove();goHome()" style="padding:12px 20px;border-radius:10px;border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;cursor:pointer;font-size:14px;width:100%">${t('paywallQuitBtn')}</button>`;
-  }
-  card.innerHTML=`<div style="font-size:22px;font-weight:700;margin-bottom:8px">${title}</div><div style="font-size:14px;opacity:.75;margin-bottom:20px;line-height:1.5">${sub}</div><div style="display:flex;flex-direction:column;gap:6px;align-items:center">${btns}</div>`;
+  card.style.cssText='background:#111;color:#fff;border-radius:14px;padding:0;max-width:360px;width:90%;text-align:center;font-family:"DM Sans",sans-serif;box-shadow:0 8px 40px rgba(0,0,0,.7);overflow:hidden';
+  const p=getPlan();
+  const cooldownEnd=p.cooldownUntil||0;
+  const waitMs=Math.max(0,cooldownEnd-Date.now());
+  const waitDisplay=waitMs>0?fmtTimer(waitMs):'—';
+  card.innerHTML=`
+    <div style="background:repeating-linear-gradient(135deg,#1a1a1a 0 12px,#111 12px 24px);padding:18px 20px 14px;border-bottom:3px solid #c1121f">
+      <div style="font-size:.65rem;color:#666;font-weight:700;text-transform:uppercase;letter-spacing:.12em;margin-bottom:4px">${t('paywallPause')}</div>
+      <div style="font-size:1.25rem;font-weight:800;color:#fff">${t('paywallTitle')}</div>
+    </div>
+    <div style="padding:20px 22px 24px">
+      <div style="font-size:.85rem;color:#aaa;margin-bottom:18px;line-height:1.5">${t('paywallSub')}</div>
+      <button onclick="buyPaygBlock()" style="padding:13px 20px;border-radius:10px;border:none;background:#4169e1;color:#fff;cursor:pointer;font-size:14px;font-weight:700;width:100%;margin-bottom:4px">${t('paywallContinueBtn')} — ${PAYG_PRICE}</button>
+      <div style="font-size:.68rem;color:#555;margin-bottom:14px">${t('paywallSecure')}</div>
+      ${tier==='free'&&waitMs>0?`<button onclick="document.getElementById('paywallOverlay').remove();goHome()" style="padding:10px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:transparent;color:#888;cursor:pointer;font-size:.8rem;width:100%;margin-bottom:8px">${t('paywallWaitBtn')} (⏱ <span id="paywallCountdown">${waitDisplay}</span>)</button>`:'<button onclick="document.getElementById(\'paywallOverlay\').remove();goHome()" style="padding:10px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:transparent;color:#888;cursor:pointer;font-size:.8rem;width:100%;margin-bottom:8px">${t(\'paywallQuitBtn\')}</button>'}
+      <div onclick="buyPaygBlock()" style="font-size:.72rem;color:#4169e1;cursor:pointer;text-decoration:underline;opacity:.7">${t('paywallAlreadyPaid')}</div>
+    </div>`;
   overlay.appendChild(card);
   document.body.appendChild(overlay);
+  if(tier==='free'&&waitMs>0){
+    const cdEl=document.getElementById('paywallCountdown');
+    if(cdEl){let rem=waitMs;const iv=setInterval(()=>{rem=Math.max(0,cooldownEnd-Date.now());cdEl.textContent=fmtTimer(rem);if(rem<=0){clearInterval(iv);const ov=document.getElementById('paywallOverlay');if(ov)ov.remove();unfreezeTimer();}},1000);}
+  }
+}
+function showClapperboard(){
+  const existing=document.getElementById('clapOverlay');
+  if(existing)existing.remove();
+  takeNumber++;
+  const userName=userAccess.email?userAccess.email.split('@')[0]:(getUserTier()==='visitor'?'Guest':'Actor');
+  const charName=selectedChar||'—';
+  const scriptName=currentScriptName||t('pasteScriptLabel');
+  const sceneName=pdfScript.length>0&&selectedChar?charName+' scene':'Scene';
+  const overlay=document.createElement('div');
+  overlay.id='clapOverlay';
+  overlay.className='clap-overlay';
+  overlay.innerHTML=`<div class="clap-card">
+    <div class="clap-top"><span>🎬 CASTWING</span><small>REC</small></div>
+    <div class="clap-body">
+      <div class="clap-row"><span class="clap-label">Scene</span><span class="clap-val">${sceneName}</span></div>
+      <div class="clap-row"><span class="clap-label">Take</span><span class="clap-val">${String(takeNumber).padStart(2,'0')}</span></div>
+      <div class="clap-row"><span class="clap-label">Actor</span><span class="clap-val">${userName}</span></div>
+      <div class="clap-row"><span class="clap-label">Role</span><span class="clap-val">${charName}</span></div>
+      <div class="clap-row"><span class="clap-label">Script</span><span class="clap-val">${scriptName}</span></div>
+    </div>
+  </div>`;
+  overlay.addEventListener('click',()=>overlay.remove());
+  document.body.appendChild(overlay);
+  setTimeout(()=>{if(overlay.parentElement)overlay.remove()},3000);
 }
 function buyPaygBlock(){
   const existing=document.getElementById('paywallOverlay');
@@ -930,10 +968,14 @@ const UI_FALLBACK_TRANSLATIONS={
   authVerified:{fr:'Email vérifié ✅',en:'Email verified ✅',es:'Email verificado ✅',it:'Email verificata ✅',zh:'邮箱验证成功 ✅',ko:'이메일 인증 완료 ✅',ja:'メール認証完了 ✅',ar:'تم التحقق من البريد ✅',de:'E-Mail bestätigt ✅',pt:'E-mail verificado ✅',hi:'ईमेल सत्यापित ✅'},
   authInvalidCode:{fr:'Code invalide',en:'Invalid code',es:'Código inválido',it:'Codice non valido',zh:'验证码无效',ko:'코드가 올바르지 않습니다',ja:'コードが無効です',ar:'رمز غير صالح',de:'Ungültiger Code',pt:'Código inválido',hi:'कोड अमान्य है'},
   usageBlocked:{fr:'Limite atteinte. Attends 1h ou débloque à 1$.',en:'Limit reached. Wait 1h or unlock for $1.',es:'Límite alcanzado. Espera 1h o desbloquea por 1$.',it:'Limite raggiunto. Attendi 1h o sblocca con 1$.',zh:'已达上限。等待1小时或支付1美元解锁。',ko:'사용 한도 도달. 1시간 대기 또는 1달러 결제로 해제.',ja:'上限に達しました。1時間待つか1ドルで解除。',ar:'تم بلوغ الحد. انتظر ساعة أو افتح مقابل 1$.',de:'Limit erreicht. 1h warten oder für 1$ entsperren.',pt:'Limite atingido. Aguarde 1h ou desbloqueie por 1$.',hi:'सीमा पूरी। 1 घंटा प्रतीक्षा करें या 1$ देकर अनलॉक करें।'},
+  paywallPause:{fr:'Pause de la scène',en:'Scene paused',es:'Escena pausada',it:'Scena in pausa',zh:'场景暂停',ko:'장면 일시정지',ja:'シーン一時停止',ar:'المشهد متوقف',de:'Szene pausiert',pt:'Cena pausada',hi:'दृश्य रुका हुआ',tr:'Sahne duraklatıldı',ru:'Сцена на паузе'},
   paywallTitle:{fr:'La scène s\'arrête ici.',en:'The scene stops here.',es:'La escena se detiene aquí.',it:'La scena si ferma qui.',zh:'场景到此为止。',ko:'장면이 여기서 멈춥니다.',ja:'シーンはここで終了です。',ar:'المشهد يتوقف هنا.',de:'Die Szene endet hier.',pt:'A cena para aqui.',hi:'दृश्य यहीं रुकता है।',tr:'Sahne burada duruyor.',ru:'Сцена останавливается здесь.'},
-  paywallSub:{fr:'Tu peux continuer maintenant.',en:'You can continue now.',es:'Puedes continuar ahora.',it:'Puoi continuare ora.',zh:'你可以继续。',ko:'지금 계속할 수 있습니다.',ja:'今すぐ続けることができます。',ar:'يمكنك المتابعة الآن.',de:'Du kannst jetzt weitermachen.',pt:'Você pode continuar agora.',hi:'अब आप जारी रख सकते हैं।',tr:'Şimdi devam edebilirsiniz.',ru:'Вы можете продолжить сейчас.'},
-  paywallFreeSub:{fr:'Reviens dans {min} min ou continue tout de suite.',en:'Come back in {min} min or continue now.',es:'Vuelve en {min} min o continúa ahora.',it:'Torna tra {min} min o continua ora.',zh:'{min}分钟后回来或立即继续。',ko:'{min}분 후에 돌아오거나 지금 계속하세요.',ja:'{min}分後に戻るか今すぐ続けてください。',ar:'عد بعد {min} دقيقة أو تابع الآن.',de:'Komm in {min} Min zurück oder mach jetzt weiter.',pt:'Volte em {min} min ou continue agora.',hi:'{min} मिनट बाद वापस आएं या अभी जारी रखें।',tr:'{min} dk sonra gelin veya şimdi devam edin.',ru:'Вернитесь через {min} мин или продолжите сейчас.'},
+  paywallSub:{fr:'Tu as atteint la limite gratuite. Reprends maintenant ou attends.',en:'You reached the free limit. Continue now or wait.',es:'Alcanzaste el límite gratuito. Continúa o espera.',it:'Hai raggiunto il limite gratuito. Continua o attendi.',zh:'免费额度已用完。立即继续或等待。',ko:'무료 한도에 도달했습니다. 지금 계속하거나 기다리세요.',ja:'無料上限に達しました。今すぐ続けるか待ってください。',ar:'وصلت إلى الحد المجاني. تابع الآن أو انتظر.',de:'Du hast das Gratislimit erreicht. Jetzt weitermachen oder warten.',pt:'Você atingiu o limite gratuito. Continue agora ou espere.',hi:'आपने मुफ़्त सीमा पूरी कर ली। अभी जारी रखें या प्रतीक्षा करें।',tr:'Ücretsiz sınıra ulaştınız. Şimdi devam edin veya bekleyin.',ru:'Достигнут бесплатный лимит. Продолжите сейчас или подождите.'},
   paywallContinueBtn:{fr:'Continuer la scène',en:'Continue the scene',es:'Continuar la escena',it:'Continua la scena',zh:'继续场景',ko:'장면 계속',ja:'シーンを続ける',ar:'أكمل المشهد',de:'Szene fortsetzen',pt:'Continuar a cena',hi:'दृश्य जारी रखें',tr:'Sahneye devam et',ru:'Продолжить сцену'},
+  paywallSecure:{fr:'Paiement sécurisé',en:'Secure payment',es:'Pago seguro',it:'Pagamento sicuro',zh:'安全支付',ko:'안전한 결제',ja:'安全な支払い',ar:'دفع آمن',de:'Sichere Zahlung',pt:'Pagamento seguro',hi:'सुरक्षित भुगतान',tr:'Güvenli ödeme',ru:'Безопасный платёж'},
+  paywallWaitBtn:{fr:'Attendre',en:'Wait',es:'Esperar',it:'Attendi',zh:'等待',ko:'기다리기',ja:'待つ',ar:'انتظر',de:'Warten',pt:'Esperar',hi:'प्रतीक्षा करें',tr:'Bekle',ru:'Подождать'},
+  paywallAlreadyPaid:{fr:'J\'ai déjà payé',en:'I already paid',es:'Ya pagué',it:'Ho già pagato',zh:'我已经付款',ko:'이미 결제했습니다',ja:'すでに支払い済み',ar:'لقد دفعت بالفعل',de:'Ich habe bereits bezahlt',pt:'Já paguei',hi:'मैंने पहले ही भुगतान किया',tr:'Zaten ödedim',ru:'Я уже оплатил'},
+  clapPastedText:{fr:'Texte collé',en:'Pasted text',es:'Texto pegado',it:'Testo incollato',zh:'粘贴文本',ko:'붙여넣은 텍스트',ja:'貼り付けテキスト',ar:'نص ملصق',de:'Eingefügter Text',pt:'Texto colado',hi:'चिपकाया गया टेक्स्ट',tr:'Yapıştırılan metin',ru:'Вставленный текст'},
   paywallQuitBtn:{fr:'Quitter',en:'Quit',es:'Salir',it:'Esci',zh:'退出',ko:'종료',ja:'終了',ar:'إنهاء',de:'Beenden',pt:'Sair',hi:'छोड़ें',tr:'Çıkış',ru:'Выйти'},
   partnerGateTitle:{fr:'Crée un compte pour inviter un partenaire.',en:'Create an account to invite a partner.',es:'Crea una cuenta para invitar a un compañero.',it:'Crea un account per invitare un partner.',zh:'创建帐户以邀请搭档。',ko:'파트너를 초대하려면 계정을 만드세요.',ja:'パートナーを招待するにはアカウントを作成してください。',ar:'أنشئ حسابًا لدعوة شريك.',de:'Erstelle ein Konto, um einen Partner einzuladen.',pt:'Crie uma conta para convidar um parceiro.',hi:'पार्टनर को आमंत्रित करने के लिए अकाउंट बनाएं।',tr:'Partner davet etmek için hesap oluşturun.',ru:'Создайте аккаунт, чтобы пригласить партнёра.'},
   partnerGateDesc:{fr:'Inscris-toi gratuitement pour débloquer le mode partenaire.',en:'Sign up for free to unlock partner mode.',es:'Regístrate gratis para desbloquear el modo compañero.',it:'Iscriviti gratis per sbloccare la modalità partner.',zh:'免费注册以解锁搭档模式。',ko:'무료로 가입하여 파트너 모드를 잠금 해제하세요.',ja:'無料登録でパートナーモードを解除。',ar:'سجّل مجانًا لفتح وضع الشريك.',de:'Melde dich kostenlos an, um den Partnermodus freizuschalten.',pt:'Cadastre-se grátis para desbloquear o modo parceiro.',hi:'पार्टनर मोड अनलॉक करने के लिए मुफ़्त में साइन अप करें।',tr:'Partner modunu açmak için ücretsiz kaydolun.',ru:'Зарегистрируйтесь бесплатно, чтобы разблокировать режим партнёра.'},
@@ -2179,6 +2221,8 @@ function stripPdfWatermarkNoise(text,pageCount,fileName){
 }
 
 async function processPDF(n,file){
+  currentScriptName=file.name||'PDF';
+  takeNumber=0;
   setLoading(true,t('pdfReading'));
   try{
     let buf;
@@ -2709,6 +2753,7 @@ async function startAiSession(){
   selectedEmotion=document.getElementById('emotionSelect').value||selectedEmotion;
   if(!canUseEmotions())selectedEmotion='neutral';
   if(!selectedVoice)selectedVoice=VOICE_PRESETS[0]||null;
+  if(!currentScriptName){const si=document.getElementById('scriptInput1');currentScriptName=si&&si.value.trim()?t('clapPastedText'):'—';}
   prompterLines=buildLines(1);
   if(!prompterLines.length&&pdfScript.length>0){
     prompterLines=pdfScript.map(s=>({text:s.line,type:selectedChar&&s.char===selectedChar?'actor':'partner',char:s.char}));
@@ -2716,6 +2761,7 @@ async function startAiSession(){
   prompterIndex=0;
   lastAutoSpokenIndex=-1;
   showScreen('session');renderPrompter();
+  showClapperboard();
   if(tier!=='visitor')startSessionTimer();
   else hideTimerBadge();
   if(mode==='ai'||mode==='auto'){document.getElementById('aiPanel').classList.add('active');populateSessionVoiceSelect();setStatus('',mode==='auto'?'🎤 Auto prêt':'🦾 IA prête')}
@@ -2730,7 +2776,7 @@ async function startPartnerSession(){
   cancelSpeechFlow();
   const code=document.getElementById('mySessionCode').textContent;if(!code||code==='—')return;
   prompterLines=buildLines(2);prompterIndex=0;
-  showScreen('session');renderPrompter();setStatus('waiting','En attente du partenaire…');hideOverlay();
+  showScreen('session');renderPrompter();showClapperboard();setStatus('waiting','En attente du partenaire…');hideOverlay();
   showToast('Partage le code '+code,4500);
   await ensureSessionStream();
   const pid='castwing-'+code;peer=createPeer(pid);
@@ -2766,7 +2812,7 @@ function endSession(){
   document.getElementById('noVideoMsg').style.display='flex';document.getElementById('noVideoMsg').textContent='Caméra en attente…';
   document.getElementById('aiPanel').classList.remove('active');
   hideTimerBadge();
-  hideOverlay();isMicOn=true;isCamOn=true;prompterLines=[];prompterIndex=0;pdfScript=[];selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;showScreen('home');
+  hideOverlay();isMicOn=true;isCamOn=true;prompterLines=[];prompterIndex=0;pdfScript=[];selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;currentScriptName='';takeNumber=0;showScreen('home');
 }
 function cancelConnection(){hideOverlay();if(!conn||!conn.open)endSession()}
 
