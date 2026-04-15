@@ -1813,6 +1813,16 @@ function isLikelyStageDirectionLine(line){
   if(/^[-–—]\s*/.test(String(line||'').trim()))return true;
   return false;
 }
+function isLikelyStageDirectionContent(text){
+  const t=String(text||'').trim();
+  if(!t||t.length<8)return false;
+  if(/^pas de dialogue/i.test(t))return true;
+  if(/^(il|elle|ils|elles|on|une?\s+\w+)\s+(entre|sort|pose|prend|regarde|se\s+|s['']|ouvre|ferme|va|vient|arrive|part|monte|descend|marche|court|dort|pleure|rit|embrasse|frappe)/i.test(t))return true;
+  if(/\b(silhouette|arrière[\s-]plan|hors[\s-]champ|panoramique|travelling|gros\s+plan|plan\s+(large|moyen|serré|rapproché)|caméra|contre[\s-]champ|fondu|en\s+off|voice[\s-]over|voix[\s-]off)\b/i.test(t))return true;
+  if(/\b(entre\s+dans|sort\s+de|se\s+tourne|se\s+lève|se\s+dirige|se\s+retourne|s['']approche|s['']éloigne|s['']assoit|s['']en\s+va|se\s+précipite)\b/i.test(t))return true;
+  if(/\.\s+(?:Il|Elle|Ils|Elles|On|Une?\s)\s/i.test(t))return true;
+  return false;
+}
 function splitSpeakerInlineLine(line){
   const txt=String(line||'').trim();
   const m=txt.match(/^([^:：]{2,80})\s*[:：]\s*(.+)$/);
@@ -1992,6 +2002,7 @@ async function processPDF(n,file){
       parsedScript=[];
     }
     pdfScript=parsedScript;
+    selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;
     const chars=getChars();
     document.getElementById('uploadZone'+n).style.display='none';
     document.getElementById('uploadOk'+n).style.display='flex';
@@ -2000,6 +2011,13 @@ async function processPDF(n,file){
       renderChars(n,chars);
       document.getElementById('charSection'+n).style.display='block';
       document.getElementById('setupStatus'+n).textContent=pdfScript.length+' '+t('pdfLinesDetected');
+      if(chars.length>=2&&n===1){
+        selectedChar=chars[0].char;
+        soloPartnerMode='all';soloPartnerChar=null;
+        const grid=document.getElementById('charGrid'+n);
+        if(grid&&grid.children[0])grid.children[0].classList.add('selected');
+        renderPartnerAssignment(1);
+      }
       const detectedLang=detectTextLanguage(rawText);
       if(detectedLang&&VOICE_LOCALES.some(l=>l.id===detectedLang)){
         applyLocaleVoices(detectedLang,false);
@@ -2111,18 +2129,18 @@ function parsePDFScript(text){
     const inline=splitSpeakerInlineLine(l);
     if(inline&&isLikelySpeakerCue(inline.speaker)&&!suspectNameWatermarks.has(normalizeScriptLine(inline.speaker))){
       cur=inline.speaker;
-      if(inline.content)res.push({char:cur,line:inline.content});
+      if(inline.content&&!isLikelyStageDirectionContent(inline.content))res.push({char:cur,line:inline.content});
       continue;
     }
     const normalized=normalizeScriptLine(l);
     if(suspectNameWatermarks.has(normalized)){cur=null;continue}
     let m=charInlineRx.exec(l);
-    if(m){const name=m[1].trim();if(name.length>=2&&isLikelySpeakerCue(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;res.push({char:cur,line:m[2].trim()});continue}}
+    if(m){const name=m[1].trim();const dial=m[2].trim();if(name.length>=2&&isLikelySpeakerCue(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;if(!isLikelyStageDirectionContent(dial))res.push({char:cur,line:dial});continue}}
     m=charDashOnlyRx.exec(l);
     if(m){const name=m[1].trim();if(name.length>=2&&isLikelySpeakerCue(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;continue}}
     m=charAloneRx.exec(l);
     if(m){const name=m[1].trim();if(name.length>=2&&isLikelySpeakerCue(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;continue}}
-    if(cur&&l.length>1&&!/^\s*[\(\[]/.test(l))res.push({char:cur,line:l});
+    if(cur&&l.length>1&&!/^\s*[\(\[]/.test(l)&&!isLikelyStageDirectionContent(l))res.push({char:cur,line:l});
   }
   const uniqPrimary=new Set(res.map(v=>v.char)).size;
   const rescued=rescueMultiSpeakerFromLines(lines,suspectNameWatermarks);
