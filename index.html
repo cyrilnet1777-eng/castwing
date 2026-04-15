@@ -198,18 +198,20 @@ input[type="file"]{display:none}
 <!-- ═══ HOME ═══ -->
 <div id="home" class="screen active">
   <div class="home-inner">
-    <div class="logo"><h1>Cast<span class="logo-rec-dot">REC</span><span>wing</span></h1><p id="homeSubtitle">Studio d'audition</p></div>
+    <div class="logo"><h1>Cast<span class="logo-rec-dot">REC</span><span>wing</span></h1><p id="homeSubtitle" style="max-width:300px;margin:0 auto">Rehearse your scenes without depending on anyone.</p></div>
+    <p id="homeHook" style="text-align:center;font-size:.82rem;color:#7fd8bb;font-weight:500;margin:-.4rem 0 .2rem">Your acting partner is always available.</p>
     <div class="home-cards">
       <div class="hcard" onclick="goSetupAi()">
-        <div class="hcard-icon navy">🦾</div>
-        <div class="hcard-text"><h3 id="homeSoloTitle">Solo + IA</h3><p id="homeSoloDesc">L'IA donne la réplique avec une voix</p></div>
+        <div class="hcard-icon navy">🎭</div>
+        <div class="hcard-text"><h3 id="homeSoloTitle">Start a scene</h3><p id="homeSoloDesc">Solo with AI or manual reading</p></div>
       </div>
-      <div class="hcard" onclick="goPartnerChoice()">
+      <div class="hcard" onclick="handlePartnerClick()">
         <div class="hcard-icon blue">🎬</div>
-        <div class="hcard-text"><h3 id="homePartnerTitle">Avec un partenaire</h3><p id="homePartnerDesc">Inviter quelqu'un à donner la réplique</p></div>
+        <div class="hcard-text"><h3 id="homePartnerTitle">Rehearse with a partner</h3><p id="homePartnerDesc">Invite someone to play the scene for real</p></div>
       </div>
     </div>
-    <div class="home-footer" id="homeFooterText">WebRTC pair-à-pair · Aucune donnée stockée</div>
+    <p id="homeCastingReady" style="text-align:center;font-size:.72rem;color:rgba(127,216,187,.6);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-top:.2rem">Ready to send to casting.</p>
+    <div class="home-footer" id="homeFooterText">Peer-to-peer · No data stored</div>
   </div>
   <div class="home-bottom-bar" id="homeBottomBar">
     <button class="auth-mini-btn" id="authMiniBtn" onclick="openAuthModal()">Login / Sign up</button>
@@ -386,7 +388,7 @@ input[type="file"]{display:none}
 
 <!-- ═══ SESSION ═══ -->
 <div id="session" class="screen">
-  <div id="creditBadge" style="position:fixed;top:12px;right:52px;background:rgba(0,0,0,.6);color:#fff;padding:4px 10px;border-radius:12px;font-size:13px;font-family:'DM Sans',sans-serif;z-index:1000;display:none;pointer-events:none">🎤 <span id="creditCount">15</span></div>
+  <div id="creditBadge" style="position:fixed;top:12px;right:52px;background:rgba(0,0,0,.6);color:#fff;padding:4px 10px;border-radius:12px;font-size:13px;font-family:'DM Sans',sans-serif;z-index:1000;display:none;pointer-events:none">⏱ <span id="creditCount">60:00</span></div>
   <div class="session-top"><div class="status"><div class="status-dot waiting" id="statusDot"></div><span id="statusText">En attente…</span></div><button class="back-btn" onclick="endSession()" style="color:#fff;font-size:1rem">✕</button></div>
   <div class="session-body">
     <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><div class="no-video" id="noVideoMsg">Caméra en attente…</div><div class="video-controls"><button class="vctrl" id="btnMic" onclick="toggleMic()">🎙️</button><button class="vctrl" id="btnRec" onclick="toggleRecording()">⏺</button><button class="vctrl" id="btnCam" onclick="toggleCam()">📷</button></div></div></div>
@@ -434,12 +436,17 @@ const useElevenLabs=true;
 const pauseBetweenLines=500;
 const SETTINGS_KEY='castwing_user_settings_v3';
 const ACCESS_KEY='castwing_user_access_v1';
-const CREDITS_KEY='castwing_credits_v1';
-const GUEST_CREDITS=15;
-const SIGNED_CREDITS=50;
-const FREE_LIMIT_MS=20*60*1000;
-const COOLDOWN_MS=60*60*1000;
+const PLAN_KEY='castwing_plan_v2';
+const REFERRAL_KEY='castwing_referral_v1';
+const FREE_SESSION_MS=60*60*1000;
+const FREE_COOLDOWN_MS=6*60*60*1000;
+const PAYG_BLOCK_MS=10*60*1000;
+const PAYG_PRICE='$1';
+const PRO_PRICE='12.99€';
+const PRO_MONTHLY_MS=400*60*1000;
 const PAYMENT_LINK_URL='https://buy.stripe.com/test_00g8wQfNw5Yk6jS5kk';
+let sessionTimerInterval=null;
+let sessionTimerFrozen=false;
 const ELEVEN_ACCOUNT_BACKOFF_MS=5*60*1000;
 let ttsEndpointCache='';
 let elevenLabsTemporarilyDisabled=false;
@@ -449,105 +456,174 @@ let elevenLabsDisableReason='';
 const unavailableElevenVoiceIds=new Set();
 const unavailableVoiceToastShown=new Set();
 
-// ── Credits System ──
-function getCredits(){
+// ── Plan & Timer System ──
+// Tiers: visitor (no account), free (signed up), payg (pay-as-you-go), pro (subscription)
+function getPlan(){
   try{
-    const raw=localStorage.getItem(CREDITS_KEY);
-    if(raw){const parsed=JSON.parse(raw);if(parsed&&typeof parsed==='object')return parsed;}
+    const raw=localStorage.getItem(PLAN_KEY);
+    if(raw){const p=JSON.parse(raw);if(p&&typeof p==='object')return p;}
   }catch(e){}
-  const init={total:GUEST_CREDITS,remaining:GUEST_CREDITS,isGuest:true,createdAt:new Date().toISOString()};
-  try{localStorage.setItem(CREDITS_KEY,JSON.stringify(init));}catch(e){}
-  return init;
+  return{tier:'visitor',remainingMs:0,cooldownUntil:0,paygBankMs:0,proResetDate:null,createdAt:new Date().toISOString()};
 }
-function saveCredits(c){try{localStorage.setItem(CREDITS_KEY,JSON.stringify(c));}catch(e){}}
-function consumeCredit(){
-  const c=getCredits();
-  if(c.remaining<=0)return false;
-  c.remaining=Math.max(0,c.remaining-1);
-  saveCredits(c);
-  updateCreditBadge(c.remaining);
-  return true;
+function savePlan(p){try{localStorage.setItem(PLAN_KEY,JSON.stringify(p));}catch(e){}}
+function getUserTier(){return getPlan().tier||'visitor'}
+function isSignedUp(){return getUserTier()!=='visitor'}
+function canUseElevenLabs(){const t=getUserTier();return t==='free'||t==='payg'||t==='pro'}
+function canUsePartner(){return isSignedUp()}
+function canRecord(){return isSignedUp()}
+function canUseEmotions(){return getUserTier()==='pro'}
+function getMaxVideoRes(){const t=getUserTier();if(t==='pro')return{w:3840,h:2160,label:'4K'};if(t==='free'||t==='payg')return{w:1920,h:1080,label:'HD'};return{w:0,h:0,label:'none'}}
+function isFreezable(){const t=getUserTier();return t==='free'||t==='pro'}
+
+function getRemainingSessionMs(){
+  const p=getPlan();
+  if(p.tier==='visitor')return 0;
+  if(p.tier==='pro'){
+    checkProMonthlyReset(p);
+    return p.remainingMs>0?p.remainingMs:PRO_MONTHLY_MS;
+  }
+  if(p.tier==='payg')return p.paygBankMs||0;
+  if(p.tier==='free'){
+    if(p.cooldownUntil&&Date.now()<p.cooldownUntil)return 0;
+    if(p.cooldownUntil&&Date.now()>=p.cooldownUntil){p.cooldownUntil=0;p.remainingMs=FREE_SESSION_MS;savePlan(p);}
+    if(!p.remainingMs&&!p.cooldownUntil){p.remainingMs=FREE_SESSION_MS;savePlan(p);}
+    return p.remainingMs||0;
+  }
+  return 0;
 }
-function hasCredits(){return getCredits().remaining>0}
-function updateCreditBadge(remaining){
+function consumeMs(ms){
+  const p=getPlan();
+  if(p.tier==='visitor')return;
+  if(p.tier==='free'){p.remainingMs=Math.max(0,(p.remainingMs||0)-ms);if(p.remainingMs<=0){p.cooldownUntil=Date.now()+FREE_COOLDOWN_MS;p.remainingMs=0;}savePlan(p);}
+  if(p.tier==='payg'){p.paygBankMs=Math.max(0,(p.paygBankMs||0)-ms);savePlan(p);}
+  if(p.tier==='pro'){p.remainingMs=Math.max(0,(p.remainingMs||0)-ms);savePlan(p);}
+}
+function addPaygMinutes(ms){const p=getPlan();p.paygBankMs=(p.paygBankMs||0)+ms;if(p.tier==='visitor')p.tier='payg';savePlan(p);}
+function checkProMonthlyReset(p){
+  if(p.tier!=='pro'||!p.proResetDate)return;
+  if(Date.now()>=new Date(p.proResetDate).getTime()){
+    p.remainingMs=PRO_MONTHLY_MS;
+    p.proResetDate=new Date(new Date().getFullYear(),new Date().getMonth()+1,1).toISOString();
+    savePlan(p);
+  }
+}
+function fmtTimer(ms){
+  if(ms<=0)return'0:00';
+  const totalSec=Math.ceil(ms/1000);
+  const m=Math.floor(totalSec/60);
+  const s=totalSec%60;
+  return m+':'+(s<10?'0':'')+s;
+}
+function updateTimerBadge(){
   const badge=document.getElementById('creditBadge');
   const el=document.getElementById('creditCount');
   if(!badge||!el)return;
-  if(remaining==null)remaining=getCredits().remaining;
-  el.textContent=remaining;
+  const ms=getRemainingSessionMs();
+  el.textContent=fmtTimer(ms);
   badge.style.display='block';
-  if(remaining<=3)badge.style.background='rgba(220,53,69,.85)';
-  else if(remaining<=8)badge.style.background='rgba(255,165,0,.85)';
+  if(ms<=60000)badge.style.background='rgba(220,53,69,.85)';
+  else if(ms<=180000)badge.style.background='rgba(255,165,0,.85)';
   else badge.style.background='rgba(0,0,0,.6)';
 }
-function hideCreditBadge(){const b=document.getElementById('creditBadge');if(b)b.style.display='none'}
-function showWelcomeCreditBanner(){
-  if(localStorage.getItem('castwing_credit_banner_shown'))return;
-  localStorage.setItem('castwing_credit_banner_shown','true');
-  const c=getCredits();
-  const n=c.remaining;
-  const msg=t('creditsWelcome').replace('{n}',n);
-  const cta=t('creditsSignupCta').replace('{n}',SIGNED_CREDITS);
-  const banner=document.createElement('div');
-  banner.id='creditWelcomeBanner';
-  banner.innerHTML=`<div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1a1a2e;color:#fff;padding:14px 20px;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;z-index:9999;max-width:380px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.3)"><div style="margin-bottom:8px">🎭 ${msg}</div><div style="margin-bottom:12px;opacity:.8;font-size:12px">${cta}</div><div style="display:flex;gap:8px;justify-content:center"><button onclick="this.closest('#creditWelcomeBanner').remove()" style="padding:8px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;cursor:pointer;font-size:13px">${t('creditsBtnContinue')}</button><button onclick="openAuthModal();this.closest('#creditWelcomeBanner').remove()" style="padding:8px 16px;border-radius:8px;border:none;background:#4169e1;color:#fff;cursor:pointer;font-size:13px">${t('creditsBtnSignup')}</button></div></div>`;
-  document.body.appendChild(banner);
-  setTimeout(()=>{if(banner.parentElement)banner.remove()},8000);
+function hideTimerBadge(){const b=document.getElementById('creditBadge');if(b)b.style.display='none'}
+function startSessionTimer(){
+  stopSessionTimer();
+  sessionTimerFrozen=false;
+  updateTimerBadge();
+  sessionTimerInterval=setInterval(()=>{
+    if(sessionTimerFrozen)return;
+    const tier=getUserTier();
+    if(tier==='visitor')return;
+    consumeMs(1000);
+    updateTimerBadge();
+    const ms=getRemainingSessionMs();
+    if(ms<=0)showPaywallModal();
+  },1000);
 }
-function showCreditsDepletedModal(){
-  const c=getCredits();
-  const title=c.isGuest?t('creditsDepletedGuest'):t('creditsDepletedUser');
-  const sub=c.isGuest?t('creditsBrowserFallback'):(t('creditsRenewal').replace('{date}',formatResetDate(c.resetDate))+' '+t('creditsBrowserFallback'));
+function stopSessionTimer(){if(sessionTimerInterval){clearInterval(sessionTimerInterval);sessionTimerInterval=null;}}
+function freezeTimer(){if(isFreezable())sessionTimerFrozen=true;}
+function unfreezeTimer(){sessionTimerFrozen=false;}
+
+function showPaywallModal(){
+  cancelSpeechFlow();
+  freezeTimer();
+  const existing=document.getElementById('paywallOverlay');
+  if(existing)existing.remove();
+  const tier=getUserTier();
   const overlay=document.createElement('div');
-  overlay.id='creditsDepletedOverlay';
+  overlay.id='paywallOverlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:10000';
+  const card=document.createElement('div');
+  card.style.cssText='background:#1a1a2e;color:#fff;border-radius:16px;padding:32px 24px;max-width:380px;width:90%;text-align:center;font-family:"DM Sans",sans-serif;box-shadow:0 8px 40px rgba(0,0,0,.6)';
+  let title=t('paywallTitle');
+  let sub=t('paywallSub');
+  let btns='';
+  if(tier==='free'){
+    const cooldownEnd=getPlan().cooldownUntil;
+    const waitMin=cooldownEnd?Math.ceil((cooldownEnd-Date.now())/60000):0;
+    sub=t('paywallFreeSub').replace('{min}',waitMin>0?waitMin:'~360');
+    btns=`<button onclick="buyPaygBlock()" style="padding:12px 20px;border-radius:10px;border:none;background:#4169e1;color:#fff;cursor:pointer;font-size:14px;font-weight:600;width:100%">${t('paywallContinueBtn')}</button>
+    <div style="font-size:12px;opacity:.6;margin-top:4px">+10 min · ${PAYG_PRICE}</div>
+    <button onclick="document.getElementById('paywallOverlay').remove();goHome()" style="padding:10px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#fff;cursor:pointer;font-size:13px;margin-top:6px">${t('paywallQuitBtn')}</button>`;
+  }else if(tier==='payg'){
+    btns=`<button onclick="buyPaygBlock()" style="padding:12px 20px;border-radius:10px;border:none;background:#4169e1;color:#fff;cursor:pointer;font-size:14px;font-weight:600;width:100%">${t('paywallContinueBtn')}</button>
+    <div style="font-size:12px;opacity:.6;margin-top:4px">+10 min · ${PAYG_PRICE}</div>
+    <button onclick="document.getElementById('paywallOverlay').remove();goHome()" style="padding:10px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#fff;cursor:pointer;font-size:13px;margin-top:6px">${t('paywallQuitBtn')}</button>`;
+  }else{
+    btns=`<button onclick="document.getElementById('paywallOverlay').remove();goHome()" style="padding:12px 20px;border-radius:10px;border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;cursor:pointer;font-size:14px;width:100%">${t('paywallQuitBtn')}</button>`;
+  }
+  card.innerHTML=`<div style="font-size:22px;font-weight:700;margin-bottom:8px">${title}</div><div style="font-size:14px;opacity:.75;margin-bottom:20px;line-height:1.5">${sub}</div><div style="display:flex;flex-direction:column;gap:6px;align-items:center">${btns}</div>`;
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+}
+function buyPaygBlock(){
+  const existing=document.getElementById('paywallOverlay');
+  if(existing)existing.remove();
+  addPaygMinutes(PAYG_BLOCK_MS);
+  unfreezeTimer();
+  updateTimerBadge();
+  showToast('+10 min',2000);
+}
+function showPartnerGate(){
+  const overlay=document.createElement('div');
+  overlay.id='partnerGateOverlay';
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:10000';
   const card=document.createElement('div');
   card.style.cssText='background:#1a1a2e;color:#fff;border-radius:16px;padding:28px 24px;max-width:360px;width:90%;text-align:center;font-family:"DM Sans",sans-serif;box-shadow:0 4px 30px rgba(0,0,0,.5)';
-  let btns=`<button onclick="switchToBrowserVoiceCredits();document.getElementById('creditsDepletedOverlay').remove()" style="padding:10px 18px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;cursor:pointer;font-size:13px">🔊 ${t('creditsBtnBrowser')}</button>`;
-  if(c.isGuest)btns+=`<button onclick="openAuthModal();document.getElementById('creditsDepletedOverlay').remove()" style="padding:10px 18px;border-radius:8px;border:none;background:#4169e1;color:#fff;cursor:pointer;font-size:13px">${t('creditsBtnSignup')}</button>`;
-  card.innerHTML=`<div style="font-size:18px;font-weight:700;margin-bottom:10px">${title}</div><div style="font-size:13px;opacity:.8;margin-bottom:18px">${sub}</div><div style="display:flex;gap:8px;justify-content:center">${btns}</div>`;
+  card.innerHTML=`<div style="font-size:17px;font-weight:700;margin-bottom:10px">${t('partnerGateTitle')}</div><div style="font-size:13px;opacity:.8;margin-bottom:18px">${t('partnerGateDesc')}</div><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button onclick="openAuthModal();document.getElementById('partnerGateOverlay').remove()" style="padding:10px 18px;border-radius:8px;border:none;background:#4169e1;color:#fff;cursor:pointer;font-size:13px;font-weight:600">${t('partnerGateSignup')}</button><button onclick="document.getElementById('partnerGateOverlay').remove();goSetupAi()" style="padding:10px 18px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;cursor:pointer;font-size:13px">${t('partnerGateSolo')}</button></div>`;
   overlay.appendChild(card);
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove()});
   document.body.appendChild(overlay);
 }
-function switchToBrowserVoiceCredits(){
-  elevenLabsTemporarilyDisabled=true;
-  elevenLabsDisableReason='credits_depleted';
-  showToast(t('creditsBrowserFallback'),3000);
-}
-function formatResetDate(iso){
-  if(!iso)return'?';
-  try{const d=new Date(iso);return d.toLocaleDateString(selectedUILanguage==='fr'?'fr-FR':'en-US',{day:'numeric',month:'long'})}catch(e){return iso}
-}
-function getNextFirstOfMonth(){
-  const now=new Date();
-  return new Date(now.getFullYear(),now.getMonth()+1,1).toISOString();
-}
-function checkMonthlyReset(){
-  const c=getCredits();
-  if(c.isGuest||!c.resetDate)return;
-  if(new Date()>=new Date(c.resetDate)){
-    c.remaining=c.total||SIGNED_CREDITS;
-    c.resetDate=getNextFirstOfMonth();
-    saveCredits(c);
-    if(elevenLabsDisableReason==='credits_depleted'){
-      elevenLabsTemporarilyDisabled=false;
-      elevenLabsDisableReason='';
-    }
-  }
-}
 function onUserSignedIn(user){
-  const guest=getCredits();
-  if(guest.isGuest){
-    const upgraded={total:SIGNED_CREDITS,remaining:Math.max(guest.remaining,SIGNED_CREDITS),isGuest:false,userId:user&&user.id||'',resetDate:getNextFirstOfMonth(),createdAt:new Date().toISOString()};
-    saveCredits(upgraded);
+  const p=getPlan();
+  if(p.tier==='visitor'){
+    p.tier='free';
+    p.remainingMs=FREE_SESSION_MS;
+    p.cooldownUntil=0;
+    p.createdAt=new Date().toISOString();
+    savePlan(p);
   }
   if(elevenLabsDisableReason==='credits_depleted'){
     elevenLabsTemporarilyDisabled=false;
     elevenLabsDisableReason='';
   }
-  updateCreditBadge();
 }
+// ── Referral System ──
+function getReferralData(){
+  try{const r=localStorage.getItem(REFERRAL_KEY);if(r)return JSON.parse(r);}catch(e){}
+  const code=genCode();
+  const init={code,signups:0,rewarded:false};
+  try{localStorage.setItem(REFERRAL_KEY,JSON.stringify(init));}catch(e){}
+  return init;
+}
+function recordReferralSignup(){
+  const r=getReferralData();
+  r.signups=(r.signups||0)+1;
+  if(r.signups>=2&&!r.rewarded){r.rewarded=true;addPaygMinutes(30*60*1000);showToast(t('referralReward'),4000);}
+  try{localStorage.setItem(REFERRAL_KEY,JSON.stringify(r));}catch(e){}
+}
+function getReferralCode(){return getReferralData().code||''}
 
 function getTTSEndpointCandidates(){
   const host=(window.location.hostname||'').toLowerCase();
@@ -797,8 +873,8 @@ const UI_LANGUAGES=[
   {id:'ru',label:'Русский',flag:'🇷🇺'},
 ];
 const UI_I18N={
-  fr:{homeSubtitle:"Studio d'audition",siteLanguageLabel:'Langue du site',homeVoicesLabel:'Voix IA disponibles',homeSoloTitle:'Solo + IA',homeSoloDesc:"L'IA donne la réplique avec une voix",homePartnerTitle:'Avec un partenaire',homePartnerDesc:"Inviter quelqu'un à donner la réplique",homeFooterText:'WebRTC pair-à-pair · Aucune donnée stockée',partnerChoiceTitle:'Session partenaire',partnerCreateTitle:'Je crée la session (acteur)',partnerCreateDesc:'Générer un code et inviter un partenaire',partnerJoinTitle:'Je rejoins une session (partenaire)',partnerJoinDesc:"Entrer le code de l'acteur",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF ou texte)',uploadLabel:'Glisse ton PDF ici ou clique',uploadSub:'Format scénario standard',myCharacterLabel:'Mon personnage',partnerReadsLabel:'IA lit les répliques de :',partnerAllOthersBtn:'Tous les autres personnages',partnerHintAll:'L’IA joue tous les rôles sauf le tien.',partnerHintDuo:'Mode duo : uniquement les échanges entre toi et ce personnage.',pickCharacterFirst:'Choisis d’abord ton personnage',pasteScriptLabel:'Ou colle le texte',replyModeLabel:'Mode réplique',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuel',modeAutoBtn:'🎤 Auto',voiceSectionLabel:"Voix de l'IA",voiceLanguageLabel:'Langue voix',emotionLabel:'Émotion',speedLabel:'Vitesse',speedSlowBtn:'Lent x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rapide x1.6',launchAiBtn:'Lancer la session 🦾',setupPartnerTitle:'Avec un partenaire',sessionCodeLabel:'Ton code de session',sessionCodeHint:'Partage ce code à ton partenaire',copyCodeBtn:'📋 Copier code',copyLinkBtn:'🔗 Copier lien',shareBtn:'📤 Partager',launchPartnerBtn:'Lancer la session 🎬',joinScreenTitle:'Rejoindre une session',joinCodeLabel:'Code de session',joinCodePlaceholder:"Entre le code de l'acteur",joinSessionBtn:'Rejoindre 🎙️',prompterEmptyText:'Aucun texte chargé',sessionVoiceLabel:'🦾 Voix :',prevBtn:'◀ Préc',nextBtn:'Suiv ▶',quitBtn:'Quitter',modeHintAi:"L'IA lit les répliques du partenaire automatiquement.",modeHintManual:'Avance les répliques manuellement avec les boutons.',modeHintAuto:"L'IA lit le partenaire puis détecte la fin de ta phrase (silence) pour avancer — durée adaptée à la longueur de ta réplique.",toastEmotion:'Émotion',toastSpeed:'Vitesse',toastVoice:'Voix',toastAccent:'Langue voix',toastLanguage:'Langue du site',toastVoiceFallback:'Voix de secours utilisée'},
-  en:{homeSubtitle:'Audition studio',siteLanguageLabel:'Website language',homeVoicesLabel:'Available AI voices',homeSoloTitle:'Solo + AI',homeSoloDesc:'AI reads the partner lines',homePartnerTitle:'With a partner',homePartnerDesc:'Invite someone to read lines with you',homeFooterText:'Peer-to-peer WebRTC · No stored data',partnerChoiceTitle:'Partner session',partnerCreateTitle:'Create session (actor)',partnerCreateDesc:'Generate a code and invite a partner',partnerJoinTitle:'Join session (partner)',partnerJoinDesc:"Enter the actor's code",setupAiTitle:'Solo + AI',scriptLabel:'Script (PDF or text)',uploadLabel:'Drop your PDF here or click',uploadSub:'Standard screenplay format',myCharacterLabel:'My character',partnerReadsLabel:'Scene partner reads:',partnerAllOthersBtn:'All other characters',partnerHintAll:'The AI plays every role except yours.',partnerHintDuo:'Duo mode: only lines between you and this character.',pickCharacterFirst:'Choose your character first',pasteScriptLabel:'Or paste text',replyModeLabel:'Reply mode',modeAiBtn:'🦾 Voice AI',modeManBtn:'✋ Manual',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'AI voice',voiceLanguageLabel:'Voice language',emotionLabel:'Emotion',speedLabel:'Speed',speedSlowBtn:'Slow x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Fast x1.6',launchAiBtn:'Start session 🦾',setupPartnerTitle:'With a partner',sessionCodeLabel:'Your session code',sessionCodeHint:'Share this code with your partner',copyCodeBtn:'📋 Copy code',copyLinkBtn:'🔗 Copy link',shareBtn:'📤 Share',launchPartnerBtn:'Start session 🎬',joinScreenTitle:'Join a session',joinCodeLabel:'Session code',joinCodePlaceholder:"Enter actor's code",joinSessionBtn:'Join 🎙️',prompterEmptyText:'No script loaded',sessionVoiceLabel:'🦾 Voice:',prevBtn:'◀ Prev',nextBtn:'Next ▶',quitBtn:'Quit',modeHintAi:'AI reads partner lines automatically.',modeHintManual:'Advance lines manually with the buttons.',modeHintAuto:'AI reads partner lines, then waits for the end of your line (silence) — pause scales with line length.',toastEmotion:'Emotion',toastSpeed:'Speed',toastVoice:'Voice',toastAccent:'Voice language',toastLanguage:'Website language',toastVoiceFallback:'Backup voice used'},
+  fr:{homeSubtitle:'Répète tes scènes sans dépendre de personne.',siteLanguageLabel:'Langue du site',homeSoloTitle:'Commencer une scène',homeSoloDesc:"Solo avec l'IA ou lecture manuelle",homePartnerTitle:'Répéter avec un partenaire',homePartnerDesc:'Invite quelqu\'un pour jouer la scène en vrai',homeFooterText:'Pair-à-pair · Aucune donnée stockée',partnerChoiceTitle:'Session partenaire',partnerCreateTitle:'Je crée la session (acteur)',partnerCreateDesc:'Générer un code et inviter un partenaire',partnerJoinTitle:'Je rejoins une session (partenaire)',partnerJoinDesc:"Entrer le code de l'acteur",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF ou texte)',uploadLabel:'Glisse ton PDF ici ou clique',uploadSub:'Format scénario standard',myCharacterLabel:'Mon personnage',partnerReadsLabel:'IA lit les répliques de :',partnerAllOthersBtn:'Tous les autres personnages',partnerHintAll:'L’IA joue tous les rôles sauf le tien.',partnerHintDuo:'Mode duo : uniquement les échanges entre toi et ce personnage.',pickCharacterFirst:'Choisis d’abord ton personnage',pasteScriptLabel:'Ou colle le texte',replyModeLabel:'Mode réplique',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuel',modeAutoBtn:'🎤 Auto',voiceSectionLabel:"Voix de l'IA",voiceLanguageLabel:'Langue voix',emotionLabel:'Émotion',speedLabel:'Vitesse',speedSlowBtn:'Lent x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rapide x1.6',launchAiBtn:'Lancer la session 🦾',setupPartnerTitle:'Avec un partenaire',sessionCodeLabel:'Ton code de session',sessionCodeHint:'Partage ce code à ton partenaire',copyCodeBtn:'📋 Copier code',copyLinkBtn:'🔗 Copier lien',shareBtn:'📤 Partager',launchPartnerBtn:'Lancer la session 🎬',joinScreenTitle:'Rejoindre une session',joinCodeLabel:'Code de session',joinCodePlaceholder:"Entre le code de l'acteur",joinSessionBtn:'Rejoindre 🎙️',prompterEmptyText:'Aucun texte chargé',sessionVoiceLabel:'🦾 Voix :',prevBtn:'◀ Préc',nextBtn:'Suiv ▶',quitBtn:'Quitter',modeHintAi:"L'IA lit les répliques du partenaire automatiquement.",modeHintManual:'Avance les répliques manuellement avec les boutons.',modeHintAuto:"L'IA lit le partenaire puis détecte la fin de ta phrase (silence) pour avancer — durée adaptée à la longueur de ta réplique.",toastEmotion:'Émotion',toastSpeed:'Vitesse',toastVoice:'Voix',toastAccent:'Langue voix',toastLanguage:'Langue du site',toastVoiceFallback:'Voix de secours utilisée'},
+  en:{homeSubtitle:'Rehearse your scenes without depending on anyone.',siteLanguageLabel:'Website language',homeSoloTitle:'Start a scene',homeSoloDesc:'Solo with AI or manual reading',homePartnerTitle:'Rehearse with a partner',homePartnerDesc:'Invite someone to play the scene for real',homeFooterText:'Peer-to-peer · No data stored',partnerChoiceTitle:'Partner session',partnerCreateTitle:'Create session (actor)',partnerCreateDesc:'Generate a code and invite a partner',partnerJoinTitle:'Join session (partner)',partnerJoinDesc:"Enter the actor's code",setupAiTitle:'Solo + AI',scriptLabel:'Script (PDF or text)',uploadLabel:'Drop your PDF here or click',uploadSub:'Standard screenplay format',myCharacterLabel:'My character',partnerReadsLabel:'Scene partner reads:',partnerAllOthersBtn:'All other characters',partnerHintAll:'The AI plays every role except yours.',partnerHintDuo:'Duo mode: only lines between you and this character.',pickCharacterFirst:'Choose your character first',pasteScriptLabel:'Or paste text',replyModeLabel:'Reply mode',modeAiBtn:'🦾 Voice AI',modeManBtn:'✋ Manual',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'AI voice',voiceLanguageLabel:'Voice language',emotionLabel:'Emotion',speedLabel:'Speed',speedSlowBtn:'Slow x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Fast x1.6',launchAiBtn:'Start session 🦾',setupPartnerTitle:'With a partner',sessionCodeLabel:'Your session code',sessionCodeHint:'Share this code with your partner',copyCodeBtn:'📋 Copy code',copyLinkBtn:'🔗 Copy link',shareBtn:'📤 Share',launchPartnerBtn:'Start session 🎬',joinScreenTitle:'Join a session',joinCodeLabel:'Session code',joinCodePlaceholder:"Enter actor's code",joinSessionBtn:'Join 🎙️',prompterEmptyText:'No script loaded',sessionVoiceLabel:'🦾 Voice:',prevBtn:'◀ Prev',nextBtn:'Next ▶',quitBtn:'Quit',modeHintAi:'AI reads partner lines automatically.',modeHintManual:'Advance lines manually with the buttons.',modeHintAuto:'AI reads partner lines, then waits for the end of your line (silence) — pause scales with line length.',toastEmotion:'Emotion',toastSpeed:'Speed',toastVoice:'Voice',toastAccent:'Voice language',toastLanguage:'Website language',toastVoiceFallback:'Backup voice used'},
   es:{homeSubtitle:'Estudio de audición',siteLanguageLabel:'Idioma del sitio',homeVoicesLabel:'Voces IA disponibles',homeSoloTitle:'Solo + IA',homeSoloDesc:'La IA da la réplica con voz',homePartnerTitle:'Con un compañero',homePartnerDesc:'Invita a alguien para dar la réplica',homeFooterText:'WebRTC punto a punto · Sin datos guardados',partnerChoiceTitle:'Sesión con compañero',partnerCreateTitle:'Creo la sesión (actor)',partnerCreateDesc:'Generar código e invitar a un compañero',partnerJoinTitle:'Me uno a una sesión (compañero)',partnerJoinDesc:'Ingresar el código del actor',setupAiTitle:'Solo + IA',scriptLabel:'Guion (PDF o texto)',uploadLabel:'Arrastra tu PDF aquí o haz clic',uploadSub:'Formato estándar de guion',myCharacterLabel:'Mi personaje',pasteScriptLabel:'O pega el texto',replyModeLabel:'Modo de réplica',modeAiBtn:'🦾 IA vocal',modeManBtn:'✋ Manual',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'Voz de IA',voiceLanguageLabel:'Idioma de voz',emotionLabel:'Emoción',speedLabel:'Velocidad',speedSlowBtn:'Lento x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rápido x1.6',launchAiBtn:'Iniciar sesión 🦾',setupPartnerTitle:'Con un compañero',sessionCodeLabel:'Tu código de sesión',sessionCodeHint:'Comparte este código',copyCodeBtn:'📋 Copiar código',copyLinkBtn:'🔗 Copiar enlace',shareBtn:'📤 Compartir',launchPartnerBtn:'Iniciar sesión 🎬',joinScreenTitle:'Unirse a una sesión',joinCodeLabel:'Código de sesión',joinCodePlaceholder:'Ingresa el código del actor',joinSessionBtn:'Unirse 🎙️',prompterEmptyText:'Ningún texto cargado',sessionVoiceLabel:'🦾 Voz:',prevBtn:'◀ Ant',nextBtn:'Sig ▶',quitBtn:'Salir',modeHintAi:'La IA lee las líneas del compañero automáticamente.',modeHintManual:'Avanza manualmente con los botones.',modeHintAuto:'La IA lee y avanza tras 1.5s de silencio.',toastEmotion:'Emoción',toastSpeed:'Velocidad',toastVoice:'Voz',toastAccent:'Idioma de voz',toastLanguage:'Idioma del sitio',toastVoiceFallback:'Voz de respaldo usada'},
   it:{homeSubtitle:'Studio di audizione',siteLanguageLabel:'Lingua del sito',homeVoicesLabel:'Voci IA disponibili',homeSoloTitle:'Solo + IA',homeSoloDesc:'L’IA recita le battute partner',homePartnerTitle:'Con un partner',homePartnerDesc:'Invita qualcuno a dare la replica',homeFooterText:'WebRTC peer-to-peer · Nessun dato salvato',partnerChoiceTitle:'Sessione partner',partnerCreateTitle:'Creo sessione (attore)',partnerCreateDesc:'Genera codice e invita un partner',partnerJoinTitle:'Mi unisco a una sessione',partnerJoinDesc:"Inserisci il codice dell'attore",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF o testo)',uploadLabel:'Trascina il PDF o fai clic',uploadSub:'Formato copione standard',myCharacterLabel:'Il mio personaggio',pasteScriptLabel:'Oppure incolla il testo',replyModeLabel:'Modalità battuta',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuale',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'Voce IA',voiceLanguageLabel:'Lingua voce',emotionLabel:'Emozione',speedLabel:'Velocità',speedSlowBtn:'Lento x0.7',speedNormalBtn:'Normale x1',speedFastBtn:'Veloce x1.6',launchAiBtn:'Avvia sessione 🦾',setupPartnerTitle:'Con un partner',sessionCodeLabel:'Codice sessione',sessionCodeHint:'Condividi questo codice',copyCodeBtn:'📋 Copia codice',copyLinkBtn:'🔗 Copia link',shareBtn:'📤 Condividi',launchPartnerBtn:'Avvia sessione 🎬',joinScreenTitle:'Unisciti a una sessione',joinCodeLabel:'Codice sessione',joinCodePlaceholder:"Inserisci il codice dell'attore",joinSessionBtn:'Unisciti 🎙️',prompterEmptyText:'Nessun testo caricato',sessionVoiceLabel:'🦾 Voce:',prevBtn:'◀ Prec',nextBtn:'Succ ▶',quitBtn:'Esci',modeHintAi:'L’IA legge automaticamente le battute partner.',modeHintManual:'Avanza manualmente con i pulsanti.',modeHintAuto:'L’IA avanza dopo 1.5s di silenzio.',toastEmotion:'Emozione',toastSpeed:'Velocità',toastVoice:'Voce',toastAccent:'Lingua voce',toastLanguage:'Lingua sito',toastVoiceFallback:'Usata voce di backup'},
   zh:{homeSubtitle:'试镜工作室',siteLanguageLabel:'网站语言',homeVoicesLabel:'可用 AI 语音',homeSoloTitle:'单人 + AI',homeSoloDesc:'AI 朗读对手台词',homePartnerTitle:'与搭档',homePartnerDesc:'邀请他人一起对词',homeFooterText:'点对点 WebRTC · 不保存数据',partnerChoiceTitle:'搭档会话',partnerCreateTitle:'创建会话（演员）',partnerCreateDesc:'生成代码并邀请搭档',partnerJoinTitle:'加入会话（搭档）',partnerJoinDesc:'输入演员代码',setupAiTitle:'单人 + AI',scriptLabel:'剧本（PDF 或文本）',uploadLabel:'拖放 PDF 或点击上传',uploadSub:'标准剧本格式',myCharacterLabel:'我的角色',pasteScriptLabel:'或粘贴文本',replyModeLabel:'台词模式',modeAiBtn:'🦾 AI 语音',modeManBtn:'✋ 手动',modeAutoBtn:'🎤 自动',voiceSectionLabel:'AI 语音',voiceLanguageLabel:'语音语言',emotionLabel:'情绪',speedLabel:'速度',speedSlowBtn:'慢速 x0.7',speedNormalBtn:'正常 x1',speedFastBtn:'快速 x1.6',launchAiBtn:'开始会话 🦾',setupPartnerTitle:'与搭档',sessionCodeLabel:'会话代码',sessionCodeHint:'把代码发给搭档',copyCodeBtn:'📋 复制代码',copyLinkBtn:'🔗 复制链接',shareBtn:'📤 分享',launchPartnerBtn:'开始会话 🎬',joinScreenTitle:'加入会话',joinCodeLabel:'会话代码',joinCodePlaceholder:'输入演员代码',joinSessionBtn:'加入 🎙️',prompterEmptyText:'尚未加载文本',sessionVoiceLabel:'🦾 语音:',prevBtn:'◀ 上一条',nextBtn:'下一条 ▶',quitBtn:'退出',modeHintAi:'AI 自动朗读对手台词。',modeHintManual:'使用按钮手动推进。',modeHintAuto:'静音 1.5 秒后自动推进。',toastEmotion:'情绪',toastSpeed:'速度',toastVoice:'语音',toastAccent:'语音语言',toastLanguage:'网站语言',toastVoiceFallback:'已使用备用语音'},
@@ -816,6 +892,11 @@ const UI_EXTRA_I18N={
   fr:{codeUnavailable:'Code indisponible',codeCopied:'Code copié',linkUnavailable:'Lien indisponible',linkCopied:'Lien copié',copyFailed:'Copie impossible',shareUnavailable:'Partage indisponible',shareTextCopied:'Texte copié',joinCodePrefilled:'Code prérempli',joinCodeMissing:'Entre un code',waitingForPartner:'En attente du partenaire…',waitingOverlayTitle:'En attente…',waitingOverlayMessage:'Partage le code ',connection:'Connexion…',searching:'Recherche de ',sessionNotFound:'Session introuvable.',connectionSlow:'Connexion lente',disconnected:'Déconnecté',partnerDisconnected:'Partenaire déconnecté',error:'Erreur'},
 };
 const UI_FALLBACK_TRANSLATIONS={
+  homeSubtitle:{es:'Ensaya tus escenas sin depender de nadie.',it:'Prova le tue scene senza dipendere da nessuno.',zh:'不依赖任何人，自主排练。',ko:'누구에게도 의존하지 않고 장면을 연습하세요.',ja:'誰にも頼らずシーンをリハーサル。',ar:'تدرّب على مشاهدك دون الاعتماد على أحد.',de:'Proben ohne auf jemanden angewiesen zu sein.',pt:'Ensaie suas cenas sem depender de ninguém.',hi:'किसी पर निर्भर हुए बिना अपने सीन रिहर्स करें।',tr:'Kimseye bağlı kalmadan sahnelerini prova et.',ru:'Репетируйте сцены, не завися ни от кого.'},
+  homeSoloTitle:{es:'Iniciar una escena',it:'Inizia una scena',zh:'开始一个场景',ko:'장면 시작',ja:'シーンを始める',ar:'ابدأ مشهدًا',de:'Szene starten',pt:'Iniciar uma cena',hi:'एक सीन शुरू करें',tr:'Bir sahne başlat',ru:'Начать сцену'},
+  homeSoloDesc:{es:'Solo con IA o lectura manual',it:'Solo con IA o lettura manuale',zh:'独自与AI或手动阅读',ko:'AI와 솔로 또는 수동 읽기',ja:'AIとソロまたは手動読み',ar:'منفرد مع الذكاء الاصطناعي أو القراءة اليدوية',de:'Solo mit KI oder manuelles Lesen',pt:'Solo com IA ou leitura manual',hi:'AI के साथ सोलो या मैनुअल पठन',tr:'Yapay zeka ile solo veya manuel okuma',ru:'Соло с ИИ или ручное чтение'},
+  homePartnerTitle:{es:'Ensayar con un compañero',it:'Prova con un partner',zh:'与搭档排练',ko:'파트너와 연습',ja:'パートナーとリハーサル',ar:'تدرّب مع شريك',de:'Mit Partner proben',pt:'Ensaiar com um parceiro',hi:'पार्टनर के साथ रिहर्सल',tr:'Partnerle prova yap',ru:'Репетировать с партнёром'},
+  homePartnerDesc:{es:'Invita a alguien a actuar la escena de verdad',it:'Invita qualcuno a recitare la scena dal vivo',zh:'邀请搭档真实演绎场景',ko:'누군가를 초대해 실제로 장면을 연기하세요',ja:'誰かを招待して本番さながらのシーンを',ar:'ادعُ شخصًا لتمثيل المشهد فعليًا',de:'Lade jemanden ein, die Szene wirklich zu spielen',pt:'Convide alguém para encenar de verdade',hi:'किसी को असली सीन करने के लिए आमंत्रित करें',tr:'Sahneyi gerçekten oynaması için birini davet et',ru:'Пригласите кого-нибудь сыграть сцену по-настоящему'},
   partnerReadsLabel:{es:'La IA lee las líneas de:',it:'L’IA legge le battute di:',zh:'AI 朗读以下角色台词：',ko:'AI가 읽을 상대 역할:',ja:'AI が読む相手役:',ar:'الذكاء الاصطناعي يقرأ دور:',de:'KI liest die Zeilen von:',pt:'A IA lê as falas de:',hi:'AI इन किरदारों की लाइनें पढ़े:'},
   partnerAllOthersBtn:{es:'Todos los demás personajes',it:'Tutti gli altri personaggi',zh:'所有其他角色',ko:'다른 모든 캐릭터',ja:'他のすべてのキャラクター',ar:'جميع الشخصيات الأخرى',de:'Alle anderen Figuren',pt:'Todos os outros personagens',hi:'बाकी सभी किरदार'},
   partnerHintAll:{es:'La IA interpreta todos los personajes excepto el tuyo.',it:'L’IA interpreta tutti i ruoli tranne il tuo.',zh:'AI 扮演除你以外的所有角色。',ko:'AI가 당신 역할을 제외한 모든 배역을 읽습니다.',ja:'AI はあなた以外の全役を読みます。',ar:'الذكاء الاصطناعي يلعب كل الأدوار ما عدا دورك.',de:'Die KI spricht alle Rollen außer deiner.',pt:'A IA faz todas as falas, exceto as suas.',hi:'AI आपके किरदार को छोड़कर बाकी सभी भूमिकाएँ पढ़ेगा।'},
@@ -849,15 +930,18 @@ const UI_FALLBACK_TRANSLATIONS={
   authVerified:{fr:'Email vérifié ✅',en:'Email verified ✅',es:'Email verificado ✅',it:'Email verificata ✅',zh:'邮箱验证成功 ✅',ko:'이메일 인증 완료 ✅',ja:'メール認証完了 ✅',ar:'تم التحقق من البريد ✅',de:'E-Mail bestätigt ✅',pt:'E-mail verificado ✅',hi:'ईमेल सत्यापित ✅'},
   authInvalidCode:{fr:'Code invalide',en:'Invalid code',es:'Código inválido',it:'Codice non valido',zh:'验证码无效',ko:'코드가 올바르지 않습니다',ja:'コードが無効です',ar:'رمز غير صالح',de:'Ungültiger Code',pt:'Código inválido',hi:'कोड अमान्य है'},
   usageBlocked:{fr:'Limite atteinte. Attends 1h ou débloque à 1$.',en:'Limit reached. Wait 1h or unlock for $1.',es:'Límite alcanzado. Espera 1h o desbloquea por 1$.',it:'Limite raggiunto. Attendi 1h o sblocca con 1$.',zh:'已达上限。等待1小时或支付1美元解锁。',ko:'사용 한도 도달. 1시간 대기 또는 1달러 결제로 해제.',ja:'上限に達しました。1時間待つか1ドルで解除。',ar:'تم بلوغ الحد. انتظر ساعة أو افتح مقابل 1$.',de:'Limit erreicht. 1h warten oder für 1$ entsperren.',pt:'Limite atingido. Aguarde 1h ou desbloqueie por 1$.',hi:'सीमा पूरी। 1 घंटा प्रतीक्षा करें या 1$ देकर अनलॉक करें।'},
-  creditsWelcome:{fr:'Tu as {n} lectures vocales AI gratuites.',en:'You have {n} free AI voice reads.',es:'Tienes {n} lecturas de voz IA gratis.',it:'Hai {n} letture vocali AI gratuite.',zh:'你有 {n} 次免费 AI 语音朗读。',ko:'무료 AI 음성 읽기 {n}회를 사용할 수 있습니다.',ja:'無料 AI 音声読み上げが {n} 回あります。',ar:'لديك {n} قراءة صوتية AI مجانية.',de:'Du hast {n} kostenlose KI-Sprachlesungen.',pt:'Você tem {n} leituras de voz IA grátis.',hi:'आपके पास {n} मुफ्त AI वॉइस रीड हैं।',tr:'{n} ücretsiz AI sesli okuma hakkınız var.',ru:'У вас {n} бесплатных AI-озвучек.'},
-  creditsSignupCta:{fr:"Inscris-toi pour en avoir {n} par mois !",en:'Sign up for {n} per month!',es:'Regístrate para obtener {n} al mes.',it:'Iscriviti per averne {n} al mese!',zh:'注册即可每月获得 {n} 次！',ko:'매월 {n}회를 받으려면 가입하세요!',ja:'毎月 {n} 回もらえる！登録はこちら',ar:'سجّل للحصول على {n} شهريًا!',de:'Melde dich an für {n} pro Monat!',pt:'Cadastre-se para {n} por mês!',hi:'हर महीने {n} पाने के लिए साइन अप करें!',tr:'Aylık {n} almak için kaydolun!',ru:'Зарегистрируйтесь — {n} в месяц!'},
-  creditsDepletedGuest:{fr:'Tes crédits vocaux AI sont épuisés !',en:'Your AI voice credits are used up!',es:'¡Tus créditos de voz IA se agotaron!',it:'I tuoi crediti vocali AI sono esauriti!',zh:'你的 AI 语音积分已用完！',ko:'AI 음성 크레딧을 모두 사용했습니다!',ja:'AI 音声クレジットが使い切りました！',ar:'نفدت أرصدتك الصوتية AI!',de:'Deine KI-Sprachguthaben sind aufgebraucht!',pt:'Seus créditos de voz IA acabaram!',hi:'आपके AI वॉइस क्रेडिट खत्म हो गए!',tr:'AI ses kredileriniz tükendi!',ru:'Ваши AI-кредиты исчерпаны!'},
-  creditsDepletedUser:{fr:'Tes crédits vocaux du mois sont épuisés !',en:'Your monthly voice credits are used up!',es:'¡Tus créditos de voz del mes se agotaron!',it:'I tuoi crediti vocali del mese sono esauriti!',zh:'本月语音积分已用完！',ko:'이번 달 음성 크레딧을 모두 사용했습니다!',ja:'今月の音声クレジットが使い切りました！',ar:'نفدت أرصدتك الصوتية لهذا الشهر!',de:'Deine Sprachguthaben für diesen Monat sind aufgebraucht!',pt:'Seus créditos de voz do mês acabaram!',hi:'इस महीने के वॉइस क्रेडिट खत्म हो गए!',tr:'Bu ayki ses kredileriniz tükendi!',ru:'Ваши голосовые кредиты в этом месяце исчерпаны!'},
-  creditsRenewal:{fr:'Renouvellement le {date}.',en:'Renewal on {date}.',es:'Renovación el {date}.',it:'Rinnovo il {date}.',zh:'{date} 续期。',ko:'{date}에 갱신됩니다.',ja:'{date} に更新されます。',ar:'التجديد في {date}.',de:'Erneuerung am {date}.',pt:'Renovação em {date}.',hi:'{date} को नवीनीकरण।',tr:'{date} tarihinde yenilenir.',ru:'Обновление {date}.'},
-  creditsBrowserFallback:{fr:'Continue avec les voix gratuites du navigateur.',en:'Continue with free browser voices.',es:'Continúa con las voces gratuitas del navegador.',it:'Continua con le voci gratuite del browser.',zh:'继续使用免费浏览器语音。',ko:'무료 브라우저 음성으로 계속합니다.',ja:'無料のブラウザ音声で続行します。',ar:'تابع باستخدام أصوات المتصفح المجانية.',de:'Nutze die kostenlosen Browserstimmen weiter.',pt:'Continue com as vozes gratuitas do navegador.',hi:'मुफ़्त ब्राउज़र वॉइस के साथ जारी रखें।',tr:'Ücretsiz tarayıcı sesleriyle devam edin.',ru:'Продолжайте с бесплатными голосами браузера.'},
-  creditsBtnBrowser:{fr:'Voix navigateur',en:'Browser voice',es:'Voz del navegador',it:'Voce browser',zh:'浏览器语音',ko:'브라우저 음성',ja:'ブラウザ音声',ar:'صوت المتصفح',de:'Browserstimme',pt:'Voz do navegador',hi:'ब्राउज़र वॉइस',tr:'Tarayıcı sesi',ru:'Голос браузера'},
-  creditsBtnSignup:{fr:"S'inscrire",en:'Sign up',es:'Registrarse',it:'Iscriviti',zh:'注册',ko:'가입',ja:'登録',ar:'سجّل',de:'Registrieren',pt:'Cadastrar',hi:'साइन अप',tr:'Kaydol',ru:'Зарегистрироваться'},
-  creditsBtnContinue:{fr:'Continuer',en:'Continue',es:'Continuar',it:'Continua',zh:'继续',ko:'계속',ja:'続ける',ar:'متابعة',de:'Weiter',pt:'Continuar',hi:'जारी रखें',tr:'Devam',ru:'Продолжить'},
+  paywallTitle:{fr:'La scène s\'arrête ici.',en:'The scene stops here.',es:'La escena se detiene aquí.',it:'La scena si ferma qui.',zh:'场景到此为止。',ko:'장면이 여기서 멈춥니다.',ja:'シーンはここで終了です。',ar:'المشهد يتوقف هنا.',de:'Die Szene endet hier.',pt:'A cena para aqui.',hi:'दृश्य यहीं रुकता है।',tr:'Sahne burada duruyor.',ru:'Сцена останавливается здесь.'},
+  paywallSub:{fr:'Tu peux continuer maintenant.',en:'You can continue now.',es:'Puedes continuar ahora.',it:'Puoi continuare ora.',zh:'你可以继续。',ko:'지금 계속할 수 있습니다.',ja:'今すぐ続けることができます。',ar:'يمكنك المتابعة الآن.',de:'Du kannst jetzt weitermachen.',pt:'Você pode continuar agora.',hi:'अब आप जारी रख सकते हैं।',tr:'Şimdi devam edebilirsiniz.',ru:'Вы можете продолжить сейчас.'},
+  paywallFreeSub:{fr:'Reviens dans {min} min ou continue tout de suite.',en:'Come back in {min} min or continue now.',es:'Vuelve en {min} min o continúa ahora.',it:'Torna tra {min} min o continua ora.',zh:'{min}分钟后回来或立即继续。',ko:'{min}분 후에 돌아오거나 지금 계속하세요.',ja:'{min}分後に戻るか今すぐ続けてください。',ar:'عد بعد {min} دقيقة أو تابع الآن.',de:'Komm in {min} Min zurück oder mach jetzt weiter.',pt:'Volte em {min} min ou continue agora.',hi:'{min} मिनट बाद वापस आएं या अभी जारी रखें।',tr:'{min} dk sonra gelin veya şimdi devam edin.',ru:'Вернитесь через {min} мин или продолжите сейчас.'},
+  paywallContinueBtn:{fr:'Continuer la scène',en:'Continue the scene',es:'Continuar la escena',it:'Continua la scena',zh:'继续场景',ko:'장면 계속',ja:'シーンを続ける',ar:'أكمل المشهد',de:'Szene fortsetzen',pt:'Continuar a cena',hi:'दृश्य जारी रखें',tr:'Sahneye devam et',ru:'Продолжить сцену'},
+  paywallQuitBtn:{fr:'Quitter',en:'Quit',es:'Salir',it:'Esci',zh:'退出',ko:'종료',ja:'終了',ar:'إنهاء',de:'Beenden',pt:'Sair',hi:'छोड़ें',tr:'Çıkış',ru:'Выйти'},
+  partnerGateTitle:{fr:'Crée un compte pour inviter un partenaire.',en:'Create an account to invite a partner.',es:'Crea una cuenta para invitar a un compañero.',it:'Crea un account per invitare un partner.',zh:'创建帐户以邀请搭档。',ko:'파트너를 초대하려면 계정을 만드세요.',ja:'パートナーを招待するにはアカウントを作成してください。',ar:'أنشئ حسابًا لدعوة شريك.',de:'Erstelle ein Konto, um einen Partner einzuladen.',pt:'Crie uma conta para convidar um parceiro.',hi:'पार्टनर को आमंत्रित करने के लिए अकाउंट बनाएं।',tr:'Partner davet etmek için hesap oluşturun.',ru:'Создайте аккаунт, чтобы пригласить партнёра.'},
+  partnerGateDesc:{fr:'Inscris-toi gratuitement pour débloquer le mode partenaire.',en:'Sign up for free to unlock partner mode.',es:'Regístrate gratis para desbloquear el modo compañero.',it:'Iscriviti gratis per sbloccare la modalità partner.',zh:'免费注册以解锁搭档模式。',ko:'무료로 가입하여 파트너 모드를 잠금 해제하세요.',ja:'無料登録でパートナーモードを解除。',ar:'سجّل مجانًا لفتح وضع الشريك.',de:'Melde dich kostenlos an, um den Partnermodus freizuschalten.',pt:'Cadastre-se grátis para desbloquear o modo parceiro.',hi:'पार्टनर मोड अनलॉक करने के लिए मुफ़्त में साइन अप करें।',tr:'Partner modunu açmak için ücretsiz kaydolun.',ru:'Зарегистрируйтесь бесплатно, чтобы разблокировать режим партнёра.'},
+  partnerGateSignup:{fr:'Créer un compte',en:'Create account',es:'Crear cuenta',it:'Crea account',zh:'创建帐户',ko:'계정 만들기',ja:'アカウント作成',ar:'إنشاء حساب',de:'Konto erstellen',pt:'Criar conta',hi:'अकाउंट बनाएं',tr:'Hesap oluştur',ru:'Создать аккаунт'},
+  partnerGateSolo:{fr:'Continuer seul',en:'Continue solo',es:'Continuar solo',it:'Continua da solo',zh:'独自继续',ko:'혼자 계속',ja:'ソロで続ける',ar:'متابعة منفردًا',de:'Alleine fortfahren',pt:'Continuar sozinho',hi:'अकेले जारी रखें',tr:'Yalnız devam et',ru:'Продолжить одному'},
+  homeHook:{fr:'Ton partenaire de jeu est toujours disponible.',en:'Your acting partner is always available.',es:'Tu compañero de actuación siempre está disponible.',it:'Il tuo partner di scena è sempre disponibile.',zh:'你的表演搭档随时待命。',ko:'당신의 연기 파트너는 언제나 준비되어 있습니다.',ja:'あなたの演技パートナーはいつでも利用可能です。',ar:'شريكك في التمثيل متاح دائمًا.',de:'Dein Schauspielpartner ist immer verfügbar.',pt:'Seu parceiro de cena está sempre disponível.',hi:'आपका एक्टिंग पार्टनर हमेशा उपलब्ध है।',tr:'Oyunculuk partneriniz her zaman hazır.',ru:'Ваш партнёр по сцене всегда доступен.'},
+  homeCastingReady:{fr:'Prêt à envoyer au casting.',en:'Ready to send to casting.',es:'Listo para enviar al casting.',it:'Pronto da inviare al casting.',zh:'准备发送给选角。',ko:'캐스팅에 보낼 준비 완료.',ja:'キャスティングに送る準備ができました。',ar:'جاهز للإرسال إلى الكاستينغ.',de:'Bereit zum Senden an das Casting.',pt:'Pronto para enviar ao casting.',hi:'कास्टिंग को भेजने के लिए तैयार।',tr:'Casting\'e göndermeye hazır.',ru:'Готово к отправке на кастинг.'},
+  referralReward:{fr:'+30 min offertes ! Merci du partage.',en:'+30 min free! Thanks for sharing.',es:'+30 min gratis. ¡Gracias por compartir!',it:'+30 min gratis! Grazie per aver condiviso.',zh:'赠送30分钟！感谢分享。',ko:'+30분 무료! 공유해 주셔서 감사합니다.',ja:'+30分無料！シェアありがとうございます。',ar:'+30 دقيقة مجانية! شكرًا للمشاركة.',de:'+30 Min geschenkt! Danke fürs Teilen.',pt:'+30 min grátis! Obrigado por compartilhar.',hi:'+30 मिनट मुफ़्त! शेयर करने के लिए धन्यवाद।',tr:'+30 dk hediye! Paylaştığınız için teşekkürler.',ru:'+30 мин бесплатно! Спасибо за рекомендацию.'},
 };
 const TTS_LANGS=['fr','en','es','it','de','pt','ar','zh','ja','ko','hi','tr','ru'];
 
@@ -1022,6 +1106,8 @@ function applyUILanguage(){
   document.documentElement.lang=selectedUILanguage;
   document.documentElement.dir=selectedUILanguage==='ar'?'rtl':'ltr';
   setTextById('homeSubtitle','homeSubtitle');
+  setTextById('homeHook','homeHook');
+  setTextById('homeCastingReady','homeCastingReady');
   setTextById('siteLanguageLabel','siteLanguageLabel');
   setTextById('homeSoloTitle','homeSoloTitle');
   setTextById('homeSoloDesc','homeSoloDesc');
@@ -1327,7 +1413,7 @@ function requireAccessOrPaywall(){
 function updateEmotionLock(){
   const emotionSelect=document.getElementById('emotionSelect');
   if(!emotionSelect)return;
-  const locked=!hasPaidAccess();
+  const locked=!canUseEmotions();
   emotionSelect.classList.toggle('emotion-locked',locked);
   [...emotionSelect.options].forEach(opt=>{
     if(opt.value==='neutral')opt.disabled=false;
@@ -1592,12 +1678,10 @@ function cancelTTSPlayback(){
 async function speakWithElevenLabs(text,preset,token,cb){
   try{
     if(!preset||!preset.voiceId)throw new Error('Missing ElevenLabs voiceId');
-    if(!hasCredits()){
-      showCreditsDepletedModal();
+    if(!canUseElevenLabs()||getRemainingSessionMs()<=0){
+      if(getRemainingSessionMs()<=0)showPaywallModal();
       return false;
     }
-    showWelcomeCreditBanner();
-    consumeCredit();
     const speed=getCurrentVoiceSpeed();
     const voiceCandidates=[preset.voiceId,...(preset.fallbackVoiceIds||[])];
     let blob=null;
@@ -1728,6 +1812,10 @@ function trStatusLabel(key){
 }
 function goHome(){endSession();showScreen('home')}
 function goPartnerChoice(){showScreen('partnerChoice')}
+function handlePartnerClick(){
+  if(!isSignedUp()){showPartnerGate();return}
+  goPartnerChoice();
+}
 function goJoin(){showScreen('joinScreen')}
 function goSetupAi(){
   showScreen('setupAi');
@@ -2574,6 +2662,7 @@ async function toggleCam(){
 // ── Recording ──
 function toggleRecording(){if(isRecording)stopRecording();else startRecording()}
 function startRecording(){
+  if(!canRecord()){showToast(t('partnerGateTitle'));openAuthModal();return}
   if(!localStream){showToast('Pas de flux vidéo');return}recordedChunks=[];
   try{mediaRecorder=new MediaRecorder(localStream,{mimeType:MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm'});
   mediaRecorder.ondataavailable=e=>{if(e.data.size>0)recordedChunks.push(e.data)};
@@ -2609,22 +2698,26 @@ function setupCallHandlers(c){call=c;call.on('stream',s=>{document.getElementByI
 
 // ── START SESSIONS ──
 async function startAiSession(){
-  if(!requireAccessOrPaywall())return;
   if(pdfScript.length>0&&!selectedChar){showToast(t('pickCharacterFirst'));return}
+  const tier=getUserTier();
+  if(tier!=='visitor'&&getRemainingSessionMs()<=0){showPaywallModal();return}
+  if(tier==='visitor'){elevenLabsTemporarilyDisabled=true;elevenLabsDisableReason='visitor';}
+  else{if(elevenLabsDisableReason==='visitor'){elevenLabsTemporarilyDisabled=false;elevenLabsDisableReason='';}}
+  if(!canUseEmotions())selectedEmotion='neutral';
   role='actor';sessionMode='ai';
   voiceSpeed=getCurrentVoiceSpeed();
   selectedEmotion=document.getElementById('emotionSelect').value||selectedEmotion;
+  if(!canUseEmotions())selectedEmotion='neutral';
   if(!selectedVoice)selectedVoice=VOICE_PRESETS[0]||null;
   prompterLines=buildLines(1);
   if(!prompterLines.length&&pdfScript.length>0){
-    console.warn('buildLines returned empty despite pdfScript having',pdfScript.length,'entries. selectedChar=',selectedChar,'soloPartnerMode=',soloPartnerMode);
     prompterLines=pdfScript.map(s=>({text:s.line,type:selectedChar&&s.char===selectedChar?'actor':'partner',char:s.char}));
   }
   prompterIndex=0;
   lastAutoSpokenIndex=-1;
   showScreen('session');renderPrompter();
-  checkMonthlyReset();
-  updateCreditBadge();
+  if(tier!=='visitor')startSessionTimer();
+  else hideTimerBadge();
   if(mode==='ai'||mode==='auto'){document.getElementById('aiPanel').classList.add('active');populateSessionVoiceSelect();setStatus('',mode==='auto'?'🎤 Auto prêt':'🦾 IA prête')}
   else setStatus('','Manuel');
   await ensureSessionStream();
@@ -2632,7 +2725,7 @@ async function startAiSession(){
 }
 
 async function startPartnerSession(){
-  if(!requireAccessOrPaywall())return;
+  if(!isSignedUp()){showPartnerGate();return}
   role='actor';sessionMode='partner';mode='manual';
   cancelSpeechFlow();
   const code=document.getElementById('mySessionCode').textContent;if(!code||code==='—')return;
@@ -2665,13 +2758,14 @@ async function joinAsPartner(){
 
 // ── Cleanup ──
 function endSession(){
+  stopSessionTimer();
   if(connectionTimeout)clearTimeout(connectionTimeout);cancelSpeechFlow();
   if(isRecording)stopRecording();if(call){call.close();call=null}if(conn){conn.close();conn=null}if(peer){peer.destroy();peer=null}
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null}
   document.getElementById('localVideo').srcObject=null;document.getElementById('remoteAudio').srcObject=null;
   document.getElementById('noVideoMsg').style.display='flex';document.getElementById('noVideoMsg').textContent='Caméra en attente…';
   document.getElementById('aiPanel').classList.remove('active');
-  hideCreditBadge();
+  hideTimerBadge();
   hideOverlay();isMicOn=true;isCamOn=true;prompterLines=[];prompterIndex=0;pdfScript=[];selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;showScreen('home');
 }
 function cancelConnection(){hideOverlay();if(!conn||!conn.open)endSession()}
@@ -2695,7 +2789,6 @@ function initCardTilt(){
 
 document.addEventListener('DOMContentLoaded',async ()=>{
   loadAccess();
-  checkMonthlyReset();
   const saved=loadSettings();
   if(saved){
     if(saved.uiLang&&UI_LANGUAGES.some(l=>l.id===saved.uiLang))selectedUILanguage=saved.uiLang;
