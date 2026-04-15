@@ -86,9 +86,9 @@ input[type="file"]{display:none}
 .char-grid{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.4rem}
 .char-grid .char-item{padding:.5rem .9rem;border-radius:var(--radius);border:1.5px solid var(--border);background:#f4faf7;color:#0f2a24 !important;cursor:pointer;transition:all .2s;font-size:.82rem;font-weight:700;opacity:1}
 .char-grid .char-item:hover{border-color:var(--blue)}
-.char-grid .char-item.selected{background:var(--blue);color:var(--white) !important;border-color:var(--blue)}
+.char-grid .char-item.selected{background:var(--blue);color:#04211d !important;border-color:var(--blue)}
 .char-grid .char-item .cc{font-weight:400;font-size:.72rem;opacity:.75;margin-left:.3rem;color:#3d5c52 !important}
-.char-item.selected .cc{color:rgba(255,255,255,.85)}
+.char-item.selected .cc{color:rgba(4,33,29,.7) !important}
 .partner-char-grid .char-item.partner-all-chip{flex:1 1 100%;justify-content:center;text-align:center}
 
 /* MODE TOGGLE */
@@ -99,18 +99,19 @@ input[type="file"]{display:none}
 
 .speed-slider-wrap{margin-top:.45rem}
 .speed-slider-row{display:flex;align-items:center;gap:.55rem}
-.speed-slider-row .speed-ico{font-size:1.1rem;line-height:1}
+.speed-label-end{font-size:.72rem;color:#8eb8a8;font-weight:600;white-space:nowrap;min-width:2.6rem;text-transform:uppercase;letter-spacing:.04em}
+.speed-label-end:last-child{text-align:right}
 .speed-slider{appearance:none;-webkit-appearance:none;flex:1;height:6px;border-radius:999px;background:linear-gradient(90deg,#2d5f52 0%,#5bb99c 100%);outline:none}
 .speed-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:#ffffff;border:2px solid #2f8f74;box-shadow:0 2px 8px rgba(0,0,0,.35);cursor:pointer}
 .speed-slider::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#ffffff;border:2px solid #2f8f74;box-shadow:0 2px 8px rgba(0,0,0,.35);cursor:pointer}
-.speed-slider-value{margin-top:.35rem;font-size:.77rem;color:#cfe7de;text-align:left;font-weight:700}
 
 /* VOICE */
 .voice-section{margin-top:1rem;display:none}.voice-section.active{display:block}
 .voice-grid{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.4rem}
 .voice-item{padding:.5rem .9rem;border-radius:var(--radius);border:1.5px solid var(--border);background:rgba(7,30,26,.9);cursor:pointer;transition:all .2s;font-size:.82rem;font-weight:600;color:#d9efe7}
-.voice-item:hover{border-color:var(--blue)}.voice-item.selected{background:var(--blue);color:var(--white);border-color:var(--blue)}
+.voice-item:hover{border-color:var(--blue)}.voice-item.selected{background:var(--blue);color:#04211d;border-color:var(--blue);font-weight:700}
 .voice-item .vtag{font-size:.7rem;display:block;opacity:.7;margin-top:.1rem;font-weight:400}
+.voice-item.selected .vtag{color:#0b3d34;opacity:.85}
 
 /* BUTTONS */
 .btn{display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.85rem 1.5rem;border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;border:none;transition:all .2s;text-transform:uppercase;letter-spacing:.04em}
@@ -361,12 +362,11 @@ input[type="file"]{display:none}
         <label id="speedLabel">Vitesse</label>
         <div class="speed-slider-wrap">
           <div class="speed-slider-row">
-            <span class="speed-ico" aria-hidden="true">🐌</span>
-            <input id="speedSlider" class="speed-slider" type="range" min="0.7" max="1.6" step="0.05" value="1"
+            <span class="speed-label-end" id="speedLabelSlow">Lent</span>
+            <input id="speedSlider" class="speed-slider" type="range" min="0.5" max="2" step="0.05" value="1"
               oninput="setVoiceSpeed(this.value,true)" onchange="setVoiceSpeed(this.value,false)">
-            <span class="speed-ico" aria-hidden="true">🐇</span>
+            <span class="speed-label-end" id="speedLabelFast">Rapide</span>
           </div>
-          <div class="speed-slider-value" id="speedValueText">x1.00</div>
         </div>
       </div>
     </div>
@@ -432,8 +432,7 @@ input[type="file"]{display:none}
       <div class="mode-opt" id="sessionModeManualBtn" onclick="switchSessionMode('manual')">✋ Manuel</div>
       <div class="mode-opt" id="sessionModeAutoBtn" onclick="switchSessionMode('auto')">🎤 Auto</div>
       <div class="session-speed">
-        <span style="font-size:.72rem;color:#d1ebe2">⚡</span>
-        <input id="sessionSpeedSlider" type="range" min="0.7" max="1.6" step="0.05" value="1" oninput="setSessionSpeed(this.value)">
+        <input id="sessionSpeedSlider" type="range" min="0.5" max="2" step="0.05" value="1" oninput="setSessionSpeed(this.value)">
       </div>
     </div>
     <button class="btn btn-secondary" onclick="prompterPrev()" style="padding:.5rem .8rem;font-size:.75rem" id="prevBtn">◀ Préc</button>
@@ -923,8 +922,8 @@ const EMOTION_PRESETS={
   angry:{label:'En colère',pitch:0.94,rate:1.12,playbackRate:1.08},
   whisper:{label:'Chuchoté',pitch:1.28,rate:0.72,playbackRate:0.72},
 };
-const SPEED_MIN=0.7;
-const SPEED_MAX=1.6;
+const SPEED_MIN=0.5;
+const SPEED_MAX=2;
 const SPEED_DEFAULT=1;
 const PREVIEW_TEXT_BY_LANG={
   fr:'Bonjour, je suis {name}.',
@@ -1034,6 +1033,8 @@ const UI_FALLBACK_TRANSLATIONS={
   homeHook:{fr:'Ton partenaire de jeu, toujours disponible.',en:'Your acting partner, always available.',es:'Tu compañero de actuación, siempre disponible.',it:'Il tuo partner di scena, sempre disponibile.',zh:'你的表演搭档，随时待命。',ko:'당신의 연기 파트너, 언제나 준비.',ja:'あなたの演技パートナー、いつでも。',ar:'شريكك في التمثيل، متاح دائمًا.',de:'Dein Schauspielpartner, immer verfügbar.',pt:'Seu parceiro de cena, sempre disponível.',hi:'आपका एक्टिंग पार्टनर, हमेशा उपलब्ध।',tr:'Oyunculuk partnerin, her zaman hazır.',ru:'Ваш партнёр по сцене, всегда доступен.'},
   homeCastingReady:{fr:'Prêt à envoyer au casting.',en:'Ready to send to casting.',es:'Listo para enviar al casting.',it:'Pronto da inviare al casting.',zh:'准备发送给选角。',ko:'캐스팅에 보낼 준비 완료.',ja:'キャスティングに送る準備ができました。',ar:'جاهز للإرسال إلى الكاستينغ.',de:'Bereit zum Senden an das Casting.',pt:'Pronto para enviar ao casting.',hi:'कास्टिंग को भेजने के लिए तैयार।',tr:'Casting\'e göndermeye hazır.',ru:'Готово к отправке на кастинг.'},
   referralReward:{fr:'+30 min offertes ! Merci du partage.',en:'+30 min free! Thanks for sharing.',es:'+30 min gratis. ¡Gracias por compartir!',it:'+30 min gratis! Grazie per aver condiviso.',zh:'赠送30分钟！感谢分享。',ko:'+30분 무료! 공유해 주셔서 감사합니다.',ja:'+30分無料！シェアありがとうございます。',ar:'+30 دقيقة مجانية! شكرًا للمشاركة.',de:'+30 Min geschenkt! Danke fürs Teilen.',pt:'+30 min grátis! Obrigado por compartilhar.',hi:'+30 मिनट मुफ़्त! शेयर करने के लिए धन्यवाद।',tr:'+30 dk hediye! Paylaştığınız için teşekkürler.',ru:'+30 мин бесплатно! Спасибо за рекомендацию.'},
+  speedSlow:{fr:'Lent',en:'Slow',es:'Lento',it:'Lento',zh:'慢',ko:'느림',ja:'遅い',ar:'بطيء',de:'Langsam',pt:'Lento',hi:'धीमा',tr:'Yavaş',ru:'Медленно'},
+  speedFast:{fr:'Rapide',en:'Fast',es:'Rápido',it:'Veloce',zh:'快',ko:'빠름',ja:'速い',ar:'سريع',de:'Schnell',pt:'Rápido',hi:'तेज़',tr:'Hızlı',ru:'Быстро'},
 };
 const TTS_LANGS=['fr','en','es','it','de','pt','ar','zh','ja','ko','hi','tr','ru'];
 
@@ -1231,6 +1232,8 @@ function applyUILanguage(){
   setTextById('voiceLanguageLabel','voiceLanguageLabel');
   setTextById('emotionLabel','emotionLabel');
   setTextById('speedLabel','speedLabel');
+  setTextById('speedLabelSlow','speedSlow');
+  setTextById('speedLabelFast','speedFast');
   setTextById('launchAiBtn','launchAiBtn');
   setTextById('setupPartnerTitle','setupPartnerTitle');
   setTextById('sessionCodeLabel','sessionCodeLabel');
@@ -1724,9 +1727,6 @@ function setVoiceSpeed(value,silent){
   voiceSpeed=Math.max(SPEED_MIN,Math.min(SPEED_MAX,Number.isFinite(parsed)?parsed:SPEED_DEFAULT));
   const slider=document.getElementById('speedSlider');
   if(slider)slider.value=String(voiceSpeed);
-  const speedText=document.getElementById('speedValueText');
-  if(speedText)speedText.textContent='x'+voiceSpeed.toFixed(2);
-  if(!silent)showToast(t('toastSpeed')+': x'+voiceSpeed.toFixed(2));
   persistSettings();
 }
 
