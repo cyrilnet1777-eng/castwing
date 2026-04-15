@@ -139,7 +139,8 @@ input[type="file"]{display:none}
 .vctrl:hover{background:rgba(0,0,0,.75)}.vctrl.recording{background:var(--danger);border-color:var(--danger);animation:pulse-rec 1.2s ease infinite}
 @keyframes pulse-rec{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}50%{box-shadow:0 0 0 10px rgba(239,68,68,0)}}
 .prompter-area{flex-shrink:0;max-height:35vh;background:rgba(0,26,77,.92);border-top:1px solid rgba(255,255,255,.08);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem 1.2rem}
-.prompter-line{font-size:1rem;line-height:1.7;font-weight:500;color:rgba(255,255,255,.5);margin-bottom:.3rem;transition:all .3s ease;padding:.25rem .4rem;border-radius:6px}
+.prompter-line{font-size:1rem;line-height:1.7;font-weight:500;color:rgba(255,255,255,.5);margin-bottom:.3rem;transition:all .2s ease;padding:.25rem .4rem;border-radius:6px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.prompter-line:active{background:rgba(65,105,225,.15)}
 .prompter-line.active{color:var(--white);font-weight:700;background:rgba(65,105,225,.25);font-size:1.05rem}
 .prompter-line.partner-line{color:rgba(255,255,255,.35);font-style:italic}.prompter-line.partner-line.active{color:rgba(200,210,255,.8)}
 .prompter-empty{text-align:center;color:rgba(255,255,255,.3);font-size:.85rem;padding:2rem 0}
@@ -394,6 +395,7 @@ input[type="file"]{display:none}
 
 <!-- ═══ SESSION ═══ -->
 <div id="session" class="screen">
+  <div id="creditBadge" style="position:fixed;top:12px;right:52px;background:rgba(0,0,0,.6);color:#fff;padding:4px 10px;border-radius:12px;font-size:13px;font-family:'DM Sans',sans-serif;z-index:1000;display:none;pointer-events:none">🎤 <span id="creditCount">15</span></div>
   <div class="session-top"><div class="status"><div class="status-dot waiting" id="statusDot"></div><span id="statusText">En attente…</span></div><button class="back-btn" onclick="endSession()" style="color:#fff;font-size:1rem">✕</button></div>
   <div class="session-body">
     <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><div class="no-video" id="noVideoMsg">Caméra en attente…</div><div class="video-controls"><button class="vctrl" id="btnMic" onclick="toggleMic()">🎙️</button><button class="vctrl" id="btnRec" onclick="toggleRecording()">⏺</button><button class="vctrl" id="btnCam" onclick="toggleCam()">📷</button></div></div></div>
@@ -441,6 +443,9 @@ const useElevenLabs=true;
 const pauseBetweenLines=500;
 const SETTINGS_KEY='castwing_user_settings_v3';
 const ACCESS_KEY='castwing_user_access_v1';
+const CREDITS_KEY='castwing_credits_v1';
+const GUEST_CREDITS=15;
+const SIGNED_CREDITS=50;
 const FREE_LIMIT_MS=20*60*1000;
 const COOLDOWN_MS=60*60*1000;
 const PAYMENT_LINK_URL='https://buy.stripe.com/test_00g8wQfNw5Yk6jS5kk';
@@ -452,6 +457,106 @@ let elevenLabsBackoffTimer=null;
 let elevenLabsDisableReason='';
 const unavailableElevenVoiceIds=new Set();
 const unavailableVoiceToastShown=new Set();
+
+// ── Credits System ──
+function getCredits(){
+  try{
+    const raw=localStorage.getItem(CREDITS_KEY);
+    if(raw){const parsed=JSON.parse(raw);if(parsed&&typeof parsed==='object')return parsed;}
+  }catch(e){}
+  const init={total:GUEST_CREDITS,remaining:GUEST_CREDITS,isGuest:true,createdAt:new Date().toISOString()};
+  try{localStorage.setItem(CREDITS_KEY,JSON.stringify(init));}catch(e){}
+  return init;
+}
+function saveCredits(c){try{localStorage.setItem(CREDITS_KEY,JSON.stringify(c));}catch(e){}}
+function consumeCredit(){
+  const c=getCredits();
+  if(c.remaining<=0)return false;
+  c.remaining=Math.max(0,c.remaining-1);
+  saveCredits(c);
+  updateCreditBadge(c.remaining);
+  return true;
+}
+function hasCredits(){return getCredits().remaining>0}
+function updateCreditBadge(remaining){
+  const badge=document.getElementById('creditBadge');
+  const el=document.getElementById('creditCount');
+  if(!badge||!el)return;
+  if(remaining==null)remaining=getCredits().remaining;
+  el.textContent=remaining;
+  badge.style.display='block';
+  if(remaining<=3)badge.style.background='rgba(220,53,69,.85)';
+  else if(remaining<=8)badge.style.background='rgba(255,165,0,.85)';
+  else badge.style.background='rgba(0,0,0,.6)';
+}
+function hideCreditBadge(){const b=document.getElementById('creditBadge');if(b)b.style.display='none'}
+function showWelcomeCreditBanner(){
+  if(localStorage.getItem('castwing_credit_banner_shown'))return;
+  localStorage.setItem('castwing_credit_banner_shown','true');
+  const c=getCredits();
+  const n=c.remaining;
+  const msg=t('creditsWelcome').replace('{n}',n);
+  const cta=t('creditsSignupCta').replace('{n}',SIGNED_CREDITS);
+  const banner=document.createElement('div');
+  banner.id='creditWelcomeBanner';
+  banner.innerHTML=`<div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1a1a2e;color:#fff;padding:14px 20px;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;z-index:9999;max-width:380px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.3)"><div style="margin-bottom:8px">🎭 ${msg}</div><div style="margin-bottom:12px;opacity:.8;font-size:12px">${cta}</div><div style="display:flex;gap:8px;justify-content:center"><button onclick="this.closest('#creditWelcomeBanner').remove()" style="padding:8px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;cursor:pointer;font-size:13px">${t('creditsBtnContinue')}</button><button onclick="openAuthModal();this.closest('#creditWelcomeBanner').remove()" style="padding:8px 16px;border-radius:8px;border:none;background:#4169e1;color:#fff;cursor:pointer;font-size:13px">${t('creditsBtnSignup')}</button></div></div>`;
+  document.body.appendChild(banner);
+  setTimeout(()=>{if(banner.parentElement)banner.remove()},8000);
+}
+function showCreditsDepletedModal(){
+  const c=getCredits();
+  const title=c.isGuest?t('creditsDepletedGuest'):t('creditsDepletedUser');
+  const sub=c.isGuest?t('creditsBrowserFallback'):(t('creditsRenewal').replace('{date}',formatResetDate(c.resetDate))+' '+t('creditsBrowserFallback'));
+  const overlay=document.createElement('div');
+  overlay.id='creditsDepletedOverlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:10000';
+  const card=document.createElement('div');
+  card.style.cssText='background:#1a1a2e;color:#fff;border-radius:16px;padding:28px 24px;max-width:360px;width:90%;text-align:center;font-family:"DM Sans",sans-serif;box-shadow:0 4px 30px rgba(0,0,0,.5)';
+  let btns=`<button onclick="switchToBrowserVoiceCredits();document.getElementById('creditsDepletedOverlay').remove()" style="padding:10px 18px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;cursor:pointer;font-size:13px">🔊 ${t('creditsBtnBrowser')}</button>`;
+  if(c.isGuest)btns+=`<button onclick="openAuthModal();document.getElementById('creditsDepletedOverlay').remove()" style="padding:10px 18px;border-radius:8px;border:none;background:#4169e1;color:#fff;cursor:pointer;font-size:13px">${t('creditsBtnSignup')}</button>`;
+  card.innerHTML=`<div style="font-size:18px;font-weight:700;margin-bottom:10px">${title}</div><div style="font-size:13px;opacity:.8;margin-bottom:18px">${sub}</div><div style="display:flex;gap:8px;justify-content:center">${btns}</div>`;
+  overlay.appendChild(card);
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove()});
+  document.body.appendChild(overlay);
+}
+function switchToBrowserVoiceCredits(){
+  elevenLabsTemporarilyDisabled=true;
+  elevenLabsDisableReason='credits_depleted';
+  showToast(t('creditsBrowserFallback'),3000);
+}
+function formatResetDate(iso){
+  if(!iso)return'?';
+  try{const d=new Date(iso);return d.toLocaleDateString(selectedUILanguage==='fr'?'fr-FR':'en-US',{day:'numeric',month:'long'})}catch(e){return iso}
+}
+function getNextFirstOfMonth(){
+  const now=new Date();
+  return new Date(now.getFullYear(),now.getMonth()+1,1).toISOString();
+}
+function checkMonthlyReset(){
+  const c=getCredits();
+  if(c.isGuest||!c.resetDate)return;
+  if(new Date()>=new Date(c.resetDate)){
+    c.remaining=c.total||SIGNED_CREDITS;
+    c.resetDate=getNextFirstOfMonth();
+    saveCredits(c);
+    if(elevenLabsDisableReason==='credits_depleted'){
+      elevenLabsTemporarilyDisabled=false;
+      elevenLabsDisableReason='';
+    }
+  }
+}
+function onUserSignedIn(user){
+  const guest=getCredits();
+  if(guest.isGuest){
+    const upgraded={total:SIGNED_CREDITS,remaining:Math.max(guest.remaining,SIGNED_CREDITS),isGuest:false,userId:user&&user.id||'',resetDate:getNextFirstOfMonth(),createdAt:new Date().toISOString()};
+    saveCredits(upgraded);
+  }
+  if(elevenLabsDisableReason==='credits_depleted'){
+    elevenLabsTemporarilyDisabled=false;
+    elevenLabsDisableReason='';
+  }
+  updateCreditBadge();
+}
 
 function getTTSEndpointCandidates(){
   const host=(window.location.hostname||'').toLowerCase();
@@ -752,7 +857,16 @@ const UI_FALLBACK_TRANSLATIONS={
   authCodeSent:{fr:'Code envoyé. Vérifie ta boîte mail.',en:'Code sent. Check your inbox.',es:'Código enviado. Revisa tu email.',it:'Codice inviato. Controlla la tua email.',zh:'验证码已发送，请查收邮箱。',ko:'코드를 보냈습니다. 메일함을 확인하세요.',ja:'コードを送信しました。メールを確認してください。',ar:'تم إرسال الرمز. تحقق من بريدك.',de:'Code gesendet. Bitte E-Mail prüfen.',pt:'Código enviado. Verifique seu e-mail.',hi:'कोड भेज दिया गया है। अपना ईमेल देखें।'},
   authVerified:{fr:'Email vérifié ✅',en:'Email verified ✅',es:'Email verificado ✅',it:'Email verificata ✅',zh:'邮箱验证成功 ✅',ko:'이메일 인증 완료 ✅',ja:'メール認証完了 ✅',ar:'تم التحقق من البريد ✅',de:'E-Mail bestätigt ✅',pt:'E-mail verificado ✅',hi:'ईमेल सत्यापित ✅'},
   authInvalidCode:{fr:'Code invalide',en:'Invalid code',es:'Código inválido',it:'Codice non valido',zh:'验证码无效',ko:'코드가 올바르지 않습니다',ja:'コードが無効です',ar:'رمز غير صالح',de:'Ungültiger Code',pt:'Código inválido',hi:'कोड अमान्य है'},
-  usageBlocked:{fr:'Limite atteinte. Attends 1h ou débloque à 1$.',en:'Limit reached. Wait 1h or unlock for $1.',es:'Límite alcanzado. Espera 1h o desbloquea por 1$.',it:'Limite raggiunto. Attendi 1h o sblocca con 1$.',zh:'已达上限。等待1小时或支付1美元解锁。',ko:'사용 한도 도달. 1시간 대기 또는 1달러 결제로 해제.',ja:'上限に達しました。1時間待つか1ドルで解除。',ar:'تم بلوغ الحد. انتظر ساعة أو افتح مقابل 1$.',de:'Limit erreicht. 1h warten oder für 1$ entsperren.',pt:'Limite atingido. Aguarde 1h ou desbloqueie por 1$.',hi:'सीमा पूरी। 1 घंटा प्रतीक्षा करें या 1$ देकर अनलॉक करें।'}
+  usageBlocked:{fr:'Limite atteinte. Attends 1h ou débloque à 1$.',en:'Limit reached. Wait 1h or unlock for $1.',es:'Límite alcanzado. Espera 1h o desbloquea por 1$.',it:'Limite raggiunto. Attendi 1h o sblocca con 1$.',zh:'已达上限。等待1小时或支付1美元解锁。',ko:'사용 한도 도달. 1시간 대기 또는 1달러 결제로 해제.',ja:'上限に達しました。1時間待つか1ドルで解除。',ar:'تم بلوغ الحد. انتظر ساعة أو افتح مقابل 1$.',de:'Limit erreicht. 1h warten oder für 1$ entsperren.',pt:'Limite atingido. Aguarde 1h ou desbloqueie por 1$.',hi:'सीमा पूरी। 1 घंटा प्रतीक्षा करें या 1$ देकर अनलॉक करें।'},
+  creditsWelcome:{fr:'Tu as {n} lectures vocales AI gratuites.',en:'You have {n} free AI voice reads.',es:'Tienes {n} lecturas de voz IA gratis.',it:'Hai {n} letture vocali AI gratuite.',zh:'你有 {n} 次免费 AI 语音朗读。',ko:'무료 AI 음성 읽기 {n}회를 사용할 수 있습니다.',ja:'無料 AI 音声読み上げが {n} 回あります。',ar:'لديك {n} قراءة صوتية AI مجانية.',de:'Du hast {n} kostenlose KI-Sprachlesungen.',pt:'Você tem {n} leituras de voz IA grátis.',hi:'आपके पास {n} मुफ्त AI वॉइस रीड हैं।',tr:'{n} ücretsiz AI sesli okuma hakkınız var.',ru:'У вас {n} бесплатных AI-озвучек.'},
+  creditsSignupCta:{fr:"Inscris-toi pour en avoir {n} par mois !",en:'Sign up for {n} per month!',es:'Regístrate para obtener {n} al mes.',it:'Iscriviti per averne {n} al mese!',zh:'注册即可每月获得 {n} 次！',ko:'매월 {n}회를 받으려면 가입하세요!',ja:'毎月 {n} 回もらえる！登録はこちら',ar:'سجّل للحصول على {n} شهريًا!',de:'Melde dich an für {n} pro Monat!',pt:'Cadastre-se para {n} por mês!',hi:'हर महीने {n} पाने के लिए साइन अप करें!',tr:'Aylık {n} almak için kaydolun!',ru:'Зарегистрируйтесь — {n} в месяц!'},
+  creditsDepletedGuest:{fr:'Tes crédits vocaux AI sont épuisés !',en:'Your AI voice credits are used up!',es:'¡Tus créditos de voz IA se agotaron!',it:'I tuoi crediti vocali AI sono esauriti!',zh:'你的 AI 语音积分已用完！',ko:'AI 음성 크레딧을 모두 사용했습니다!',ja:'AI 音声クレジットが使い切りました！',ar:'نفدت أرصدتك الصوتية AI!',de:'Deine KI-Sprachguthaben sind aufgebraucht!',pt:'Seus créditos de voz IA acabaram!',hi:'आपके AI वॉइस क्रेडिट खत्म हो गए!',tr:'AI ses kredileriniz tükendi!',ru:'Ваши AI-кредиты исчерпаны!'},
+  creditsDepletedUser:{fr:'Tes crédits vocaux du mois sont épuisés !',en:'Your monthly voice credits are used up!',es:'¡Tus créditos de voz del mes se agotaron!',it:'I tuoi crediti vocali del mese sono esauriti!',zh:'本月语音积分已用完！',ko:'이번 달 음성 크레딧을 모두 사용했습니다!',ja:'今月の音声クレジットが使い切りました！',ar:'نفدت أرصدتك الصوتية لهذا الشهر!',de:'Deine Sprachguthaben für diesen Monat sind aufgebraucht!',pt:'Seus créditos de voz do mês acabaram!',hi:'इस महीने के वॉइस क्रेडिट खत्म हो गए!',tr:'Bu ayki ses kredileriniz tükendi!',ru:'Ваши голосовые кредиты в этом месяце исчерпаны!'},
+  creditsRenewal:{fr:'Renouvellement le {date}.',en:'Renewal on {date}.',es:'Renovación el {date}.',it:'Rinnovo il {date}.',zh:'{date} 续期。',ko:'{date}에 갱신됩니다.',ja:'{date} に更新されます。',ar:'التجديد في {date}.',de:'Erneuerung am {date}.',pt:'Renovação em {date}.',hi:'{date} को नवीनीकरण।',tr:'{date} tarihinde yenilenir.',ru:'Обновление {date}.'},
+  creditsBrowserFallback:{fr:'Continue avec les voix gratuites du navigateur.',en:'Continue with free browser voices.',es:'Continúa con las voces gratuitas del navegador.',it:'Continua con le voci gratuite del browser.',zh:'继续使用免费浏览器语音。',ko:'무료 브라우저 음성으로 계속합니다.',ja:'無料のブラウザ音声で続行します。',ar:'تابع باستخدام أصوات المتصفح المجانية.',de:'Nutze die kostenlosen Browserstimmen weiter.',pt:'Continue com as vozes gratuitas do navegador.',hi:'मुफ़्त ब्राउज़र वॉइस के साथ जारी रखें।',tr:'Ücretsiz tarayıcı sesleriyle devam edin.',ru:'Продолжайте с бесплатными голосами браузера.'},
+  creditsBtnBrowser:{fr:'Voix navigateur',en:'Browser voice',es:'Voz del navegador',it:'Voce browser',zh:'浏览器语音',ko:'브라우저 음성',ja:'ブラウザ音声',ar:'صوت المتصفح',de:'Browserstimme',pt:'Voz do navegador',hi:'ब्राउज़र वॉइस',tr:'Tarayıcı sesi',ru:'Голос браузера'},
+  creditsBtnSignup:{fr:"S'inscrire",en:'Sign up',es:'Registrarse',it:'Iscriviti',zh:'注册',ko:'가입',ja:'登録',ar:'سجّل',de:'Registrieren',pt:'Cadastrar',hi:'साइन अप',tr:'Kaydol',ru:'Зарегистрироваться'},
+  creditsBtnContinue:{fr:'Continuer',en:'Continue',es:'Continuar',it:'Continua',zh:'继续',ko:'계속',ja:'続ける',ar:'متابعة',de:'Weiter',pt:'Continuar',hi:'जारी रखें',tr:'Devam',ru:'Продолжить'},
 };
 const TTS_LANGS=['fr','en','es','it','de','pt','ar','zh','ja','ko','hi','tr','ru'];
 
@@ -1135,6 +1249,7 @@ async function verifyEmailCode(){
     userAccess.provider='email';
     persistAccess();
     updateAuthMiniButton();
+    onUserSignedIn({id:authPendingEmail});
     document.getElementById('authStatusText').textContent=t('authVerified');
     showToast(t('authVerified'));
     closeAuthModal();
@@ -1147,6 +1262,7 @@ function socialLogin(provider){
     userAccess.email=`${provider}@castwing.user`;
     persistAccess();
     updateAuthMiniButton();
+    onUserSignedIn({id:provider});
     showToast(`${provider} login ✅`);
     closeAuthModal();
   }
@@ -1475,6 +1591,12 @@ function cancelTTSPlayback(){
 async function speakWithElevenLabs(text,preset,token,cb){
   try{
     if(!preset||!preset.voiceId)throw new Error('Missing ElevenLabs voiceId');
+    if(!hasCredits()){
+      showCreditsDepletedModal();
+      return false;
+    }
+    showWelcomeCreditBanner();
+    consumeCredit();
     const speed=getCurrentVoiceSpeed();
     const voiceCandidates=[preset.voiceId,...(preset.fallbackVoiceIds||[])];
     let blob=null;
@@ -2244,7 +2366,10 @@ function buildLines(n){
 function renderPrompter(){
   const a=document.getElementById('prompterArea');
   if(!prompterLines.length){a.innerHTML='<div class="prompter-empty">Aucun texte chargé</div>';return}
-  a.innerHTML=prompterLines.map((l,i)=>{const cls=['prompter-line'];if(i===prompterIndex)cls.push('active');if(l.type==='partner')cls.push('partner-line');const pfx=l.type==='partner'?'🎙️ ':'🎬 ';const ch=l.char?`<b>${l.char}:</b> `:'';return`<div class="${cls.join(' ')}">${pfx}${ch}${l.text}</div>`}).join('');
+  a.innerHTML=prompterLines.map((l,i)=>{const cls=['prompter-line'];if(i===prompterIndex)cls.push('active');if(l.type==='partner')cls.push('partner-line');const pfx=l.type==='partner'?'🎙️ ':'🎬 ';const ch=l.char?`<b>${l.char}:</b> `:'';return`<div class="${cls.join(' ')}" data-line-index="${i}">${pfx}${ch}${l.text}</div>`}).join('');
+  a.querySelectorAll('.prompter-line[data-line-index]').forEach(el=>{
+    el.addEventListener('click',()=>handleTapToJump(parseInt(el.dataset.lineIndex,10)));
+  });
   const act=a.querySelector('.prompter-line.active');if(act)act.scrollIntoView({behavior:'smooth',block:'center'});
 }
 function computeSilenceMsForActorLine(line){
@@ -2320,6 +2445,15 @@ function prompterPrev(){
   if(prompterIndex<=0)return;
   cancelSpeechFlow();
   prompterIndex--;
+  lastAutoSpokenIndex=-1;
+  renderPrompter();
+  syncPrompter();
+  handleCurrentLineAutomation();
+}
+function handleTapToJump(targetIndex){
+  if(targetIndex<0||targetIndex>=prompterLines.length||targetIndex===prompterIndex)return;
+  cancelSpeechFlow();
+  prompterIndex=targetIndex;
   lastAutoSpokenIndex=-1;
   renderPrompter();
   syncPrompter();
@@ -2452,7 +2586,7 @@ function stopRecording(){if(mediaRecorder&&mediaRecorder.state!=='inactive')medi
 function createPeer(id){return new Peer(id,{config:{iceServers:ICE_SERVERS}})}
 function setStatus(s,t){document.getElementById('statusDot').className='status-dot '+s;document.getElementById('statusText').textContent=t}
 function handleDataMessage(d){
-  if(d.type==='prompter'){
+  if(d.type==='prompter'||d.type==='jump'){
     prompterIndex=d.index;
     renderPrompter();
   }else if(d.type==='script'){
@@ -2488,6 +2622,8 @@ async function startAiSession(){
   prompterIndex=0;
   lastAutoSpokenIndex=-1;
   showScreen('session');renderPrompter();
+  checkMonthlyReset();
+  updateCreditBadge();
   if(mode==='ai'||mode==='auto'){document.getElementById('aiPanel').classList.add('active');populateSessionVoiceSelect();setStatus('',mode==='auto'?'🎤 Auto prêt':'🦾 IA prête')}
   else setStatus('','Manuel');
   await ensureSessionStream();
@@ -2534,6 +2670,7 @@ function endSession(){
   document.getElementById('localVideo').srcObject=null;document.getElementById('remoteAudio').srcObject=null;
   document.getElementById('noVideoMsg').style.display='flex';document.getElementById('noVideoMsg').textContent='Caméra en attente…';
   document.getElementById('aiPanel').classList.remove('active');
+  hideCreditBadge();
   hideOverlay();isMicOn=true;isCamOn=true;prompterLines=[];prompterIndex=0;pdfScript=[];selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;showScreen('home');
 }
 function cancelConnection(){hideOverlay();if(!conn||!conn.open)endSession()}
@@ -2557,6 +2694,7 @@ function initCardTilt(){
 
 document.addEventListener('DOMContentLoaded',async ()=>{
   loadAccess();
+  checkMonthlyReset();
   const saved=loadSettings();
   if(saved){
     if(saved.uiLang&&UI_LANGUAGES.some(l=>l.id===saved.uiLang))selectedUILanguage=saved.uiLang;
