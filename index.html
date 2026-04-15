@@ -156,21 +156,31 @@ input[type="file"]{display:none}
 .spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.2);border-top-color:var(--white);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;top:1.2rem;left:50%;transform:translateX(-50%);background:var(--navy);color:var(--white);padding:.65rem 1.2rem;border-radius:var(--radius);font-size:.82rem;font-weight:700;box-shadow:var(--shadow-lg);z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90vw;text-align:center}.toast.show{opacity:1}
 .loading-overlay{display:none;position:fixed;inset:0;z-index:150;background:rgba(0,26,77,.7);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:.8rem;color:var(--white)}.loading-overlay.active{display:flex}.loading-overlay p{font-size:.9rem;font-weight:700}
-.auth-modal,.paywall-modal{display:none;position:fixed;inset:0;z-index:180;background:rgba(0,18,20,.72);backdrop-filter:blur(10px);align-items:center;justify-content:center;padding:1rem}
+.auth-modal,.paywall-modal{display:none;position:fixed;inset:0;z-index:180;background:rgba(6,10,20,.62);backdrop-filter:blur(16px);align-items:center;justify-content:center;padding:1rem}
 .auth-modal.active,.paywall-modal.active{display:flex}
-.auth-card,.paywall-card{width:min(620px,95vw);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02)),rgba(7,22,20,.84);border:1px solid rgba(127,247,231,.28);border-radius:16px;padding:1.35rem;box-shadow:0 22px 60px rgba(0,0,0,.34),0 0 34px rgba(61,245,214,.16)}
-.auth-card h3,.paywall-card h3{font-size:1rem;color:#f6fffd;margin-bottom:.55rem}
-.auth-sub,.paywall-sub{font-size:.8rem;color:#bcd8d1;margin-bottom:.75rem}
-.auth-row{display:flex;gap:.5rem}
-.auth-row input{flex:1}
+.auth-card{width:min(520px,95vw);background:#f3f4f6;border:1px solid rgba(255,255,255,.9);border-radius:18px;padding:1.35rem 1.2rem;box-shadow:0 26px 90px rgba(0,0,0,.45)}
+.paywall-card{width:min(620px,95vw);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02)),rgba(7,22,20,.84);border:1px solid rgba(127,247,231,.28);border-radius:16px;padding:1.35rem;box-shadow:0 22px 60px rgba(0,0,0,.34),0 0 34px rgba(61,245,214,.16)}
+.auth-card h3{font-size:2rem;color:#1c2430;margin-bottom:.15rem;text-align:center}
+.paywall-card h3{font-size:1rem;color:#f6fffd;margin-bottom:.55rem}
+.auth-sub{font-size:.95rem;color:#5e6775;margin-bottom:1rem;text-align:center}
+.paywall-sub{font-size:.8rem;color:#bcd8d1;margin-bottom:.75rem}
+.auth-row{display:flex;gap:.5rem;align-items:center}
+.auth-row input{flex:1;background:#fff;color:#0f1720;border:1px solid #d3d7dd;border-radius:12px;padding:.85rem .95rem}
+.auth-divider{display:flex;align-items:center;gap:.55rem;margin:.85rem 0;color:#737b87;font-size:.9rem}
+.auth-divider::before,.auth-divider::after{content:"";flex:1;height:1px;background:#d4d8de}
 .auth-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}
-.auth-social{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem}
-.auth-social .mode-opt{flex:1 1 30%}
-.auth-social .mode-opt{display:flex;align-items:center;justify-content:center;gap:.45rem}
-#authGoogleBtn::before,#authAppleBtn::before,#authEmailBtn::before{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:999px;font-weight:800;background:rgba(255,255,255,.14)}
-#authGoogleBtn::before{content:"G";color:#34a853}
-#authAppleBtn::before{content:"";color:#ffffff}
-#authEmailBtn::before{content:"@";color:#7ff7e7}
+.auth-social{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.35rem}
+.auth-social .mode-opt{flex:1 1 100%;display:flex;align-items:center;justify-content:center;gap:.45rem;background:#ffffff;color:#2a313d;border:1px solid #d4d8dd}
+.auth-social .mode-opt:hover{border-color:#c0c7d2;background:#f8fafc}
+#authGoogleBtn::before,#authAppleBtn::before,#authEmailBtn::before{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;font-weight:900}
+#authGoogleBtn::before{content:"G";color:#34a853;background:#fff}
+#authAppleBtn::before{content:"";color:#111;background:#fff}
+#authEmailBtn::before{content:"@";color:#0ea5a5;background:#fff}
+.auth-card .back-btn{background:#ffffff;border-color:#d7dbe1;color:#25303f}
+.auth-card .back-btn:hover{background:#eef2f6}
+.auth-primary-btn{width:100%;margin-top:.7rem;background:linear-gradient(180deg,#2f3440,#222732)!important;color:#fff!important;border-color:#1f2430!important}
+.auth-code-row{display:none;margin-top:.55rem}
+.auth-code-row.active{display:flex}
 .pay-options{display:grid;grid-template-columns:1fr;gap:.5rem;margin-top:.7rem}
 .pay-lock{font-size:.76rem;color:#95bbb0;margin-top:.35rem}
 .emotion-locked{opacity:.55}
@@ -218,18 +228,21 @@ input[type="file"]{display:none}
       <button class="back-btn" onclick="closeAuthModal()" aria-label="Close">✕</button>
     </div>
     <p class="auth-sub" id="authSubtitle">Vérifie ton email avec un code pour sécuriser l’accès.</p>
+    <div class="auth-social">
+      <div class="mode-opt" onclick="socialLogin('google')" id="authGoogleBtn">Continue with Google</div>
+      <div class="mode-opt" onclick="socialLogin('apple')" id="authAppleBtn">Continue with Apple</div>
+    </div>
+    <div class="auth-divider">or</div>
     <div class="auth-row">
       <input id="authEmailInput" type="email" placeholder="email@domaine.com">
-      <button class="mode-opt" id="authSendCodeBtn" onclick="requestEmailCode()">Envoyer code</button>
     </div>
-    <div class="auth-row" style="margin-top:.5rem">
+    <button class="mode-opt auth-primary-btn" id="authSendCodeBtn" onclick="requestEmailCode()">Continue</button>
+    <div class="auth-row auth-code-row" id="authCodeRow">
       <input id="authCodeInput" type="text" maxlength="6" placeholder="123456">
       <button class="mode-opt" id="authVerifyCodeBtn" onclick="verifyEmailCode()">Vérifier</button>
     </div>
-    <div class="auth-social">
-      <div class="mode-opt" onclick="socialLogin('google')" id="authGoogleBtn">Google</div>
-      <div class="mode-opt" onclick="socialLogin('apple')" id="authAppleBtn">Apple</div>
-      <div class="mode-opt" onclick="socialLogin('email')" id="authEmailBtn">Email only</div>
+    <div class="auth-social" style="margin-top:.45rem">
+      <div class="mode-opt" onclick="socialLogin('email')" id="authEmailBtn">Continue with email</div>
     </div>
     <p class="pay-lock" id="authStatusText"></p>
   </div>
@@ -706,11 +719,11 @@ const UI_FALLBACK_TRANSLATIONS={
   authMiniBtn:{fr:'Se connecter',en:'Login / Sign up',es:'Entrar / Registro',it:'Accedi / Iscriviti',zh:'登录 / 注册',ko:'로그인 / 가입',ja:'ログイン / 登録',ar:'تسجيل الدخول / إنشاء حساب',de:'Login / Registrieren',pt:'Entrar / Cadastro',hi:'लॉगिन / साइन अप'},
   authTitle:{fr:'Connexion / Inscription',en:'Login / Sign up',es:'Iniciar sesión / Registro',it:'Accesso / Registrazione',zh:'登录 / 注册',ko:'로그인 / 가입',ja:'ログイン / 登録',ar:'تسجيل الدخول / إنشاء حساب',de:'Login / Registrieren',pt:'Entrar / Cadastro',hi:'लॉगिन / साइन अप'},
   authSubtitle:{fr:'Vérifie ton email avec un code pour sécuriser l’accès.',en:'Verify your email with a code to secure access.',es:'Verifica tu email con un código para asegurar el acceso.',it:'Verifica la tua email con un codice per proteggere l’accesso.',zh:'使用邮箱验证码保护访问。',ko:'이메일 코드로 접근을 보호하세요.',ja:'メールコードでアクセスを保護します。',ar:'تحقق من بريدك برمز لتأمين الدخول.',de:'Bestätige deine E-Mail per Code für sicheren Zugriff.',pt:'Verifique seu e-mail com código para proteger o acesso.',hi:'एक्सेस सुरक्षित करने के लिए ईमेल कोड से सत्यापित करें।'},
-  authSendCodeBtn:{fr:'Envoyer code',en:'Send code',es:'Enviar código',it:'Invia codice',zh:'发送验证码',ko:'코드 보내기',ja:'コード送信',ar:'إرسال الرمز',de:'Code senden',pt:'Enviar código',hi:'कोड भेजें'},
+  authSendCodeBtn:{fr:'Continuer',en:'Continue',es:'Continuar',it:'Continua',zh:'继续',ko:'계속',ja:'続ける',ar:'متابعة',de:'Weiter',pt:'Continuar',hi:'जारी रखें'},
   authVerifyCodeBtn:{fr:'Vérifier',en:'Verify',es:'Verificar',it:'Verifica',zh:'验证',ko:'확인',ja:'確認',ar:'تحقق',de:'Prüfen',pt:'Verificar',hi:'सत्यापित करें'},
-  authGoogleBtn:{fr:'Google',en:'Google',es:'Google',it:'Google',zh:'Google',ko:'Google',ja:'Google',ar:'Google',de:'Google',pt:'Google',hi:'Google'},
-  authAppleBtn:{fr:'Apple',en:'Apple',es:'Apple',it:'Apple',zh:'Apple',ko:'Apple',ja:'Apple',ar:'Apple',de:'Apple',pt:'Apple',hi:'Apple'},
-  authEmailBtn:{fr:'Email',en:'Email only',es:'Solo email',it:'Solo email',zh:'仅邮箱',ko:'이메일만',ja:'メールのみ',ar:'البريد فقط',de:'Nur E-Mail',pt:'Somente e-mail',hi:'केवल ईमेल'},
+  authGoogleBtn:{fr:'Continuer avec Google',en:'Continue with Google',es:'Continuar con Google',it:'Continua con Google',zh:'使用 Google 继续',ko:'Google로 계속하기',ja:'Google で続行',ar:'المتابعة عبر Google',de:'Mit Google fortfahren',pt:'Continuar com Google',hi:'Google से जारी रखें'},
+  authAppleBtn:{fr:'Continuer avec Apple',en:'Continue with Apple',es:'Continuar con Apple',it:'Continua con Apple',zh:'使用 Apple 继续',ko:'Apple로 계속하기',ja:'Apple で続行',ar:'المتابعة عبر Apple',de:'Mit Apple fortfahren',pt:'Continuar com Apple',hi:'Apple से जारी रखें'},
+  authEmailBtn:{fr:'Continuer avec email',en:'Continue with email',es:'Continuar con email',it:'Continua con email',zh:'使用邮箱继续',ko:'이메일로 계속하기',ja:'メールで続行',ar:'المتابعة عبر البريد',de:'Mit E-Mail fortfahren',pt:'Continuar com e-mail',hi:'ईमेल से जारी रखें'},
   paywallTitle:{fr:'Accès limité',en:'Access limited',es:'Acceso limitado',it:'Accesso limitato',zh:'访问受限',ko:'접근 제한',ja:'アクセス制限',ar:'وصول محدود',de:'Zugriff begrenzt',pt:'Acesso limitado',hi:'एक्सेस सीमित'},
   paywallSub:{fr:'20 minutes gratuites utilisées. Attends 1h ou débloque maintenant pour 1$.',en:'20 free minutes used. Wait 1h or unlock now for $1.',es:'20 minutos gratis usados. Espera 1h o desbloquea por 1$.',it:'20 minuti gratuiti usati. Attendi 1h o sblocca ora per 1$.',zh:'20分钟免费已用完。等待1小时或付1美元立即解锁。',ko:'무료 20분이 끝났습니다. 1시간 대기 또는 1달러 결제로 즉시 해제하세요.',ja:'無料20分を使い切りました。1時間待つか1ドルで解除。',ar:'تم استخدام 20 دقيقة مجانية. انتظر ساعة أو افتح الآن مقابل 1$.',de:'20 Gratisminuten verbraucht. 1h warten oder für 1$ sofort entsperren.',pt:'20 minutos grátis usados. Espere 1h ou desbloqueie por 1$.',hi:'20 मिनट मुफ्त उपयोग पूरे। 1 घंटे प्रतीक्षा करें या 1$ देकर अनलॉक करें।'},
   payAppleBtn:{fr:'Payer 1$ (Apple Pay)',en:'Pay $1 (Apple Pay)',es:'Pagar 1$ (Apple Pay)',it:'Paga 1$ (Apple Pay)',zh:'支付1美元（Apple Pay）',ko:'1달러 결제 (Apple Pay)',ja:'1ドル支払い (Apple Pay)',ar:'ادفع 1$ (Apple Pay)',de:'1$ zahlen (Apple Pay)',pt:'Pagar 1$ (Apple Pay)',hi:'1$ भुगतान (Apple Pay)'},
@@ -1061,6 +1074,10 @@ function updateAuthMiniButton(){
 }
 function openAuthModal(){
   document.getElementById('authStatusText').textContent='';
+  const codeRow=document.getElementById('authCodeRow');
+  if(codeRow)codeRow.classList.remove('active');
+  const codeInput=document.getElementById('authCodeInput');
+  if(codeInput)codeInput.value='';
   document.getElementById('authModal').classList.add('active');
 }
 function closeAuthModal(){document.getElementById('authModal').classList.remove('active')}
@@ -1080,6 +1097,10 @@ async function requestEmailCode(){
     if(!rsp.ok){showToast((out&&out.error)||'Auth error');return}
     authFlowToken=String(out.token||'');
     if(out.debugCode)showToast(`Code: ${out.debugCode}`,6000);
+    const codeRow=document.getElementById('authCodeRow');
+    if(codeRow)codeRow.classList.add('active');
+    const codeInput=document.getElementById('authCodeInput');
+    if(codeInput)codeInput.focus();
     document.getElementById('authStatusText').textContent=t('authCodeSent');
   }catch(e){showToast('Auth offline');}
 }
@@ -1744,6 +1765,27 @@ function isLikelyCharacterName(candidate){
   if(key.startsWith("L'ART")||key.startsWith('L ART DU CRIME'))return false;
   return true;
 }
+function isLikelyStageDirectionLine(line){
+  const key=normalizeScriptLine(line);
+  if(!key)return true;
+  if(/^\(?\s*(?:INT|EXT|EST|INT\.|EXT\.|SCENE|SCÈNE|SEQUENCE|SÉQUENCE|CUT TO|FADE|FONDU|MUSIQUE|MUSIC|SFX|FX|TRANSITION|ACTE|ACT|EPISODE|ÉPISODE)\b/.test(key))return true;
+  if(/^(?:\(|\[).+(?:\)|\])$/.test(String(line||'').trim()))return true;
+  if(/^[-–—]\s*/.test(String(line||'').trim()))return true;
+  return false;
+}
+function splitSpeakerInlineLine(line){
+  const txt=String(line||'').trim();
+  const m=txt.match(/^([^:：]{2,80})\s*[:：]\s*(.+)$/);
+  if(!m)return null;
+  return{speaker:m[1].trim(),content:m[2].trim()};
+}
+function isSpeakerCueCase(name){
+  const n=String(name||'').trim();
+  if(!n)return false;
+  const hasLatinCase=/[A-Za-zÀ-ÖØ-öø-ÿ]/.test(n);
+  if(hasLatinCase)return n===n.toUpperCase();
+  return true;
+}
 
 function stripPdfWatermarkNoise(text,pageCount,fileName){
   const lines=String(text||'').split('\n').map(l=>l.replace(/\u00A0/g,' ').trim());
@@ -1841,29 +1883,35 @@ function parsePDFScript(text){
     }
   });
   const suspectNameWatermarks=new Set([...nameFreq.entries()].filter(([,count])=>count>=2).map(([k])=>k));
-  const UP='A-ZÀÂÄÆÇÉÈÊËÎÏÔÖŒÙÛÜŸÑ';
-  const name='['+UP+']['+UP+'\\s\\-\\.\\\'’]{0,40}';
-  const charInlineRx=new RegExp('^('+name+')\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*(.+)$');
-  const charDashOnlyRx=new RegExp('^('+name+')\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*$');
-  const charAloneRx=new RegExp('^('+name+')\\s*(?:\\([^)]*\\)\\s*)*:?\\s*$');
+  const name='([\\p{L}][\\p{L}\\s\\-\\.\\\'’]{0,40})';
+  const charInlineRx=new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*(.+)$','u');
+  const charDashOnlyRx=new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*[:\\-–—]\\s*$','u');
+  const charAloneRx=new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*:?\\s*$','u');
   const didasRx=/^\s*[\(\[].+[\)\]]\s*$/;
-  const sceneRx=/^(INT[\.\s\/]|EXT[\.\s\/]|SÉQUENCE\b|TRANSITION\b|FONDU\b|FADE\b|CUT TO\b|NOIR\b)/i;
+  const sceneRx=/^(INT[\.\s\/]|EXT[\.\s\/]|SÉQUENCE\b|SEQUENCE\b|TRANSITION\b|FONDU\b|FADE\b|CUT TO\b|NOIR\b|SCÈNE\b|SCENE\b|ACTE\b|ACT\b|EPISODE\b|ÉPISODE\b)/i;
   const pageRx=/^\d{1,4}\s*\.?\s*$/;
   let cur=null;
   for(const raw of lines){
-    const l=raw.trim().replace(/\s{2,}/g,' ');
+    const l=raw.trim().replace(/^[\u2022•*\-–—]\s*/,'').replace(/\s{2,}/g,' ');
     if(!l){cur=null;continue}
     if(pageRx.test(l))continue;
     if(sceneRx.test(l))continue;
     if(didasRx.test(l))continue;
+    if(isLikelyStageDirectionLine(l))continue;
+    const inline=splitSpeakerInlineLine(l);
+    if(inline&&isLikelyCharacterName(inline.speaker)&&isSpeakerCueCase(inline.speaker)&&!suspectNameWatermarks.has(normalizeScriptLine(inline.speaker))){
+      cur=inline.speaker;
+      if(inline.content)res.push({char:cur,line:inline.content});
+      continue;
+    }
     const normalized=normalizeScriptLine(l);
     if(suspectNameWatermarks.has(normalized)){cur=null;continue}
     let m=charInlineRx.exec(l);
-    if(m){const name=m[1].trim();if(name.length>=2&&name===name.toUpperCase()&&isLikelyCharacterName(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;res.push({char:cur,line:m[2].trim()});continue}}
+    if(m){const name=m[1].trim();if(name.length>=2&&isSpeakerCueCase(name)&&isLikelyCharacterName(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;res.push({char:cur,line:m[2].trim()});continue}}
     m=charDashOnlyRx.exec(l);
-    if(m){const name=m[1].trim();if(name.length>=2&&name===name.toUpperCase()&&isLikelyCharacterName(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;continue}}
+    if(m){const name=m[1].trim();if(name.length>=2&&isSpeakerCueCase(name)&&isLikelyCharacterName(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;continue}}
     m=charAloneRx.exec(l);
-    if(m){const name=m[1].trim();if(name.length>=2&&name===name.toUpperCase()&&isLikelyCharacterName(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;continue}}
+    if(m){const name=m[1].trim();if(name.length>=2&&isSpeakerCueCase(name)&&isLikelyCharacterName(name)&&!suspectNameWatermarks.has(normalizeScriptLine(name))){cur=name;continue}}
     if(cur&&l.length>1&&!/^\s*[\(\[]/.test(l))res.push({char:cur,line:l});
   }
   if(res.length){
