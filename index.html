@@ -1929,7 +1929,7 @@ function toggleSetupCamera(){
 }
 function goSetupPartner(){showScreen('setupPartner');document.getElementById('mySessionCode').textContent=genCode();initDragDrop('uploadZone2')}
 function getPartnerCode(){const code=(document.getElementById('mySessionCode').textContent||'').trim();return code&&code!=='—'?code:''}
-function getJoinLink(){const code=getPartnerCode();if(!code)return '';return window.location.origin+window.location.pathname+'?code='+encodeURIComponent(code)}
+function getJoinLink(){const code=getPartnerCode();if(!code)return '';return window.location.origin+window.location.pathname+'?join='+encodeURIComponent(code)}
 function getPartnerShareText(){const code=getPartnerCode();if(!code)return '';const link=getJoinLink();return '🎬 Rejoins ma session Castwing\nCode: '+code+'\nLien direct: '+link}
 async function copyToClipboard(text){if(!text)return false;try{if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(text);return true}}catch(e){}const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand('copy')}catch(e){}document.body.removeChild(ta);return ok}
 async function copyPartnerCode(){const code=getPartnerCode();if(!code){showToast(t('codeUnavailable'));return}const ok=await copyToClipboard(code);showToast(ok?t('codeCopied')+' ✅':t('copyFailed'))}
@@ -1942,10 +1942,13 @@ async function shareVia(channel){
   if(channel==='wechat'){await copyToClipboard(text);window.open('https://web.wechat.com/','_blank');showToast(t('shareTextCopied'));return}
   const ok=await copyToClipboard(text);showToast(ok?t('shareTextCopied')+' ✅':t('shareUnavailable'))}
 function applyJoinCodeFromURL(){
-  const params=new URLSearchParams(window.location.search);const raw=(params.get('code')||'').toUpperCase();
+  const params=new URLSearchParams(window.location.search);
+  const raw=(params.get('join')||params.get('code')||'').toUpperCase();
   const clean=raw.replace(/[^A-Z0-9]/g,'').slice(0,10);if(!clean)return false;
   const input=document.getElementById('joinCodeInput');if(input)input.value=clean;
-  showScreen('joinScreen');showToast(t('joinCodePrefilled')+': '+clean,4000);return true;
+  showScreen('joinScreen');showToast(t('joinCodePrefilled')+': '+clean,4000);
+  try{window.history.replaceState(null,'',window.location.pathname)}catch(e){}
+  return true;
 }
 
 // ── Mode ──
@@ -2876,7 +2879,6 @@ async function startPartnerSession(){
 }
 
 async function joinAsPartner(){
-  if(!requireAccessOrPaywall())return;
   role='partner';sessionMode='partner';
   cancelSpeechFlow();
   const code=document.getElementById('joinCodeInput').value.trim().toUpperCase();if(!code){showToast('Entre un code');return}
@@ -2956,8 +2958,11 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   if(ss)ss.value=String(voiceSpeed);
   initCardTilt();
   startUsageTracking();
-  if(isUsageBlocked())openPaywallModal(t('usageBlocked'));
-  if(!applyJoinCodeFromURL())showScreen('home');
+  const joinedFromURL=applyJoinCodeFromURL();
+  if(!joinedFromURL){
+    showScreen('home');
+    if(isUsageBlocked())openPaywallModal(t('usageBlocked'));
+  }
 });
 </script>
 </body>
