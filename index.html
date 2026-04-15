@@ -127,8 +127,8 @@ input[type="file"]{display:none}
 .status-dot.waiting{background:var(--warning)}.status-dot.disconnected{background:var(--danger);animation:none}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
 .session-body{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
-.video-area{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:.5rem;position:relative;background:#000}
-.video-container{position:relative;width:100%;max-width:720px;aspect-ratio:16/9;border-radius:var(--radius);overflow:hidden;background:#111}
+.video-area{flex:1;display:flex;align-items:stretch;justify-content:center;min-height:0;padding:.5rem;position:relative;background:#000}
+.video-container{position:relative;width:100%;max-width:720px;border-radius:var(--radius);overflow:hidden;background:#111}
 .video-container video{width:100%;height:100%;object-fit:cover;display:block}
 .video-container .no-video{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.85rem;color:rgba(255,255,255,.4);font-weight:500}
 .video-controls{position:absolute;bottom:.8rem;left:50%;transform:translateX(-50%);display:flex;gap:.5rem;z-index:5}
@@ -186,7 +186,7 @@ input[type="file"]{display:none}
 .emotion-locked{opacity:.55}
 .emotion-locked option[value="neutral"]{opacity:1}
 
-@media(min-width:768px){#home{padding:3rem}.home-inner{max-width:520px}.logo h1{font-size:3.2rem}.session-body{flex-direction:row}.video-area{flex:3}.prompter-area{flex:2;max-height:none;border-top:none;border-left:1px solid rgba(255,255,255,.08)}}
+@media(min-width:768px){#home{padding:3rem}.home-inner{max-width:520px}.logo h1{font-size:3.2rem}.session-body{flex-direction:row}.video-area{flex:3;align-items:stretch}.video-container{max-width:none}.prompter-area{flex:2;max-height:none;border-top:none;border-left:1px solid rgba(255,255,255,.08)}}
 </style>
 </head>
 <body>
