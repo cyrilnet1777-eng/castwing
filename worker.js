@@ -51,7 +51,8 @@ async function handleTTS(request, env) {
     const voiceId = typeof payload.voiceId === "string" ? payload.voiceId.trim() : "";
     const emotion = typeof payload.emotion === "string" ? payload.emotion.trim().toLowerCase() : "neutral";
     const speed = Number.isFinite(Number(payload.speed)) ? Number(payload.speed) : 1;
-    const languageCode = typeof payload.languageCode === "string" ? payload.languageCode.trim().toLowerCase() : "";
+    const rawLang = typeof payload.languageCode === "string" ? payload.languageCode.trim().toLowerCase() : "";
+    const languageCode = rawLang.split("-")[0] || "";
     const modelId = typeof payload.modelId === "string" ? payload.modelId.trim() : "";
 
     if (!text || !voiceId) return json({ error: "Missing text or voiceId" }, 400);

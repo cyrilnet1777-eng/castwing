@@ -633,8 +633,8 @@ const VOICE_LOCALES=[
     {id:'ko-m',voice:'austin',fallback:['ahmet','james'],label:'Junho',tag:'Standard',gender:'male',languageCode:'ko-kr'},
   ]},
   {id:'turkish',label:'Türkçe 🇹🇷',languageCode:'tr',profiles:[
-    {id:'tr-f',voice:'charlotte',fallback:['eliza','mitsuki'],label:'Defne',tag:'Standard',gender:'female',languageCode:'tr-tr'},
-    {id:'tr-m',voice:'austin',fallback:['ahmet','edward'],label:'Emir',tag:'Standard',gender:'male',languageCode:'tr-tr'},
+    {id:'tr-f',voice:'eda',fallback:['charlotte','eliza'],label:'Defne',tag:'Standard',gender:'female',languageCode:'tr-tr'},
+    {id:'tr-m',voice:'ahmet',fallback:['austin','edward'],label:'Emir',tag:'Standard',gender:'male',languageCode:'tr-tr'},
   ]},
   {id:'russian',label:'Русский 🇷🇺',languageCode:'ru',profiles:[
     {id:'ru-f',voice:'charlotte',fallback:['morgane','elen'],label:'Alina',tag:'Standard',gender:'female',languageCode:'ru-ru'},
@@ -669,6 +669,8 @@ const PREVIEW_TEXT_BY_LANG={
   zh:'Ni hao, wo shi {name}.',
   ja:'Konnichiwa, watashi wa {name} desu.',
   ko:'Annyeong, jeoneun {name} imnida.',
+  tr:'Merhaba, ben {name}.',
+  ru:'Privet, ya {name}.',
 };
 
 const UI_LANGUAGES=[
@@ -736,7 +738,7 @@ const UI_FALLBACK_TRANSLATIONS={
   authInvalidCode:{fr:'Code invalide',en:'Invalid code',es:'Código inválido',it:'Codice non valido',zh:'验证码无效',ko:'코드가 올바르지 않습니다',ja:'コードが無効です',ar:'رمز غير صالح',de:'Ungültiger Code',pt:'Código inválido',hi:'कोड अमान्य है'},
   usageBlocked:{fr:'Limite atteinte. Attends 1h ou débloque à 1$.',en:'Limit reached. Wait 1h or unlock for $1.',es:'Límite alcanzado. Espera 1h o desbloquea por 1$.',it:'Limite raggiunto. Attendi 1h o sblocca con 1$.',zh:'已达上限。等待1小时或支付1美元解锁。',ko:'사용 한도 도달. 1시간 대기 또는 1달러 결제로 해제.',ja:'上限に達しました。1時間待つか1ドルで解除。',ar:'تم بلوغ الحد. انتظر ساعة أو افتح مقابل 1$.',de:'Limit erreicht. 1h warten oder für 1$ entsperren.',pt:'Limite atingido. Aguarde 1h ou desbloqueie por 1$.',hi:'सीमा पूरी। 1 घंटा प्रतीक्षा करें या 1$ देकर अनलॉक करें।'}
 };
-const TTS_LANGS=['fr','en','es','it','de','pt','ar','zh','ja','ko','hi'];
+const TTS_LANGS=['fr','en','es','it','de','pt','ar','zh','ja','ko','hi','tr','ru'];
 
 function resolveVoiceId(id){
   return ELEVEN_VOICE_IDS[id]||ELEVEN_VOICE_IDS.serena;
