@@ -299,7 +299,7 @@ input[type="file"]{display:none}
     <label id="scriptLabel1">Script (PDF ou texte)</label>
     <div class="upload-zone" id="uploadZone1" onclick="document.getElementById('pdfInput1').click()"><div class="up-icon">📄</div><div class="up-label" id="uploadLabel1">Glisse ton PDF ici ou clique</div><div class="up-sub" id="uploadSub1">Format scénario standard</div></div>
     <div class="upload-ok" id="uploadOk1" style="display:none"><span>✓</span><span class="fname" id="fileName1"></span><button class="clear-btn" onclick="clearPDF(1)">✕</button></div>
-    <input type="file" id="pdfInput1" accept=".pdf,application/pdf" onchange="handlePDFInput(1,this)">
+    <input type="file" id="pdfInput1" accept=".pdf,application/pdf,*/*" onchange="handlePDFInput(1,this)">
     <div class="setup-status" id="setupStatus1"></div>
     <div id="charSection1" style="display:none;margin-top:1rem"><label id="myCharacterLabel1">Mon personnage</label><div class="char-grid" id="charGrid1"></div><div id="partnerAssignWrap1" style="display:none;margin-top:1rem"><label id="partnerReadsLabel1">IA lit les répliques de :</label><div class="char-grid partner-char-grid" id="partnerCharGrid1"></div><div class="mode-hint" id="partnerAssignHint1"></div></div></div>
     <div style="margin-top:1rem"><label id="pasteScriptLabel1">Ou colle le texte</label><textarea id="scriptInput1" placeholder="MOI: Ma réplique&#10;PARTENAIRE: Sa réplique"></textarea></div>
@@ -375,7 +375,7 @@ input[type="file"]{display:none}
     <label id="scriptLabel2">Script (PDF ou texte)</label>
     <div class="upload-zone" id="uploadZone2" onclick="document.getElementById('pdfInput2').click()"><div class="up-icon">📄</div><div class="up-label" id="uploadLabel2">Glisse ton PDF ici ou clique</div><div class="up-sub" id="uploadSub2">Format scénario standard</div></div>
     <div class="upload-ok" id="uploadOk2" style="display:none"><span>✓</span><span class="fname" id="fileName2"></span><button class="clear-btn" onclick="clearPDF(2)">✕</button></div>
-    <input type="file" id="pdfInput2" accept=".pdf,application/pdf" onchange="handlePDFInput(2,this)">
+    <input type="file" id="pdfInput2" accept=".pdf,application/pdf,*/*" onchange="handlePDFInput(2,this)">
     <div class="setup-status" id="setupStatus2"></div>
     <div id="charSection2" style="display:none;margin-top:1rem"><label id="myCharacterLabel2">Mon personnage</label><div class="char-grid" id="charGrid2"></div></div>
     <div style="margin-top:1rem"><label id="pasteScriptLabel2">Ou colle le texte</label><textarea id="scriptInput2" placeholder="MOI: Ma réplique&#10;PARTENAIRE: Sa réplique"></textarea></div>
@@ -1700,11 +1700,14 @@ function initDragDrop(zoneId){
   ['dragenter','dragover'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();zone.classList.add('dragover')}));
   ['dragleave','drop'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();zone.classList.remove('dragover')}));
   zone.addEventListener('drop',e=>{const f=e.dataTransfer.files;if(f.length>0&&f[0].type==='application/pdf')processPDF(n,f[0]);else showToast('Seuls les PDF sont acceptés')});
-  zone.addEventListener('touchstart',function(e){zone.classList.add('dragover')},{passive:true});
-  zone.addEventListener('touchend',function(e){zone.classList.remove('dragover');document.getElementById('pdfInput'+n).click()},{passive:true});
 }
 
-function handlePDFInput(n,input){const f=input.files[0];if(f)processPDF(n,f)}
+function handlePDFInput(n,input){
+  const f=input.files[0];if(!f)return;
+  const isPdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name||'');
+  if(!isPdf){showToast('Seuls les fichiers PDF sont acceptés',4000);input.value='';return}
+  processPDF(n,f);
+}
 
 function extractPageText(textContent){
   const rows=new Map();
