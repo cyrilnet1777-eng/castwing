@@ -2000,12 +2000,22 @@ async function processPDF(n,file){
       renderChars(n,chars);
       document.getElementById('charSection'+n).style.display='block';
       document.getElementById('setupStatus'+n).textContent=pdfScript.length+' '+t('pdfLinesDetected');
+      const detectedLang=detectTextLanguage(rawText);
+      if(detectedLang&&VOICE_LOCALES.some(l=>l.id===detectedLang)){
+        applyLocaleVoices(detectedLang,false);
+        initVoiceGrid();
+      }
       showToast(chars.length+' personnages détectés',3000);
     }else{
       pdfScript=[];
       document.getElementById('charSection'+n).style.display='none';
       document.getElementById('scriptInput'+n).value=cleanText||rawText;
       document.getElementById('setupStatus'+n).textContent=t('pdfImportedRaw');
+      const detectedLangRaw=detectTextLanguage(rawText);
+      if(detectedLangRaw&&VOICE_LOCALES.some(l=>l.id===detectedLangRaw)){
+        applyLocaleVoices(detectedLangRaw,false);
+        initVoiceGrid();
+      }
       showToast('Aucun dialogue structuré trouvé – texte importé brut',4000);
     }
   }catch(e){
@@ -2013,6 +2023,34 @@ async function processPDF(n,file){
     showToast('Erreur lecture PDF : '+(e&&e.message?e.message:'format non supporté')+'. Essaie de coller le texte.',6000);
   }
   setLoading(false);
+}
+
+function detectTextLanguage(text){
+  const sample=(text||'').toLowerCase().replace(/[^a-zà-öø-ÿа-яёğışöüçñ\s]/g,' ').replace(/\s+/g,' ').slice(0,5000);
+  const words=sample.split(' ').filter(w=>w.length>=2);
+  if(!words.length)return '';
+  const langWords={
+    french:new Set(['le','la','les','de','du','des','est','une','un','avec','dans','pour','que','qui','mais','pas','son','sur','elle','vous','nous','mon','ton','tout','cette','être','fait','dit','plus','bien','comme']),
+    english:new Set(['the','is','are','and','with','for','that','this','have','was','you','not','but','they','she','his','her','from','been','would','what','will','can','just','more','about','into','than','then']),
+    spanish:new Set(['los','las','del','una','con','para','que','por','como','pero','más','esta','ese','son','han','todo','era','tiene','hay','desde','cuando','muy','entre','sobre','también']),
+    german:new Set(['der','die','das','und','ist','ein','eine','den','dem','von','mit','auf','für','nicht','sich','auch','des','noch','wie','bei','nach','aus','war','hat','sind','wird','zum','zur','kann','nur']),
+    italian:new Set(['che','non','una','per','con','sono','del','della','dei','degli','come','questo','quella','anche','più','suo','sua','suo','era','fatto','molto','quando','dove','ogni','stato','dopo','prima','sempre']),
+    portuguese:new Set(['que','não','uma','para','com','como','mais','dos','das','por','seu','sua','mas','isso','este','esta','tem','era','são','quando','muito','também','sobre','pode','depois','onde','bem']),
+    arabic:new Set(['من','في','على','إلى','هذا','هذه','كان','لا','ما','أن','عن','مع','هو','هي','ذلك','كل','بعد','قال','لقد','حتى','بين','عند']),
+    turkish:new Set(['bir','bu','ile','için','var','olan','den','dan','olarak','gibi','daha','hem','ama','ancak','çok','kadar','sonra','önce','bana','sana','benim','senin','onun']),
+    russian:new Set(['что','как','это','был','она','его','для','все','они','при','так','быть','уже','или','мне','нет','еще','бы','себя','тот','только','когда','ему']),
+    japanese:new Set(['の','に','は','を','た','が','で','て','と','し','れ','さ','ある','いる','する','から','こと','これ','それ','ない']),
+    chinese:new Set(['的','了','在','是','我','他','她','们','这','那','有','你','不','和','就','也','说','要','会','人','到','来','都']),
+    korean:new Set(['은','는','이','가','을','를','에','의','로','와','과','도','만','에서','부터','까지','하다','있다','없다']),
+    hindi:new Set(['है','का','की','के','में','को','से','ने','पर','और','एक','यह','वह','हैं','था','हम','आप','उन','कि','जो','भी']),
+  };
+  const scores={};
+  for(const[lang,set]of Object.entries(langWords)){
+    scores[lang]=words.filter(w=>set.has(w)).length;
+  }
+  const best=Object.entries(scores).sort((a,b)=>b[1]-a[1])[0];
+  if(!best||best[1]<3)return '';
+  return best[0];
 }
 
 function buildSpeakerRegexes(){
@@ -2424,7 +2462,12 @@ async function startAiSession(){
   voiceSpeed=getCurrentVoiceSpeed();
   selectedEmotion=document.getElementById('emotionSelect').value||selectedEmotion;
   if(!selectedVoice)selectedVoice=VOICE_PRESETS[0]||null;
-  prompterLines=buildLines(1);prompterIndex=0;
+  prompterLines=buildLines(1);
+  if(!prompterLines.length&&pdfScript.length>0){
+    console.warn('buildLines returned empty despite pdfScript having',pdfScript.length,'entries. selectedChar=',selectedChar,'soloPartnerMode=',soloPartnerMode);
+    prompterLines=pdfScript.map(s=>({text:s.line,type:selectedChar&&s.char===selectedChar?'actor':'partner',char:s.char}));
+  }
+  prompterIndex=0;
   lastAutoSpokenIndex=-1;
   showScreen('session');renderPrompter();
   if(mode==='ai'||mode==='auto'){document.getElementById('aiPanel').classList.add('active');populateSessionVoiceSelect();setStatus('',mode==='auto'?'🎤 Auto prêt':'🦾 IA prête')}
