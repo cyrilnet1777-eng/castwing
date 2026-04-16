@@ -5,3 +5,15 @@ main = "worker.js"
 [assets]
 directory = "."
 not_found_handling = "single-page-application"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "castwing-db"
+database_id = "fb8c4e61-e82c-4d75-aadd-f509e5612735"
+
+[[kv_namespaces]]
+binding = "AUTH_KV"
+id = "ed41ae7cfc704ef1bd36aba310c83c40"
+
+[vars]
+ADMIN_EMAILS = "sersoub.w@gmail.com"

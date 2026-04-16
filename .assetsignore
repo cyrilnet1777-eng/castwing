@@ -1,0 +1,16 @@
+# Wrangler Workers assets: ignore dev/tooling (see Cloudflare docs — .gitignore-style)
+.git/
+.mamba/
+.local/
+.wrangler/
+.tmp-deploy/
+.cursor/
+**/.DS_Store
+.dev.vars
+
+# Internal docs (not needed by the SPA at runtime)
+CASTWING-MONETISATION-PLAN.pdf
+CASTWING-MONETISATION-PLAN.md
+CASTWING-SPEC*.md
+# Source SFX drafts — production copies live under /sounds/
+sons castwing/
