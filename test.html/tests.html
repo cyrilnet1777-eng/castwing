@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Castwing — Tests de régression</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 40px 20px;
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  background: #FAFAF8;
+  color: #0F1624;
+  line-height: 1.5;
+}
+.container { max-width: 880px; margin: 0 auto; }
+h1 {
+  font-size: 28px; font-weight: 700; letter-spacing: -0.02em;
+  margin: 0 0 4px;
+}
+.subtitle {
+  color: #6B7280; margin: 0 0 32px; font-size: 14px;
+}
+.controls {
+  display: flex; gap: 12px; margin-bottom: 24px;
+  flex-wrap: wrap; align-items: center;
+}
+button {
+  font-family: inherit; font-size: 14px; font-weight: 600;
+  padding: 10px 18px; border-radius: 10px; cursor: pointer;
+  border: none; transition: all 0.15s;
+}
+.btn-primary { background: #0F1624; color: #fff; }
+.btn-primary:hover { background: #1a2540; }
+.btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+.btn-secondary {
+  background: #fff; color: #0F1624; border: 1px solid #E5E5E5;
+}
+.btn-secondary:hover { background: #F5F5F5; }
+.target-url-input {
+  padding: 10px 14px;
+  border: 1px solid #E5E5E5;
+  border-radius: 10px;
+  font-family: inherit; font-size: 14px;
+  flex: 1; min-width: 240px;
+  color: #0F1624;
+}
+.summary {
+  background: #fff;
+  border: 1px solid #EDEDEA;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.summary-item { text-align: center; }
+.summary-value {
+  font-size: 28px; font-weight: 700; letter-spacing: -0.02em;
+}
+.summary-label {
+  font-size: 11px; color: #6B7280;
+  text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px;
+}
+.summary-value.pass { color: #4A7C59; }
+.summary-value.fail { color: #E63946; }
+.summary-value.warn { color: #D97706; }
+.summary-value.pending { color: #9CA3AF; }
+
+.test-list { display: flex; flex-direction: column; gap: 8px; }
+.test-item {
+  background: #fff;
+  border: 1px solid #EDEDEA;
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex; align-items: center; gap: 14px;
+  transition: all 0.15s;
+}
+.test-item:hover { border-color: #D5D5D0; }
+.test-status {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+  flex-shrink: 0;
+}
+.status-pass { background: #E8F5EC; color: #4A7C59; }
+.status-fail { background: #FDECEE; color: #E63946; }
+.status-warn { background: #FEF3C7; color: #D97706; }
+.status-running { background: #E0E7FF; color: #4169e1; }
+.status-pending { background: #F3F4F6; color: #9CA3AF; }
+.status-manual { background: #F3F4F6; color: #6B7280; }
+.test-info { flex: 1; min-width: 0; }
+.test-name { font-weight: 600; font-size: 14px; }
+.test-type {
+  font-size: 11px; color: #9CA3AF;
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+.test-result {
+  font-size: 12px; color: #6B7280; margin-top: 4px;
+}
+.test-result.error { color: #E63946; }
+.test-actions { display: flex; gap: 6px; }
+.test-btn {
+  background: transparent;
+  border: 1px solid #E5E5E5;
+  color: #0F1624;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px; font-weight: 500;
+  cursor: pointer;
+}
+.test-btn:hover { background: #F5F5F5; }
+.test-btn-pass { background: #E8F5EC; color: #4A7C59; border-color: #C8E0D0; }
+.test-btn-fail { background: #FDECEE; color: #E63946; border-color: #F5C5CB; }
+.log {
+  margin-top: 24px;
+  background: #0F1624; color: #D0D5DD;
+  border-radius: 12px;
+  padding: 16px;
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.log-line { padding: 2px 0; }
+.log-line.pass { color: #7FE3A3; }
+.log-line.fail { color: #F87171; }
+.log-line.info { color: #93C5FD; }
+.category-title {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: #6B7280;
+  margin: 20px 0 8px; padding-left: 4px;
+}
+.category-title:first-child { margin-top: 0; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Tests de régression Castwing</h1>
+  <p class="subtitle">Lance avant chaque déploiement. 15 tests : auto + manuel avec boutons pass/fail.</p>
+
+  <div class="controls">
+    <input type="text" id="target-url" class="target-url-input"
+           value="https://cast-wing.com" placeholder="URL à tester">
+    <button class="btn-primary" id="run-all-btn" onclick="runAllAutoTests()">
+      Lancer les tests auto
+    </button>
+    <button class="btn-secondary" onclick="resetAll()">Réinitialiser</button>
+    <button class="btn-secondary" onclick="exportResults()">Exporter résultats</button>
+  </div>
+
+  <div class="summary">
+    <div class="summary-item">
+      <div class="summary-value pass" id="count-pass">0</div>
+      <div class="summary-label">Passés</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-value fail" id="count-fail">0</div>
+      <div class="summary-label">Échoués</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-value warn" id="count-warn">0</div>
+      <div class="summary-label">À vérifier</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-value pending" id="count-pending">15</div>
+      <div class="summary-label">En attente</div>
+    </div>
+  </div>
+
+  <div id="test-list"></div>
+
+  <div class="log" id="log">[prêt] Clique "Lancer les tests auto" pour démarrer.</div>
+</div>
+
+<script>
+// ============================================================================
+// CONFIGURATION DES TESTS
+// ============================================================================
+
+const TESTS = [
+  // --- SANTÉ BACKEND (auto) ---
+  {
+    id: 'site-reachable',
+    name: 'Le site répond (200 OK)',
+    category: 'Santé backend',
+    type: 'auto',
+    test: async (url) => {
+      const res = await fetch(url, { method: 'GET', mode: 'no-cors' });
+      return { pass: true, msg: 'Site accessible' };
+    }
+  },
+  {
+    id: 'html-loads',
+    name: 'index.html contient les éléments critiques',
+    category: 'Santé backend',
+    type: 'auto',
+    test: async (url) => {
+      const res = await fetch(url);
+      const html = await res.text();
+      const checks = [
+        { key: 'peerjs', label: 'PeerJS (WebRTC)' },
+        { key: 'pdf.js', label: 'PDF.js' },
+        { key: 'DM Sans', label: 'Font DM Sans' },
+        { key: 'castwing', label: 'Markers Castwing' }
+      ];
+      const missing = checks.filter(c => !html.toLowerCase().includes(c.key.toLowerCase()));
+      if (missing.length > 0) {
+        return { pass: false, msg: `Manque : ${missing.map(m => m.label).join(', ')}` };
+      }
+      return { pass: true, msg: `Tous les éléments présents (${checks.length})` };
+    }
+  },
+  {
+    id: 'api-tts-exists',
+    name: '/api/tts existe (OPTIONS)',
+    category: 'Santé backend',
+    type: 'auto',
+    test: async (url) => {
+      try {
+        const res = await fetch(url + '/api/tts', { method: 'OPTIONS' });
+        if (res.status === 404) return { pass: false, msg: 'Route /api/tts introuvable' };
+        return { pass: true, msg: `Route répond (${res.status})` };
+      } catch (e) {
+        return { pass: false, msg: 'Route /api/tts inaccessible: ' + e.message };
+      }
+    }
+  },
+  {
+    id: 'api-auth-exists',
+    name: '/api/auth/send-code ne leake PAS le code',
+    category: 'Santé backend',
+    type: 'auto',
+    test: async (url) => {
+      const testEmail = `test-${Date.now()}@castwing-test.invalid`;
+      try {
+        const res = await fetch(url + '/api/auth/send-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: testEmail })
+        });
+        const body = await res.text();
+        const hasCode = /["']code["']\s*:\s*["']?\d{6}/.test(body);
+        if (hasCode) {
+          return { pass: false, msg: 'FAILLE: le code est dans la réponse API' };
+        }
+        return { pass: true, msg: 'Pas de code dans la réponse (bien)' };
+      } catch (e) {
+        return { pass: false, msg: 'Route inaccessible: ' + e.message };
+      }
+    }
+  },
+
+  // --- PARSING (semi-auto via iframe) ---
+  {
+    id: 'parser-no-slug-spoken',
+    name: 'Parser : slug lines classifiées comme NON parlées',
+    category: 'Parser script',
+    type: 'manual',
+    hint: 'Upload un PDF avec "53 EXT. HILLTOP - DAY 53" au début. Lance mode IA vocale. L\'AI ne doit PAS lire "53 EXT. HILLTOP".'
+  },
+  {
+    id: 'parser-no-action-spoken',
+    name: 'Parser : didascalies (action) NON parlées',
+    category: 'Parser script',
+    type: 'manual',
+    hint: 'Upload un PDF avec une didascalie type "Jesus walks among the people". L\'AI doit la sauter, pas la lire.'
+  },
+  {
+    id: 'parser-grouping',
+    name: 'Téléprompter : regroupement des répliques consécutives',
+    category: 'Parser script',
+    type: 'manual',
+    hint: 'Si un personnage a 3+ répliques d\'affilée, son nom apparaît UNE SEULE fois au-dessus du bloc.'
+  },
+
+  // --- UX CRITIQUE (manuel) ---
+  {
+    id: 'character-selection',
+    name: 'Écran de sélection de personnage',
+    category: 'Flux utilisateur',
+    type: 'manual',
+    hint: 'Après upload PDF, on voit "Qui joues-tu ?" avec la liste des personnages. Cliquer sur un démarre la session.'
+  },
+  {
+    id: 'tap-to-jump',
+    name: 'Tap-to-jump dans le téléprompter',
+    category: 'Flux utilisateur',
+    type: 'manual',
+    hint: 'Cliquer sur n\'importe quelle réplique : l\'audio en cours s\'arrête, le highlight saute, et si c\'est une réplique partenaire en mode IA, l\'AI la lit.'
+  },
+  {
+    id: 'chrono-freeze',
+    name: 'Chrono minutes : freeze en pause',
+    category: 'Flux utilisateur',
+    type: 'manual',
+    hint: 'Le chrono avance quand l\'AI parle, se fige quand elle s\'arrête ou qu\'on met en pause. Pas de consommation invisible.'
+  },
+
+  // --- AUTH (manuel) ---
+  {
+    id: 'auth-email-no-leak',
+    name: 'Auth email : code PAS affiché à l\'écran',
+    category: 'Authentification',
+    type: 'manual',
+    hint: 'Clique "Continuer avec email", entre ton email. Le code doit arriver SEULEMENT par email, JAMAIS affiché dans l\'UI.'
+  },
+  {
+    id: 'auth-signup-vs-login',
+    name: 'Distinction sign-up vs log-in',
+    category: 'Authentification',
+    type: 'manual',
+    hint: '1er compte = toast "Bienvenue" + son long. Déconnexion/reconnexion = toast "Content de te revoir" + son court. Les deux doivent être différents.'
+  },
+  {
+    id: 'auth-google',
+    name: 'Auth Google fonctionne',
+    category: 'Authentification',
+    type: 'manual',
+    hint: 'Bouton "Continuer avec Google" ouvre bien le popup Google, après sélection on est connecté.'
+  },
+
+  // --- FEATURES CŒUR (manuel) ---
+  {
+    id: 'ai-voice-reads',
+    name: 'Mode IA vocale lit les répliques partenaires',
+    category: 'Features cœur',
+    type: 'manual',
+    hint: 'Mode "IA vocale" sélectionné. L\'AI lit automatiquement chaque réplique du partenaire (pas la tienne).'
+  },
+  {
+    id: 'recording-works',
+    name: 'Enregistrement vidéo .webm téléchargeable',
+    category: 'Features cœur',
+    type: 'manual',
+    hint: 'Bouton REC enregistre la caméra, bouton Stop télécharge un fichier .webm lisible sur ton ordi.'
+  }
+];
+
+// ============================================================================
+// ÉTAT & RENDU
+// ============================================================================
+
+const state = {
+  results: {} // id -> { status: 'pass'|'fail'|'warn'|'pending'|'running', msg: '' }
+};
+
+TESTS.forEach(t => { state.results[t.id] = { status: 'pending', msg: '' }; });
+
+function render() {
+  const container = document.getElementById('test-list');
+  container.innerHTML = '';
+
+  const byCategory = {};
+  for (const t of TESTS) {
+    if (!byCategory[t.category]) byCategory[t.category] = [];
+    byCategory[t.category].push(t);
+  }
+
+  for (const [cat, tests] of Object.entries(byCategory)) {
+    const title = document.createElement('div');
+    title.className = 'category-title';
+    title.textContent = cat;
+    container.appendChild(title);
+
+    for (const t of tests) {
+      container.appendChild(renderTest(t));
+    }
+  }
+
+  updateSummary();
+}
+
+function renderTest(t) {
+  const r = state.results[t.id];
+  const el = document.createElement('div');
+  el.className = 'test-item';
+
+  const statusClass = r.status === 'pending' ? (t.type === 'manual' ? 'manual' : 'pending') : r.status;
+  const statusIcon = {
+    pass: '✓', fail: '✗', warn: '!',
+    running: '...', pending: '·', manual: 'M'
+  }[r.status === 'pending' && t.type === 'manual' ? 'manual' : r.status];
+
+  const resultClass = r.status === 'fail' ? 'error' : '';
+  const resultText = r.msg || (t.type === 'manual' ? t.hint : '');
+
+  el.innerHTML = `
+    <div class="test-status status-${statusClass}">${statusIcon}</div>
+    <div class="test-info">
+      <div class="test-name">${t.name}</div>
+      <div class="test-type">${t.type === 'auto' ? 'Auto' : 'Manuel'}</div>
+      <div class="test-result ${resultClass}">${resultText}</div>
+    </div>
+    <div class="test-actions">
+      ${t.type === 'manual' ? `
+        <button class="test-btn test-btn-pass" onclick="markManual('${t.id}', 'pass')">✓</button>
+        <button class="test-btn test-btn-fail" onclick="markManual('${t.id}', 'fail')">✗</button>
+      ` : `
+        <button class="test-btn" onclick="runOneTest('${t.id}')">Relancer</button>
+      `}
+    </div>
+  `;
+  return el;
+}
+
+function updateSummary() {
+  const counts = { pass: 0, fail: 0, warn: 0, pending: 0 };
+  for (const id in state.results) {
+    const s = state.results[id].status;
+    if (s === 'running') counts.pending++;
+    else if (counts[s] !== undefined) counts[s]++;
+    else counts.pending++;
+  }
+  document.getElementById('count-pass').textContent = counts.pass;
+  document.getElementById('count-fail').textContent = counts.fail;
+  document.getElementById('count-warn').textContent = counts.warn;
+  document.getElementById('count-pending').textContent = counts.pending;
+}
+
+function log(msg, type = 'info') {
+  const logEl = document.getElementById('log');
+  const line = document.createElement('div');
+  line.className = 'log-line ' + type;
+  const ts = new Date().toLocaleTimeString();
+  line.textContent = `[${ts}] ${msg}`;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// ============================================================================
+// RUNNERS
+// ============================================================================
+
+async function runOneTest(id) {
+  const t = TESTS.find(x => x.id === id);
+  if (!t || t.type !== 'auto') return;
+
+  const url = document.getElementById('target-url').value.replace(/\/$/, '');
+  state.results[id] = { status: 'running', msg: 'En cours...' };
+  render();
+  log(`→ ${t.name}`, 'info');
+
+  try {
+    const res = await t.test(url);
+    state.results[id] = {
+      status: res.pass ? 'pass' : 'fail',
+      msg: res.msg
+    };
+    log(`${res.pass ? '✓' : '✗'} ${t.name}: ${res.msg}`, res.pass ? 'pass' : 'fail');
+  } catch (e) {
+    state.results[id] = { status: 'fail', msg: 'Erreur: ' + e.message };
+    log(`✗ ${t.name}: ${e.message}`, 'fail');
+  }
+  render();
+}
+
+async function runAllAutoTests() {
+  document.getElementById('run-all-btn').disabled = true;
+  log('==== Lancement des tests automatiques ====', 'info');
+
+  for (const t of TESTS) {
+    if (t.type === 'auto') {
+      await runOneTest(t.id);
+    }
+  }
+
+  log('==== Tests auto terminés ====', 'info');
+  log('Il reste les tests manuels à valider à la main.', 'info');
+  document.getElementById('run-all-btn').disabled = false;
+}
+
+function markManual(id, result) {
+  const t = TESTS.find(x => x.id === id);
+  state.results[id] = {
+    status: result,
+    msg: result === 'pass' ? 'Validé manuellement' : 'Échec marqué manuellement'
+  };
+  log(`${result === 'pass' ? '✓' : '✗'} [MANUEL] ${t.name}`, result);
+  render();
+}
+
+function resetAll() {
+  TESTS.forEach(t => { state.results[t.id] = { status: 'pending', msg: '' }; });
+  document.getElementById('log').innerHTML = '[reset] Prêt pour nouveau run.';
+  render();
+}
+
+function exportResults() {
+  const lines = ['# Castwing — Rapport de tests', ''];
+  lines.push(`Date: ${new Date().toLocaleString()}`);
+  lines.push(`Cible: ${document.getElementById('target-url').value}`);
+  lines.push('');
+
+  const byCategory = {};
+  for (const t of TESTS) {
+    if (!byCategory[t.category]) byCategory[t.category] = [];
+    byCategory[t.category].push(t);
+  }
+
+  for (const [cat, tests] of Object.entries(byCategory)) {
+    lines.push(`## ${cat}`);
+    lines.push('');
+    for (const t of tests) {
+      const r = state.results[t.id];
+      const icon = { pass: '✓', fail: '✗', warn: '!', pending: '·', running: '...' }[r.status] || '?';
+      lines.push(`- [${icon}] **${t.name}** (${t.type}): ${r.msg || '—'}`);
+    }
+    lines.push('');
+  }
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `castwing-tests-${Date.now()}.md`;
+  a.click();
+}
+
+render();
+</script>
+
+</body>
+</html>
