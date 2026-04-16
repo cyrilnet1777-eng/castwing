@@ -1,6 +1,6 @@
 /* =========================================================
    CASTWING WORKER — Backend
-   Routes: /api/tts, /api/auth, /api/auth/google, /api/geo,
+   Routes: /api/tts, /api/parse-script, /api/auth, /api/auth/google, /api/geo,
            /api/session, /api/credits/consume,
            /api/invite/redeem,
            /api/admin/create-invite, /api/admin/list-invites,
@@ -834,6 +834,227 @@ async function handleCreditsConsume(request, env) {
 }
 
 /* =========================================================
+   REMOTE SCRIPT PARSE (ANTHROPIC)
+========================================================= */
+
+const MAX_REMOTE_PARSE_BYTES = 10 * 1024 * 1024;
+const PARSE_TIMEOUT_MS = 25000;
+
+function logParse(event, data = {}) {
+  try {
+    console.log(JSON.stringify({ scope: "parse-script", event, ...data }));
+  } catch (_) {}
+}
+
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+}
+
+function stripJsonFence(text) {
+  const s = String(text || "").trim();
+  const fenced = s.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  return fenced ? fenced[1].trim() : s;
+}
+
+function validateParsedScript(raw) {
+  if (!Array.isArray(raw)) return { ok: false, error: "not_array" };
+  const out = [];
+  for (let i = 0; i < raw.length; i += 1) {
+    const row = raw[i];
+    if (!row || typeof row !== "object") return { ok: false, error: `row_${i}_not_object` };
+    const kind = String(row.kind || "").trim();
+    if (!["slug", "action", "dialogue"].includes(kind)) {
+      return { ok: false, error: `row_${i}_invalid_kind` };
+    }
+    if (kind === "dialogue") {
+      const char = String(row.char || "").replace(/\s+/g, " ").trim();
+      const text = String(row.text || "").replace(/\s+/g, " ").trim();
+      if (!char || !text) return { ok: false, error: `row_${i}_invalid_dialogue` };
+      out.push({ kind: "dialogue", char, text });
+      continue;
+    }
+    const text = String(row.text || "").replace(/\s+/g, " ").trim();
+    if (!text) return { ok: false, error: `row_${i}_empty_text` };
+    out.push({ kind, text });
+  }
+  if (!out.length) return { ok: false, error: "empty_output" };
+  if (out.length > 5000) return { ok: false, error: "too_many_rows" };
+  return { ok: true, script: out };
+}
+
+async function callAnthropicParse({ env, parseId, model, pdfBase64, fileName, attempt }) {
+  const systemPrompt = [
+    "You are a screenplay parser.",
+    "Return ONLY valid JSON array. No prose, no markdown.",
+    "Each item must be one of:",
+    '{"kind":"slug","text":"..."}',
+    '{"kind":"action","text":"..."}',
+    '{"kind":"dialogue","char":"...","text":"..."}',
+    "Ignore OCR/page noise: watermarks, revision headers, page numbers, margin markers.",
+    "Normalize dialogue speaker names: remove (CONT'D), (O.S.), (V.O.) variations.",
+    "Keep original order. Do not invent lines."
+  ].join(" ");
+  const userPrompt = [
+    "Parse this screenplay PDF into structured JSON.",
+    "Output must be a JSON array only.",
+    "Preserve order.",
+    "Ignore revision/page/header/footer noise."
+  ].join(" ");
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort("timeout"), PARSE_TIMEOUT_MS);
+  const t0 = Date.now();
+  try {
+    const rsp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": String(env.ANTHROPIC_API_KEY || ""),
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 6400,
+        temperature: 0,
+        system: systemPrompt,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "document",
+                source: {
+                  type: "base64",
+                  media_type: "application/pdf",
+                  data: pdfBase64,
+                },
+              },
+              { type: "text", text: `${userPrompt} File name: ${fileName || "script.pdf"}` },
+            ],
+          },
+        ],
+      }),
+    });
+    const duration = Date.now() - t0;
+    const body = await rsp.json().catch(() => ({}));
+    if (!rsp.ok) {
+      logParse("anthropic_http_error", {
+        parse_id: parseId, model, attempt, status: rsp.status, duration_ms: duration,
+      });
+      return { ok: false, error: `anthropic_http_${rsp.status}`, providerBody: body };
+    }
+    const text = Array.isArray(body.content)
+      ? body.content.filter(x => x && x.type === "text").map(x => x.text || "").join("\n")
+      : "";
+    const cleaned = stripJsonFence(text);
+    let parsed;
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch (_) {
+      logParse("anthropic_invalid_json", { parse_id: parseId, model, attempt, duration_ms: duration });
+      return { ok: false, error: "invalid_json" };
+    }
+    const validated = validateParsedScript(parsed);
+    if (!validated.ok) {
+      logParse("anthropic_schema_invalid", {
+        parse_id: parseId, model, attempt, duration_ms: duration, schema_error: validated.error,
+      });
+      return { ok: false, error: `schema_${validated.error}` };
+    }
+    logParse("anthropic_success", {
+      parse_id: parseId, model, attempt, duration_ms: duration, rows: validated.script.length,
+    });
+    return { ok: true, script: validated.script };
+  } catch (err) {
+    const duration = Date.now() - t0;
+    const timeoutErr = String(err && err.message || err).toLowerCase().includes("timeout")
+      || String(err && err.name || "").toLowerCase() === "aborterror";
+    logParse("anthropic_exception", {
+      parse_id: parseId, model, attempt, duration_ms: duration, timeout: timeoutErr, error: toText(err),
+    });
+    return { ok: false, error: timeoutErr ? "anthropic_timeout" : "anthropic_exception" };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function handleParseScript(request, env) {
+  const parseId = generateId("parse");
+  const startedAt = Date.now();
+  if (!env.ANTHROPIC_API_KEY) {
+    return json({ ok: false, error: "missing_anthropic_api_key", fallback_recommended: true, meta: { parse_id: parseId } }, 500);
+  }
+  const contentType = request.headers.get("content-type") || "";
+  if (!contentType.toLowerCase().includes("multipart/form-data")) {
+    return json({ ok: false, error: "expected_multipart_form_data", fallback_recommended: true, meta: { parse_id: parseId } }, 400);
+  }
+  const form = await request.formData().catch(() => null);
+  const file = form ? form.get("file") : null;
+  if (!file || typeof file.arrayBuffer !== "function") {
+    return json({ ok: false, error: "missing_file", fallback_recommended: true, meta: { parse_id: parseId } }, 400);
+  }
+  const fileName = String(file.name || "script.pdf");
+  const fileType = String(file.type || "");
+  const fileBytes = Number(file.size || 0);
+  if (fileBytes > MAX_REMOTE_PARSE_BYTES) {
+    return json({
+      ok: false, error: "payload_too_large_for_remote_parse", fallback_recommended: true,
+      meta: { parse_id: parseId, file_bytes: fileBytes },
+    }, 413);
+  }
+  if (!fileType.includes("pdf") && !/\.pdf$/i.test(fileName)) {
+    return json({ ok: false, error: "invalid_file_type", fallback_recommended: true, meta: { parse_id: parseId, file_type: fileType } }, 400);
+  }
+  const buffer = await file.arrayBuffer();
+  const pdfBase64 = arrayBufferToBase64(buffer);
+  const attempts = [
+    { model: "claude-haiku-4-5-20251001", attempt: 1 },
+    { model: "claude-haiku-4-5-20251001", attempt: 2 },
+    { model: "claude-sonnet-4-6", attempt: 3 },
+  ];
+  let lastError = "unknown";
+  for (const step of attempts) {
+    const result = await callAnthropicParse({
+      env, parseId, model: step.model, pdfBase64, fileName, attempt: step.attempt,
+    });
+    if (result.ok) {
+      return json({
+        ok: true,
+        provider: "anthropic",
+        model: step.model,
+        script: result.script,
+        meta: {
+          parse_id: parseId,
+          attempts: step.attempt,
+          duration_ms: Date.now() - startedAt,
+          file_bytes: fileBytes,
+        },
+      });
+    }
+    lastError = result.error || "parse_failed";
+  }
+  return json({
+    ok: false,
+    error: lastError,
+    fallback_recommended: true,
+    meta: {
+      parse_id: parseId,
+      attempts: attempts.length,
+      duration_ms: Date.now() - startedAt,
+      file_bytes: fileBytes,
+    },
+  }, 502);
+}
+
+/* =========================================================
    D1 MIGRATION HELPER
 ========================================================= */
 
@@ -881,6 +1102,7 @@ export default {
     }
 
     if (url.pathname === "/api/tts" && request.method === "POST") return handleTTS(request, env);
+    if (url.pathname === "/api/parse-script" && request.method === "POST") return handleParseScript(request, env);
     if (url.pathname === "/api/auth" && request.method === "POST") return handleAuth(request, env);
     if (url.pathname === "/api/auth/google" && request.method === "POST") return handleGoogleAuth(request, env);
     if (url.pathname === "/api/session" && request.method === "GET") return handleSession(request, env);
@@ -893,7 +1115,7 @@ export default {
     if (url.pathname === "/api/admin/list-invites" && request.method === "GET") return handleListInvites(request, env);
     if (url.pathname === "/api/admin/revoke-invite" && request.method === "POST") return handleRevokeInvite(request, env);
 
-    const apiPaths = ["/api/tts", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/consume", "/api/invite/redeem", "/api/admin/"];
+    const apiPaths = ["/api/tts", "/api/parse-script", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/consume", "/api/invite/redeem", "/api/admin/"];
     if (apiPaths.some(p => url.pathname.startsWith(p))) {
       return json({ error: "Method not allowed" }, 405);
     }
