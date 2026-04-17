@@ -1867,7 +1867,8 @@ const UI_FALLBACK_TRANSLATIONS={
   partnerHintAll:{es:'La IA interpreta todos los personajes excepto el tuyo.',it:'L’IA interpreta tutti i ruoli tranne il tuo.',zh:'AI 扮演除你以外的所有角色。',ko:'AI가 당신 역할을 제외한 모든 배역을 읽습니다.',ja:'AI はあなた以外の全役を読みます。',ar:'الذكاء الاصطناعي يلعب كل الأدوار ما عدا دورك.',de:'Die KI spricht alle Rollen außer deiner.',pt:'A IA faz todas as falas, exceto as suas.',hi:'AI आपके किरदार को छोड़कर बाकी सभी भूमिकाएँ पढ़ेगा।'},
   partnerHintDuo:{es:'Modo dúo: solo líneas entre tú y este personaje.',it:'Modalità duo: solo battute tra te e questo personaggio.',zh:'双人模式：仅保留你与该角色的对话。',ko:'듀오 모드: 나와 이 캐릭터의 대사만 유지합니다.',ja:'デュオモード：あなたとこの役の台詞のみ。',ar:'وضع ثنائي: فقط الحوارات بينك وبين هذه الشخصية.',de:'Duo-Modus: nur Dialoge zwischen dir und dieser Figur.',pt:'Modo duo: apenas falas entre você e este personagem.',hi:'डुओ मोड: केवल आप और इस किरदार के बीच की लाइनें।'},
   pickCharacterFirst:{es:'Elige primero tu personaje',it:'Scegli prima il tuo personaggio',zh:'请先选择你的角色',ko:'먼저 내 캐릭터를 선택하세요',ja:'先に自分の役を選んでください',ar:'اختر شخصيتك أولًا',de:'Wähle zuerst deine Figur',pt:'Escolha primeiro seu personagem',hi:'पहले अपना किरदार चुनें'},
-  pdfReading:{en:'Reading script…',es:'Leyendo guion…',it:'Lettura copione…',zh:'读取剧本中…',ko:'대본 읽는 중…',ja:'台本を読み込み中…',ar:'جارٍ قراءة النص…',de:'Skript wird gelesen…',pt:'Lendo roteiro…',hi:'स्क्रिप्ट पढ़ी जा रही है…'},
+  pdfReading:{fr:'Lecture du script…',en:'Reading script…',es:'Leyendo guion…',it:'Lettura copione…',zh:'读取剧本中…',ko:'대본 읽는 중…',ja:'台本を読み込み中…',ar:'جارٍ قراءة النص…',de:'Skript wird gelesen…',pt:'Lendo roteiro…',hi:'स्क्रिप्ट पढ़ी जा रही है…',tr:'Senaryo okunuyor…',ru:'Чтение сценария…'},
+  cancelBtn:{fr:'✕ Annuler',en:'✕ Cancel',es:'✕ Cancelar',it:'✕ Annulla',zh:'✕ 取消',ko:'✕ 취소',ja:'✕ キャンセル',ar:'✕ إلغاء',de:'✕ Abbrechen',pt:'✕ Cancelar',hi:'✕ रद्द करें',tr:'✕ İptal',ru:'✕ Отмена'},
   pdfLinesDetected:{en:'lines detected',es:'líneas detectadas',it:'battute rilevate',zh:'条台词已识别',ko:'개 대사 감지됨',ja:'行を検出',ar:'سطرًا تم اكتشافه',de:'Zeilen erkannt',pt:'falas detectadas',hi:'पंक्तियाँ मिलीं'},
   pdfImportedRaw:{en:'Text imported (raw)',es:'Texto importado (sin procesar)',it:'Testo importato (grezzo)',zh:'已导入文本（原始）',ko:'텍스트 가져옴(원문)',ja:'テキストを読み込み（生データ）',ar:'تم استيراد النص (خام)',de:'Text importiert (roh)',pt:'Texto importado (bruto)',hi:'टेक्स्ट आयात किया गया (रॉ)'},
   pdfReadError:{en:'PDF reading error',es:'Error al leer el PDF',it:'Errore lettura PDF',zh:'PDF 读取错误',ko:'PDF 읽기 오류',ja:'PDF 読み込みエラー',ar:'خطأ في قراءة PDF',de:'Fehler beim Lesen der PDF',pt:'Erro ao ler PDF',hi:'PDF पढ़ने में त्रुटि'},
@@ -2979,7 +2980,7 @@ function setLoading(on,m){
   if(on){document.getElementById('loadingMsg').textContent=m||'Chargement…';e.classList.add('active')}
   else{stopFakeProgress();e.classList.remove('active');if(cb)cb.classList.remove('active')}
 }
-function showLoadingCancel(){const cb=document.getElementById('loadingCancelBtn');if(cb)cb.classList.add('active')}
+function showLoadingCancel(){const cb=document.getElementById('loadingCancelBtn');if(cb){cb.textContent=t('cancelBtn');cb.classList.add('active')}}
 function cancelPdfParse(){
   _pdfParseCancelled=true;
   if(_pdfParseAbort){_pdfParseAbort.abort();_pdfParseAbort=null}
