@@ -110,12 +110,10 @@ input[type="file"]{display:none}
 .mode-opt:hover{border-color:rgba(127,247,231,.30)}.mode-opt.active{background:linear-gradient(180deg,#3fe9d3,#1fb9a5);color:#04211d;border-color:#7ff7e7}
 .mode-hint{font-size:.75rem;color:var(--text-muted);margin-top:.4rem}
 
-.speed-btns{display:flex;gap:.4rem;margin-top:.4rem}
-.speed-btn{flex:1;padding:.5rem .2rem;border-radius:var(--radius);border:1.5px solid var(--border);background:rgba(7,30,26,.9);text-align:center;cursor:pointer;font-size:.78rem;font-weight:700;color:#d9efe7;transition:all .2s;line-height:1.2}
+.speed-btns{display:flex;gap:.3rem}
+.speed-btn{width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:rgba(7,30,26,.9);text-align:center;cursor:pointer;font-size:.82rem;font-weight:800;color:#d9efe7;transition:all .2s;line-height:32px;flex-shrink:0}
 .speed-btn:hover{border-color:rgba(127,247,231,.3)}
 .speed-btn.active{background:linear-gradient(180deg,#3fe9d3,#1fb9a5);color:#04211d;border-color:#7ff7e7}
-.speed-btn .speed-btn-label{font-size:.65rem;font-weight:500;opacity:.7;display:block;margin-top:.1rem}
-.speed-btn.active .speed-btn-label{opacity:.85;color:#0b3d34}
 
 /* VOICE */
 .voice-section{margin-top:1rem;display:none}.voice-section.active{display:block}
@@ -169,7 +167,6 @@ input[type="file"]{display:none}
 .pause-settings-panel .char-item.selected .cc{color:rgba(4,33,29,.7) !important}
 .pause-settings-panel select{width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid rgba(127,247,231,.2);background:rgba(7,30,26,.9);color:#d9efe7;font-size:.82rem;font-family:'DM Sans',sans-serif}
 .pause-settings-panel .speed-btns{gap:.3rem}
-.pause-settings-panel .speed-btn{padding:.4rem .15rem;font-size:.72rem}
 .prompter-area{flex:1;background:#1a1a1a;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.25rem 1rem 6rem;margin-top:35vh;max-width:720px;margin-left:auto;margin-right:auto;color:rgba(255,255,255,.92)}
 .prompter-group{margin-bottom:1.5rem}
 .prompter-character{font-size:.68rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.42);margin-bottom:.45rem;padding-left:.25rem;font-style:normal}
@@ -521,10 +518,6 @@ input[type="file"]{display:none}
           <option value="whisper">Chuchoté</option>
         </select>
       </div>
-      <div style="margin-top:.6rem">
-        <label id="speedLabel">Vitesse</label>
-        <div class="speed-btns" id="speedBtnsSetup"></div>
-      </div>
     </div>
   </div>
   <button class="btn btn-primary btn-full" onclick="startAiSession()" id="launchAiBtn">Lancer la session 🦾</button>
@@ -676,7 +669,7 @@ let usageTimer=null;
 let cwServerSession={email:null,isAdmin:false,plan:'visitor',creditsRemaining:null};
 
 const useElevenLabs=true;
-const pauseBetweenLines=500;
+function getPauseBetweenLines(){return voiceSpeed>=2.0?0:500;}
 const SETTINGS_KEY='castwing_user_settings_v3';
 const ACCESS_KEY='castwing_user_access_v1';
 const PLAN_KEY='castwing_plan_v2';
@@ -1778,10 +1771,10 @@ const SPEED_MIN=0.5;
 const SPEED_MAX=2;
 const SPEED_DEFAULT=1;
 const SPEED_LEVELS=[
-  {value:0.65,label:'×0.65',sub:'Lent'},
-  {value:1.0,label:'×1.0',sub:'Normal'},
-  {value:1.5,label:'×1.5',sub:'Rapide'},
-  {value:2.0,label:'×2.0',sub:'Pro'}
+  {value:0.65,num:'1',tip:'Lent'},
+  {value:1.0,num:'2',tip:'Normal'},
+  {value:1.5,num:'3',tip:'Rapide'},
+  {value:2.0,num:'4',tip:'Italienne'}
 ];
 const PREVIEW_TEXT_BY_LANG={
   fr:'Bonjour, je suis {name}.',
@@ -2722,13 +2715,13 @@ function renderSpeedBtns(containerId){
   SPEED_LEVELS.forEach(lvl=>{
     const el=document.createElement('div');
     el.className='speed-btn'+(voiceSpeed===lvl.value?' active':'');
-    el.innerHTML=lvl.label+'<span class="speed-btn-label">'+lvl.sub+'</span>';
+    el.textContent=lvl.num;
+    el.title=lvl.tip;
     el.onclick=()=>{setVoiceSpeed(lvl.value,false)};
     g.appendChild(el);
   });
 }
 function renderAllSpeedBtns(){
-  renderSpeedBtns('speedBtnsSetup');
   renderSpeedBtns('speedBtnsSession');
   renderSpeedBtns('speedBtnsPause');
 }
@@ -2806,7 +2799,7 @@ async function speakWithElevenLabs(text,preset,token,cb){
         text,
         voiceId,
         modelId:preset.modelId||'eleven_multilingual_v2',
-        emotion:selectedEmotion,
+        emotion:voiceSpeed>=2.0?'neutral':selectedEmotion,
         speed,
         languageCode:preset.languageCode||getCurrentLanguageCode()
       });
@@ -4113,7 +4106,7 @@ function scheduleAfterPartner(lineIndex){
     renderPrompter();
     syncPrompter();
     handleCurrentLineAutomation();
-  },pauseBetweenLines);
+  },getPauseBetweenLines());
 }
 function handleCurrentLineAutomation(){
   clearAutoTimer();
