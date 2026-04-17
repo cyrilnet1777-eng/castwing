@@ -3668,7 +3668,7 @@ async function processPDF(n,file){
         parsedScript=[];
       }
     }
-    pdfScript=sanitizeCharacterNames(parsedScript);
+    pdfScript=sanitizeDialogueVsAction(sanitizeCharacterNames(parsedScript));
     syncPdfScriptDebugMirror();
     selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;
     const chars=getChars();
@@ -3939,6 +3939,23 @@ function sanitizeCharacterNames(script){
     if(!row||row.kind!=='dialogue'||!bad.has(row.char))return row;
     return{kind:'action',char:'',line:row.line,isStageDirection:true,isSpoken:false,parenthetical:null};
   });
+}
+function sanitizeDialogueVsAction(script){
+  const ACTION_VERBS=/\b(pose|entre|sort|regarde|s[''\u2019]?assoit|se\s+l[eè]ve|prend|ouvre|ferme|traverse|appara[iî]t|dispara[iî]t|claque|frappe|court|marche|tient|porte|d[ée]pose|saisit|s[''\u2019]?approche|s[''\u2019]?arr[eê]te|se\s+tourne|se\s+retourne|se\s+dirige|s[''\u2019]?en\s+va|monte|descend|recule|avance|lance|attrape|pousse|tire|jette|ram[aà]sse|allume|[ée]teint|d[ée]croche|raccroche)\b/i;
+  const SUBJ_VERB=/^(un|une|le|la|les|des|il|elle|ils|elles|on)\s+\w*(e|ent|t|s)\b/i;
+  const NO_DIALOGUE=/pas de dialogue|sans parler/i;
+  let reclassed=0;
+  const res=script.map(row=>{
+    if(!row||row.kind!=='dialogue'||!row.line)return row;
+    const txt=row.line.trim();
+    if(ACTION_VERBS.test(txt)||SUBJ_VERB.test(txt)||NO_DIALOGUE.test(txt)){
+      reclassed++;
+      return{kind:'action',char:'',line:row.line,isStageDirection:true,isSpoken:false,parenthetical:null};
+    }
+    return row;
+  });
+  if(reclassed>0)console.info('[parse] sanitizeDialogueVsAction reclassed',reclassed,'dialogue(s) → action');
+  return res;
 }
 function getChars(){const c={};for(const row of pdfScript){if(!row||row.kind!==LINE_TYPE.DIALOGUE||!row.char)continue;c[row.char]=(c[row.char]||0)+1}return Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([char,count])=>({char,count}))}
 function renderPartnerAssignment(n){
