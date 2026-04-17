@@ -157,6 +157,20 @@ input[type="file"]{display:none}
 .vctrl-pause.is-paused{background:rgba(127,227,163,.25);border-color:rgba(127,227,163,.4)}
 .pause-overlay{display:none;position:absolute;inset:0;z-index:55;background:rgba(0,0,0,.55);align-items:center;justify-content:center;flex-direction:column;gap:.5rem;pointer-events:none}.pause-overlay.active{display:flex}
 .pause-overlay span{font-size:1.3rem;font-weight:700;color:rgba(255,255,255,.85);letter-spacing:.1em;text-transform:uppercase}
+.pause-settings-btn{pointer-events:auto;margin-top:.6rem;padding:.5rem 1.2rem;border-radius:10px;border:1.5px solid rgba(127,247,231,.35);background:rgba(7,30,26,.85);color:#7ff7e7;font-size:.82rem;font-weight:700;cursor:pointer;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:all .2s}
+.pause-settings-btn:hover{background:rgba(63,233,211,.18);border-color:#7ff7e7}
+.pause-settings-panel{display:none;pointer-events:auto;position:absolute;bottom:80px;left:50%;transform:translateX(-50%);width:min(92vw,380px);background:rgba(7,22,20,.95);border:1.5px solid rgba(127,247,231,.25);border-radius:14px;padding:1rem 1.1rem;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:60;max-height:60vh;overflow-y:auto}
+.pause-settings-panel.active{display:block}
+.pause-settings-panel label{display:block;font-size:.75rem;font-weight:700;color:#7ff7e7;margin-bottom:.35rem;margin-top:.7rem;text-transform:uppercase;letter-spacing:.05em}
+.pause-settings-panel label:first-child{margin-top:0}
+.pause-settings-panel .char-grid{gap:.4rem}
+.pause-settings-panel .char-grid .char-item{background:rgba(7,30,26,.9);color:#d9efe7 !important;border-color:rgba(127,247,231,.2);font-size:.78rem;padding:.4rem .7rem}
+.pause-settings-panel .char-grid .char-item.selected{background:var(--blue);color:#04211d !important;border-color:#7ff7e7}
+.pause-settings-panel .char-grid .char-item .cc{color:rgba(217,239,231,.6) !important}
+.pause-settings-panel .char-item.selected .cc{color:rgba(4,33,29,.7) !important}
+.pause-settings-panel select{width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid rgba(127,247,231,.2);background:rgba(7,30,26,.9);color:#d9efe7;font-size:.82rem;font-family:'DM Sans',sans-serif}
+.pause-settings-panel .speed-slider{width:100%;accent-color:#3fe9d3}
+.pause-settings-panel .speed-val{font-size:.72rem;color:rgba(217,239,231,.6);text-align:center;margin-top:.2rem}
 .prompter-area{flex:1;background:#1a1a1a;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.25rem 1rem 6rem;margin-top:35vh;max-width:720px;margin-left:auto;margin-right:auto;color:rgba(255,255,255,.92)}
 .prompter-group{margin-bottom:1.5rem}
 .prompter-character{font-size:.68rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.42);margin-bottom:.45rem;padding-left:.25rem;font-style:normal}
@@ -573,7 +587,7 @@ input[type="file"]{display:none}
   <div class="session-body">
     <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><video id="remoteVideo" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:contain;background:#000"></video><div class="no-video" id="noVideoMsg">Caméra en attente…</div><div class="video-controls"><button class="vctrl" id="btnMic" onclick="toggleMic()"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/></svg></button><button class="vctrl" id="btnRec" onclick="toggleRecording()"><span class="rec-dot"></span></button><button class="vctrl vctrl-pause" id="btnPause" onclick="togglePause()"><svg id="pauseIcon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button><button class="vctrl" id="btnCam" onclick="toggleCam()"><svg viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg></button></div></div></div>
     <div class="prompter-area" id="prompterArea"><div class="prompter-empty" id="prompterEmptyText">Aucun texte chargé</div></div>
-    <div id="pauseOverlay" class="pause-overlay"><span>⏸ En pause</span></div>
+    <div id="pauseOverlay" class="pause-overlay"><span>⏸ En pause</span><button class="pause-settings-btn" id="pauseSettingsBtn" onclick="togglePauseSettings()">⚙ Réglages</button><div class="pause-settings-panel" id="pauseSettingsPanel"><label>Mon personnage</label><div class="char-grid" id="pauseCharGrid"></div><label>Voix IA</label><select id="pauseVoiceSelect" onchange="changePauseVoice()"></select><label>Vitesse</label><input type="range" class="speed-slider" id="pauseSpeedSlider" min="0.5" max="2" step="0.05" value="1" oninput="setPauseSpeed(this.value)"><div class="speed-val" id="pauseSpeedVal">1.0x</div></div></div>
   </div>
   <div class="ai-panel" id="aiPanel"><span class="ai-label" id="sessionVoiceLabel">🦾 Voix :</span><select id="sessionVoiceSelect" onchange="changeSessionVoice()"></select></div>
   <div class="session-bottom">
@@ -4229,8 +4243,72 @@ function togglePause(forceState){
     if(btn)btn.classList.remove('is-paused');
     if(icon)icon.innerHTML='<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>';
     if(conn&&conn.open)conn.send({type:'resume'});
+    closePauseSettings();
     handleCurrentLineAutomation();
   }
+}
+function togglePauseSettings(){
+  const panel=document.getElementById('pauseSettingsPanel');
+  if(!panel)return;
+  if(panel.classList.contains('active')){closePauseSettings();return}
+  populatePauseCharGrid();
+  populatePauseVoiceSelect();
+  const slider=document.getElementById('pauseSpeedSlider');
+  if(slider)slider.value=String(voiceSpeed);
+  const val=document.getElementById('pauseSpeedVal');
+  if(val)val.textContent=Number(voiceSpeed).toFixed(1)+'x';
+  panel.classList.add('active');
+}
+function closePauseSettings(){
+  const panel=document.getElementById('pauseSettingsPanel');
+  if(panel)panel.classList.remove('active');
+}
+function populatePauseCharGrid(){
+  const g=document.getElementById('pauseCharGrid');
+  if(!g)return;
+  g.innerHTML='';
+  const chars=getChars();
+  chars.forEach(({char,count})=>{
+    const el=document.createElement('div');
+    el.className='char-item'+(selectedChar===char?' selected':'');
+    el.innerHTML=`${char}<span class="cc">(${count})</span>`;
+    el.onclick=()=>{
+      selectedChar=char;
+      g.querySelectorAll('.char-item').forEach(c=>c.classList.remove('selected'));
+      el.classList.add('selected');
+      prompterLines=buildLines(1);
+      prompterIndex=0;
+      renderPrompter();
+      showToast('Tu joues '+char);
+    };
+    g.appendChild(el);
+  });
+}
+function populatePauseVoiceSelect(){
+  const s=document.getElementById('pauseVoiceSelect');
+  if(!s)return;
+  s.innerHTML='';
+  VOICE_PRESETS.forEach(v=>{
+    const o=document.createElement('option');
+    o.value=v.id;o.textContent=v.label+' — '+v.tag;
+    if(selectedVoice&&v.id===selectedVoice.id)o.selected=true;
+    s.appendChild(o);
+  });
+}
+function changePauseVoice(){
+  const s=document.getElementById('pauseVoiceSelect');
+  if(!s)return;
+  selectedVoice=VOICE_PRESETS.find(v=>v.id===s.value)||VOICE_PRESETS[0]||null;
+  if(selectedVoice)showToast('Voix : '+selectedVoice.label);
+  persistSettings();
+  populateSessionVoiceSelect();
+}
+function setPauseSpeed(v){
+  setVoiceSpeed(v,false);
+  const val=document.getElementById('pauseSpeedVal');
+  if(val)val.textContent=Number(v).toFixed(1)+'x';
+  const ss=document.getElementById('sessionSpeedSlider');
+  if(ss)ss.value=String(voiceSpeed);
 }
 
 // ── Recording ──
@@ -4368,6 +4446,7 @@ async function joinAsPartner(){
 function endSession(){
   stopSessionTimer();
   sessionPaused=false;
+  closePauseSettings();
   const po=document.getElementById('pauseOverlay');if(po)po.classList.remove('active');
   const pb=document.getElementById('btnPause');if(pb)pb.classList.remove('is-paused');
   const pi=document.getElementById('pauseIcon');if(pi)pi.innerHTML='<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>';
