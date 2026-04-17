@@ -594,6 +594,7 @@ input[type="file"]{display:none}
 </div>
 
 <audio id="remoteAudio" autoplay></audio>
+<audio id="ttsAudioEl" playsinline></audio>
 
 <script>
 try{
@@ -652,10 +653,12 @@ function unlockAudio(){
     const buf=_audioCtx.createBuffer(1,1,22050);
     const src=_audioCtx.createBufferSource();
     src.buffer=buf;src.connect(_audioCtx.destination);src.start(0);
-    const a=new Audio();
-    a.src='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
-    a.volume=0;
-    a.play().catch(()=>{});
+    const el=document.getElementById('ttsAudioEl');
+    if(el){
+      el.src='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+      el.volume=0;
+      el.play().then(()=>{el.volume=1;}).catch(()=>{});
+    }
     _audioUnlocked=true;
   }catch(e){}
 }
@@ -2777,20 +2780,25 @@ function changeSessionVoice(){
 function clearAutoTimer(){if(autoAdvanceTimer){clearTimeout(autoAdvanceTimer);autoAdvanceTimer=null}}
 function cancelTTSPlayback(){
   speechSynthesis.cancel();
-  if(ttsAudio){
-    ttsAudio.pause();
-    if(ttsAudio.src)URL.revokeObjectURL(ttsAudio.src);
-    ttsAudio.src='';
-    ttsAudio=null;
+  const el=document.getElementById('ttsAudioEl');
+  if(el){
+    el.pause();
+    el.onended=null;el.onerror=null;
+    if(el._revokeUrl){try{URL.revokeObjectURL(el._revokeUrl)}catch(e){} el._revokeUrl=null;}
+    el.removeAttribute('src');el.load();
   }
+  ttsAudio=null;
 }
 async function warmAudioForMobile(){
   if(_audioUnlocked)return;
   try{
-    const a=new Audio();
-    a.src='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
-    a.volume=0;
-    await a.play().catch(()=>{});
+    const el=document.getElementById('ttsAudioEl');
+    if(el){
+      el.src='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+      el.volume=0;
+      await el.play().catch(()=>{});
+      el.volume=1;
+    }
     _audioUnlocked=true;
   }catch(e){}
 }
@@ -2882,13 +2890,18 @@ async function speakWithElevenLabs(text,preset,token,cb){
     }
     if(token!==activeSpeechToken){return}
     const url=URL.createObjectURL(blob);
-    const audio=new Audio(url);
+    const audio=document.getElementById('ttsAudioEl');
+    if(!audio){URL.revokeObjectURL(url);return false}
+    if(ttsAudio&&ttsAudio._revokeUrl)try{URL.revokeObjectURL(ttsAudio._revokeUrl)}catch(e){}
+    audio.onended=null;audio.onerror=null;
+    audio.src=url;
+    audio._revokeUrl=url;
     const emo=getEmotionSettings();
     const emoRate=Number(emo&&emo.playbackRate)||1;
     audio.playbackRate=Math.max(0.58,Math.min(1.9,(speed||1)*emoRate));
     audio.volume=selectedEmotion==='whisper'?0.55:selectedEmotion==='sad'?0.9:1;
     ttsAudio=audio;
-    const done=()=>{URL.revokeObjectURL(url);if(ttsAudio===audio)ttsAudio=null;if(token===activeSpeechToken&&cb)cb();};
+    const done=()=>{URL.revokeObjectURL(url);if(audio._revokeUrl===url)audio._revokeUrl=null;if(token===activeSpeechToken&&cb)cb();lastTTSEndTs=Date.now();};
     audio.onended=done;
     audio.onerror=done;
     try{await audio.play()}catch(e){
