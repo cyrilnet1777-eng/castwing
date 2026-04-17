@@ -3889,12 +3889,7 @@ function parsePDFScript(text){
   return res;
 }
 function sanitizeCharacterNames(script){
-  const SOLO_BAD=new Set(['OUI','NON','MINUTES','ABSOLUMENT','ÉCRAN','ALORS','DONC','TRÈS','PLUS','MOINS','TOUT','TOUS','RIEN','BIEN','ENCORE','AUSSI','MÊME','COMME','QUAND','COMMENT','POURQUOI','SUITE','APRÈS','FIN','DÉBUT','CONTINUED','CONT','MORE','YES','NO','NOT','CUT','FADE','CONT\'D']);
-  const FULL_BAD_PATTERNS=[
-    /^(DE|DU|DES|LE|LA|LES|UN|UNE|AU|AUX|EN|ET|OU|À|SUR|DANS|POUR|PAR|AVEC|MAIS|QUE|QUI|CE|SE|NE|ON|IL|ELLE|ILS|NOUS|VOUS)\s/i,
-    /\s(DE|DU|DES|LE|LA|LES|UN|UNE|AU|AUX)\s/i,
-    /^L[''\u2019]/i
-  ];
+  const ALWAYS_BAD=new Set(['OUI','NON','MINUTES','ABSOLUMENT','ÉCRAN','CONTINUED','CONT','CONT\'D','CUT','FADE','MORE','YES','NO','NOT']);
   const charCounts={};
   for(const row of script){
     if(!row||row.kind!=='dialogue'||!row.char)continue;
@@ -3904,12 +3899,14 @@ function sanitizeCharacterNames(script){
   for(const name of Object.keys(charCounts)){
     const trimmed=name.trim();
     const words=trimmed.split(/\s+/);
+    if(ALWAYS_BAD.has(trimmed.toUpperCase())){bad.add(name);continue}
     if(words.length>3){bad.add(name);continue}
-    if(words.length===1&&SOLO_BAD.has(trimmed.toUpperCase())){bad.add(name);continue}
     if(/^\d+$/.test(trimmed)||trimmed.length<=1){bad.add(name);continue}
-    if(charCounts[name]===1&&words.length>=2&&FULL_BAD_PATTERNS.some(p=>p.test(trimmed))){bad.add(name);continue}
+    if(charCounts[name]<2){bad.add(name);continue}
   }
-  if(bad.size>0)console.warn('[parse] filtered fake characters:',Array.from(bad));
+  const kept=Object.keys(charCounts).filter(n=>!bad.has(n));
+  console.info('[parse] characters kept:',kept.map(n=>n+' ('+charCounts[n]+')'));
+  if(bad.size>0)console.warn('[parse] characters rejected:',Array.from(bad).map(n=>n+' ('+charCounts[n]+')'));
   return script.map(row=>{
     if(!row||row.kind!=='dialogue'||!bad.has(row.char))return row;
     return{kind:'action',char:'',line:row.line,isStageDirection:true,isSpoken:false,parenthetical:null};
