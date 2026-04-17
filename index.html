@@ -4115,13 +4115,14 @@ function computeSilenceMsForActorLine(line){
   const txt=String(line&&line.text||'');
   return Math.min(6000,3000+Math.floor(txt.length*36));
 }
-function stopAutoVAD(){if(vad)vad.stop()}
+function stopAutoVAD(){if(_vadArmTimer){clearTimeout(_vadArmTimer);_vadArmTimer=null;}if(vad)vad.stop()}
 function cancelSpeechFlow(){
   activeSpeechToken++;
   cancelTTSPlayback();
   clearAutoTimer();
   stopAutoVAD();
 }
+let _vadArmTimer=null;
 async function armAutoVADForActorLine(){
   if(mode!=='auto'||sessionMode!=='ai')return;
   const line=prompterLines[prompterIndex];
@@ -4129,14 +4130,29 @@ async function armAutoVADForActorLine(){
   const tracks=localStream.getAudioTracks();
   if(!tracks.length||!tracks[0].enabled)return;
   stopAutoVAD();
-  const silenceMs=computeSilenceMsForActorLine(line);
-  vad=new VoiceActivityDetector({speechThreshold:0.012,silenceDuration:silenceMs,onSpeechEnd:onAutoSpeechEnd});
-  await vad.start(new MediaStream(tracks));
+  if(_vadArmTimer){clearTimeout(_vadArmTimer);_vadArmTimer=null;}
+  const postTtsDelay=Math.max(0,2000-(Date.now()-lastTTSEndTs));
+  const doArm=async()=>{
+    _vadArmTimer=null;
+    if(mode!=='auto'||sessionPaused)return;
+    const silenceMs=computeSilenceMsForActorLine(line);
+    console.info('[VAD] arming: silenceThreshold='+silenceMs+'ms, postTtsDelay='+postTtsDelay+'ms');
+    vad=new VoiceActivityDetector({speechThreshold:0.008,silenceDuration:silenceMs,onSpeechEnd:onAutoSpeechEnd});
+    await vad.start(new MediaStream(tracks));
+  };
+  if(postTtsDelay>100){
+    _vadArmTimer=setTimeout(doArm,postTtsDelay);
+  }else{
+    await doArm();
+  }
 }
 function onAutoSpeechEnd(){
   if(sessionPaused)return;
   if(mode!=='auto'||sessionMode!=='ai')return;
-  if(lastTTSEndTs&&Date.now()-lastTTSEndTs<2000)return;
+  const sinceTts=lastTTSEndTs?Date.now()-lastTTSEndTs:9999;
+  const shouldAdvance=sinceTts>=2000;
+  console.info('[VAD] silence detected: sinceTTS='+sinceTts+'ms, threshold=2000ms, advancing='+shouldAdvance);
+  if(!shouldAdvance)return;
   const line=prompterLines[prompterIndex];
   if(!line||line.type!=='actor')return;
   if(prompterIndex>=prompterLines.length-1)return;
