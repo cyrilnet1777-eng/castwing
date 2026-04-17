@@ -92,7 +92,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.06;mi
 input[type="file"]{display:none}
 .upload-ok{display:flex;align-items:center;gap:.6rem;background:#e8f5e9;border-radius:var(--radius);padding:.7rem 1rem;font-size:.85rem;font-weight:700;color:#2e7d32}
 .upload-ok .fname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.upload-ok .clear-btn{background:none;border:none;cursor:pointer;font-size:1.1rem;color:#999;padding:.2rem}
+.upload-ok .clear-btn{background:none;border:none;cursor:pointer;font-size:1.3rem;color:#e74c3c;padding:.3rem .5rem;min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center;border-radius:6px;transition:background .2s}.upload-ok .clear-btn:hover{background:rgba(231,76,60,.12)}
 .setup-status{font-size:.78rem;color:var(--text-muted);text-align:center;margin-top:.3rem}
 
 /* CHAR */
@@ -207,6 +207,7 @@ input[type="file"]{display:none}
 .spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.2);border-top-color:var(--white);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;top:1.2rem;left:50%;transform:translateX(-50%);background:var(--navy);color:var(--white);padding:.65rem 1.2rem;border-radius:var(--radius);font-size:.82rem;font-weight:700;box-shadow:var(--shadow-lg);z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90vw;text-align:center}.toast.show{opacity:1}
 .loading-overlay{display:none;position:fixed;inset:0;z-index:150;background:rgba(0,26,77,.7);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:.8rem;color:var(--white)}.loading-overlay.active{display:flex}.loading-overlay p{font-size:.9rem;font-weight:700}
+.loading-cancel-btn{margin-top:.3rem;padding:.4rem 1.1rem;border-radius:8px;border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;font-size:.8rem;font-weight:600;cursor:pointer;display:none;transition:all .2s}.loading-cancel-btn:hover{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.5)}.loading-cancel-btn.active{display:inline-block}
 .progress-ring{position:relative;width:64px;height:64px}.progress-ring svg{transform:rotate(-90deg)}.progress-ring circle{fill:none;stroke-width:4}.progress-ring .ring-bg{stroke:rgba(255,255,255,.15)}.progress-ring .ring-fg{stroke:var(--white);stroke-linecap:round;transition:stroke-dashoffset .3s ease}.progress-ring .ring-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;color:var(--white)}
 .auth-modal,.paywall-modal{display:none;position:fixed;inset:0;z-index:180;background:rgba(6,10,20,.62);backdrop-filter:blur(16px);align-items:center;justify-content:center;padding:1rem}
 .auth-modal.active,.paywall-modal.active{display:flex}
@@ -373,7 +374,7 @@ input[type="file"]{display:none}
     <div id="cwInviteList" class="cw-invite-list"></div>
   </div>
 </div>
-<div id="loadingOverlay" class="loading-overlay"><div id="loadingSpinner" class="spinner"></div><div id="loadingRing" class="progress-ring" style="display:none"><svg width="64" height="64"><circle class="ring-bg" cx="32" cy="32" r="28"/><circle id="ringFg" class="ring-fg" cx="32" cy="32" r="28" stroke-dasharray="175.93" stroke-dashoffset="175.93"/></svg><span id="ringPct" class="ring-pct">0%</span></div><p id="loadingMsg">Chargement…</p></div>
+<div id="loadingOverlay" class="loading-overlay"><div id="loadingSpinner" class="spinner"></div><div id="loadingRing" class="progress-ring" style="display:none"><svg width="64" height="64"><circle class="ring-bg" cx="32" cy="32" r="28"/><circle id="ringFg" class="ring-fg" cx="32" cy="32" r="28" stroke-dasharray="175.93" stroke-dashoffset="175.93"/></svg><span id="ringPct" class="ring-pct">0%</span></div><p id="loadingMsg">Chargement…</p><button id="loadingCancelBtn" class="loading-cancel-btn" onclick="cancelPdfParse()">✕ Annuler</button></div>
 <div id="connectOverlay" class="overlay"><div class="spinner"></div><h3 id="overlayTitle">Connexion…</h3><p id="overlayMsg"></p><button class="btn btn-secondary" onclick="cancelConnection()" style="margin-top:.5rem">Annuler</button></div>
 
 <!-- ═══ HOME ═══ -->
@@ -1505,7 +1506,8 @@ async function tryRemoteClaudeParse(file){
   if(file.size>MAX_REMOTE_PARSE_BYTES)return{ok:false,reason:'payload_too_large_for_remote_parse'};
   const fd=new FormData();
   fd.append('file',file,file.name||'script.pdf');
-  const ctrl=new AbortController();
+  _pdfParseAbort=new AbortController();
+  const ctrl=_pdfParseAbort;
   const timeout=setTimeout(()=>ctrl.abort(),32000);
   try{
     const rsp=await fetch('/api/parse-script',{method:'POST',body:fd,signal:ctrl.signal});
@@ -2877,7 +2879,20 @@ function showToast(m,d=3000){const t=document.getElementById('toast');t.textCont
 function showOverlay(t,m){document.getElementById('overlayTitle').textContent=t;document.getElementById('overlayMsg').textContent=m;document.getElementById('connectOverlay').classList.add('active')}
 function hideOverlay(){document.getElementById('connectOverlay').classList.remove('active')}
 let _fakeProgressTimer=null,_fakeProgressPct=0;
-function setLoading(on,m){const e=document.getElementById('loadingOverlay');if(on){document.getElementById('loadingMsg').textContent=m||'Chargement…';e.classList.add('active')}else{stopFakeProgress();e.classList.remove('active')}}
+let _pdfParseAbort=null,_pdfParseCancelled=false;
+function setLoading(on,m){
+  const e=document.getElementById('loadingOverlay');
+  const cb=document.getElementById('loadingCancelBtn');
+  if(on){document.getElementById('loadingMsg').textContent=m||'Chargement…';e.classList.add('active')}
+  else{stopFakeProgress();e.classList.remove('active');if(cb)cb.classList.remove('active')}
+}
+function showLoadingCancel(){const cb=document.getElementById('loadingCancelBtn');if(cb)cb.classList.add('active')}
+function cancelPdfParse(){
+  _pdfParseCancelled=true;
+  if(_pdfParseAbort){_pdfParseAbort.abort();_pdfParseAbort=null}
+  setLoading(false);
+  showToast('Analyse annulée',2000);
+}
 function startFakeProgress(){
   stopFakeProgress();
   _fakeProgressPct=0;
@@ -3532,8 +3547,10 @@ function stripPdfWatermarkNoise(text,pageCount,fileName){
 async function processPDF(n,file){
   currentScriptName=file.name||'PDF';
   takeNumber=0;
+  _pdfParseCancelled=false;
   try{if(typeof window!=='undefined')window.__parserDebugLogs=[];}catch(_e){}
   setLoading(true,t('pdfReading'));
+  showLoadingCancel();
   startFakeProgress();
   try{
     let parsedScript=[];
@@ -3544,6 +3561,7 @@ async function processPDF(n,file){
     let parseProvider='';
     const remote=await tryRemoteClaudeParse(file);
     stopFakeProgress();
+    if(_pdfParseCancelled){setLoading(false);return}
     if(remote.ok&&Array.isArray(remote.parsedScript)&&remote.parsedScript.length){
       parsedScript=remote.parsedScript;
       rawText=remote.parsedScript.map(x=>x.kind==='dialogue'?`${x.char}: ${x.line}`:x.line).join('\n');
