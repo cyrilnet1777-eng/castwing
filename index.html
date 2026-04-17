@@ -603,6 +603,7 @@ let peer=null,conn=null,call=null,localStream=null,mediaRecorder=null,recordedCh
 let isRecording=false,isMicOn=true,isCamOn=true,prompterLines=[],prompterIndex=0,connectionTimeout=null;
 let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',selectedLocale='french',selectedUILanguage='fr',voiceSpeed=1,availableVoices=[],presetVoiceMap={};
 let soloPartnerMode='all',soloPartnerChar=null;
+let lockedVoiceLocale='';
 let autoAdvanceTimer=null,lastAutoSpokenIndex=-1,activeSpeechToken=0;
 let ttsAudio=null,vad=null;
 let takeNumber=0,currentScriptName='';
@@ -1959,7 +1960,8 @@ function initVoiceCountrySelect(){
   const select=document.getElementById('voiceCountrySelect');
   if(!select)return;
   select.innerHTML='';
-  const sortedLocales=VOICE_LOCALES.slice().sort((a,b)=>a.label.localeCompare(b.label,'en',{sensitivity:'base'}));
+  const pool=lockedVoiceLocale?VOICE_LOCALES.filter(l=>l.id===lockedVoiceLocale):VOICE_LOCALES.slice();
+  const sortedLocales=pool.sort((a,b)=>a.label.localeCompare(b.label,'en',{sensitivity:'base'}));
   sortedLocales.forEach(l=>{
     const opt=document.createElement('option');
     opt.value=l.id;
@@ -3572,7 +3574,9 @@ async function processPDF(n,file){
       const claudeLang=remoteLang?(langMap[remoteLang.toLowerCase().slice(0,2)]||''):'';
       const detectedLang=claudeLang||detectTextLanguage(rawText||cleanText);
       if(detectedLang&&VOICE_LOCALES.some(l=>l.id===detectedLang)){
+        lockedVoiceLocale=detectedLang;
         applyLocaleVoices(detectedLang,false);
+        initVoiceCountrySelect();
         initVoiceGrid();
       }
       if(usedFallbackLocal)showToast('Analyse locale (fallback)',2000);
@@ -3829,7 +3833,7 @@ function renderChars(n,chars){
   chars.forEach(({char,count})=>{const el=document.createElement('div');el.className='char-item';el.innerHTML=`${char}<span class="cc">(${count})</span>`;el.onclick=()=>{selectedChar=char;soloPartnerMode='all';soloPartnerChar=null;g.querySelectorAll('.char-item').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');showToast('Tu joues '+char);if(n===1)renderPartnerAssignment(1)};g.appendChild(el)});
   if(n===1)renderPartnerAssignment(1);
 }
-function clearPDF(n){pdfScript=[];syncPdfScriptDebugMirror();selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;document.getElementById('uploadZone'+n).style.display='block';document.getElementById('uploadOk'+n).style.display='none';document.getElementById('charSection'+n).style.display='none';if(n===1){const w=document.getElementById('partnerAssignWrap1');if(w)w.style.display='none'}document.getElementById('setupStatus'+n).textContent='';document.getElementById('pdfInput'+n).value=''}
+function clearPDF(n){pdfScript=[];syncPdfScriptDebugMirror();selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;lockedVoiceLocale='';initVoiceCountrySelect();document.getElementById('uploadZone'+n).style.display='block';document.getElementById('uploadOk'+n).style.display='none';document.getElementById('charSection'+n).style.display='none';if(n===1){const w=document.getElementById('partnerAssignWrap1');if(w)w.style.display='none'}document.getElementById('setupStatus'+n).textContent='';document.getElementById('pdfInput'+n).value=''}
 
 // ── Prompter ──
 function buildLines(n){
@@ -4330,6 +4334,7 @@ function endSession(){
   document.getElementById('noVideoMsg').style.display='flex';document.getElementById('noVideoMsg').textContent='Caméra en attente…';
   document.getElementById('aiPanel').classList.remove('active');
   hideTimerBadge();
+  lockedVoiceLocale='';
   hideOverlay();isMicOn=true;isCamOn=true;prompterLines=[];prompterIndex=0;pdfScript=[];syncPdfScriptDebugMirror();selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;currentScriptName='';takeNumber=0;showScreen('home');
 }
 function cancelConnection(){hideOverlay();if(!conn||!conn.open)endSession()}
