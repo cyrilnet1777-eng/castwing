@@ -3527,6 +3527,7 @@ async function processPDF(n,file){
     let cleanText='';
     let usedFallbackLocal=false;
     let remoteLang='';
+    let parseProvider='';
     const remote=await tryRemoteClaudeParse(file);
     stopFakeProgress();
     if(remote.ok&&Array.isArray(remote.parsedScript)&&remote.parsedScript.length){
@@ -3534,10 +3535,12 @@ async function processPDF(n,file){
       rawText=remote.parsedScript.map(x=>x.kind==='dialogue'?`${x.char}: ${x.line}`:x.line).join('\n');
       cleanText=rawText;
       remoteLang=remote.language||'';
+      parseProvider='anthropic';
       console.info('[parse] provider=anthropic model='+(remote.model||'')+' lang='+remoteLang);
       showToast('Script analysé par IA',1800);
     }else{
       usedFallbackLocal=true;
+      parseProvider='fallback';
       console.warn('[parse] provider=fallback reason=',remote.reason||'unknown');
       let buf;
       if(typeof file.arrayBuffer==='function'){
@@ -3575,7 +3578,7 @@ async function processPDF(n,file){
         parsedScript=[];
       }
     }
-    pdfScript=parsedScript;
+    pdfScript=sanitizeCharacterNames(parsedScript);
     syncPdfScriptDebugMirror();
     selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;
     const chars=getChars();
@@ -3585,7 +3588,7 @@ async function processPDF(n,file){
     if(pdfScript.length>0&&chars.length>0){
       renderChars(n,chars);
       document.getElementById('charSection'+n).style.display='block';
-      document.getElementById('setupStatus'+n).textContent=pdfScript.length+' '+t('pdfLinesDetected');
+      document.getElementById('setupStatus'+n).textContent=pdfScript.length+' '+t('pdfLinesDetected')+' · parsed by: '+parseProvider;
       if(n===1)showToast(t('pickCharacterFirst'),3000);
       const langMap={fr:'french',en:'english',es:'spanish',de:'german',it:'italian',pt:'portuguese',ar:'arabic',zh:'chinese',ja:'japanese',ko:'korean',tr:'turkish',ru:'russian',hi:'hindi'};
       const claudeLang=remoteLang?(langMap[remoteLang.toLowerCase().slice(0,2)]||''):'';
@@ -3818,6 +3821,26 @@ function parsePDFScript(text){
     entry.char=nameMap.get(norm);
   }
   return res;
+}
+function sanitizeCharacterNames(script){
+  const STOP_WORDS=new Set(['DE','DU','DES','LE','LA','LES','UN','UNE','AU','AUX','EN','ET','OU','À','SUR','DANS','POUR','PAR','AVEC','MAIS','QUE','QUI','CE','SE','NE','ON','IL','ELLE','ILS','NOUS','VOUS','OUI','NON','MINUTES','ABSOLUMENT','ÉCRAN','ALORS','DONC','TRÈS','PLUS','MOINS','TOUT','TOUS','RIEN','BIEN','ENCORE','AUSSI','MÊME','COMME','QUAND','COMMENT','POURQUOI','MONSIEUR','MADAME','VOIX','SUITE','APRÈS','FIN','DÉBUT','CONTINUED','CONT','MORE','THE','AND','BUT','YES','NO','NOT','OFF','SCREEN','OVER','BACK','CUT','FADE','CONTINUED','CONT\'D']);
+  const L_PATTERN=/^L[''\u2019]/i;
+  const bad=new Set();
+  for(const row of script){
+    if(!row||row.kind!=='dialogue'||!row.char)continue;
+    const name=row.char.trim();
+    const words=name.split(/\s+/);
+    if(words.length>3){bad.add(name);continue}
+    if(words.some(w=>STOP_WORDS.has(w.toUpperCase()))){bad.add(name);continue}
+    if(words.some(w=>L_PATTERN.test(w))){bad.add(name);continue}
+    if(/^\d+$/.test(name)){bad.add(name);continue}
+    if(name.length<=1){bad.add(name);continue}
+  }
+  if(bad.size>0)console.warn('[parse] filtered fake characters:',Array.from(bad));
+  return script.map(row=>{
+    if(!row||row.kind!=='dialogue'||!bad.has(row.char))return row;
+    return{kind:'action',char:'',line:row.line,isStageDirection:true,isSpoken:false,parenthetical:null};
+  });
 }
 function getChars(){const c={};for(const row of pdfScript){if(!row||row.kind!==LINE_TYPE.DIALOGUE||!row.char)continue;c[row.char]=(c[row.char]||0)+1}return Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([char,count])=>({char,count}))}
 function renderPartnerAssignment(n){
