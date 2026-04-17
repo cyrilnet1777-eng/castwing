@@ -652,6 +652,20 @@ const SFX={
   countdown:'/sounds/countdown.mp3',
 };
 const sfxCache={};
+let _audioUnlocked=false;
+function unlockAudio(){
+  if(_audioUnlocked)return;
+  try{
+    const Ctx=window.AudioContext||window.webkitAudioContext;
+    if(!Ctx)return;
+    const ctx=new Ctx();
+    const buf=ctx.createBuffer(1,1,22050);
+    const src=ctx.createBufferSource();
+    src.buffer=buf;src.connect(ctx.destination);src.start(0);
+    if(ctx.state==='suspended')ctx.resume();
+    _audioUnlocked=true;
+  }catch(e){}
+}
 function playSfx(key,vol=0.5){
   const src=SFX[key];if(!src)return;
   try{
@@ -3855,18 +3869,25 @@ function parsePDFScript(text){
   return res;
 }
 function sanitizeCharacterNames(script){
-  const STOP_WORDS=new Set(['DE','DU','DES','LE','LA','LES','UN','UNE','AU','AUX','EN','ET','OU','À','SUR','DANS','POUR','PAR','AVEC','MAIS','QUE','QUI','CE','SE','NE','ON','IL','ELLE','ILS','NOUS','VOUS','OUI','NON','MINUTES','ABSOLUMENT','ÉCRAN','ALORS','DONC','TRÈS','PLUS','MOINS','TOUT','TOUS','RIEN','BIEN','ENCORE','AUSSI','MÊME','COMME','QUAND','COMMENT','POURQUOI','MONSIEUR','MADAME','VOIX','SUITE','APRÈS','FIN','DÉBUT','CONTINUED','CONT','MORE','THE','AND','BUT','YES','NO','NOT','OFF','SCREEN','OVER','BACK','CUT','FADE','CONTINUED','CONT\'D']);
-  const L_PATTERN=/^L[''\u2019]/i;
-  const bad=new Set();
+  const SOLO_BAD=new Set(['OUI','NON','MINUTES','ABSOLUMENT','ÉCRAN','ALORS','DONC','TRÈS','PLUS','MOINS','TOUT','TOUS','RIEN','BIEN','ENCORE','AUSSI','MÊME','COMME','QUAND','COMMENT','POURQUOI','SUITE','APRÈS','FIN','DÉBUT','CONTINUED','CONT','MORE','YES','NO','NOT','CUT','FADE','CONT\'D']);
+  const FULL_BAD_PATTERNS=[
+    /^(DE|DU|DES|LE|LA|LES|UN|UNE|AU|AUX|EN|ET|OU|À|SUR|DANS|POUR|PAR|AVEC|MAIS|QUE|QUI|CE|SE|NE|ON|IL|ELLE|ILS|NOUS|VOUS)\s/i,
+    /\s(DE|DU|DES|LE|LA|LES|UN|UNE|AU|AUX)\s/i,
+    /^L[''\u2019]/i
+  ];
+  const charCounts={};
   for(const row of script){
     if(!row||row.kind!=='dialogue'||!row.char)continue;
-    const name=row.char.trim();
-    const words=name.split(/\s+/);
+    charCounts[row.char]=(charCounts[row.char]||0)+1;
+  }
+  const bad=new Set();
+  for(const name of Object.keys(charCounts)){
+    const trimmed=name.trim();
+    const words=trimmed.split(/\s+/);
     if(words.length>3){bad.add(name);continue}
-    if(words.some(w=>STOP_WORDS.has(w.toUpperCase()))){bad.add(name);continue}
-    if(words.some(w=>L_PATTERN.test(w))){bad.add(name);continue}
-    if(/^\d+$/.test(name)){bad.add(name);continue}
-    if(name.length<=1){bad.add(name);continue}
+    if(words.length===1&&SOLO_BAD.has(trimmed.toUpperCase())){bad.add(name);continue}
+    if(/^\d+$/.test(trimmed)||trimmed.length<=1){bad.add(name);continue}
+    if(charCounts[name]===1&&words.length>=2&&FULL_BAD_PATTERNS.some(p=>p.test(trimmed))){bad.add(name);continue}
   }
   if(bad.size>0)console.warn('[parse] filtered fake characters:',Array.from(bad));
   return script.map(row=>{
@@ -4398,6 +4419,7 @@ function setupCallHandlers(c){
 
 // ── START SESSIONS ──
 async function startAiSession(){
+  unlockAudio();
   if(pdfScript.length>0&&!selectedChar){showToast(t('pickCharacterFirst'));return}
   const tier=getUserTier();
   if(!isServerAdmin()&&tier!=='visitor'&&getRemainingSessionMs()<=0){showPaywallModal();return}
@@ -4428,6 +4450,7 @@ async function startAiSession(){
 }
 
 async function startPartnerSession(){
+  unlockAudio();
   if(pdfScript.length>0&&!selectedChar){showToast(t('pickCharacterFirst'));return}
   if(!isSignedUp()){showPartnerGate();return}
   role='actor';sessionMode='partner';mode='manual';
