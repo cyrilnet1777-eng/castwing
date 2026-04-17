@@ -962,7 +962,7 @@ function startSessionTimer(){
     const dt=Math.min(5000,Math.max(0,ts-chronoLastTs));
     chronoLastTs=ts;
     const tier=getUserTier();
-    if(tier!=='visitor'||getSpecTier()==='figurant'){
+    if(!isServerAdmin()&&(tier!=='visitor'||getSpecTier()==='figurant')){
       consumeMs(dt);
       updateTimerBadge();
       const ms=getRemainingSessionMs();
@@ -4279,7 +4279,7 @@ function setupCallHandlers(c){
 async function startAiSession(){
   if(pdfScript.length>0&&!selectedChar){showToast(t('pickCharacterFirst'));return}
   const tier=getUserTier();
-  if(tier!=='visitor'&&getRemainingSessionMs()<=0){showPaywallModal();return}
+  if(!isServerAdmin()&&tier!=='visitor'&&getRemainingSessionMs()<=0){showPaywallModal();return}
   if(!canUseElevenLabs()){elevenLabsTemporarilyDisabled=true;elevenLabsDisableReason='quota';}
   else{elevenLabsTemporarilyDisabled=false;if(elevenLabsDisableReason==='visitor'||elevenLabsDisableReason==='quota')elevenLabsDisableReason='';}
   if(!canUseEmotions())selectedEmotion='neutral';
