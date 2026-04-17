@@ -3698,7 +3698,7 @@ async function processPDF(n,file){
         parsedScript=[];
       }
     }
-    pdfScript=sanitizeDialogueVsAction(sanitizeCharacterNames(parsedScript));
+    pdfScript=mergeConsecutiveDialogues(sanitizeDialogueVsAction(sanitizeCharacterNames(parsedScript)));
     syncPdfScriptDebugMirror();
     selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;
     const chars=getChars();
@@ -3989,6 +3989,22 @@ function sanitizeDialogueVsAction(script){
   });
   if(reclassed>0)console.info('[parse] sanitizeDialogueVsAction reclassed',reclassed,'dialogue(s) → action');
   return res;
+}
+function mergeConsecutiveDialogues(script){
+  if(!script||!script.length)return script;
+  const out=[];
+  for(const row of script){
+    if(!row){continue}
+    const prev=out[out.length-1];
+    if(row.kind===LINE_TYPE.DIALOGUE&&prev&&prev.kind===LINE_TYPE.DIALOGUE&&prev.char===row.char&&!prev.isStageDirection&&!row.isStageDirection){
+      prev.line=(prev.line.replace(/[-–—]\s*$/,'')+' '+row.line).replace(/\s+/g,' ').trim();
+    }else{
+      out.push({...row});
+    }
+  }
+  const merged=script.length-out.length;
+  if(merged>0)console.info('[parse] mergeConsecutiveDialogues merged',merged,'continuation line(s)');
+  return out;
 }
 function getChars(){const c={};for(const row of pdfScript){if(!row||row.kind!==LINE_TYPE.DIALOGUE||!row.char)continue;c[row.char]=(c[row.char]||0)+1}return Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([char,count])=>({char,count}))}
 function renderPartnerAssignment(n){
