@@ -243,6 +243,8 @@ input[type="file"]{display:none}
 .clap-row .clap-label{color:rgba(255,255,255,.55);font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-size:.65rem}
 .clap-row .clap-val{color:#f5f5f5;font-weight:700;text-align:right;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @keyframes clapIn{from{opacity:0;transform:scale(1.05)}to{opacity:1;transform:scale(1)}}
+.clap-countdown{font-size:5rem;font-weight:900;color:#fff;text-align:center;font-family:'DM Sans',sans-serif;animation:countPop .4s ease}
+@keyframes countPop{from{opacity:0;transform:scale(1.5)}to{opacity:1;transform:scale(1)}}
 
 .paywall-overlay{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));background:rgba(2,8,8,.56);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:paywallOverlayIn .22s ease}
 .paywall-mini{width:min(100%,380px);border-radius:28px;padding:20px 18px 16px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015)),rgba(7,18,18,.88);border:1px solid rgba(130,255,235,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 24px 60px rgba(0,0,0,.38),0 0 30px rgba(57,231,208,.10);text-align:center;color:#f6fffd;animation:paywallCardIn .28s cubic-bezier(.2,.9,.2,1);position:relative;overflow:hidden}
@@ -632,6 +634,7 @@ const SFX={
   ambienceValley:'/sounds/ambience-valley.mp3',
   ambienceHorror:'/sounds/ambience-horror.mp3',
   ambienceOffice:'/sounds/ambience-office.mp3',
+  countdown:'/sounds/countdown.mp3',
 };
 const sfxCache={};
 function playSfx(key,vol=0.5){
@@ -1041,7 +1044,7 @@ function showPaywallModal(){
     if(cdEl){const iv=setInterval(()=>{const rem=Math.max(0,cooldownEnd-Date.now());cdEl.textContent=fmtTimer(rem);if(rem<=0){clearInterval(iv);dismissPaywall();unfreezeTimer();}},1000);}
   }
 }
-function showClapperboard(){
+function showClapperboard(onComplete){
   const existing=document.getElementById('clapOverlay');
   if(existing)existing.remove();
   takeNumber++;
@@ -1062,10 +1065,21 @@ function showClapperboard(){
       <div class="clap-row"><span class="clap-label">Script</span><span class="clap-val">${scriptName}</span></div>
     </div>
   </div>`;
-  overlay.addEventListener('click',()=>overlay.remove());
   document.body.appendChild(overlay);
-  playSfx('rise',0.4);
-  setTimeout(()=>{if(overlay.parentElement)overlay.remove()},3000);
+  playSfx('countdown',0.5);
+  setTimeout(()=>{
+    overlay.innerHTML='<div class="clap-countdown">3</div>';
+    setTimeout(()=>{
+      overlay.innerHTML='<div class="clap-countdown">2</div>';
+      setTimeout(()=>{
+        overlay.innerHTML='<div class="clap-countdown">1</div>';
+        setTimeout(()=>{
+          if(overlay.parentElement)overlay.remove();
+          if(typeof onComplete==='function')onComplete();
+        },1000);
+      },1000);
+    },1000);
+  },2000);
 }
 function buyPaygBlock(){
   dismissPaywall();
@@ -4282,13 +4296,14 @@ async function startAiSession(){
   prompterIndex=0;
   lastAutoSpokenIndex=-1;
   showScreen('session');renderPrompter();
-  showClapperboard();
-  if(tier!=='visitor'||getSpecTier()==='figurant')startSessionTimer();
-  else hideTimerBadge();
   if(mode==='ai'||mode==='auto'){document.getElementById('aiPanel').classList.add('active');populateSessionVoiceSelect();setStatus('',mode==='auto'?'🎤 Auto prêt':'🦾 IA prête')}
   else setStatus('','Manuel');
   await ensureSessionStream();
-  handleCurrentLineAutomation();
+  showClapperboard(()=>{
+    if(tier!=='visitor'||getSpecTier()==='figurant')startSessionTimer();
+    else hideTimerBadge();
+    handleCurrentLineAutomation();
+  });
 }
 
 async function startPartnerSession(){
@@ -4298,7 +4313,8 @@ async function startPartnerSession(){
   cancelSpeechFlow();
   const code=document.getElementById('mySessionCode').textContent;if(!code||code==='—')return;
   prompterLines=buildLines(2);prompterIndex=0;
-  showScreen('session');renderPrompter();showClapperboard();setStatus('waiting','En attente du partenaire…');hideOverlay();
+  showScreen('session');renderPrompter();setStatus('waiting','En attente du partenaire…');hideOverlay();
+  showClapperboard();
   showToast('Partage le code '+code,4500);
   await ensureSessionStream();
   const pid='castwing-'+code;peer=createPeer(pid);
