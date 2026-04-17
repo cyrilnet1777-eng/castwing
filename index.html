@@ -244,7 +244,22 @@ input[type="file"]{display:none}
 .emotion-locked{opacity:.55}
 .emotion-locked option[value="neutral"]{opacity:1}
 
-@media(max-width:767px){.video-area{height:100vh;height:100dvh}.video-container video{object-fit:cover}.prompter-area{position:fixed;bottom:0;left:0;right:0;height:50vh;height:50dvh;margin-top:0;max-width:none;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:55;padding-bottom:7rem;border-top:1px solid rgba(255,255,255,.08)}.prompter-area.rear-cam{opacity:.15;pointer-events:none;height:15vh;height:15dvh}.video-controls{z-index:60;bottom:calc(50vh + .8rem);bottom:calc(50dvh + .8rem)}.session-bottom{z-index:60}}
+@media(max-width:767px){
+.video-area{height:100vh;height:100dvh}
+.video-container video{object-fit:cover}
+.prompter-area{position:fixed;bottom:0;left:0;right:0;height:50vh;height:50dvh;margin-top:0;max-width:none;background:rgba(0,0,0,.85);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:55;padding-bottom:7rem;border-top:1px solid rgba(127,227,163,.15)}
+.prompter-area .prompter-line{color:#7FE3A3;font-size:.95rem}
+.prompter-area .prompter-line.active{color:#fff;background:rgba(30,100,60,.45);font-weight:600}
+.prompter-area .prompter-line.is-stage-direction{color:rgba(255,255,255,.4);font-style:italic}
+.prompter-area .prompter-line.prompter-line-partner{color:#7FE3A3}
+.prompter-area .prompter-character{color:#fff;font-weight:800;font-size:.72rem;letter-spacing:.2em}
+.prompter-area .prompter-group-user .prompter-character{color:#7FE3A3}
+.prompter-area .prompter-action{color:rgba(255,255,255,.4);font-style:italic}
+.prompter-area .prompter-slug{color:rgba(127,227,163,.6);background:rgba(127,227,163,.05);border-color:rgba(127,227,163,.12)}
+.prompter-area.rear-cam{opacity:.15;pointer-events:none;height:15vh;height:15dvh}
+.video-controls{z-index:60;bottom:calc(50vh + .8rem);bottom:calc(50dvh + .8rem)}
+.session-bottom{z-index:60}
+}
 @media(min-width:768px){#home{padding:3rem}.home-inner{max-width:520px}.logo h1{font-size:3.2rem}.session-body{flex-direction:row}.video-area{position:fixed;top:0;left:0;width:60%;height:100vh;z-index:50}.prompter-area{margin-top:0;margin-left:60%;flex:1;max-height:none;border-top:none;border-left:1px solid rgba(255,255,255,.06)}}
 .clap-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;z-index:10001;animation:clapIn .3s ease}
 .clap-card{background:linear-gradient(180deg,#2a2a2a,#161616);border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:0;width:280px;max-width:90%;font-family:'DM Sans',sans-serif;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06);position:relative}
