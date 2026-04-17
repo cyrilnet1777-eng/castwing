@@ -605,7 +605,7 @@ let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',
 let soloPartnerMode='all',soloPartnerChar=null;
 let lockedVoiceLocale='';
 let autoAdvanceTimer=null,lastAutoSpokenIndex=-1,activeSpeechToken=0;
-let ttsAudio=null,vad=null;
+let ttsAudio=null,vad=null,lastTTSEndTs=0;
 let takeNumber=0,currentScriptName='';
 const LINE_TYPE={SLUG:'slug',ACTION:'action',DIALOGUE:'dialogue'};
 const PARSER_DEBUG=true;
@@ -3945,7 +3945,7 @@ function renderPrompter(){
 }
 function computeSilenceMsForActorLine(line){
   const txt=String(line&&line.text||'');
-  return Math.min(4500,1100+Math.floor(txt.length*36));
+  return Math.min(6000,3000+Math.floor(txt.length*36));
 }
 function stopAutoVAD(){if(vad)vad.stop()}
 function cancelSpeechFlow(){
@@ -3968,6 +3968,7 @@ async function armAutoVADForActorLine(){
 function onAutoSpeechEnd(){
   if(sessionPaused)return;
   if(mode!=='auto'||sessionMode!=='ai')return;
+  if(lastTTSEndTs&&Date.now()-lastTTSEndTs<2000)return;
   const line=prompterLines[prompterIndex];
   if(!line||line.type!=='actor')return;
   if(prompterIndex>=prompterLines.length-1)return;
@@ -4007,7 +4008,7 @@ function handleCurrentLineAutomation(){
     if(lastAutoSpokenIndex===prompterIndex)return;
     const currentIndex=prompterIndex;
     lastAutoSpokenIndex=currentIndex;
-    aiSpeak(line.text,()=>scheduleAfterPartner(currentIndex));
+    aiSpeak(line.text,()=>{lastTTSEndTs=Date.now();scheduleAfterPartner(currentIndex)});
     return;
   }
   if(mode==='auto'&&line.type==='actor')armAutoVADForActorLine();
