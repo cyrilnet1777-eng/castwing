@@ -2832,6 +2832,7 @@ async function speakWithElevenLabs(text,preset,token,cb){
       }
     }
     const speed=getCurrentVoiceSpeed();
+    console.info('[TTS] lang:',preset.languageCode,'locale:',selectedLocale,'locked:',lockedVoiceLocale,'voice:',preset.label);
     const voiceCandidates=[preset.voiceId,...(preset.fallbackVoiceIds||[])];
     let blob=null;
     let usedFallback=false;
@@ -2840,13 +2841,14 @@ async function speakWithElevenLabs(text,preset,token,cb){
     for(let i=0;i<voiceCandidates.length;i++){
       const voiceId=voiceCandidates[i];
       if(unavailableElevenVoiceIds.has(voiceId))continue;
+      const effectiveLang=preset.languageCode||getCurrentLanguageCode()||(lockedVoiceLocale?getLocaleConfig(lockedVoiceLocale).languageCode:'')||'en';
       const {response:rsp}=await fetchTTSFromBestEndpoint({
         text,
         voiceId,
         modelId:preset.modelId||'eleven_multilingual_v2',
         emotion:voiceSpeed>=2.0?'neutral':selectedEmotion,
         speed,
-        languageCode:preset.languageCode||getCurrentLanguageCode()
+        languageCode:effectiveLang
       });
       if(rsp.ok){
         blob=await rsp.blob();
@@ -3727,7 +3729,9 @@ async function processPDF(n,file){
       document.getElementById('setupStatus'+n).textContent=t('pdfImportedRaw');
       const detectedLangRaw=detectTextLanguage(rawText||cleanText);
       if(detectedLangRaw&&VOICE_LOCALES.some(l=>l.id===detectedLangRaw)){
+        lockedVoiceLocale=detectedLangRaw;
         applyLocaleVoices(detectedLangRaw,false);
+        initVoiceCountrySelect();
         initVoiceGrid();
       }
       showToast('Aucun dialogue structuré trouvé – texte importé brut',4000);
