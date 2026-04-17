@@ -840,7 +840,7 @@ async function handleCreditsConsume(request, env) {
 ========================================================= */
 
 const MAX_REMOTE_PARSE_BYTES = 10 * 1024 * 1024;
-const PARSE_TIMEOUT_MS = 25000;
+const PARSE_TIMEOUT_MS = 55000;
 
 function logParse(event, data = {}) {
   try {
