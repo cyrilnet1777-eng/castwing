@@ -3899,6 +3899,8 @@ function parsePDFScript(text){
 }
 function sanitizeCharacterNames(script){
   const ALWAYS_BAD=new Set(['OUI','NON','MINUTES','ABSOLUMENT','ÉCRAN','CONTINUED','CONT','CONT\'D','CUT','FADE','MORE','YES','NO','NOT']);
+  const PRONOUNS=new Set(['JE','TU','IL','ELLE','ON','NOUS','VOUS','ILS','ELLES','SE','TE','ME','MON','TON','SON','MA','TA','SA','MES','TES','SES','CE','CET','CETTE','CES','LE','LA','LES','UN','UNE','DES','DU','DE','AU','AUX','EN','Y','QUI','QUE','QUOI','DONT','OÙ']);
+  const L_PATTERN=/L[''\u2019]/i;
   const charCounts={};
   for(const row of script){
     if(!row||row.kind!=='dialogue'||!row.char)continue;
@@ -3911,6 +3913,8 @@ function sanitizeCharacterNames(script){
     if(ALWAYS_BAD.has(trimmed.toUpperCase())){bad.add(name);continue}
     if(words.length>3){bad.add(name);continue}
     if(/^\d+$/.test(trimmed)||trimmed.length<=1){bad.add(name);continue}
+    if(words.some(w=>PRONOUNS.has(w.toUpperCase()))){bad.add(name);continue}
+    if(L_PATTERN.test(trimmed)){bad.add(name);continue}
     if(charCounts[name]<2){bad.add(name);continue}
   }
   const kept=Object.keys(charCounts).filter(n=>!bad.has(n));
