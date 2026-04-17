@@ -92,18 +92,20 @@ async function createSignedSessionCookie(email, env) {
 async function readSignedSessionCookie(request, env) {
   const cookie = request.headers.get("Cookie") || "";
   const match = cookie.match(new RegExp(`${SESSION_COOKIE_NAME}=([^;]+)`));
-  if (!match) return null;
+  if (!match) { console.log("[session] no cookie found"); return null; }
   const parts = match[1].split(".");
-  if (parts.length !== 2) return null;
+  if (parts.length !== 2) { console.log("[session] cookie malformed"); return null; }
   try {
     const payload = b64urlDecode(parts[0]);
     const secret = String(env.INVITE_SIGNING_SECRET || env.AUTH_CODE_SECRET || "dev-session-secret");
     const expected = await sha256Hex(payload + "|" + secret);
-    if (expected !== parts[1]) return null;
+    if (expected !== parts[1]) { console.log("[session] sig mismatch"); return null; }
     const parsed = JSON.parse(payload);
-    if (!parsed.email || (parsed.exp && parsed.exp < Date.now())) return null;
+    if (!parsed.email) { console.log("[session] no email in payload"); return null; }
+    if (parsed.exp && parsed.exp < Date.now()) { console.log("[session] expired"); return null; }
     return parsed.email.toLowerCase();
   } catch (e) {
+    console.log("[session] parse error", e);
     return null;
   }
 }

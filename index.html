@@ -1155,12 +1155,13 @@ function getReferralCode(){return getReferralData().code||''}
 async function fetchServerSession(){
   try{
     const rsp=await fetch('/api/session',{method:'GET',credentials:'same-origin'});
-    if(!rsp.ok)return;
-    const data=await rsp.json();
+    if(!rsp.ok){console.warn('[session] http',rsp.status);return}
+    const data=await rsp.json().catch(()=>null);
+    console.info('[session]',JSON.stringify(data));
     if(!data||!data.ok)return;
     cwServerSession={email:data.email||null,isAdmin:!!data.isAdmin,plan:data.plan||'visitor',creditsRemaining:data.creditsRemaining};
     applyServerSessionUI();
-  }catch(e){console.info('[session] fetch failed',e);}
+  }catch(e){console.warn('[session] fetch failed',e);}
 }
 function applyServerSessionUI(){
   const badge=document.getElementById('cwSessionBadge');
@@ -2302,7 +2303,7 @@ async function requestEmailCode(){
   if(!email||!/@/.test(email)){showToast('Email invalide');return}
   authPendingEmail=email;
   try{
-    const rsp=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'request_code',email,lang:authEmailLangFromUI()})});
+    const rsp=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'request_code',email,lang:authEmailLangFromUI()}),credentials:'same-origin'});
     const out=await rsp.json().catch(()=>null);
     if(!rsp.ok){showToast((out&&out.error)||'Envoi email échoué');return}
     showToast('Code envoyé à '+email+'. Vérifie ta boîte mail.',5000);
@@ -2319,7 +2320,7 @@ async function verifyEmailCode(){
   const code=(document.getElementById('authCodeInput').value||'').trim();
   if(!authPendingEmail||code.length<4){showToast(t('authInvalidCode'));return}
   try{
-    const rsp=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'verify_code',email:authPendingEmail,code})});
+    const rsp=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'verify_code',email:authPendingEmail,code}),credentials:'same-origin'});
     const out=await rsp.json().catch(()=>null);
     if(!rsp.ok||!(out&&out.ok)){showToast((out&&out.error)||t('authInvalidCode'));return}
     const wasVisitor=getPlan().tier==='visitor';
@@ -4419,9 +4420,9 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   const ss=document.getElementById('sessionSpeedSlider');
   if(ss)ss.value=String(voiceSpeed);
   initCardTilt();
-  startUsageTracking();
   await fetchServerSession();
-  if(isServerAdmin())dismissPaywall();
+  if(isServerAdmin()){dismissPaywall();closePaywallModal();}
+  startUsageTracking();
   redeemInviteFromURL();
   const joinedFromURL=applyJoinCodeFromURL();
   if(!joinedFromURL){
