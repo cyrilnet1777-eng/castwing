@@ -2286,6 +2286,7 @@ function startChangeEmail(){
   if(emailInput){emailInput.value='';emailInput.focus();}
 }
 function openPaywallModal(msg){
+  if(isServerAdmin())return;
   const el=document.getElementById('paywallStatusText');
   if(el)el.textContent=msg||'';
   document.getElementById('paywallModal').classList.add('active');
@@ -2723,7 +2724,7 @@ function cancelTTSPlayback(){
 async function speakWithElevenLabs(text,preset,token,cb){
   try{
     if(!preset||!preset.voiceId)throw new Error('Missing ElevenLabs voiceId');
-    if(!canUseElevenLabs()||getRemainingSessionMs()<=0){
+    if(!isServerAdmin()&&(!canUseElevenLabs()||getRemainingSessionMs()<=0)){
       if(getRemainingSessionMs()<=0)showPaywallModal();
       return false;
     }
@@ -4419,7 +4420,8 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   if(ss)ss.value=String(voiceSpeed);
   initCardTilt();
   startUsageTracking();
-  fetchServerSession();
+  await fetchServerSession();
+  if(isServerAdmin())dismissPaywall();
   redeemInviteFromURL();
   const joinedFromURL=applyJoinCodeFromURL();
   if(!joinedFromURL){
