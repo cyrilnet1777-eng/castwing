@@ -153,6 +153,10 @@ input[type="file"]{display:none}
 .vctrl .rec-dot{width:14px;height:14px;border-radius:50%;background:#c1121f;box-shadow:0 0 8px rgba(193,18,31,.6)}
 .vctrl.recording .rec-dot{width:16px;height:16px;border-radius:3px;background:#fff;box-shadow:none}
 @keyframes pulse-rec{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}50%{box-shadow:0 0 0 10px rgba(239,68,68,0)}}
+.vctrl-pause{min-width:48px;min-height:48px;width:48px;height:48px}
+.vctrl-pause.is-paused{background:rgba(127,227,163,.25);border-color:rgba(127,227,163,.4)}
+.pause-overlay{display:none;position:absolute;inset:0;z-index:55;background:rgba(0,0,0,.55);align-items:center;justify-content:center;flex-direction:column;gap:.5rem;pointer-events:none}.pause-overlay.active{display:flex}
+.pause-overlay span{font-size:1.3rem;font-weight:700;color:rgba(255,255,255,.85);letter-spacing:.1em;text-transform:uppercase}
 .prompter-area{flex:1;background:#1a1a1a;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.25rem 1rem 6rem;margin-top:35vh;max-width:720px;margin-left:auto;margin-right:auto;color:rgba(255,255,255,.92)}
 .prompter-group{margin-bottom:1.5rem}
 .prompter-character{font-size:.68rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.42);margin-bottom:.45rem;padding-left:.25rem;font-style:normal}
@@ -565,8 +569,9 @@ input[type="file"]{display:none}
   <div id="creditBadge" style="position:fixed;top:12px;right:52px;background:rgba(0,0,0,.6);color:#fff;padding:4px 10px;border-radius:12px;font-size:13px;font-family:'DM Sans',sans-serif;z-index:1000;display:none;pointer-events:none">⏱ <span id="creditCount">60:00</span></div>
   <div class="session-top"><div class="status"><div class="status-dot waiting" id="statusDot"></div><span id="statusText">En attente…</span></div><button class="back-btn" onclick="endSession()" style="color:#fff;font-size:1rem">✕</button></div>
   <div class="session-body">
-    <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><video id="remoteVideo" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:contain;background:#000"></video><div class="no-video" id="noVideoMsg">Caméra en attente…</div><div class="video-controls"><button class="vctrl" id="btnMic" onclick="toggleMic()"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/></svg></button><button class="vctrl" id="btnRec" onclick="toggleRecording()"><span class="rec-dot"></span></button><button class="vctrl" id="btnCam" onclick="toggleCam()"><svg viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg></button></div></div></div>
+    <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><video id="remoteVideo" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:contain;background:#000"></video><div class="no-video" id="noVideoMsg">Caméra en attente…</div><div class="video-controls"><button class="vctrl" id="btnMic" onclick="toggleMic()"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/></svg></button><button class="vctrl" id="btnRec" onclick="toggleRecording()"><span class="rec-dot"></span></button><button class="vctrl vctrl-pause" id="btnPause" onclick="togglePause()"><svg id="pauseIcon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button><button class="vctrl" id="btnCam" onclick="toggleCam()"><svg viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg></button></div></div></div>
     <div class="prompter-area" id="prompterArea"><div class="prompter-empty" id="prompterEmptyText">Aucun texte chargé</div></div>
+    <div id="pauseOverlay" class="pause-overlay"><span>⏸ En pause</span></div>
   </div>
   <div class="ai-panel" id="aiPanel"><span class="ai-label" id="sessionVoiceLabel">🦾 Voix :</span><select id="sessionVoiceSelect" onchange="changeSessionVoice()"></select></div>
   <div class="session-bottom">
@@ -659,6 +664,7 @@ const PRO_MONTHLY_MS=400*60*1000;
 const PAYMENT_LINK_URL='https://buy.stripe.com/test_00g8wQfNw5Yk6jS5kk';
 let sessionTimerInterval=null;
 let sessionTimerFrozen=false;
+let sessionPaused=false;
 let chronoRafId=null;
 let chronoRunning=false;
 let chronoLastTs=0;
@@ -3956,6 +3962,7 @@ async function armAutoVADForActorLine(){
   await vad.start(new MediaStream(tracks));
 }
 function onAutoSpeechEnd(){
+  if(sessionPaused)return;
   if(mode!=='auto'||sessionMode!=='ai')return;
   const line=prompterLines[prompterIndex];
   if(!line||line.type!=='actor')return;
@@ -3969,6 +3976,7 @@ function onAutoSpeechEnd(){
 function scheduleAfterPartner(lineIndex){
   clearAutoTimer();
   autoAdvanceTimer=setTimeout(()=>{
+    if(sessionPaused)return;
     if(prompterIndex!==lineIndex)return;
     if(mode==='manual')return;
     if(prompterIndex>=prompterLines.length-1)return;
@@ -3982,6 +3990,7 @@ function scheduleAfterPartner(lineIndex){
 function handleCurrentLineAutomation(){
   clearAutoTimer();
   stopAutoVAD();
+  if(sessionPaused)return;
   if(sessionMode!=='ai'||!prompterLines[prompterIndex])return;
   const line=prompterLines[prompterIndex];
   if(line.isSpoken!==true){
@@ -4149,6 +4158,33 @@ async function toggleCam(){
   showToast('Caméra activée');
 }
 
+// ── Pause ──
+function togglePause(forceState){
+  const newState=typeof forceState==='boolean'?forceState:!sessionPaused;
+  if(newState===sessionPaused)return;
+  sessionPaused=newState;
+  const btn=document.getElementById('btnPause');
+  const icon=document.getElementById('pauseIcon');
+  const overlay=document.getElementById('pauseOverlay');
+  if(sessionPaused){
+    cancelTTSPlayback();
+    stopAutoVAD();
+    clearAutoTimer();
+    freezeTimer();
+    if(overlay)overlay.classList.add('active');
+    if(btn)btn.classList.add('is-paused');
+    if(icon)icon.innerHTML='<polygon points="6,4 20,12 6,20" fill="currentColor"/>';
+    if(conn&&conn.open)conn.send({type:'pause'});
+  }else{
+    unfreezeTimer();
+    if(overlay)overlay.classList.remove('active');
+    if(btn)btn.classList.remove('is-paused');
+    if(icon)icon.innerHTML='<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>';
+    if(conn&&conn.open)conn.send({type:'resume'});
+    handleCurrentLineAutomation();
+  }
+}
+
 // ── Recording ──
 function toggleRecording(){if(isRecording)stopRecording();else startRecording()}
 function startRecording(){
@@ -4166,6 +4202,8 @@ function stopRecording(){if(mediaRecorder&&mediaRecorder.state!=='inactive')medi
 function createPeer(id){return new Peer(id,{config:{iceServers:ICE_SERVERS}})}
 function setStatus(s,t){document.getElementById('statusDot').className='status-dot '+s;document.getElementById('statusText').textContent=t}
 function handleDataMessage(d){
+  if(d.type==='pause'){togglePause(true);return}
+  if(d.type==='resume'){togglePause(false);return}
   if(d.type==='prompter'||d.type==='jump'){
     prompterIndex=d.index;
     renderPrompter();
@@ -4279,6 +4317,10 @@ async function joinAsPartner(){
 // ── Cleanup ──
 function endSession(){
   stopSessionTimer();
+  sessionPaused=false;
+  const po=document.getElementById('pauseOverlay');if(po)po.classList.remove('active');
+  const pb=document.getElementById('btnPause');if(pb)pb.classList.remove('is-paused');
+  const pi=document.getElementById('pauseIcon');if(pi)pi.innerHTML='<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>';
   if(connectionTimeout)clearTimeout(connectionTimeout);cancelSpeechFlow();
   if(isRecording)stopRecording();if(call){call.close();call=null}if(conn){conn.close();conn=null}if(peer){peer.destroy();peer=null}
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null}
