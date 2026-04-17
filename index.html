@@ -604,6 +604,7 @@ let isRecording=false,isMicOn=true,isCamOn=true,prompterLines=[],prompterIndex=0
 let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',selectedLocale='french',selectedUILanguage='fr',voiceSpeed=1,availableVoices=[],presetVoiceMap={};
 let soloPartnerMode='all',soloPartnerChar=null;
 let lockedVoiceLocale='';
+let _preItalienneVoice=null;
 let autoAdvanceTimer=null,lastAutoSpokenIndex=-1,activeSpeechToken=0;
 let ttsAudio=null,vad=null,lastTTSEndTs=0;
 let userScrolledUp=false,_lastPrompterScrollTop=0;
@@ -1670,6 +1671,7 @@ const ELEVEN_VOICE_IDS={
   ahmet:'ZsYcqahfiS2dy4J6XYC5',
   omar:'xvhpbk8otnNHtT3fjCpr',
   salma:'B5xxC4eQoOFJnY4R5XkI',
+  sadie:'bD9maNcCuQQS75DGuteM',
 };
 const VOICE_ALIAS_GENDER={
   serena:'female',
@@ -1701,17 +1703,20 @@ const VOICE_ALIAS_GENDER={
   francesca:'female',
   leo_kid:'male',
   isa:'female',
+  sadie:'female',
 };
 const VOICE_LOCALES=[
   {id:'french',label:'Français 🇫🇷',languageCode:'fr',profiles:[
     {id:'fr-f',voice:'charlotte',fallback:['francesca','eliza','elen','isa'],label:'Camille',tag:'Standard',gender:'female',languageCode:'fr-fr'},
     {id:'fr-m',voice:'james',fallback:['camille_m','john_doe','austin','edward'],label:'Lucas',tag:'Standard',gender:'male',languageCode:'fr-fr'},
+    {id:'fr-sadie',voice:'sadie',fallback:['charlotte','francesca','eliza'],label:'Sadie',tag:'Calm & Gritty',gender:'female',languageCode:'fr-fr'},
   ]},
   {id:'english',label:'English 🇺🇸',languageCode:'en',profiles:[
     {id:'en-us-f',voice:'elen',fallback:['isa','francesca','eliza','charlotte'],label:'Taylor',tag:'US',gender:'female',languageCode:'en-us'},
     {id:'en-us-m',voice:'edward',fallback:['john_doe','camille_m','austin','james'],label:'Mason',tag:'US',gender:'male',languageCode:'en-us'},
     {id:'en-gb-f',voice:'eliza',fallback:['isa','elen','charlotte','francesca'],label:'Emma',tag:'UK',gender:'female',languageCode:'en-gb'},
     {id:'en-gb-m',voice:'austin',fallback:['john_doe','edward','camille_m','james'],label:'Oliver',tag:'UK',gender:'male',languageCode:'en-gb'},
+    {id:'en-sadie',voice:'sadie',fallback:['elen','eliza','charlotte'],label:'Sadie',tag:'Calm & Gritty',gender:'female',languageCode:'en-us'},
   ]},
   {id:'spanish',label:'Español 🇪🇸',languageCode:'es',profiles:[
     {id:'es-f',voice:'charlotte',fallback:['eliza','salma'],label:'Valentina',tag:'Standard',gender:'female',languageCode:'es-es'},
@@ -2702,9 +2707,20 @@ function setEmotion(key,silent){
   if(!silent)showToast(t('toastEmotion')+': '+EMOTION_PRESETS[selectedEmotion].label);
   persistSettings();
 }
+const ITALIENNE_VOICE_ID='tZssYepgGaQmegsMEXjK';
 function setVoiceSpeed(value,silent){
   const parsed=Number(value);
+  const prev=voiceSpeed;
   voiceSpeed=Math.max(SPEED_MIN,Math.min(SPEED_MAX,Number.isFinite(parsed)?parsed:SPEED_DEFAULT));
+  if(voiceSpeed>=2.0&&prev<2.0){
+    _preItalienneVoice=selectedVoice;
+    selectedVoice={id:'_italienne',label:'Italienne',tag:'Neutre',voiceId:ITALIENNE_VOICE_ID,fallbackVoiceIds:[],modelId:'eleven_multilingual_v2',languageCode:selectedVoice?.languageCode||'fr',gender:'female',pitch:1,rate:1};
+    populateSessionVoiceSelect();
+  }else if(voiceSpeed<2.0&&prev>=2.0&&_preItalienneVoice){
+    selectedVoice=_preItalienneVoice;
+    _preItalienneVoice=null;
+    populateSessionVoiceSelect();
+  }
   persistSettings();
   renderAllSpeedBtns();
 }
