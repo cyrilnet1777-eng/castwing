@@ -606,6 +606,7 @@ let soloPartnerMode='all',soloPartnerChar=null;
 let lockedVoiceLocale='';
 let autoAdvanceTimer=null,lastAutoSpokenIndex=-1,activeSpeechToken=0;
 let ttsAudio=null,vad=null,lastTTSEndTs=0;
+let userScrolledUp=false,_lastPrompterScrollTop=0;
 let takeNumber=0,currentScriptName='';
 const LINE_TYPE={SLUG:'slug',ACTION:'action',DIALOGUE:'dialogue'};
 const PARSER_DEBUG=true;
@@ -3941,7 +3942,7 @@ function renderPrompter(){
     a.appendChild(groupEl);
   }
   const act=a.querySelector('.prompter-line.active');
-  if(act)act.scrollIntoView({behavior:'smooth',block:'center'});
+  if(act&&!userScrolledUp)act.scrollIntoView({behavior:'smooth',block:'center'});
 }
 function computeSilenceMsForActorLine(line){
   const txt=String(line&&line.text||'');
@@ -4015,6 +4016,7 @@ function handleCurrentLineAutomation(){
 }
 function prompterNext(){
   if(prompterIndex>=prompterLines.length-1)return;
+  userScrolledUp=false;
   cancelSpeechFlow();
   prompterIndex++;
   lastAutoSpokenIndex=-1;
@@ -4024,6 +4026,7 @@ function prompterNext(){
 }
 function prompterPrev(){
   if(prompterIndex<=0)return;
+  userScrolledUp=false;
   cancelSpeechFlow();
   prompterIndex--;
   lastAutoSpokenIndex=-1;
@@ -4033,6 +4036,7 @@ function prompterPrev(){
 }
 function handleTapToJump(targetIndex){
   if(targetIndex<0||targetIndex>=prompterLines.length||targetIndex===prompterIndex)return;
+  userScrolledUp=false;
   cancelSpeechFlow();
   prompterIndex=targetIndex;
   lastAutoSpokenIndex=-1;
@@ -4335,7 +4339,7 @@ function endSession(){
   document.getElementById('noVideoMsg').style.display='flex';document.getElementById('noVideoMsg').textContent='Caméra en attente…';
   document.getElementById('aiPanel').classList.remove('active');
   hideTimerBadge();
-  lockedVoiceLocale='';
+  lockedVoiceLocale='';userScrolledUp=false;
   hideOverlay();isMicOn=true;isCamOn=true;prompterLines=[];prompterIndex=0;pdfScript=[];syncPdfScriptDebugMirror();selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;currentScriptName='';takeNumber=0;showScreen('home');
 }
 function cancelConnection(){hideOverlay();if(!conn||!conn.open)endSession()}
@@ -4358,6 +4362,13 @@ function initCardTilt(){
 }
 
 document.addEventListener('DOMContentLoaded',async ()=>{
+  const pa=document.getElementById('prompterArea');
+  if(pa)pa.addEventListener('scroll',()=>{
+    const st=pa.scrollTop;
+    if(st<_lastPrompterScrollTop)userScrolledUp=true;
+    if(pa.scrollHeight-st-pa.clientHeight<80)userScrolledUp=false;
+    _lastPrompterScrollTop=st;
+  },{passive:true});
   loadAccess();
   checkAndApplyResets();
   setInterval(checkAndApplyResets,60000);
