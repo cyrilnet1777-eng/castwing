@@ -864,10 +864,16 @@ function stripJsonFence(text) {
 }
 
 function validateParsedScript(raw) {
-  if (!Array.isArray(raw)) return { ok: false, error: "not_array" };
+  let items = raw;
+  let language = "";
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    language = String(raw.language || "").trim().slice(0, 5);
+    items = raw.script;
+  }
+  if (!Array.isArray(items)) return { ok: false, error: "not_array" };
   const out = [];
-  for (let i = 0; i < raw.length; i += 1) {
-    const row = raw[i];
+  for (let i = 0; i < items.length; i += 1) {
+    const row = items[i];
     if (!row || typeof row !== "object") return { ok: false, error: `row_${i}_not_object` };
     const kind = String(row.kind || "").trim();
     if (!["slug", "action", "dialogue"].includes(kind)) {
@@ -886,25 +892,45 @@ function validateParsedScript(raw) {
   }
   if (!out.length) return { ok: false, error: "empty_output" };
   if (out.length > 5000) return { ok: false, error: "too_many_rows" };
-  return { ok: true, script: out };
+  return { ok: true, script: out, language };
 }
 
 async function callAnthropicParse({ env, parseId, model, pdfBase64, fileName, attempt }) {
   const systemPrompt = [
-    "You are a screenplay parser.",
-    "Return ONLY valid JSON array. No prose, no markdown.",
-    "Each item must be one of:",
-    '{"kind":"slug","text":"..."}',
-    '{"kind":"action","text":"..."}',
-    '{"kind":"dialogue","char":"...","text":"..."}',
-    "Ignore OCR/page noise: watermarks, revision headers, page numbers, margin markers.",
-    "Normalize dialogue speaker names: remove (CONT'D), (O.S.), (V.O.) variations.",
-    "Keep original order. Do not invent lines."
-  ].join(" ");
+    "You are a screenplay/script parser. You return structured JSON only.",
+    "",
+    "Return a JSON object with two keys:",
+    '{"language":"<ISO 639-1 code, e.g. fr, en, es>","script":[...]}',
+    "",
+    "The script array contains items of these types:",
+    '{"kind":"slug","text":"..."} — scene headings (INT./EXT.)',
+    '{"kind":"action","text":"..."} — stage directions, descriptions of what characters DO (movement, gestures, actions)',
+    '{"kind":"dialogue","char":"CHARACTER NAME","text":"..."} — spoken words ONLY',
+    "",
+    "CRITICAL RULES FOR CHARACTER NAMES (char field):",
+    "- A character name is a PROPER NOUN: a first name, last name, or both (1-3 words max).",
+    "- Short uppercase phrases that are spoken dialogue are NOT character names. Examples of NON-characters: OUI ABSOLUMENT, DE L'AMMONIAQUE, TU ME L'ENVOIES, SUR L'ÉCRAN, MINUTES, BIEN SÛR, ALLÔ, MERCI.",
+    "- If a candidate contains a French/English article (DE, DU, D', L', LE, LA, LES, UN, UNE, DES, THE, A, AN) it is NOT a character name.",
+    "- If a candidate is a common dictionary word (OUI, NON, MINUTES, STOP, OK, etc.) it is NOT a character name.",
+    "- A real character name appears MULTIPLE times in the script as a speaker cue. If it only appears once, do NOT treat it as a character.",
+    "- When in doubt, do NOT create a new character — assign the line to the previous speaker or mark it as action.",
+    "",
+    "CRITICAL RULES FOR ACTION vs DIALOGUE:",
+    "- kind:dialogue = ONLY the words a character SPEAKS out loud.",
+    "- kind:action = any description of what happens on screen: movement, gestures, camera directions, scene descriptions.",
+    "- If a line describes what a character DOES (verbs like: pose, entre, sort, regarde, s'assoit, se lève, prend, ouvre, ferme, marche, court, frappe, embrasse, arrives, walks, sits, stands, looks, puts, places, opens, closes) it is ALWAYS kind:action, NEVER kind:dialogue.",
+    "- Parenthetical acting directions within dialogue (e.g. (en colère), (whispering)) should be excluded from the text; only keep the spoken words.",
+    "",
+    "OTHER RULES:",
+    "- Ignore OCR/page noise: watermarks, revision headers (Pink Rev, Blue Rev…), page numbers, margin markers.",
+    "- Normalize speaker names: remove (CONT'D), (O.S.), (V.O.), (SUITE) suffixes.",
+    "- Keep original order. Do not invent lines.",
+    "- No prose, no markdown fences. Output raw JSON only."
+  ].join("\n");
   const userPrompt = [
     "Parse this screenplay PDF into structured JSON.",
-    "Output must be a JSON array only.",
-    "Preserve order.",
+    'Output must be a JSON object: {"language":"...","script":[...]}',
+    "Preserve the original order of the script.",
     "Ignore revision/page/header/footer noise."
   ].join(" ");
 
@@ -922,7 +948,7 @@ async function callAnthropicParse({ env, parseId, model, pdfBase64, fileName, at
       },
       body: JSON.stringify({
         model,
-        max_tokens: 6400,
+        max_tokens: 8192,
         temperature: 0,
         system: systemPrompt,
         messages: [
@@ -970,9 +996,9 @@ async function callAnthropicParse({ env, parseId, model, pdfBase64, fileName, at
       return { ok: false, error: `schema_${validated.error}` };
     }
     logParse("anthropic_success", {
-      parse_id: parseId, model, attempt, duration_ms: duration, rows: validated.script.length,
+      parse_id: parseId, model, attempt, duration_ms: duration, rows: validated.script.length, language: validated.language || "",
     });
-    return { ok: true, script: validated.script };
+    return { ok: true, script: validated.script, language: validated.language || "" };
   } catch (err) {
     const duration = Date.now() - t0;
     const timeoutErr = String(err && err.message || err).toLowerCase().includes("timeout")
@@ -1031,6 +1057,7 @@ async function handleParseScript(request, env) {
         provider: "anthropic",
         model: step.model,
         script: result.script,
+        language: result.language || "",
         meta: {
           parse_id: parseId,
           attempts: step.attempt,

@@ -189,6 +189,7 @@ input[type="file"]{display:none}
 .spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.2);border-top-color:var(--white);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;top:1.2rem;left:50%;transform:translateX(-50%);background:var(--navy);color:var(--white);padding:.65rem 1.2rem;border-radius:var(--radius);font-size:.82rem;font-weight:700;box-shadow:var(--shadow-lg);z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90vw;text-align:center}.toast.show{opacity:1}
 .loading-overlay{display:none;position:fixed;inset:0;z-index:150;background:rgba(0,26,77,.7);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:.8rem;color:var(--white)}.loading-overlay.active{display:flex}.loading-overlay p{font-size:.9rem;font-weight:700}
+.progress-ring{position:relative;width:64px;height:64px}.progress-ring svg{transform:rotate(-90deg)}.progress-ring circle{fill:none;stroke-width:4}.progress-ring .ring-bg{stroke:rgba(255,255,255,.15)}.progress-ring .ring-fg{stroke:var(--white);stroke-linecap:round;transition:stroke-dashoffset .3s ease}.progress-ring .ring-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;color:var(--white)}
 .auth-modal,.paywall-modal{display:none;position:fixed;inset:0;z-index:180;background:rgba(6,10,20,.62);backdrop-filter:blur(16px);align-items:center;justify-content:center;padding:1rem}
 .auth-modal.active,.paywall-modal.active{display:flex}
 .auth-card{width:min(520px,95vw);background:#f3f4f6;border:1px solid rgba(255,255,255,.9);border-radius:18px;padding:1.35rem 1.2rem;box-shadow:0 26px 90px rgba(0,0,0,.45)}
@@ -352,7 +353,7 @@ input[type="file"]{display:none}
     <div id="cwInviteList" class="cw-invite-list"></div>
   </div>
 </div>
-<div id="loadingOverlay" class="loading-overlay"><div class="spinner"></div><p id="loadingMsg">Chargement…</p></div>
+<div id="loadingOverlay" class="loading-overlay"><div id="loadingSpinner" class="spinner"></div><div id="loadingRing" class="progress-ring" style="display:none"><svg width="64" height="64"><circle class="ring-bg" cx="32" cy="32" r="28"/><circle id="ringFg" class="ring-fg" cx="32" cy="32" r="28" stroke-dasharray="175.93" stroke-dashoffset="175.93"/></svg><span id="ringPct" class="ring-pct">0%</span></div><p id="loadingMsg">Chargement…</p></div>
 <div id="connectOverlay" class="overlay"><div class="spinner"></div><h3 id="overlayTitle">Connexion…</h3><p id="overlayMsg"></p><button class="btn btn-secondary" onclick="cancelConnection()" style="margin-top:.5rem">Annuler</button></div>
 
 <!-- ═══ HOME ═══ -->
@@ -1489,6 +1490,7 @@ async function tryRemoteClaudeParse(file){
       parsedScript:mapped,
       provider:data.provider||'anthropic',
       model:data.model||'',
+      language:data.language||'',
       meta:data.meta||{}
     };
   }catch(err){
@@ -2835,7 +2837,40 @@ function genCode(){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let r='';for(let i
 function showToast(m,d=3000){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),d)}
 function showOverlay(t,m){document.getElementById('overlayTitle').textContent=t;document.getElementById('overlayMsg').textContent=m;document.getElementById('connectOverlay').classList.add('active')}
 function hideOverlay(){document.getElementById('connectOverlay').classList.remove('active')}
-function setLoading(on,m){const e=document.getElementById('loadingOverlay');if(on){document.getElementById('loadingMsg').textContent=m||'Chargement…';e.classList.add('active')}else e.classList.remove('active')}
+let _fakeProgressTimer=null,_fakeProgressPct=0;
+function setLoading(on,m){const e=document.getElementById('loadingOverlay');if(on){document.getElementById('loadingMsg').textContent=m||'Chargement…';e.classList.add('active')}else{stopFakeProgress();e.classList.remove('active')}}
+function startFakeProgress(){
+  stopFakeProgress();
+  _fakeProgressPct=0;
+  const spinner=document.getElementById('loadingSpinner');
+  const ring=document.getElementById('loadingRing');
+  if(spinner)spinner.style.display='none';
+  if(ring)ring.style.display='';
+  _updateRing(0);
+  _fakeProgressTimer=setInterval(()=>{
+    if(_fakeProgressPct<30)_fakeProgressPct+=Math.random()*4+2;
+    else if(_fakeProgressPct<90)_fakeProgressPct+=Math.random()*1.2+.3;
+    else _fakeProgressPct=Math.min(_fakeProgressPct+.1,95);
+    _updateRing(Math.floor(_fakeProgressPct));
+  },400);
+}
+function stopFakeProgress(){
+  if(_fakeProgressTimer){clearInterval(_fakeProgressTimer);_fakeProgressTimer=null}
+  _updateRing(100);
+  const spinner=document.getElementById('loadingSpinner');
+  const ring=document.getElementById('loadingRing');
+  if(spinner)spinner.style.display='';
+  if(ring)ring.style.display='none';
+  _fakeProgressPct=0;
+}
+function _updateRing(pct){
+  const fg=document.getElementById('ringFg');
+  const label=document.getElementById('ringPct');
+  if(!fg||!label)return;
+  const circ=2*Math.PI*28;
+  fg.setAttribute('stroke-dashoffset',String(circ-(circ*pct/100)));
+  label.textContent=pct+'%';
+}
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');const bb=document.getElementById('homeBottomBar');if(bb)bb.style.display=id==='home'?'flex':'none'}
 function trModeReadyLabel(m){
   if(m==='auto')return selectedUILanguage==='fr'?'🎤 Auto prêt':'🎤 Auto ready';
@@ -3460,17 +3495,21 @@ async function processPDF(n,file){
   takeNumber=0;
   try{if(typeof window!=='undefined')window.__parserDebugLogs=[];}catch(_e){}
   setLoading(true,t('pdfReading'));
+  startFakeProgress();
   try{
     let parsedScript=[];
     let rawText='';
     let cleanText='';
     let usedFallbackLocal=false;
+    let remoteLang='';
     const remote=await tryRemoteClaudeParse(file);
+    stopFakeProgress();
     if(remote.ok&&Array.isArray(remote.parsedScript)&&remote.parsedScript.length){
       parsedScript=remote.parsedScript;
       rawText=remote.parsedScript.map(x=>x.kind==='dialogue'?`${x.char}: ${x.line}`:x.line).join('\n');
       cleanText=rawText;
-      console.info('[parse] provider=anthropic model='+(remote.model||''));
+      remoteLang=remote.language||'';
+      console.info('[parse] provider=anthropic model='+(remote.model||'')+' lang='+remoteLang);
       showToast('Script analysé par IA',1800);
     }else{
       usedFallbackLocal=true;
@@ -3523,7 +3562,9 @@ async function processPDF(n,file){
       document.getElementById('charSection'+n).style.display='block';
       document.getElementById('setupStatus'+n).textContent=pdfScript.length+' '+t('pdfLinesDetected');
       if(n===1)showToast(t('pickCharacterFirst'),3000);
-      const detectedLang=detectTextLanguage(rawText||cleanText);
+      const langMap={fr:'french',en:'english',es:'spanish',de:'german',it:'italian',pt:'portuguese',ar:'arabic',zh:'chinese',ja:'japanese',ko:'korean',tr:'turkish',ru:'russian',hi:'hindi'};
+      const claudeLang=remoteLang?(langMap[remoteLang.toLowerCase().slice(0,2)]||''):'';
+      const detectedLang=claudeLang||detectTextLanguage(rawText||cleanText);
       if(detectedLang&&VOICE_LOCALES.some(l=>l.id===detectedLang)){
         applyLocaleVoices(detectedLang,false);
         initVoiceGrid();
