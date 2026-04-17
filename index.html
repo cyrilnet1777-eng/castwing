@@ -4565,6 +4565,7 @@ async function startAiSession(){
   if(mode==='ai'||mode==='auto'){document.getElementById('aiPanel').classList.add('active');populateSessionVoiceSelect();setStatus('',mode==='auto'?'🎤 Auto prêt':'🦾 IA prête')}
   else setStatus('','Manuel');
   await ensureSessionStream();
+  if(canRecord()&&localStream&&!isRecording)startRecording();
   showClapperboard(()=>{
     if(tier!=='visitor'||getSpecTier()==='figurant')startSessionTimer();
     else hideTimerBadge();
@@ -4584,6 +4585,7 @@ async function startPartnerSession(){
   showClapperboard();
   showToast('Partage le code '+code,4500);
   await ensureSessionStream();
+  if(canRecord()&&localStream&&!isRecording)startRecording();
   const pid='castwing-'+code;peer=createPeer(pid);
   peer.on('open',()=>{});
   peer.on('connection',c=>setupDataConnection(c));
