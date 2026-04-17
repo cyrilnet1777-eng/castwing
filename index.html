@@ -653,16 +653,20 @@ const SFX={
 };
 const sfxCache={};
 let _audioUnlocked=false;
+let _audioCtx=null;
 function unlockAudio(){
-  if(_audioUnlocked)return;
   try{
     const Ctx=window.AudioContext||window.webkitAudioContext;
     if(!Ctx)return;
-    const ctx=new Ctx();
-    const buf=ctx.createBuffer(1,1,22050);
-    const src=ctx.createBufferSource();
-    src.buffer=buf;src.connect(ctx.destination);src.start(0);
-    if(ctx.state==='suspended')ctx.resume();
+    if(!_audioCtx)_audioCtx=new Ctx();
+    if(_audioCtx.state==='suspended')_audioCtx.resume();
+    const buf=_audioCtx.createBuffer(1,1,22050);
+    const src=_audioCtx.createBufferSource();
+    src.buffer=buf;src.connect(_audioCtx.destination);src.start(0);
+    const a=new Audio();
+    a.src='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+    a.volume=0;
+    a.play().catch(()=>{});
     _audioUnlocked=true;
   }catch(e){}
 }
@@ -1098,10 +1102,13 @@ function showClapperboard(onComplete){
   playSfx('countdown',0.5);
   setTimeout(()=>{
     overlay.innerHTML='<div class="clap-countdown">3</div>';
+    warmAudioForMobile();
     setTimeout(()=>{
       overlay.innerHTML='<div class="clap-countdown">2</div>';
+      warmAudioForMobile();
       setTimeout(()=>{
         overlay.innerHTML='<div class="clap-countdown">1</div>';
+        warmAudioForMobile();
         setTimeout(()=>{
           if(overlay.parentElement)overlay.remove();
           if(typeof onComplete==='function')onComplete();
@@ -2752,6 +2759,16 @@ function cancelTTSPlayback(){
     ttsAudio=null;
   }
 }
+async function warmAudioForMobile(){
+  if(_audioUnlocked)return;
+  try{
+    const a=new Audio();
+    a.src='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+    a.volume=0;
+    await a.play().catch(()=>{});
+    _audioUnlocked=true;
+  }catch(e){}
+}
 async function speakWithElevenLabs(text,preset,token,cb){
   try{
     if(!preset||!preset.voiceId)throw new Error('Missing ElevenLabs voiceId');
@@ -2849,7 +2866,10 @@ async function speakWithElevenLabs(text,preset,token,cb){
     const done=()=>{URL.revokeObjectURL(url);if(ttsAudio===audio)ttsAudio=null;if(token===activeSpeechToken&&cb)cb();};
     audio.onended=done;
     audio.onerror=done;
-    try{await audio.play()}catch(e){done()}
+    try{await audio.play()}catch(e){
+      unlockAudio();
+      try{await audio.play()}catch(e2){done()}
+    }
     return true;
   }catch(e){
     console.info('[TTS] speakWithElevenLabs error:',e.message);
@@ -4088,9 +4108,10 @@ function scheduleAfterPartner(lineIndex){
 function handleCurrentLineAutomation(){
   clearAutoTimer();
   stopAutoVAD();
-  if(sessionPaused)return;
-  if(sessionMode!=='ai'||!prompterLines[prompterIndex])return;
+  if(sessionPaused){console.info('[auto] paused, skip');return}
+  if(sessionMode!=='ai'||!prompterLines[prompterIndex]){console.info('[auto] not ai or no line');return}
   const line=prompterLines[prompterIndex];
+  console.info('[auto] idx='+prompterIndex+' type='+line.type+' spoken='+line.isSpoken+' char='+line.char+' lastSpoken='+lastAutoSpokenIndex);
   if(line.isSpoken!==true){
     const currentIndex=prompterIndex;
     lastAutoSpokenIndex=currentIndex;
@@ -4098,9 +4119,10 @@ function handleCurrentLineAutomation(){
     return;
   }
   if(line.type==='partner'&&(mode==='ai'||mode==='auto')){
-    if(lastAutoSpokenIndex===prompterIndex)return;
+    if(lastAutoSpokenIndex===prompterIndex){console.info('[auto] already spoken');return}
     const currentIndex=prompterIndex;
     lastAutoSpokenIndex=currentIndex;
+    console.info('[auto] speaking partner line:',line.text.slice(0,40));
     aiSpeak(line.text,()=>{lastTTSEndTs=Date.now();scheduleAfterPartner(currentIndex)});
     return;
   }
