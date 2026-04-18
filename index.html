@@ -144,8 +144,8 @@ input[type="file"]{display:none}
 .pause-settings-panel .ps-label{font-size:.8rem;color:#d9efe7;font-weight:600}
 .pause-settings-panel .ps-close{position:absolute;top:.6rem;right:.6rem;width:28px;height:28px;border-radius:50%;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#fff;font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
 .pause-settings-panel .ps-close:hover{background:rgba(255,255,255,.18)}
-.pause-settings-panel .ps-resume-btn{width:100%;margin-top:.8rem;padding:.6rem;border-radius:10px;border:1.5px solid rgba(127,247,231,.3);background:rgba(30,160,80,.25);color:#7ff7e7;font-size:.85rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
-.pause-settings-panel .ps-resume-btn:hover{background:rgba(30,160,80,.4)}
+.pause-settings-panel .ps-resume-btn{width:100%;margin-top:1rem;padding:.75rem;border-radius:12px;border:2px solid rgba(127,247,231,.4);background:linear-gradient(180deg,rgba(30,160,80,.35),rgba(20,120,60,.45));color:#7ff7e7;font-size:.95rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;letter-spacing:.02em}
+.pause-settings-panel .ps-resume-btn:hover{background:linear-gradient(180deg,rgba(30,160,80,.5),rgba(20,120,60,.6))}
 
 /* VOICE */
 .voice-section{margin-top:1rem;display:none}.voice-section.active{display:block}
@@ -621,7 +621,7 @@ input[type="file"]{display:none}
   <div class="session-body">
     <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><video id="remoteVideo" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:contain;background:#000"></video><div class="no-video" id="noVideoMsg">Caméra en attente…</div><div class="video-controls"><button class="vctrl" id="btnMic" onclick="toggleMic()"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/></svg></button><button class="vctrl" id="btnRec" onclick="toggleRecording()"><span class="rec-dot"></span></button><button class="vctrl vctrl-pause" id="btnPause" onclick="togglePause()"><svg id="pauseIcon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button><div class="speed-btns speed-btns-overlay" id="speedBtnsOverlay"></div><button class="vctrl vctrl-flip" id="btnCam" onclick="toggleCam()"><svg viewBox="0 0 24 24"><path d="M20 5h-3.17L15 3H9L7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-8 13a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/><path d="M12 17l-2.5-2h1.5v-2h2v2h1.5L12 17zm0-10l2.5 2h-1.5v2h-2V9H9.5L12 7z"/></svg></button></div></div><button class="mob-main-btn" id="mobMainBtn" onclick="togglePause()"><span class="rec-dot-mob"></span><span class="play-tri"></span></button><button class="mob-settings-gear" id="mobSettingsGear" onclick="togglePauseSettings()">⚙</button></div>
     <div class="prompter-area" id="prompterArea"><div class="prompter-empty" id="prompterEmptyText">Aucun texte chargé</div></div>
-    <div id="pauseOverlay" class="pause-overlay"><span>⏸ En pause</span><button class="pause-settings-btn" id="pauseSettingsBtn" onclick="togglePauseSettings()">⚙ Réglages</button><div class="pause-settings-panel" id="pauseSettingsPanel"><button class="ps-close" onclick="closePauseSettings()">✕</button><label>Mon personnage</label><div class="char-grid" id="pauseCharGrid"></div><label>Voix IA</label><select id="pauseVoiceSelect" onchange="changePauseVoice()"></select><label>Vitesse</label><div class="speed-btns" id="speedBtnsPause"></div><div class="ps-row"><span class="ps-label">Italienne</span><button class="ps-toggle" id="psItalienneToggle" onclick="toggleItalienne()"></button></div><div class="ps-row"><span class="ps-label">Mode</span><button class="ps-toggle" id="psModeToggle" onclick="togglePauseMode()"></button><span class="ps-label" id="psModeLabel" style="min-width:50px">Auto</span></div><div class="ps-row"><span class="ps-label">Caméra</span><button class="etm-btn etm-resume" onclick="toggleCam();closePauseSettings()" style="flex:0;padding:.4rem .8rem;font-size:.75rem">↻ Flip</button></div><button class="ps-resume-btn" onclick="closePauseSettings();togglePause(false)">▶ Reprendre</button></div></div>
+    <div id="pauseOverlay" class="pause-overlay"><span>⏸ En pause</span><button class="pause-settings-btn" id="pauseSettingsBtn" onclick="togglePauseSettings()">⚙ Réglages</button><div class="pause-settings-panel" id="pauseSettingsPanel"><button class="ps-close" onclick="closePauseSettings();togglePause(false)">✕</button><label>Mon personnage</label><div class="char-grid" id="pauseCharGrid"></div><label>Voix IA</label><select id="pauseVoiceSelect" onchange="changePauseVoice()"></select><label>Vitesse</label><div class="speed-btns" id="speedBtnsPause"></div><div class="ps-row"><span class="ps-label">Italienne</span><button class="ps-toggle" id="psItalienneToggle" onclick="toggleItalienne()"></button></div><div class="ps-row"><span class="ps-label">Mode</span><button class="ps-toggle" id="psModeToggle" onclick="togglePauseMode()"></button><span class="ps-label" id="psModeLabel" style="min-width:50px">Auto</span></div><div class="ps-row"><span class="ps-label">Caméra</span><button class="etm-btn etm-resume" onclick="toggleCam();closePauseSettings()" style="flex:0;padding:.4rem .8rem;font-size:.75rem">↻ Flip</button></div><button class="ps-resume-btn" onclick="closePauseSettings();togglePause(false)">▶ Reprendre</button></div></div>
     <div class="italienne-badge" id="italienneBadge">ITALIENNE</div>
   </div>
   <div class="ai-panel" id="aiPanel"><span class="ai-label" id="sessionVoiceLabel">🦾 Voix :</span><select id="sessionVoiceSelect" onchange="changeSessionVoice()"></select></div>
@@ -4699,6 +4699,7 @@ function endSession(){
   const mb=document.getElementById('mobMainBtn');if(mb)mb.classList.remove('is-paused');
   const mg=document.getElementById('mobSettingsGear');if(mg)mg.classList.remove('visible');
   const ib=document.getElementById('italienneBadge');if(ib)ib.classList.remove('active');
+  if(_preItalienneVoice){selectedVoice=_preItalienneVoice;_preItalienneVoice=null}
   hideEndTakeModal();
   if(connectionTimeout)clearTimeout(connectionTimeout);cancelSpeechFlow();
   if(isRecording)stopRecording();if(call){call.close();call=null}if(conn){conn.close();conn=null}if(peer){peer.destroy();peer=null}
@@ -4753,7 +4754,7 @@ document.addEventListener('DOMContentLoaded',async ()=>{
     if(saved.voiceLocale&&VOICE_LOCALES.some(l=>l.id===saved.voiceLocale))selectedLocale=saved.voiceLocale;
     if(saved.emotion&&EMOTION_PRESETS[saved.emotion])selectedEmotion=saved.emotion;
     if(Number.isFinite(Number(saved.speedValue))){
-      const sv=Number(saved.speedValue);
+      const sv=Math.min(Number(saved.speedValue),1.5);
       voiceSpeed=SPEED_LEVELS.reduce((best,lvl)=>Math.abs(lvl.value-sv)<Math.abs(best-sv)?lvl.value:best,SPEED_LEVELS[1].value);
     }else if(saved.speedPreset==='slow')voiceSpeed=0.65;
     else if(saved.speedPreset==='fast')voiceSpeed=1.5;
