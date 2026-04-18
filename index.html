@@ -4202,7 +4202,7 @@ function cancelSpeechFlow(){
 }
 let _vadArmTimer=null;
 async function armAutoVADForActorLine(){
-  if(mode!=='auto'||sessionMode!=='ai'){console.info('[VAD] skip arm: mode='+mode+' sessionMode='+sessionMode);return}
+  if((mode!=='auto'&&mode!=='ai')||sessionMode!=='ai'){console.info('[VAD] skip arm: mode='+mode+' sessionMode='+sessionMode);return}
   const line=prompterLines[prompterIndex];
   if(!line||line.type!=='actor'||!localStream){console.info('[VAD] skip arm: no actor line or no stream');return}
   const tracks=localStream.getAudioTracks();
@@ -4213,7 +4213,7 @@ async function armAutoVADForActorLine(){
   const postTtsDelay=Math.max(0,2000-(Date.now()-lastTTSEndTs));
   const doArm=async()=>{
     _vadArmTimer=null;
-    if(mode!=='auto'||sessionPaused)return;
+    if((mode!=='auto'&&mode!=='ai')||sessionPaused)return;
     const silenceMs=computeSilenceMsForActorLine(line);
     console.info('[VAD] arming: silenceThreshold='+silenceMs+'ms, postTtsDelay='+postTtsDelay+'ms');
     vad=new VoiceActivityDetector({speechThreshold:0.015,silenceDuration:silenceMs,onSpeechEnd:onAutoSpeechEnd});
@@ -4227,7 +4227,7 @@ async function armAutoVADForActorLine(){
 }
 function onAutoSpeechEnd(){
   if(sessionPaused)return;
-  if(mode!=='auto'||sessionMode!=='ai')return;
+  if((mode!=='auto'&&mode!=='ai')||sessionMode!=='ai')return;
   console.info('[VAD] speech ended → advancing to next line');
   const line=prompterLines[prompterIndex];
   if(!line||line.type!=='actor')return;
@@ -4273,7 +4273,7 @@ function handleCurrentLineAutomation(){
     aiSpeak(line.text,()=>{lastTTSEndTs=Date.now();scheduleAfterPartner(currentIndex)});
     return;
   }
-  if(mode==='auto'&&line.type==='actor')armAutoVADForActorLine();
+  if((mode==='auto'||mode==='ai')&&line.type==='actor')armAutoVADForActorLine();
 }
 function prompterNext(){
   if(prompterIndex>=prompterLines.length-1)return;
@@ -4629,27 +4629,27 @@ function setupCallHandlers(c){
 }
 
 // ── Gender-based voice auto-assignment ──
-const _MALE_NAMES=new Set(['françois','antoine','cyril','pierre','jean','paul','louis','marc','michel','nicolas','philippe','thomas','jacques','alain','patrick','olivier','julien','sébastien','christophe','stéphane','guillaume','vincent','mathieu','alexandre','david','eric','laurent','bruno','frédéric','pascal','thierry','gérard','didier','bernard','hervé','fabrice','yves','dominique_m','charles','andré','henri','robert','daniel','maxime','hugo','léo','lucas','gabriel','raphaël','arthur','nathan','noah','adam','ethan','samuel','victor','théo','félix','émile','romain','damien','fabien','grégoire','william','james','john','michael','richard','robert_en','mark','steven','peter','kevin','brian','edward','george','henry','alexander','benjamin','anthony','joseph','matthew','christopher','andrew','ryan','jason','jack','oliver','charlie','harry','oscar','archie','alfie','leo_en','noah_en','liam','carlos','diego','miguel','alejandro','pedro','pablo','rafael','javier','fernando','antonio','roberto','marco','giuseppe','francesco','luca','matteo','giovanni','andrea_m','stefan','hans','karl','friedrich','heinrich','wolfgang','klaus','dieter','werner','rainer','ahmed','omar','ali','hassan','hussein','khalid','mohammad','ibrahim','yusuf','mehmet','mustafa','ahmet','emre','burak','ivan','dmitri','sergei','nikolai','alexei','vladimir','boris','yuri','andrei','maxim_ru','hiroshi','takeshi','kenji','yuki_m','wei','ming','chen','jun','haruto','ren','takumi']);
-const _FEMALE_NAMES=new Set(['florence','virginie','adèle','sophie','marie','anne','catherine','nathalie','isabelle','christine','véronique','sandrine','valérie','patricia','sylvie','monique','brigitte','françoise','martine','danielle','hélène','cécile','camille','léa','emma','chloé','manon','jade','louise','alice','inès','lola','charlotte','juliette','clara','lucie','margaux','pauline','agathe','océane','sarah','laura','julie','audrey','clémence','élodie','marine','mélanie','amandine','aurélie','mary','elizabeth','jennifer','jessica','sarah_en','amanda','ashley','emily','samantha','rachel','nicole','angela','michelle','stephanie','rebecca','laura_en','emma_en','olivia','amelia','isla','ava','mia','sophia','ella','grace','freya','lily','maría','carmen','ana','lucia','rosa','elena','pilar','sofia','valentina','giulia','francesca','chiara','anna','elena_it','sara_it','marta','defne','elif','zeynep','ayşe','fatma','merve','nour','salma','fatima','layla','aisha','hana','yui','sakura','mei','ling','ananya','priya','alina','natasha','ekaterina','olga','tatiana','svetlana','minji','soo','yuna']);
+const _nfd=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const _MALE_NAMES=new Set(['francois','antoine','cyril','pierre','jean','paul','louis','marc','michel','nicolas','philippe','thomas','jacques','alain','patrick','olivier','julien','sebastien','christophe','stephane','guillaume','vincent','mathieu','alexandre','david','eric','laurent','bruno','frederic','pascal','thierry','gerard','didier','bernard','herve','fabrice','yves','charles','andre','henri','robert','daniel','maxime','hugo','leo','lucas','gabriel','raphael','arthur','nathan','noah','adam','ethan','samuel','victor','theo','felix','emile','romain','damien','fabien','gregoire','william','james','john','michael','richard','mark','steven','peter','kevin','brian','edward','george','henry','alexander','benjamin','anthony','joseph','matthew','christopher','andrew','ryan','jason','jack','oliver','charlie','harry','oscar','archie','alfie','liam','carlos','diego','miguel','alejandro','pedro','pablo','rafael','javier','fernando','antonio','roberto','marco','giuseppe','francesco','luca','matteo','giovanni','stefan','hans','karl','friedrich','heinrich','wolfgang','klaus','dieter','werner','rainer','ahmed','omar','ali','hassan','hussein','khalid','mohammad','ibrahim','yusuf','mehmet','mustafa','ahmet','emre','burak','ivan','dmitri','sergei','nikolai','alexei','vladimir','boris','yuri','andrei','hiroshi','takeshi','kenji','wei','ming','chen','jun','haruto','ren','takumi']);
+const _FEMALE_NAMES=new Set(['florence','virginie','adele','sophie','marie','anne','catherine','nathalie','isabelle','christine','veronique','sandrine','valerie','patricia','sylvie','monique','brigitte','francoise','martine','danielle','helene','cecile','camille','lea','emma','chloe','manon','jade','louise','alice','ines','lola','charlotte','juliette','clara','lucie','margaux','pauline','agathe','oceane','sarah','laura','julie','audrey','clemence','elodie','marine','melanie','amandine','aurelie','mary','elizabeth','jennifer','jessica','amanda','ashley','emily','samantha','rachel','nicole','angela','michelle','stephanie','rebecca','olivia','amelia','isla','ava','mia','sophia','ella','grace','freya','lily','maria','carmen','ana','lucia','rosa','elena','pilar','sofia','valentina','giulia','francesca','chiara','anna','marta','defne','elif','zeynep','ayse','fatma','merve','nour','salma','fatima','layla','aisha','hana','yui','sakura','mei','ling','ananya','priya','alina','natasha','ekaterina','olga','tatiana','svetlana','minji','soo','yuna']);
 function detectGenderFromName(charName){
   if(!charName)return '';
-  const nameNFD=charName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  const parts=nameNFD.split(/[\s\-_.']+/);
+  const norm=_nfd(charName.toLowerCase());
+  const parts=norm.split(/[\s\-_.']+/);
   for(const p of parts){if(_MALE_NAMES.has(p))return 'male';if(_FEMALE_NAMES.has(p))return 'female';}
-  for(const n of _MALE_NAMES){if(nameNFD.includes(n))return 'male';}
-  for(const n of _FEMALE_NAMES){if(nameNFD.includes(n))return 'female';}
   return '';
 }
 function autoAssignVoiceByGender(){
   if(!pdfScript.length||!selectedChar)return;
   const partnerChars=[...new Set(pdfScript.filter(s=>s&&s.kind===LINE_TYPE.DIALOGUE&&s.char&&s.char!==selectedChar).map(s=>s.char))];
-  if(partnerChars.length!==1)return;
+  if(partnerChars.length!==1){console.info('[Voice] skip auto-assign: '+partnerChars.length+' partner chars');return}
   const gender=detectGenderFromName(partnerChars[0]);
+  console.info('[Voice] detectGender("'+partnerChars[0]+'") →',gender||'unknown');
   if(!gender)return;
-  const match=VOICE_PRESETS.find(v=>v.gender===gender);
+  const match=VOICE_PRESETS.find(v=>v.gender===gender&&!v.id.includes('sadie'));
   if(match){
     selectedVoice=match;
-    console.info('[Voice] auto-assigned',match.label,'('+gender+') for partner',partnerChars[0]);
+    console.info('[Voice] auto-assigned',match.label,'('+match.id+') for partner',partnerChars[0]);
   }
 }
 
