@@ -2584,6 +2584,13 @@ class VoiceActivityDetector{
     const Ctx=window.AudioContext||window.webkitAudioContext;
     if(!Ctx)return false;
     this.audioContext=new Ctx();
+    if(this.audioContext.state==='suspended'){try{await this.audioContext.resume()}catch(e){}}
+    const audioTracks=stream.getAudioTracks();
+    console.info('[VAD] mic stream active:',audioTracks.length>0,'tracks:',audioTracks.length,'ctxState:',this.audioContext.state,audioTracks.map(t=>t.label+'/'+t.readyState+'/enabled:'+t.enabled).join(', '));
+    if(!audioTracks.length||audioTracks[0].readyState!=='live'){
+      console.warn('[VAD] no live audio track — mic may not be authorized');
+      return false;
+    }
     this.source=this.audioContext.createMediaStreamSource(stream);
     this.analyser=this.audioContext.createAnalyser();
     this.analyser.fftSize=512;
@@ -4205,8 +4212,12 @@ async function armAutoVADForActorLine(){
   if((mode!=='auto'&&mode!=='ai')||sessionMode!=='ai'){console.info('[VAD] skip arm: mode='+mode+' sessionMode='+sessionMode);return}
   const line=prompterLines[prompterIndex];
   if(!line||line.type!=='actor'||!localStream){console.info('[VAD] skip arm: no actor line or no stream');return}
-  const tracks=localStream.getAudioTracks();
-  if(!tracks.length||!tracks[0].enabled){console.info('[VAD] skip arm: no audio tracks or disabled');return}
+  const tracks=localStream.getAudioTracks().filter(t=>t.readyState==='live'&&t.enabled);
+  if(!tracks.length){
+    console.info('[VAD] skip arm: no live enabled audio tracks. All tracks:',localStream.getAudioTracks().map(t=>t.label+'/'+t.readyState+'/enabled:'+t.enabled));
+    showToast('Autorise le micro pour que l\'IA détecte quand tu as fini de parler',5000);
+    return;
+  }
   console.info('[VAD] audio track:',tracks[0].label,'enabled:',tracks[0].enabled,'readyState:',tracks[0].readyState);
   stopAutoVAD();
   if(_vadArmTimer){clearTimeout(_vadArmTimer);_vadArmTimer=null;}
@@ -4217,7 +4228,8 @@ async function armAutoVADForActorLine(){
     const silenceMs=computeSilenceMsForActorLine(line);
     console.info('[VAD] arming: silenceThreshold='+silenceMs+'ms, postTtsDelay='+postTtsDelay+'ms');
     vad=new VoiceActivityDetector({speechThreshold:0.015,silenceDuration:silenceMs,onSpeechEnd:onAutoSpeechEnd});
-    await vad.start(new MediaStream(tracks));
+    const armed=await vad.start(new MediaStream(tracks));
+    if(!armed)showToast('Autorise le micro pour que l\'IA détecte quand tu as fini de parler',5000);
   };
   if(postTtsDelay>100){
     _vadArmTimer=setTimeout(doArm,postTtsDelay);
