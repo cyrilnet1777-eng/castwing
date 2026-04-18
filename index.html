@@ -2257,12 +2257,13 @@ async function detectPreferredUILanguage(){
   return '';
 }
 function persistSettings(){
+  const realVoice=selectedVoice&&selectedVoice.id==='_italienne'?_preItalienneVoice:selectedVoice;
   const payload={
     uiLang:selectedUILanguage,
     voiceLocale:selectedLocale,
-    voiceId:selectedVoice?selectedVoice.id:'',
+    voiceId:realVoice?realVoice.id:'',
     emotion:selectedEmotion,
-    speedValue:voiceSpeed,
+    speedValue:Math.min(voiceSpeed,1.5),
     mode,
   };
   try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(payload));}catch(e){}
@@ -2979,6 +2980,7 @@ function speakWithBrowser(text,preset,style,token,cb){
 async function aiSpeak(text,cb){
   if(!text){if(cb)cb();return}
   const preset=selectedVoice||VOICE_PRESETS[0];
+  console.info('[TTS] aiSpeak voiceId:',preset.voiceId,'label:',preset.label,'id:',preset.id,'speed:',voiceSpeed,'emotion:',selectedEmotion);
   const spokenText=normalizeTextForTTS(text,preset);
   const token=++activeSpeechToken;
   cancelTTSPlayback();
@@ -4770,7 +4772,9 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   applyUILanguage();
   updateAuthMiniButton();
   initVoiceCountrySelect();
-  applyLocaleVoices(selectedLocale,true,saved&&saved.voiceId?saved.voiceId:null);
+  const restoredVoiceId=saved&&saved.voiceId&&saved.voiceId!=='_italienne'?saved.voiceId:null;
+  applyLocaleVoices(selectedLocale,true,restoredVoiceId);
+  if(selectedVoice&&selectedVoice.id==='_italienne'){selectedVoice=VOICE_PRESETS[0]||null;_preItalienneVoice=null}
   setVoiceSpeed(voiceSpeed,true);
   const emo=document.getElementById('emotionSelect');
   if(emo)emo.value=selectedEmotion;
