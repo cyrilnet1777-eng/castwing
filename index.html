@@ -2615,6 +2615,11 @@ class VoiceActivityDetector{
         this.hasSpoken=false;
       }
     }
+    if(!this._lastLog||now-this._lastLog>=500){
+      this._lastLog=now;
+      const silMs=this.state==='TRAILING'?now-this.trailingSince:0;
+      console.info('[VAD] state:'+this.state+' rms:'+rms.toFixed(4)+' threshold:'+this.speechThreshold+' spoken:'+this.hasSpoken+' silenceMs:'+silMs+'/'+this.silenceDuration);
+    }
     this.rafId=requestAnimationFrame(()=>this.loop());
   }
   stop(){
@@ -4194,11 +4199,12 @@ function cancelSpeechFlow(){
 }
 let _vadArmTimer=null;
 async function armAutoVADForActorLine(){
-  if(mode!=='auto'||sessionMode!=='ai')return;
+  if(mode!=='auto'||sessionMode!=='ai'){console.info('[VAD] skip arm: mode='+mode+' sessionMode='+sessionMode);return}
   const line=prompterLines[prompterIndex];
-  if(!line||line.type!=='actor'||!localStream)return;
+  if(!line||line.type!=='actor'||!localStream){console.info('[VAD] skip arm: no actor line or no stream');return}
   const tracks=localStream.getAudioTracks();
-  if(!tracks.length||!tracks[0].enabled)return;
+  if(!tracks.length||!tracks[0].enabled){console.info('[VAD] skip arm: no audio tracks or disabled');return}
+  console.info('[VAD] audio track:',tracks[0].label,'enabled:',tracks[0].enabled,'readyState:',tracks[0].readyState);
   stopAutoVAD();
   if(_vadArmTimer){clearTimeout(_vadArmTimer);_vadArmTimer=null;}
   const postTtsDelay=Math.max(0,2000-(Date.now()-lastTTSEndTs));
@@ -4207,7 +4213,7 @@ async function armAutoVADForActorLine(){
     if(mode!=='auto'||sessionPaused)return;
     const silenceMs=computeSilenceMsForActorLine(line);
     console.info('[VAD] arming: silenceThreshold='+silenceMs+'ms, postTtsDelay='+postTtsDelay+'ms');
-    vad=new VoiceActivityDetector({speechThreshold:0.008,silenceDuration:silenceMs,onSpeechEnd:onAutoSpeechEnd});
+    vad=new VoiceActivityDetector({speechThreshold:0.015,silenceDuration:silenceMs,onSpeechEnd:onAutoSpeechEnd});
     await vad.start(new MediaStream(tracks));
   };
   if(postTtsDelay>100){
@@ -4219,10 +4225,7 @@ async function armAutoVADForActorLine(){
 function onAutoSpeechEnd(){
   if(sessionPaused)return;
   if(mode!=='auto'||sessionMode!=='ai')return;
-  const sinceTts=lastTTSEndTs?Date.now()-lastTTSEndTs:9999;
-  const shouldAdvance=sinceTts>=2000;
-  console.info('[VAD] silence detected: sinceTTS='+sinceTts+'ms, threshold=2000ms, advancing='+shouldAdvance);
-  if(!shouldAdvance)return;
+  console.info('[VAD] speech ended → advancing to next line');
   const line=prompterLines[prompterIndex];
   if(!line||line.type!=='actor')return;
   if(prompterIndex>=prompterLines.length-1)return;
