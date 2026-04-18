@@ -1896,6 +1896,7 @@ const UI_FALLBACK_TRANSLATIONS={
   pickCharacterFirst:{es:'Elige primero tu personaje',it:'Scegli prima il tuo personaggio',zh:'请先选择你的角色',ko:'먼저 내 캐릭터를 선택하세요',ja:'先に自分の役を選んでください',ar:'اختر شخصيتك أولًا',de:'Wähle zuerst deine Figur',pt:'Escolha primeiro seu personagem',hi:'पहले अपना किरदार चुनें'},
   pdfReading:{fr:'Lecture du script…',en:'Reading script…',es:'Leyendo guion…',it:'Lettura copione…',zh:'读取剧本中…',ko:'대본 읽는 중…',ja:'台本を読み込み中…',ar:'جارٍ قراءة النص…',de:'Skript wird gelesen…',pt:'Lendo roteiro…',hi:'स्क्रिप्ट पढ़ी जा रही है…',tr:'Senaryo okunuyor…',ru:'Чтение сценария…'},
   cancelBtn:{fr:'✕ Annuler',en:'✕ Cancel',es:'✕ Cancelar',it:'✕ Annulla',zh:'✕ 取消',ko:'✕ 취소',ja:'✕ キャンセル',ar:'✕ إلغاء',de:'✕ Abbrechen',pt:'✕ Cancelar',hi:'✕ रद्द करें',tr:'✕ İptal',ru:'✕ Отмена'},
+  scriptPlaceholder:{fr:'MOI: Ma réplique\nPARTENAIRE: Sa réplique',en:'ME: My line\nPARTNER: Their line',es:'YO: Mi réplica\nCOMPAÑERO: Su réplica',it:'IO: La mia battuta\nPARTNER: La sua battuta',zh:'我：我的台词\n搭档：对方台词',ko:'나: 내 대사\n파트너: 상대 대사',ja:'私：私のセリフ\nパートナー：相手のセリフ',ar:'أنا: نصّي\nالشريك: نصّه',de:'ICH: Mein Text\nPARTNER: Sein Text',pt:'EU: Minha fala\nPARCEIRO: Fala dele',hi:'मैं: मेरा संवाद\nसाथी: उनका संवाद',tr:'BEN: Benim repliğim\nPARTNER: Onun repliği',ru:'Я: Моя реплика\nПАРТНЁР: Его реплика'},
   pdfLinesDetected:{en:'lines detected',es:'líneas detectadas',it:'battute rilevate',zh:'条台词已识别',ko:'개 대사 감지됨',ja:'行を検出',ar:'سطرًا تم اكتشافه',de:'Zeilen erkannt',pt:'falas detectadas',hi:'पंक्तियाँ मिलीं'},
   pdfImportedRaw:{en:'Text imported (raw)',es:'Texto importado (sin procesar)',it:'Testo importato (grezzo)',zh:'已导入文本（原始）',ko:'텍스트 가져옴(원문)',ja:'テキストを読み込み（生データ）',ar:'تم استيراد النص (خام)',de:'Text importiert (roh)',pt:'Texto importado (bruto)',hi:'टेक्स्ट आयात किया गया (रॉ)'},
   pdfReadError:{en:'PDF reading error',es:'Error al leer el PDF',it:'Errore lettura PDF',zh:'PDF 读取错误',ko:'PDF 읽기 오류',ja:'PDF 読み込みエラー',ar:'خطأ في قراءة PDF',de:'Fehler beim Lesen der PDF',pt:'Erro ao ler PDF',hi:'PDF पढ़ने में त्रुटि'},
@@ -2178,6 +2179,8 @@ function applyUILanguage(){
   setTextById('waitOneHourBtn','waitOneHourBtn');
   const joinInput=document.getElementById('joinCodeInput');
   if(joinInput)joinInput.placeholder=t('joinCodePlaceholder');
+  const ph=t('scriptPlaceholder');
+  ['scriptInput1','scriptInput2'].forEach(id=>{const el=document.getElementById(id);if(el)el.placeholder=ph;});
   const emo=document.getElementById('emotionSelect');
   if(emo){
     const labels=['neutral','excited','sad','angry','whisper'].map(getEmotionLabel);
@@ -2789,7 +2792,7 @@ function renderSpeedBtns(containerId){
   const g=document.getElementById(containerId);
   if(!g)return;
   g.innerHTML='';
-  SPEED_LEVELS.forEach(lvl=>{
+  SPEED_LEVELS.filter(lvl=>lvl.value<2.0).forEach(lvl=>{
     const el=document.createElement('div');
     el.className='speed-btn'+(voiceSpeed===lvl.value?' active':'');
     el.textContent=lvl.num;
@@ -4625,6 +4628,31 @@ function setupCallHandlers(c){
   call.on('error',e=>{console.error('Call error:',e);showToast(tt('error','Erreur')+': '+e.message,3000)});
 }
 
+// ── Gender-based voice auto-assignment ──
+const _MALE_NAMES=new Set(['françois','antoine','cyril','pierre','jean','paul','louis','marc','michel','nicolas','philippe','thomas','jacques','alain','patrick','olivier','julien','sébastien','christophe','stéphane','guillaume','vincent','mathieu','alexandre','david','eric','laurent','bruno','frédéric','pascal','thierry','gérard','didier','bernard','hervé','fabrice','yves','dominique_m','charles','andré','henri','robert','daniel','maxime','hugo','léo','lucas','gabriel','raphaël','arthur','nathan','noah','adam','ethan','samuel','victor','théo','félix','émile','romain','damien','fabien','grégoire','william','james','john','michael','richard','robert_en','mark','steven','peter','kevin','brian','edward','george','henry','alexander','benjamin','anthony','joseph','matthew','christopher','andrew','ryan','jason','jack','oliver','charlie','harry','oscar','archie','alfie','leo_en','noah_en','liam','carlos','diego','miguel','alejandro','pedro','pablo','rafael','javier','fernando','antonio','roberto','marco','giuseppe','francesco','luca','matteo','giovanni','andrea_m','stefan','hans','karl','friedrich','heinrich','wolfgang','klaus','dieter','werner','rainer','ahmed','omar','ali','hassan','hussein','khalid','mohammad','ibrahim','yusuf','mehmet','mustafa','ahmet','emre','burak','ivan','dmitri','sergei','nikolai','alexei','vladimir','boris','yuri','andrei','maxim_ru','hiroshi','takeshi','kenji','yuki_m','wei','ming','chen','jun','haruto','ren','takumi']);
+const _FEMALE_NAMES=new Set(['florence','virginie','adèle','sophie','marie','anne','catherine','nathalie','isabelle','christine','véronique','sandrine','valérie','patricia','sylvie','monique','brigitte','françoise','martine','danielle','hélène','cécile','camille','léa','emma','chloé','manon','jade','louise','alice','inès','lola','charlotte','juliette','clara','lucie','margaux','pauline','agathe','océane','sarah','laura','julie','audrey','clémence','élodie','marine','mélanie','amandine','aurélie','mary','elizabeth','jennifer','jessica','sarah_en','amanda','ashley','emily','samantha','rachel','nicole','angela','michelle','stephanie','rebecca','laura_en','emma_en','olivia','amelia','isla','ava','mia','sophia','ella','grace','freya','lily','maría','carmen','ana','lucia','rosa','elena','pilar','sofia','valentina','giulia','francesca','chiara','anna','elena_it','sara_it','marta','defne','elif','zeynep','ayşe','fatma','merve','nour','salma','fatima','layla','aisha','hana','yui','sakura','mei','ling','ananya','priya','alina','natasha','ekaterina','olga','tatiana','svetlana','minji','soo','yuna']);
+function detectGenderFromName(charName){
+  if(!charName)return '';
+  const nameNFD=charName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const parts=nameNFD.split(/[\s\-_.']+/);
+  for(const p of parts){if(_MALE_NAMES.has(p))return 'male';if(_FEMALE_NAMES.has(p))return 'female';}
+  for(const n of _MALE_NAMES){if(nameNFD.includes(n))return 'male';}
+  for(const n of _FEMALE_NAMES){if(nameNFD.includes(n))return 'female';}
+  return '';
+}
+function autoAssignVoiceByGender(){
+  if(!pdfScript.length||!selectedChar)return;
+  const partnerChars=[...new Set(pdfScript.filter(s=>s&&s.kind===LINE_TYPE.DIALOGUE&&s.char&&s.char!==selectedChar).map(s=>s.char))];
+  if(partnerChars.length!==1)return;
+  const gender=detectGenderFromName(partnerChars[0]);
+  if(!gender)return;
+  const match=VOICE_PRESETS.find(v=>v.gender===gender);
+  if(match){
+    selectedVoice=match;
+    console.info('[Voice] auto-assigned',match.label,'('+gender+') for partner',partnerChars[0]);
+  }
+}
+
 // ── START SESSIONS ──
 async function startAiSession(){
   unlockAudio();
@@ -4639,6 +4667,7 @@ async function startAiSession(){
   selectedEmotion=document.getElementById('emotionSelect').value||selectedEmotion;
   if(!canUseEmotions())selectedEmotion='neutral';
   if(!selectedVoice)selectedVoice=VOICE_PRESETS[0]||null;
+  autoAssignVoiceByGender();
   if(!currentScriptName){const si=document.getElementById('scriptInput1');currentScriptName=si&&si.value.trim()?t('clapPastedText'):'—';}
   prompterLines=buildLines(1);
   if(!prompterLines.length&&pdfScript.length>0){
