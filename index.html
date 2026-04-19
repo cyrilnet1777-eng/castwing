@@ -4140,7 +4140,7 @@ function clearPDF(n){pdfScript=[];syncPdfScriptDebugMirror();selectedChar=null;s
 
 // ── Prompter ──
 function buildLines(n){
-  console.info('[buildLines] pdfScript.length='+pdfScript.length+' selectedChar='+selectedChar+' first5kinds='+pdfScript.slice(0,20).map(s=>s.kind+'|'+s.char+'|'+(s.line||'').slice(0,20)).join(' / '));
+  const _dials=pdfScript.filter(s=>s.kind==='dialogue');const _acts=pdfScript.filter(s=>s.kind==='action');const _slugs=pdfScript.filter(s=>s.kind==='slug');console.info('[buildLines] total='+pdfScript.length+' dialogues='+_dials.length+' actions='+_acts.length+' slugs='+_slugs.length+' selectedChar='+selectedChar);if(_dials.length>0)console.info('[buildLines] first3dialogues='+_dials.slice(0,3).map(s=>s.char+': '+s.line.slice(0,40)).join(' / '));else console.warn('[buildLines] ZERO DIALOGUES — all lines are action/context, AI will never speak');
   if(pdfScript.length>0&&selectedChar){
     let rows=pdfScript;
     const selNorm=(selectedChar||'').toUpperCase().trim();
