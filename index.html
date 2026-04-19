@@ -1674,13 +1674,17 @@ function classifyWithValidatedChars(rawText,validChars){
     }
     if(cur&&l.length>1){
       // Detect stage directions mixed into dialogue blocks
-      const lLower=l.toLowerCase();
       const firstWord=l.split(/[\s,.'!?]+/)[0];
       const isThirdPerson=/^(il|elle|ils|elles|on|celui|celle|ceux)\s/i.test(l);
+      const startsWithArticleNoun=/^(l'|le |la |les |un |une |des |du |au |aux |son |sa |ses |leur |leurs |ce |cet |cette |ces )/i.test(l);
       const startsWithCharName=firstWord.length>1&&charSet.has(firstWord.toUpperCase());
-      const hasMultiCharNames=(l.match(new RegExp([...charSet].filter(n=>n.length>2).join('|'),'gi'))||[]).length>=2;
-      const isNarrative=isThirdPerson&&/\b(regarde|prend|ouvre|ferme|sort|entre|quitte|marche|court|tombe|frappe|attrape|lance|pose|lève|assied|tourne|embrasse|rient|pleure|soupire|recule|avance|approche|éloigne|monte|descend|arrive|part|revient|disparaît|apparaît|s'en va|se lève|se tourne|se retourne)\b/i.test(l);
-      if(isNarrative||startsWithCharName||hasMultiCharNames){
+      const startsWithEtAction=/^et\s+(il|elle|se|le|la|les|s'|ferme|ouvre|sort|entre|prend|pose|quitte)/i.test(l);
+      const actionVerbs=/\b(regarde|prend|ouvre|ferme|sort|entre|quitte|marche|court|tombe|frappe|attrape|lance|pose|lève|assied|tourne|embrasse|rient|pleure|soupire|recule|avance|approche|éloigne|monte|descend|arrive|part|revient|disparaît|apparaît|s'approche|se jette|se lève|se tourne|se retourne|s'en va|s'arrête|s'assoit|se retourne|se dirige|se précipite|s'écroule|se penche|se redresse)\b/i;
+      const hasActionVerb=actionVerbs.test(l);
+      const hasFirstPerson=/\b(je |j'|tu |moi|toi|nous |vous |mon |ma |mes |te |me |m'|t')\b/i.test(l);
+      const isNarrative=(isThirdPerson||startsWithArticleNoun||startsWithEtAction)&&hasActionVerb;
+      const isActionLine=startsWithCharName||(isNarrative&&!hasFirstPerson);
+      if(isActionLine){
         res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
         continue;
       }
