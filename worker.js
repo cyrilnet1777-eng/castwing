@@ -1277,6 +1277,86 @@ async function handleValidateCharacters(request, env) {
   }
 }
 
+async function handleClassifyLines(request, env) {
+  if (!env.ANTHROPIC_API_KEY) {
+    return json({ ok: false, error: "missing_anthropic_api_key" }, 500);
+  }
+  let body;
+  try { body = await request.json(); } catch (_) {
+    return json({ ok: false, error: "invalid_json" }, 400);
+  }
+  const lines = Array.isArray(body.lines) ? body.lines.slice(0, 200) : [];
+  const characters = Array.isArray(body.characters) ? body.characters : [];
+  const lang = String(body.lang || "fr").slice(0, 10);
+  if (!lines.length) return json({ ok: true, classified: [] });
+
+  const numberedLines = lines.map((l, i) => `${i}: ${l}`).join("\n");
+  const charList = characters.join(", ");
+
+  const prompt = `You are a screenplay classification expert. The validated character names are: ${charList}
+
+Below are lines from a ${lang} screenplay. For each line number, respond with ONLY:
+D:CHARACTER_NAME if it's dialogue (words the character actually SPEAKS)
+A if it's action/stage direction (describes what happens, not spoken)
+S if it's a scene heading/slug
+
+Rules:
+- Lines describing physical actions (enters, exits, looks, takes, opens, etc.) are ALWAYS action (A), even if they follow a character name
+- Lines with 3rd person narration (Il/Elle/Ils + verb) are action (A)
+- Lines starting with articles (L'/Le/La/Les/Un/Une) + noun + action verb are action (A)
+- Only actual spoken words are dialogue (D)
+- If a line contains BOTH dialogue and action, classify as D with only the dialogue part
+
+Respond in this exact format, one per line:
+0:D:JUVE
+1:A
+2:S
+
+Lines:
+${numberedLines}`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort("timeout"), 20000);
+  try {
+    const rsp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": String(env.ANTHROPIC_API_KEY),
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 4096,
+        temperature: 0,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    const data = await rsp.json().catch(() => ({}));
+    if (!rsp.ok) return json({ ok: false, error: `http_${rsp.status}` }, 502);
+    const text = Array.isArray(data.content)
+      ? data.content.filter(x => x && x.type === "text").map(x => x.text || "").join("")
+      : "";
+    
+    const classified = [];
+    for (const line of text.split("\n")) {
+      const m = line.match(/^(\d+):(D):(.+)$/) || line.match(/^(\d+):(A|S)$/);
+      if (m) {
+        const idx = parseInt(m[1]);
+        const type = m[2];
+        const char = m[3] ? m[3].trim() : "";
+        classified[idx] = { type, char };
+      }
+    }
+    return json({ ok: true, classified });
+  } catch (err) {
+    return json({ ok: false, error: "timeout_or_exception" }, 502);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 /* =========================================================
    D1 MIGRATION HELPER
 ========================================================= */
@@ -1327,6 +1407,7 @@ export default {
     if (url.pathname === "/api/tts" && request.method === "POST") return handleTTS(request, env);
     if (url.pathname === "/api/parse-script" && request.method === "POST") return handleParseScript(request, env);
     if (url.pathname === "/api/validate-characters" && request.method === "POST") return handleValidateCharacters(request, env);
+    if (url.pathname === "/api/classify-lines" && request.method === "POST") return handleClassifyLines(request, env);
     if (url.pathname === "/api/auth" && request.method === "POST") return handleAuth(request, env);
     if (url.pathname === "/api/auth/google" && request.method === "POST") return handleGoogleAuth(request, env);
     if (url.pathname === "/api/session" && request.method === "GET") return handleSession(request, env);

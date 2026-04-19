@@ -1633,6 +1633,77 @@ async function validateCharactersRemote(candidatesStr,lang){
   }finally{clearTimeout(tm)}
 }
 
+function setLoadingMsg(msg){const el=document.getElementById('loadingMsg');if(el)el.textContent=msg}
+
+async function classifyLinesViaAPI(rawText,validChars,lang){
+  const allLines=rawText.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
+  const CHUNK=100;
+  const chunks=[];
+  for(let i=0;i<allLines.length;i+=CHUNK){
+    chunks.push(allLines.slice(i,i+CHUNK));
+  }
+  console.info('[classify-api] total lines:',allLines.length,'chunks:',chunks.length);
+  
+  const results=new Array(allLines.length).fill(null);
+  const PARALLEL=3;
+  
+  for(let batch=0;batch<chunks.length;batch+=PARALLEL){
+    if(_pdfParseCancelled)return null;
+    const batchChunks=chunks.slice(batch,batch+PARALLEL);
+    setLoadingMsg('Classification… '+(batch+1)+'/'+chunks.length);
+    
+    const promises=batchChunks.map((chunk,ci)=>{
+      const chunkIdx=batch+ci;
+      const offset=chunkIdx*CHUNK;
+      return fetch('/api/classify-lines',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({lines:chunk,characters:validChars,lang:lang||'fr'})
+      }).then(r=>r.json()).then(data=>{
+        if(data.ok&&data.classified){
+          for(let i=0;i<chunk.length;i++){
+            const c=data.classified[i];
+            if(c){
+              results[offset+i]={
+                kind:c.type==='D'?'dialogue':c.type==='S'?'slug':'action',
+                char:c.type==='D'?c.char:'',
+                line:chunk[i],
+                isStageDirection:c.type==='A',
+                isSpoken:c.type==='D',
+                parenthetical:null
+              };
+            }
+          }
+        }
+      }).catch(err=>{
+        console.warn('[classify-api] chunk',chunkIdx,'failed:',err.message);
+      });
+    });
+    
+    await Promise.all(promises);
+  }
+  
+  // Fill any gaps with action (safe default)
+  const final=[];
+  for(let i=0;i<allLines.length;i++){
+    if(results[i]){
+      final.push(results[i]);
+    }else{
+      final.push({kind:'action',char:'',line:allLines[i],isStageDirection:true,isSpoken:false,parenthetical:null});
+    }
+  }
+  
+  const dialogueCount=final.filter(l=>l.kind==='dialogue').length;
+  console.info('[classify-api] done. dialogues:',dialogueCount,'actions:',final.filter(l=>l.kind==='action').length);
+  
+  if(dialogueCount===0){
+    console.warn('[classify-api] ZERO dialogues from API, will fall back to local');
+    return null;
+  }
+  
+  return final;
+}
+
 function classifyWithValidatedChars(rawText,validChars){
   const charSet=new Set(validChars.map(c=>c.toUpperCase().trim()));
   // Pre-process: split lines that mix dialogue and stage directions
@@ -3842,7 +3913,12 @@ async function processPDF(n,file){
     console.info('[parse] validated characters:',validChars);
     let parsedScript;
     if(validChars.length>0){
-      parsedScript=classifyWithValidatedChars(rawText,validChars);
+      setLoadingMsg('Classification des répliques…');
+      parsedScript=await classifyLinesViaAPI(rawText,validChars,detectedLang);
+      if(!parsedScript||parsedScript.length===0){
+        // Fallback to local if API fails completely
+        parsedScript=classifyWithValidatedChars(rawText,validChars);
+      }
     }else{
       parsedScript=parsePDFScript(rawText);
     }
