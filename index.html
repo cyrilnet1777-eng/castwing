@@ -4777,7 +4777,7 @@ async function startAiSession(){
   if(!canUseElevenLabs()){elevenLabsTemporarilyDisabled=true;elevenLabsDisableReason='quota';}
   else{elevenLabsTemporarilyDisabled=false;if(elevenLabsDisableReason==='visitor'||elevenLabsDisableReason==='quota')elevenLabsDisableReason='';}
   if(!canUseEmotions())selectedEmotion='neutral';
-  role='actor';sessionMode='ai';
+  role='actor';sessionMode='ai';mode='ai';
   voiceSpeed=getCurrentVoiceSpeed();
   selectedEmotion=document.getElementById('emotionSelect').value||selectedEmotion;
   if(!canUseEmotions())selectedEmotion='neutral';
