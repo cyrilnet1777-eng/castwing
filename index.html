@@ -1571,40 +1571,48 @@ async function tryRemoteClaudeParse(file){
   const MAX_REMOTE_PARSE_BYTES=10*1024*1024;
   if(!file||!file.size)return{ok:false,reason:'missing_file'};
   if(file.size>MAX_REMOTE_PARSE_BYTES)return{ok:false,reason:'payload_too_large_for_remote_parse'};
-  const fd=new FormData();
-  fd.append('file',file,file.name||'script.pdf');
-  _pdfParseAbort=new AbortController();
-  const ctrl=_pdfParseAbort;
-  const timeout=setTimeout(()=>ctrl.abort(),60000);
-  try{
-    const rsp=await fetch('/api/parse-script',{method:'POST',body:fd,signal:ctrl.signal});
-    const data=await rsp.json().catch(()=>({ok:false,error:'invalid_json_response'}));
-    if(!rsp.ok||!data||data.ok!==true||!Array.isArray(data.script)){
-      return{ok:false,reason:(data&&data.error)||('http_'+rsp.status),response:data||null};
+  const MAX_RETRIES=2;
+  const TIMEOUTS=[55000,90000];
+  for(let attempt=0;attempt<MAX_RETRIES;attempt++){
+    if(_pdfParseCancelled)return{ok:false,reason:'cancelled'};
+    const fd=new FormData();
+    fd.append('file',file,file.name||'script.pdf');
+    _pdfParseAbort=new AbortController();
+    const ctrl=_pdfParseAbort;
+    const tm=setTimeout(()=>ctrl.abort(),TIMEOUTS[attempt]||90000);
+    try{
+      console.info('[parse] attempt '+(attempt+1)+'/'+MAX_RETRIES+' timeout='+TIMEOUTS[attempt]+'ms');
+      const rsp=await fetch('/api/parse-script',{method:'POST',body:fd,signal:ctrl.signal});
+      const data=await rsp.json().catch(()=>({ok:false,error:'invalid_json_response'}));
+      if(!rsp.ok||!data||data.ok!==true||!Array.isArray(data.script)){
+        console.warn('[parse] attempt '+(attempt+1)+' bad response:',data&&data.error||rsp.status);
+        continue;
+      }
+      const mapped=data.script.map(row=>{
+        if(row.kind==='dialogue'){
+          return{kind:'dialogue',char:String(row.char||'').trim(),line:String(row.text||'').trim(),isStageDirection:false,isSpoken:true,parenthetical:null};
+        }
+        if(row.kind==='slug'){
+          return{kind:'slug',char:'',line:String(row.text||'').trim(),isStageDirection:false,isSpoken:false,parenthetical:null};
+        }
+        return{kind:'action',char:'',line:String(row.text||'').trim(),isStageDirection:true,isSpoken:false,parenthetical:null};
+      }).filter(x=>x.line);
+      return{
+        ok:true,
+        parsedScript:mapped,
+        provider:data.provider||'anthropic',
+        model:data.model||'',
+        language:data.language||'',
+        meta:data.meta||{}
+      };
+    }catch(err){
+      const isTimeout=String(err&&err.name||'').toLowerCase()==='aborterror';
+      console.warn('[parse] attempt '+(attempt+1)+' failed: '+(isTimeout?'timeout':err.message));
+    }finally{
+      clearTimeout(tm);
     }
-    const mapped=data.script.map(row=>{
-      if(row.kind==='dialogue'){
-        return{kind:'dialogue',char:String(row.char||'').trim(),line:String(row.text||'').trim(),isStageDirection:false,isSpoken:true,parenthetical:null};
-      }
-      if(row.kind==='slug'){
-        return{kind:'slug',char:'',line:String(row.text||'').trim(),isStageDirection:false,isSpoken:false,parenthetical:null};
-      }
-      return{kind:'action',char:'',line:String(row.text||'').trim(),isStageDirection:true,isSpoken:false,parenthetical:null};
-    }).filter(x=>x.line);
-    return{
-      ok:true,
-      parsedScript:mapped,
-      provider:data.provider||'anthropic',
-      model:data.model||'',
-      language:data.language||'',
-      meta:data.meta||{}
-    };
-  }catch(err){
-    const timeoutErr=String(err&&err.name||'').toLowerCase()==='aborterror';
-    return{ok:false,reason:timeoutErr?'frontend_timeout':'frontend_exception',error:String(err&&err.message||err)};
-  }finally{
-    clearTimeout(timeout);
   }
+  return{ok:false,reason:'all_attempts_failed'};
 }
 
 function getTTSEndpointCandidates(){
@@ -3708,7 +3716,6 @@ async function processPDF(n,file){
     let parsedScript=[];
     let rawText='';
     let cleanText='';
-    let usedFallbackLocal=false;
     let remoteLang='';
     let parseProvider='';
     const remote=await tryRemoteClaudeParse(file);
@@ -3723,44 +3730,14 @@ async function processPDF(n,file){
       console.info('[parse] provider=anthropic model='+(remote.model||'')+' lang='+remoteLang);
       showToast('Script analysé par IA',1800);
     }else{
-      usedFallbackLocal=true;
-      parseProvider='fallback';
-      console.warn('[parse] provider=fallback reason=',remote.reason||'unknown');
-      let buf;
-      if(typeof file.arrayBuffer==='function'){
-        buf=await file.arrayBuffer();
-      }else{
-        buf=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsArrayBuffer(file)});
-      }
-      const hybrid=await extractPdfTextHybrid(buf,file.name);
-      rawText=hybrid.fullText.replace(/\u00A0/g,' ');
-      if(PARSER_DEBUG){
-        parserDebugLog('OCR raw text page 1:',(hybrid.pageTexts&&hybrid.pageTexts[0])||'');
-        parserDebugLog('OCR raw text all pages:',rawText);
-      }
-      if(hybrid.usedOcr){
-        console.info('[PDF] Used OCR on pages:',hybrid.ocrPages);
-        showToast('OCR utilisé sur '+hybrid.ocrPages.length+' page(s)',3000);
-      }
-      const meaningfulLines=rawText.split('\n').map(l=>l.trim()).filter(l=>l&&!/^-+\s*\d+\s*(of|de|sur|von|di)\s*\d+\s*-+$/i.test(l));
-      const uniqueLines=new Set(meaningfulLines);
-      const isOnlyWatermark=uniqueLines.size<=3&&rawText.trim().length>0;
-      if(!rawText||rawText.trim().length<10||isOnlyWatermark){
-        const msg=isOnlyWatermark
-          ?tt('pdfWatermarkOnly','Ce PDF ne contient que le filigrane NDA. Le texte du script est protégé. Colle le texte manuellement.')
-          :'PDF vide ou non lisible – essaie de coller le texte directement';
-        showToast(msg,6000);
-        document.getElementById('scriptInput'+n).focus();
-        setLoading(false);return;
-      }
-      try{
-        cleanText=stripPdfWatermarkNoise(rawText,hybrid.pdf?hybrid.pdf.numPages:1,file&&file.name?file.name:'');
-        parsedScript=parsePDFScript(cleanText||rawText);
-      }catch(parseErr){
-        console.warn('PDF parser fallback:',parseErr);
-        cleanText=rawText;
-        parsedScript=[];
-      }
+      console.warn('[parse] Claude API failed, reason=',remote.reason||'unknown');
+      const reason=remote.reason||'';
+      const msg=reason==='cancelled'?'Annulé.'
+        :reason==='payload_too_large_for_remote_parse'?'PDF trop volumineux (max 10 Mo). Réduis le fichier ou colle le texte.'
+        :'Le serveur est occupé. Réessaie dans quelques secondes.';
+      showToast(msg,5000);
+      setLoading(false);
+      return;
     }
     pdfScript=mergeConsecutiveDialogues(sanitizeDialogueVsAction(sanitizeCharacterNames(parsedScript)));
     syncPdfScriptDebugMirror();
@@ -3783,7 +3760,6 @@ async function processPDF(n,file){
         initVoiceCountrySelect();
         initVoiceGrid();
       }
-      if(usedFallbackLocal)showToast('Analyse locale (fallback)',2000);
       showToast(chars.length+' personnages détectés',3000);
     }else{
       pdfScript=[];
