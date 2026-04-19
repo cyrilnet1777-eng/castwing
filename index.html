@@ -1618,10 +1618,16 @@ function classifyWithValidatedChars(rawText,validChars){
   const pageRx=/^\d{1,4}\s*\.?\s*$/;
   const didasRx=/^\s*[\(\[].+[\)\]]\s*$/;
   let cur=null;
+  let firstSlugFound=false;
   for(let i=0;i<lines.length;i++){
     const l=lines[i].trim();
     if(!l){cur=null;continue}
     if(pageRx.test(l))continue;
+    if(sceneRx.test(l))firstSlugFound=true;
+    if(!firstSlugFound){
+      if(l.length>1)res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
+      continue;
+    }
     if(sceneRx.test(l)){
       res.push({kind:'slug',char:'',line:l,isStageDirection:false,isSpoken:false,parenthetical:null});
       cur=null;continue;
