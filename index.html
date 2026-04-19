@@ -4367,12 +4367,16 @@ function handleCurrentLineAutomation(){
   if(line.isSpoken!==true){
     const currentIndex=prompterIndex;
     lastAutoSpokenIndex=currentIndex;
-    // Skip context/action lines instantly until first spoken line
-    if(prompterIndex<prompterLines.length-1){
-      const hasSpokenBefore=prompterLines.slice(0,prompterIndex).some(l=>l.isSpoken);
-      if(!hasSpokenBefore){
-        prompterIndex++;renderPrompter();syncPrompter();
-        setTimeout(()=>handleCurrentLineAutomation(),20);
+    // If no spoken line has been reached yet, JUMP directly to the first one
+    const anySpokenBefore=prompterLines.slice(0,prompterIndex).some(l=>l.isSpoken);
+    if(!anySpokenBefore){
+      const firstSpokenIdx=prompterLines.findIndex(l=>l.isSpoken);
+      if(firstSpokenIdx>prompterIndex){
+        console.info('[auto] jumping from preface idx='+prompterIndex+' to first spoken idx='+firstSpokenIdx);
+        prompterIndex=firstSpokenIdx;
+        lastAutoSpokenIndex=firstSpokenIdx-1;
+        renderPrompter();syncPrompter();
+        handleCurrentLineAutomation();
         return;
       }
     }
