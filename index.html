@@ -4152,11 +4152,14 @@ function buildLines(n){
       const keepNorm=new Set([selNorm,(soloPartnerChar||'').toUpperCase().trim()]);
       rows=pdfScript.filter(s=>s.kind!==LINE_TYPE.DIALOGUE||keepNorm.has((s.char||'').toUpperCase().trim()));
     }
-    return rows.map(s=>{
+    const _result=rows.map(s=>{
       const isDial=s.kind===LINE_TYPE.DIALOGUE;
       const isActor=isDial&&(s.char||'').toUpperCase().trim()===selNorm;
       return{text:s.line,type:isDial?(isActor?'actor':'partner'):'context',char:s.char||'',kind:s.kind||LINE_TYPE.DIALOGUE,isStageDirection:!!s.isStageDirection,isSpoken:isDial,parenthetical:s.parenthetical||null};
     });
+    const _a=_result.filter(r=>r.type==='actor').length;const _p=_result.filter(r=>r.type==='partner').length;const _c=_result.filter(r=>r.type==='context').length;const _sp=_result.filter(r=>r.isSpoken).length;
+    console.info('[buildLines] OUTPUT actors='+_a+' partners='+_p+' context='+_c+' spoken='+_sp+' firstSpokenIdx='+_result.findIndex(r=>r.isSpoken));
+    return _result;
   }
   if(pdfScript.length>0)return pdfScript.map(s=>{const isDial=s.kind===LINE_TYPE.DIALOGUE;return{text:isDial&&s.char?(s.char+': '+s.line):s.line,type:isDial?'actor':'context',char:s.char||'',kind:s.kind||LINE_TYPE.DIALOGUE,isStageDirection:!!s.isStageDirection,isSpoken:isDial,parenthetical:s.parenthetical||null}});
   const rawText=document.getElementById('scriptInput'+n).value;if(!rawText||!rawText.trim())return[];
