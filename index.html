@@ -191,14 +191,18 @@ input[type="file"]{display:none}
 @keyframes pulse-rec{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}50%{box-shadow:0 0 0 10px rgba(239,68,68,0)}}
 .vctrl-pause{min-width:48px;min-height:48px;width:48px;height:48px}
 .vctrl-pause.is-paused{background:rgba(127,227,163,.25);border-color:rgba(127,227,163,.4)}
-.pause-overlay{display:none;position:absolute;inset:0;z-index:55;background:rgba(0,0,0,.55);align-items:center;justify-content:center;flex-direction:column;gap:.5rem;pointer-events:none}.pause-overlay.active{display:flex}
-.pause-overlay span{font-size:1.3rem;font-weight:700;color:rgba(255,255,255,.85);letter-spacing:.1em;text-transform:uppercase}
-.take-info{text-align:center;font-family:'DM Sans',sans-serif;color:rgba(255,255,255,.9);pointer-events:none}
+.pause-overlay{display:none;position:absolute;inset:0;z-index:55;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;flex-direction:column;gap:1rem;pointer-events:auto}.pause-overlay.active{display:flex}
+.take-info{text-align:center;font-family:'DM Sans',sans-serif;color:rgba(255,255,255,.9)}
 .take-info .take-scene{font-size:1.1rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase}
 .take-info .take-prod{font-size:.75rem;font-weight:400;color:rgba(255,255,255,.5);margin-top:4px;font-variant:small-caps}
-.pause-settings-btn{pointer-events:auto;margin-top:.6rem;padding:.5rem 1.2rem;border-radius:10px;border:1.5px solid rgba(127,247,231,.35);background:rgba(7,30,26,.85);color:#7ff7e7;font-size:.82rem;font-weight:700;cursor:pointer;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:all .2s}
-.pause-settings-btn:hover{background:rgba(63,233,211,.18);border-color:#7ff7e7}
-.pause-settings-panel{display:none;pointer-events:auto;position:absolute;bottom:80px;left:50%;transform:translateX(-50%);width:min(92vw,380px);background:rgba(7,22,20,.95);border:1.5px solid rgba(127,247,231,.25);border-radius:14px;padding:1rem 1.1rem;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:60;max-height:60vh;overflow-y:auto}
+.pause-controls{display:flex;flex-direction:column;align-items:center;gap:.7rem;width:min(88vw,340px)}
+.pause-controls label{font-size:.75rem;font-weight:600;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;align-self:flex-start}
+.pause-controls .speed-btns{width:100%}
+.ps-resume-btn{width:100%;padding:.7rem;border-radius:10px;border:none;background:linear-gradient(180deg,#3fe9d3,#1fb9a5);color:#04211d;font-size:.95rem;font-weight:700;cursor:pointer;transition:all .2s}
+.ps-resume-btn:hover{filter:brightness(1.1)}
+.ps-quit-btn{margin-top:.5rem;padding:.45rem 1rem;border-radius:8px;border:1px solid rgba(255,100,100,.3);background:rgba(40,10,10,.6);color:rgba(255,120,120,.9);font-size:.78rem;font-weight:600;cursor:pointer;transition:all .2s}
+.ps-quit-btn:hover{background:rgba(80,20,20,.7);border-color:rgba(255,100,100,.5)}
+.pause-controls input[type="range"]{width:100%;accent-color:#7ff7e7}
 .pause-settings-panel.active{display:block}
 .pause-settings-panel label{display:block;font-size:.75rem;font-weight:700;color:#7ff7e7;margin-bottom:.35rem;margin-top:.7rem;text-transform:uppercase;letter-spacing:.05em}
 .pause-settings-panel label:first-child{margin-top:0}
@@ -225,6 +229,9 @@ input[type="file"]{display:none}
 .prompter-line.active{color:#fff;font-weight:600;background:rgba(30,100,60,.45)}
 .prompter-group-user .prompter-line{color:#fff}
 .prompter-line::before,.prompter-character::before{content:none!important;display:none!important}
+.turn-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;flex-shrink:0}
+.turn-actor{background:#4ade80}
+.turn-partner{background:#ef4444}
 .prompter-empty{text-align:center;color:rgba(255,255,255,.3);font-size:.85rem;padding:2rem 0}
 .ai-panel{display:none;flex-shrink:0;padding:.5rem 1rem;background:#1a1a1a;border-top:1px solid rgba(255,255,255,.06);align-items:center;gap:.5rem;font-size:.75rem}
 .ai-panel.active{display:flex}
@@ -630,9 +637,9 @@ input[type="file"]{display:none}
   <div id="creditBadge" style="position:fixed;top:12px;right:56px;background:rgba(0,0,0,.6);color:#fff;padding:4px 10px;border-radius:12px;font-size:13px;font-family:'DM Sans',sans-serif;z-index:1000;display:none;pointer-events:none">⏱ <span id="creditCount">60:00</span></div>
   <div class="session-top"><div class="status"><div class="status-dot waiting" id="statusDot"></div><span id="statusText">En attente…</span></div><button class="back-btn" onclick="showEndTakeModal()" style="color:#fff;font-size:1rem;position:fixed;top:16px;left:16px;z-index:10001">✕</button></div>
   <div class="session-body">
-    <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><video id="remoteVideo" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:contain;background:#000"></video><div class="no-video" id="noVideoMsg">Caméra en attente…</div><div class="video-controls"><button class="vctrl" id="btnMic" onclick="toggleMic()"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/></svg></button><button class="vctrl" id="btnRec" onclick="toggleRecording()"><span class="rec-dot"></span></button><button class="vctrl vctrl-pause" id="btnPause" onclick="togglePause()"><svg id="pauseIcon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button><div class="speed-btns speed-btns-overlay" id="speedBtnsOverlay"></div><button class="vctrl vctrl-flip" id="btnCam" onclick="toggleCam()"><svg viewBox="0 0 24 24"><path d="M20 5h-3.17L15 3H9L7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-8 13a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/><path d="M12 17l-2.5-2h1.5v-2h2v2h1.5L12 17zm0-10l2.5 2h-1.5v2h-2V9H9.5L12 7z"/></svg></button></div></div><div class="rec-indicator" id="recIndicator"></div><div class="mob-controls-row" id="mobControlsRow"><button class="mob-nav-btn" onclick="prompterPrev()">◀</button><button class="mob-main-btn" id="mobMainBtn" onclick="togglePause()"><svg class="pause-bars" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></svg><span class="play-tri"></span></button><button class="mob-nav-btn" onclick="prompterNext()">▶</button><button class="mob-settings-gear" id="mobSettingsGear" onclick="togglePauseSettings()">⚙</button></div></div>
+    <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><video id="remoteVideo" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:contain;background:#000"></video><div class="no-video" id="noVideoMsg">Caméra en attente…</div><div class="video-controls"><button class="vctrl" id="btnMic" onclick="toggleMic()"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/></svg></button><button class="vctrl" id="btnRec" onclick="toggleRecording()"><span class="rec-dot"></span></button><button class="vctrl vctrl-pause" id="btnPause" onclick="togglePause()"><svg id="pauseIcon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button><div class="speed-btns speed-btns-overlay" id="speedBtnsOverlay"></div><button class="vctrl vctrl-flip" id="btnCam" onclick="toggleCam()"><svg viewBox="0 0 24 24"><path d="M20 5h-3.17L15 3H9L7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-8 13a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/><path d="M12 17l-2.5-2h1.5v-2h2v2h1.5L12 17zm0-10l2.5 2h-1.5v2h-2V9H9.5L12 7z"/></svg></button></div></div><div class="rec-indicator" id="recIndicator"></div><div class="mob-controls-row" id="mobControlsRow"><button class="mob-nav-btn" onclick="prompterPrev()">◀</button><button class="mob-main-btn" id="mobMainBtn" onclick="togglePause()"><svg class="pause-bars" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></svg><span class="play-tri"></span></button><button class="mob-nav-btn" onclick="prompterNext()">▶</button></div></div>
     <div class="prompter-area" id="prompterArea"><div class="prompter-empty" id="prompterEmptyText">Aucun texte chargé</div></div>
-    <div id="pauseOverlay" class="pause-overlay"><span>⏸ En pause</span><div class="take-info" id="takeInfo"></div><button class="pause-settings-btn" id="pauseSettingsBtn" onclick="togglePauseSettings()">⚙ Réglages</button><div class="pause-settings-panel" id="pauseSettingsPanel"><button class="ps-close" onclick="closePauseSettings();togglePause(false)">✕</button><label>Mon personnage</label><div class="char-grid" id="pauseCharGrid"></div><label>Voix IA</label><select id="pauseVoiceSelect" onchange="changePauseVoice()"></select><label>Vitesse</label><div class="speed-btns" id="speedBtnsPause"></div><div class="ps-row"><span class="ps-label">Italienne</span><button class="ps-toggle" id="psItalienneToggle" onclick="toggleItalienne()"></button></div><div class="ps-row"><span class="ps-label">Mode</span><button class="ps-toggle" id="psModeToggle" onclick="togglePauseMode()"></button><span class="ps-label" id="psModeLabel" style="min-width:50px">Auto</span></div><div class="ps-row"><span class="ps-label">Caméra</span><button class="etm-btn etm-resume" onclick="toggleCam();closePauseSettings()" style="flex:0;padding:.4rem .8rem;font-size:.75rem">↻ Flip</button></div><button class="ps-resume-btn" onclick="closePauseSettings();togglePause(false)">▶ Reprendre</button></div></div>
+    <div id="pauseOverlay" class="pause-overlay"><div class="take-info" id="takeInfo"></div><div class="pause-controls" id="pauseControls"><button class="ps-resume-btn" onclick="togglePause(false)">▶ Reprendre</button><label>Vitesse</label><div class="speed-btns" id="speedBtnsPause"></div><div class="ps-row"><span class="ps-label">Italienne</span><button class="ps-toggle" id="psItalienneToggle" onclick="toggleItalienne()"></button></div><div class="ps-row"><span class="ps-label">Attente</span><input type="range" id="vadSilenceSlider" min="1" max="5" step="0.5" value="2" oninput="onVadSliderChange(this.value)"><span class="ps-label" id="vadSilenceLabel">2s</span></div><button class="ps-quit-btn" onclick="showEndTakeModal()">✕ Quitter la prise</button></div></div>
     <div class="italienne-badge" id="italienneBadge">ITALIENNE</div>
   </div>
   <div class="ai-panel" id="aiPanel"><span class="ai-label" id="sessionVoiceLabel">🦾 Voix :</span><select id="sessionVoiceSelect" onchange="changeSessionVoice()"></select></div>
@@ -667,6 +674,7 @@ let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',
 let soloPartnerMode='all',soloPartnerChar=null;
 let lockedVoiceLocale='';
 let _preItalienneVoice=null;
+let _preItalienneEmotion='neutral';
 let autoAdvanceTimer=null,lastAutoSpokenIndex=-1,activeSpeechToken=0;
 let ttsAudio=null,vad=null,lastTTSEndTs=0;
 let userScrolledUp=false,_lastPrompterScrollTop=0,_scrollResumeTimer=null;
@@ -4235,7 +4243,12 @@ function renderPrompter(){
       if(seg.isStageDirection)cls+=' is-stage-direction';
       lineEl.className=cls;
       lineEl.dataset.lineIndex=String(seg.originalIndex);
-      lineEl.textContent=seg.text;
+      if(seg.originalIndex===prompterIndex&&flat){
+        const dot=document.createElement('span');
+        dot.className='turn-dot '+(flat.type==='actor'?'turn-actor':'turn-partner');
+        lineEl.appendChild(dot);
+      }
+      lineEl.appendChild(document.createTextNode(seg.text));
       lineEl.addEventListener('click',()=>handleTapToJump(seg.originalIndex));
       segWrap.appendChild(lineEl);
     }
@@ -4245,8 +4258,15 @@ function renderPrompter(){
   const act=a.querySelector('.prompter-line.active');
   if(act&&!userScrolledUp)act.scrollIntoView({behavior:'smooth',block:'center'});
 }
+let vadSilenceSeconds=parseFloat(localStorage.getItem('cw_vadSilence')||'2');
+function onVadSliderChange(val){
+  vadSilenceSeconds=parseFloat(val)||2;
+  localStorage.setItem('cw_vadSilence',String(vadSilenceSeconds));
+  const lbl=document.getElementById('vadSilenceLabel');
+  if(lbl)lbl.textContent=vadSilenceSeconds+'s';
+}
 function computeSilenceMsForActorLine(line){
-  return 2000;
+  return Math.round(vadSilenceSeconds*1000);
 }
 function estimateMinSpeechDuration(text){
   const words=(text||'').split(/\s+/).filter(Boolean).length;
@@ -4526,7 +4546,6 @@ function togglePause(forceState){
   const icon=document.getElementById('pauseIcon');
   const overlay=document.getElementById('pauseOverlay');
   const mobBtn=document.getElementById('mobMainBtn');
-  const gear=document.getElementById('mobSettingsGear');
   const recInd=document.getElementById('recIndicator');
   if(sessionPaused){
     cancelTTSPlayback();
@@ -4534,11 +4553,17 @@ function togglePause(forceState){
     clearAutoTimer();
     freezeTimer();
     updateTakeInfo();
+    renderSpeedBtns('speedBtnsPause');
+    const itog=document.getElementById('psItalienneToggle');
+    if(itog)itog.classList.toggle('on',voiceSpeed>=2.0);
+    const slider=document.getElementById('vadSilenceSlider');
+    const slbl=document.getElementById('vadSilenceLabel');
+    if(slider){slider.value=vadSilenceSeconds}
+    if(slbl)slbl.textContent=vadSilenceSeconds+'s';
     if(overlay)overlay.classList.add('active');
     if(btn)btn.classList.add('is-paused');
     if(icon)icon.innerHTML='<polygon points="6,4 20,12 6,20" fill="currentColor"/>';
     if(mobBtn)mobBtn.classList.add('is-paused');
-    if(gear)gear.classList.add('visible');
     if(recInd)recInd.style.display='none';
     if(conn&&conn.open)conn.send({type:'pause'});
   }else{
@@ -4547,10 +4572,8 @@ function togglePause(forceState){
     if(btn)btn.classList.remove('is-paused');
     if(icon)icon.innerHTML='<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>';
     if(mobBtn)mobBtn.classList.remove('is-paused');
-    if(gear)gear.classList.remove('visible');
     if(recInd&&isRecording)recInd.style.display='block';
     if(conn&&conn.open)conn.send({type:'resume'});
-    closePauseSettings();
     handleCurrentLineAutomation();
   }
 }
@@ -4568,10 +4591,17 @@ function toggleItalienne(){
   const tog=document.getElementById('psItalienneToggle');
   const isOn=tog&&tog.classList.contains('on');
   if(isOn){
+    if(_preItalienneVoice){selectedVoice=_preItalienneVoice;_preItalienneVoice=null}
     setVoiceSpeed(1.0,true);
+    selectedEmotion=_preItalienneEmotion||'neutral';
     if(tog)tog.classList.remove('on');
     const badge=document.getElementById('italienneBadge');if(badge)badge.classList.remove('active');
   }else{
+    _preItalienneVoice=selectedVoice;
+    _preItalienneEmotion=selectedEmotion;
+    const itVoice=VOICE_PRESETS.find(v=>v.voiceId==='tZssYepgGaQmegsMEXjK');
+    if(itVoice)selectedVoice=itVoice;
+    selectedEmotion='neutral';
     setVoiceSpeed(2.0,true);
     if(tog)tog.classList.add('on');
     const badge=document.getElementById('italienneBadge');if(badge)badge.classList.add('active');
@@ -4603,10 +4633,7 @@ function togglePauseSettings(){
   if(mlabel){mlabel.textContent=(mode==='manual')?'Manuel':'Auto'}
   panel.classList.add('active');
 }
-function closePauseSettings(){
-  const panel=document.getElementById('pauseSettingsPanel');
-  if(panel)panel.classList.remove('active');
-}
+function closePauseSettings(){}
 function populatePauseCharGrid(){
   const g=document.getElementById('pauseCharGrid');
   if(!g)return;
