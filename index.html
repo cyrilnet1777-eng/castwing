@@ -1664,12 +1664,20 @@ async function classifyLinesViaAPI(rawText,validChars,lang){
           for(let i=0;i<chunk.length;i++){
             const c=data.classified[i];
             if(c){
+              const lineText=chunk[i];
+              const isCharNameOnly=c.type==='D'&&c.char&&lineText.replace(/[\s:–—\-]+$/,'').toUpperCase().trim()===c.char.toUpperCase().trim();
+              // Strip character name prefix from dialogue text
+              let cleanLine=lineText;
+              if(c.type==='D'&&c.char){
+                const rx=new RegExp('^'+c.char.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*[:\\-–—]?\\s*','i');
+                cleanLine=lineText.replace(rx,'').trim()||lineText;
+              }
               results[offset+i]={
-                kind:c.type==='D'?'dialogue':c.type==='S'?'slug':'action',
-                char:c.type==='D'?c.char:'',
-                line:chunk[i],
-                isStageDirection:c.type==='A',
-                isSpoken:c.type==='D',
+                kind:isCharNameOnly?'action':(c.type==='D'?'dialogue':c.type==='S'?'slug':'action'),
+                char:(!isCharNameOnly&&c.type==='D')?c.char:'',
+                line:isCharNameOnly?lineText:cleanLine,
+                isStageDirection:isCharNameOnly||c.type==='A',
+                isSpoken:!isCharNameOnly&&c.type==='D',
                 parenthetical:null
               };
             }
@@ -4504,8 +4512,22 @@ function handleCurrentLineAutomation(){
     if(lastAutoSpokenIndex===prompterIndex){console.info('[auto] already spoken');return}
     const currentIndex=prompterIndex;
     lastAutoSpokenIndex=currentIndex;
-    console.info('[auto] speaking partner line:',line.text.slice(0,40));
-    aiSpeak(line.text,()=>{lastTTSEndTs=Date.now();scheduleAfterPartner(currentIndex)});
+    // Strip character name from text if present
+    let spokenText=line.text;
+    if(line.char){
+      const charUp=line.char.toUpperCase().trim();
+      const textUp=spokenText.toUpperCase().trim();
+      // Skip if line is JUST the character name
+      if(textUp===charUp||textUp===charUp+':'||textUp===charUp+' :'){
+        scheduleAfterPartner(currentIndex);return;
+      }
+      // Remove character name prefix (e.g. "GEORGES BELTHAM: Fous le camp" → "Fous le camp")
+      const prefixRx=new RegExp('^'+line.char.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*[:\\-–—]?\\s*','i');
+      spokenText=spokenText.replace(prefixRx,'').trim();
+      if(!spokenText){scheduleAfterPartner(currentIndex);return}
+    }
+    console.info('[auto] speaking partner line:',spokenText.slice(0,40));
+    aiSpeak(spokenText,()=>{lastTTSEndTs=Date.now();scheduleAfterPartner(currentIndex)});
     return;
   }
   if((mode==='auto'||mode==='ai')&&line.type==='actor')armAutoVADForActorLine();
