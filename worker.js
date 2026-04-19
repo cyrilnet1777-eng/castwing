@@ -840,7 +840,7 @@ async function handleCreditsConsume(request, env) {
 ========================================================= */
 
 const MAX_REMOTE_PARSE_BYTES = 10 * 1024 * 1024;
-const PARSE_TIMEOUT_MS = 55000;
+const PARSE_TIMEOUT_MS = 120000;
 
 function logParse(event, data = {}) {
   try {
@@ -1014,6 +1014,96 @@ async function callAnthropicParse({ env, parseId, model, pdfBase64, fileName, at
   }
 }
 
+async function callAnthropicParseText({ env, parseId, model, scriptText, fileName, attempt, partLabel }) {
+  const systemPrompt = [
+    "You are a screenplay/script parser. You return structured JSON only.",
+    "",
+    "Return a JSON object with two keys:",
+    '{"language":"<ISO 639-1 code, e.g. fr, en, es>","script":[...]}',
+    "",
+    "The script array contains items of these types:",
+    '{"kind":"slug","text":"..."} — scene headings (INT./EXT.)',
+    '{"kind":"action","text":"..."} — stage directions, descriptions of what characters DO (movement, gestures, actions)',
+    '{"kind":"dialogue","char":"CHARACTER NAME","text":"..."} — spoken words ONLY',
+    "",
+    "CRITICAL RULES FOR CHARACTER NAMES (char field):",
+    "- A character name is a PROPER NOUN: a first name, last name, or both (1-3 words max).",
+    "- Short uppercase phrases that are spoken dialogue are NOT character names.",
+    "- If a candidate contains a French/English article (DE, DU, D', L', LE, LA, LES, UN, UNE, DES, THE, A, AN) it is NOT a character name.",
+    "- If a candidate is a common dictionary word it is NOT a character name.",
+    "- A real character name appears MULTIPLE times as a speaker cue.",
+    "- When in doubt, do NOT create a new character — assign the line to the previous speaker or mark it as action.",
+    "",
+    "CRITICAL RULES FOR ACTION vs DIALOGUE:",
+    "- kind:dialogue = ONLY the words a character SPEAKS out loud.",
+    "- kind:action = any description of what happens on screen.",
+    "- Parenthetical acting directions within dialogue should be excluded from the text.",
+    "",
+    "OTHER RULES:",
+    "- Ignore OCR/page noise: watermarks, revision headers, page numbers.",
+    "- Normalize speaker names: remove (CONT'D), (O.S.), (V.O.), (SUITE) suffixes.",
+    "- Keep original order. Do not invent lines.",
+    "- No prose, no markdown fences. Output raw JSON only."
+  ].join("\n");
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort("timeout"), PARSE_TIMEOUT_MS);
+  const t0 = Date.now();
+  try {
+    const rsp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": String(env.ANTHROPIC_API_KEY || ""),
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 8192,
+        temperature: 0,
+        system: systemPrompt,
+        messages: [{
+          role: "user",
+          content: `Parse this screenplay text (${partLabel || "full"}) into structured JSON. File: ${fileName}\n\n${scriptText}`,
+        }],
+      }),
+    });
+    const duration = Date.now() - t0;
+    const body = await rsp.json().catch(() => ({}));
+    if (!rsp.ok) {
+      logParse("anthropic_text_http_error", { parse_id: parseId, model, attempt, status: rsp.status, duration_ms: duration });
+      return { ok: false, error: `anthropic_http_${rsp.status}` };
+    }
+    const text = Array.isArray(body.content)
+      ? body.content.filter(x => x && x.type === "text").map(x => x.text || "").join("\n")
+      : "";
+    const cleaned = stripJsonFence(text);
+    let parsed;
+    try { parsed = JSON.parse(cleaned); } catch (_) {
+      logParse("anthropic_text_invalid_json", { parse_id: parseId, model, attempt, duration_ms: duration });
+      return { ok: false, error: "invalid_json" };
+    }
+    const validated = validateParsedScript(parsed);
+    if (!validated.ok) {
+      logParse("anthropic_text_schema_invalid", { parse_id: parseId, model, attempt, duration_ms: duration, schema_error: validated.error });
+      return { ok: false, error: `schema_${validated.error}` };
+    }
+    logParse("anthropic_text_success", { parse_id: parseId, model, attempt, duration_ms: duration, rows: validated.script.length, language: validated.language || "" });
+    return { ok: true, script: validated.script, language: validated.language || "" };
+  } catch (err) {
+    const duration = Date.now() - t0;
+    const timeoutErr = String(err && err.message || err).toLowerCase().includes("timeout")
+      || String(err && err.name || "").toLowerCase() === "aborterror";
+    logParse("anthropic_text_exception", { parse_id: parseId, model, attempt, duration_ms: duration, timeout: timeoutErr, error: toText(err) });
+    return { ok: false, error: timeoutErr ? "anthropic_timeout" : "anthropic_exception" };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+const SPLIT_TEXT_THRESHOLD = 30000;
+
 async function handleParseScript(request, env) {
   const parseId = generateId("parse");
   const startedAt = Date.now();
@@ -1041,6 +1131,46 @@ async function handleParseScript(request, env) {
   if (!fileType.includes("pdf") && !/\.pdf$/i.test(fileName)) {
     return json({ ok: false, error: "invalid_file_type", fallback_recommended: true, meta: { parse_id: parseId, file_type: fileType } }, 400);
   }
+  const extractedText = form.get("extracted_text") ? String(form.get("extracted_text")) : "";
+  const useSplitText = extractedText.length >= SPLIT_TEXT_THRESHOLD;
+
+  if (useSplitText) {
+    logParse("split_text_mode", { parse_id: parseId, text_length: extractedText.length });
+    const mid = Math.floor(extractedText.length / 2);
+    const splitAt = extractedText.lastIndexOf("\n", mid);
+    const splitPos = splitAt > mid * 0.3 ? splitAt : mid;
+    const half1 = extractedText.slice(0, splitPos);
+    const half2 = extractedText.slice(splitPos);
+    const model = "claude-haiku-4-5-20251001";
+    const [r1, r2] = await Promise.all([
+      callAnthropicParseText({ env, parseId, model, scriptText: half1, fileName, attempt: 1, partLabel: "part 1/2" }),
+      callAnthropicParseText({ env, parseId, model, scriptText: half2, fileName, attempt: 2, partLabel: "part 2/2" }),
+    ]);
+    if (r1.ok && r2.ok) {
+      const merged = [...r1.script, ...r2.script];
+      return json({
+        ok: true, provider: "anthropic", model, script: merged,
+        language: r1.language || r2.language || "",
+        meta: { parse_id: parseId, split: true, attempts: 2, duration_ms: Date.now() - startedAt, file_bytes: fileBytes },
+      });
+    }
+    if (r1.ok) {
+      return json({
+        ok: true, provider: "anthropic", model, script: r1.script,
+        language: r1.language || "",
+        meta: { parse_id: parseId, split: true, partial: true, attempts: 2, duration_ms: Date.now() - startedAt, file_bytes: fileBytes },
+      });
+    }
+    if (r2.ok) {
+      return json({
+        ok: true, provider: "anthropic", model, script: r2.script,
+        language: r2.language || "",
+        meta: { parse_id: parseId, split: true, partial: true, attempts: 2, duration_ms: Date.now() - startedAt, file_bytes: fileBytes },
+      });
+    }
+    logParse("split_text_all_failed", { parse_id: parseId });
+  }
+
   const buffer = await file.arrayBuffer();
   const pdfBase64 = arrayBufferToBase64(buffer);
   const attempts = [

@@ -1571,17 +1571,26 @@ async function tryRemoteClaudeParse(file){
   const MAX_REMOTE_PARSE_BYTES=10*1024*1024;
   if(!file||!file.size)return{ok:false,reason:'missing_file'};
   if(file.size>MAX_REMOTE_PARSE_BYTES)return{ok:false,reason:'payload_too_large_for_remote_parse'};
+  let extractedText='';
+  try{
+    let buf;
+    if(typeof file.arrayBuffer==='function')buf=await file.arrayBuffer();
+    else buf=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsArrayBuffer(file)});
+    const hybrid=await extractPdfTextHybrid(buf,file.name);
+    extractedText=(hybrid.fullText||'').replace(/\u00A0/g,' ');
+  }catch(e){console.warn('[parse] text extraction failed:',e.message);}
   const MAX_RETRIES=2;
-  const TIMEOUTS=[55000,90000];
+  const TIMEOUTS=[55000,130000];
   for(let attempt=0;attempt<MAX_RETRIES;attempt++){
     if(_pdfParseCancelled)return{ok:false,reason:'cancelled'};
     const fd=new FormData();
     fd.append('file',file,file.name||'script.pdf');
+    if(extractedText.length>30000)fd.append('extracted_text',extractedText);
     _pdfParseAbort=new AbortController();
     const ctrl=_pdfParseAbort;
-    const tm=setTimeout(()=>ctrl.abort(),TIMEOUTS[attempt]||90000);
+    const tm=setTimeout(()=>ctrl.abort(),TIMEOUTS[attempt]||130000);
     try{
-      console.info('[parse] attempt '+(attempt+1)+'/'+MAX_RETRIES+' timeout='+TIMEOUTS[attempt]+'ms');
+      console.info('[parse] attempt '+(attempt+1)+'/'+MAX_RETRIES+' timeout='+TIMEOUTS[attempt]+'ms textLen='+extractedText.length);
       const rsp=await fetch('/api/parse-script',{method:'POST',body:fd,signal:ctrl.signal});
       const data=await rsp.json().catch(()=>({ok:false,error:'invalid_json_response'}));
       if(!rsp.ok||!data||data.ok!==true||!Array.isArray(data.script)){
