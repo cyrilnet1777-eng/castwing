@@ -4339,42 +4339,36 @@ function syncPrompter(){if(conn&&conn.open)conn.send({type:'prompter',index:prom
 // ── Camera ──
 async function startCamera(){
   const localVideo=document.getElementById('localVideo');
-  const hasLiveTrack=(stream,kind)=>stream&&stream.getTracks().some(t=>t.kind===kind&&t.readyState==='live');
-  async function attachStream(stream){
-    if(localVideo.srcObject!==stream)localVideo.srcObject=stream;
-    localVideo.muted=true;
-    localVideo.playsInline=true;
+  const hasLiveVideo=()=>localStream&&localStream.getVideoTracks().some(t=>t.readyState==='live');
+  if(hasLiveVideo()){
+    if(localVideo.srcObject!==localStream)localVideo.srcObject=localStream;
+    localVideo.muted=true;localVideo.playsInline=true;
     localVideo.classList.toggle('mirror',currentFacingMode==='user');
     document.getElementById('noVideoMsg').style.display='none';
     try{await localVideo.play()}catch(e){}
-    return stream;
+    return localStream;
   }
-  if(hasLiveTrack(localStream,'video'))return attachStream(localStream);
-  if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null}
-  const attempts=[
-    {video:{facingMode:{ideal:currentFacingMode},width:{ideal:1280},height:{ideal:720}},audio:true},
-    {video:{width:{ideal:1280},height:{ideal:720}},audio:true},
-    {video:true,audio:true},
-  ];
-  const videoOnlyAttempts=[
+  if(localStream){localStream.getVideoTracks().forEach(t=>t.stop());localStream.getVideoTracks().forEach(t=>localStream.removeTrack(t))}
+  const videoAttempts=[
     {video:{facingMode:{ideal:currentFacingMode},width:{ideal:1280},height:{ideal:720}},audio:false},
+    {video:{width:{ideal:1280},height:{ideal:720}},audio:false},
     {video:true,audio:false},
   ];
   let lastErr=null;
-  for(const constraints of attempts){
+  for(const c of videoAttempts){
     try{
-      localStream=await navigator.mediaDevices.getUserMedia(constraints);
-      localStream.getVideoTracks().forEach(t=>t.enabled=isCamOn);
-      localStream.getAudioTracks().forEach(t=>t.enabled=isMicOn);
-      return await attachStream(localStream);
-    }catch(e){lastErr=e}
-  }
-  for(const constraints of videoOnlyAttempts){
-    try{
-      localStream=await navigator.mediaDevices.getUserMedia(constraints);
-      localStream.getVideoTracks().forEach(t=>t.enabled=isCamOn);
-      await attachStream(localStream);
-      showToast('Micro indisponible, caméra activée',4000);
+      const vs=await navigator.mediaDevices.getUserMedia(c);
+      const vt=vs.getVideoTracks()[0];
+      if(vt){
+        vt.enabled=isCamOn;
+        if(!localStream)localStream=new MediaStream();
+        localStream.addTrack(vt);
+      }
+      localVideo.srcObject=localStream;
+      localVideo.muted=true;localVideo.playsInline=true;
+      localVideo.classList.toggle('mirror',currentFacingMode==='user');
+      document.getElementById('noVideoMsg').style.display='none';
+      try{await localVideo.play()}catch(e){}
       return localStream;
     }catch(e){lastErr=e}
   }
@@ -4386,19 +4380,37 @@ async function startCamera(){
     noVideoEl.style.display='flex';noVideoEl.textContent='📷 '+tt('cameraUnavailable','Caméra indisponible');
     showToast(tt('cameraUnavailable','Caméra indisponible')+': '+(lastErr&&lastErr.message||''),5000);
   }
-  return null
+  return null;
 }
-function _storeMicStream(stream){
-  window._cwMicStream=stream;
-  stream.getAudioTracks().forEach(t=>{t.onended=()=>console.warn('[VAD] audio track ended unexpectedly')});
+async function _ensureSeparateAudio(){
+  if(window._cwMicStream&&window._cwMicStream.getAudioTracks().some(t=>t.readyState==='live'))return window._cwMicStream;
+  console.info('[Audio] requesting separate mic stream');
+  try{
+    const audioStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    window._cwMicStream=audioStream;
+    audioStream.getAudioTracks().forEach(t=>{
+      t.enabled=isMicOn;
+      t.onended=()=>console.warn('[VAD] audio track ended unexpectedly');
+    });
+    if(localStream){
+      localStream.getAudioTracks().forEach(t=>{localStream.removeTrack(t);t.stop()});
+      audioStream.getAudioTracks().forEach(t=>localStream.addTrack(t));
+    }
+    console.info('[Audio] separate mic stream acquired, tracks:',audioStream.getAudioTracks().map(t=>t.label+'/'+t.readyState));
+    return audioStream;
+  }catch(e){
+    console.error('[Audio] cannot get mic:',e);
+    showToast(tt('micDenied','Micro refusé — vérifie les permissions'),5000);
+    return null;
+  }
 }
 async function ensureSessionStream(){
   if(!isCamOn){
     try{
-      if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null}
-      localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-      localStream.getAudioTracks().forEach(t=>t.enabled=isMicOn);
-      _storeMicStream(localStream);
+      if(localStream){localStream.getVideoTracks().forEach(t=>t.stop());localStream=null}
+      const audioStream=await _ensureSeparateAudio();
+      if(!audioStream)return null;
+      localStream=new MediaStream(audioStream.getAudioTracks());
       document.getElementById('localVideo').srcObject=null;
       document.getElementById('noVideoMsg').style.display='flex';
       document.getElementById('noVideoMsg').textContent='Caméra désactivée';
@@ -4409,34 +4421,19 @@ async function ensureSessionStream(){
     }
   }
   const cam=await startCamera();
-  if(cam){
-    const hasLiveAudio=cam.getAudioTracks().some(t=>t.readyState==='live');
-    if(!hasLiveAudio){
-      try{
-        const micOnly=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-        const micTrack=micOnly.getAudioTracks()[0];
-        if(micTrack){micTrack.enabled=isMicOn;cam.addTrack(micTrack)}
-      }catch(e){}
-    }
-    _storeMicStream(cam);
-    return cam;
-  }
-  try{
-    localStream=await navigator.mediaDevices.getUserMedia({audio:true});
-    _storeMicStream(localStream);
+  const audioStream=await _ensureSeparateAudio();
+  if(cam&&audioStream)return localStream;
+  if(!cam&&audioStream){
+    localStream=new MediaStream(audioStream.getAudioTracks());
     document.getElementById('localVideo').srcObject=null;
     document.getElementById('noVideoMsg').style.display='flex';
     document.getElementById('noVideoMsg').textContent='Caméra indisponible, audio uniquement';
     showToast('Caméra indisponible, audio uniquement',4000);
     return localStream;
-  }catch(e){
-    document.getElementById('noVideoMsg').style.display='flex';
-    document.getElementById('noVideoMsg').textContent=tt('micDenied','Micro refusé — vérifie les permissions');
-    showToast(tt('micDenied','Micro refusé — vérifie les permissions'),5000);
-    return null;
   }
+  return cam||null;
 }
-function toggleMic(){if(!localStream)return;isMicOn=!isMicOn;localStream.getAudioTracks().forEach(t=>t.enabled=isMicOn);const btn=document.getElementById('btnMic');btn.innerHTML=isMicOn?'<svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/></svg>':'<svg viewBox="0 0 24 24"><path d="M19 11h-2a5 5 0 0 1-1.08 3.13l1.45 1.45A6.97 6.97 0 0 0 19 11zM12 14a3 3 0 0 0 2.82-2H12v2zm-1 3.93V21h2v-3.07c.34-.04.67-.11 1-.2l-1.55-1.55c-.15.01-.3.02-.45.02a5 5 0 0 1-5-5H5a7 7 0 0 0 6 6.93zM3.71 3.56L2.29 4.97l7.03 7.03H9.3A3 3 0 0 0 12 14c.09 0 .18 0 .27-.02l1.46 1.46a5.02 5.02 0 0 1-1.73.49V21h-2v-3.07L12 17.93 3.71 3.56zM12 4a3 3 0 0 0-3 3v4.17l6-6V5a3 3 0 0 0-3-3z"/><line x1="3" y1="3" x2="21" y2="21" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>';btn.style.opacity=isMicOn?'1':'.5';showToast(isMicOn?'Micro activé':'Micro coupé')}
+function toggleMic(){if(!localStream)return;isMicOn=!isMicOn;localStream.getAudioTracks().forEach(t=>t.enabled=isMicOn);if(window._cwMicStream)window._cwMicStream.getAudioTracks().forEach(t=>t.enabled=isMicOn);const btn=document.getElementById('btnMic');btn.innerHTML=isMicOn?'<svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/></svg>':'<svg viewBox="0 0 24 24"><path d="M19 11h-2a5 5 0 0 1-1.08 3.13l1.45 1.45A6.97 6.97 0 0 0 19 11zM12 14a3 3 0 0 0 2.82-2H12v2zm-1 3.93V21h2v-3.07c.34-.04.67-.11 1-.2l-1.55-1.55c-.15.01-.3.02-.45.02a5 5 0 0 1-5-5H5a7 7 0 0 0 6 6.93zM3.71 3.56L2.29 4.97l7.03 7.03H9.3A3 3 0 0 0 12 14c.09 0 .18 0 .27-.02l1.46 1.46a5.02 5.02 0 0 1-1.73.49V21h-2v-3.07L12 17.93 3.71 3.56zM12 4a3 3 0 0 0-3 3v4.17l6-6V5a3 3 0 0 0-3-3z"/><line x1="3" y1="3" x2="21" y2="21" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>';btn.style.opacity=isMicOn?'1':'.5';showToast(isMicOn?'Micro activé':'Micro coupé')}
 async function toggleCam(){
   currentFacingMode=currentFacingMode==='user'?'environment':'user';
   try{
@@ -4771,8 +4768,8 @@ function endSession(){
   hideEndTakeModal();
   if(connectionTimeout)clearTimeout(connectionTimeout);cancelSpeechFlow();
   if(isRecording)stopRecording();if(call){call.close();call=null}if(conn){conn.close();conn=null}if(peer){peer.destroy();peer=null}
+  if(window._cwMicStream){window._cwMicStream.getTracks().forEach(t=>t.stop());window._cwMicStream=null}
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null}
-  window._cwMicStream=null;
   const lv=document.getElementById('localVideo');lv.srcObject=null;lv.style.display='';lv.classList.remove('mirror');
   document.getElementById('remoteVideo').srcObject=null;document.getElementById('remoteVideo').style.display='none';
   document.getElementById('remoteAudio').srcObject=null;
