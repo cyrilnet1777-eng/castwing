@@ -689,14 +689,24 @@ const SFX={
   rise:'/sounds/cinematic-rise.mp3',
   freeze:'/sounds/freeze.mp3',
   glitch:'/sounds/glitch.mp3',
-  signup:'/sounds/signup.mp3',
-  login:'/sounds/swoosh.mp3',
   clock:'/sounds/clock.mp3',
   ambienceValley:'/sounds/ambience-valley.mp3',
   ambienceHorror:'/sounds/ambience-horror.mp3',
   ambienceOffice:'/sounds/ambience-office.mp3',
-  countdown:'/sounds/countdown.mp3',
 };
+function playCountdownBeep(frequency,duration){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const osc=ctx.createOscillator();
+    const gain=ctx.createGain();
+    osc.connect(gain);gain.connect(ctx.destination);
+    osc.frequency.value=frequency||800;
+    gain.gain.value=0.3;
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+(duration||0.15));
+    osc.stop(ctx.currentTime+(duration||0.15));
+  }catch(e){}
+}
 const sfxCache={};
 let _audioUnlocked=false;
 let _audioCtx=null;
@@ -1149,13 +1159,15 @@ function showClapperboard(onComplete){
   overlay.className='clap-overlay';
   overlay.innerHTML='<div class="clap-countdown">3</div>';
   document.body.appendChild(overlay);
-  playSfx('countdown',0.5);
+  playCountdownBeep(800);
   warmAudioForMobile();
   setTimeout(()=>{
     overlay.innerHTML='<div class="clap-countdown">2</div>';
+    playCountdownBeep(800);
     warmAudioForMobile();
     setTimeout(()=>{
       overlay.innerHTML='<div class="clap-countdown">1</div>';
+      playCountdownBeep(1200);
       warmAudioForMobile();
       setTimeout(()=>{
         if(overlay.parentElement)overlay.remove();
@@ -2498,7 +2510,6 @@ async function verifyEmailCode(){
     fetchServerSession();
     document.getElementById('authStatusText').textContent=t('authVerified');
     showToast(isSignup?t('authWelcomeNew'):t('authWelcomeBack'),isSignup?4200:3200);
-    playSfx(isSignup?'signup':'login',isSignup?0.5:0.35);
     closeAuthModal();
   }catch(e){showToast('Auth offline');}
 }
@@ -2547,7 +2558,6 @@ async function handleGoogleCredential(response){
     const st=document.getElementById('authStatusText');
     if(st)st.textContent=t('authVerified');
     showToast(isSignup?t('authWelcomeNew'):t('authWelcomeBack'),isSignup?4200:3200);
-    playSfx(isSignup?'signup':'login',isSignup?0.5:0.35);
     closeAuthModal();
   }catch(e){showToast('Auth offline');}
 }
