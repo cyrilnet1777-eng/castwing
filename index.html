@@ -290,6 +290,8 @@ input[type="file"]{display:none}
 .pay-lock{font-size:.76rem;color:#95bbb0;margin-top:.35rem}
 .emotion-locked{opacity:.55}
 .emotion-locked option[value="neutral"]{opacity:1}
+#creditBadge{display:none!important}
+#zelda-chrono{display:none!important}
 
 @media(max-width:767px){
 .video-area{height:50vh;height:50dvh}
@@ -1635,6 +1637,8 @@ function classifyWithValidatedChars(rawText,validChars){
   const charSet=new Set(validChars.map(c=>c.toUpperCase().trim()));
   const lines=rawText.split('\n'),res=[];
   const sceneRx=/^(INT[\.\s\/]|EXT[\.\s\/]|SÉQUENCE\b|SEQUENCE\b|SCÈNE\b|SCENE\b)/i;
+  const sceneRxAlt=/^\d{1,4}\s+[A-ZÀ-Ö].*\b(INT|EXT|JOUR|NUIT|SOIR|MATIN|DAY|NIGHT|AUBE|CRÉPUSCULE)\b/i;
+  const cartonRx=/^(CARTON|FONDU|NOIR|GÉNÉRIQUE|GENERIQUE|FIN\b)/i;
   const pageRx=/^\d{1,4}\s*\.?\s*$/;
   const didasRx=/^\s*[\(\[].+[\)\]]\s*$/;
   let cur=null;
@@ -1643,12 +1647,12 @@ function classifyWithValidatedChars(rawText,validChars){
     const l=lines[i].trim();
     if(!l){continue}
     if(pageRx.test(l))continue;
-    if(sceneRx.test(l))firstSlugFound=true;
+    if(sceneRx.test(l)||sceneRxAlt.test(l))firstSlugFound=true;
     if(!firstSlugFound){
       if(l.length>1)res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
       continue;
     }
-    if(sceneRx.test(l)){
+    if(sceneRx.test(l)||sceneRxAlt.test(l)||cartonRx.test(l)){
       res.push({kind:'slug',char:'',line:l,isStageDirection:false,isSpoken:false,parenthetical:null});
       cur=null;continue;
     }
