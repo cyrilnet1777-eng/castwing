@@ -1673,6 +1673,17 @@ function classifyWithValidatedChars(rawText,validChars){
       }
     }
     if(cur&&l.length>1){
+      // Detect stage directions mixed into dialogue blocks
+      const lLower=l.toLowerCase();
+      const firstWord=l.split(/[\s,.'!?]+/)[0];
+      const isThirdPerson=/^(il|elle|ils|elles|on|celui|celle|ceux)\s/i.test(l);
+      const startsWithCharName=firstWord.length>1&&charSet.has(firstWord.toUpperCase());
+      const hasMultiCharNames=(l.match(new RegExp([...charSet].filter(n=>n.length>2).join('|'),'gi'))||[]).length>=2;
+      const isNarrative=isThirdPerson&&/\b(regarde|prend|ouvre|ferme|sort|entre|quitte|marche|court|tombe|frappe|attrape|lance|pose|lève|assied|tourne|embrasse|rient|pleure|soupire|recule|avance|approche|éloigne|monte|descend|arrive|part|revient|disparaît|apparaît|s'en va|se lève|se tourne|se retourne)\b/i.test(l);
+      if(isNarrative||startsWithCharName||hasMultiCharNames){
+        res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
+        continue;
+      }
       res.push({kind:'dialogue',char:cur,line:l,isStageDirection:false,isSpoken:true,parenthetical:null});
       continue;
     }
