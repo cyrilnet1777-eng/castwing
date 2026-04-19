@@ -1567,61 +1567,89 @@ async function extractPdfTextHybrid(arrayBuffer,fileName){
   hideOcrToast();
   return{fullText:pageTexts.join('\n\n'),pageTexts,usedOcr,ocrPages,pdf};
 }
-async function tryRemoteClaudeParse(file){
-  const MAX_REMOTE_PARSE_BYTES=10*1024*1024;
-  if(!file||!file.size)return{ok:false,reason:'missing_file'};
-  if(file.size>MAX_REMOTE_PARSE_BYTES)return{ok:false,reason:'payload_too_large_for_remote_parse'};
-  let extractedText='';
+function extractCandidateCharacters(rawText){
+  const lines=rawText.split('\n');
+  const candidates={};
+  for(const line of lines){
+    const trimmed=line.trim();
+    if(!trimmed||trimmed.length>40)continue;
+    if(/^(INT\.|EXT\.|SCÈNE|SCENE|FADE|CUT|FONDU|SÉQUENCE|SEQUENCE|TRANSITION)/i.test(trimmed))continue;
+    const letters=trimmed.replace(/[^a-zA-ZÀ-ÿ]/g,'');
+    if(letters.length===0)continue;
+    const uppers=trimmed.replace(/[^A-ZÀ-Ö]/g,'');
+    if(uppers.length/letters.length<0.8)continue;
+    const cleaned=trimmed.replace(/\s*\(.*\)\s*$/,'').replace(/:$/,'').trim();
+    if(cleaned.length<2||cleaned.split(/\s+/).length>4)continue;
+    candidates[cleaned]=(candidates[cleaned]||0)+1;
+  }
+  return Object.entries(candidates)
+    .filter(([,c])=>c>=2)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([name,count])=>`${name} (${count})`)
+    .join(', ');
+}
+
+async function validateCharactersRemote(candidatesStr,lang){
+  if(!candidatesStr)return[];
+  _pdfParseAbort=new AbortController();
+  const ctrl=_pdfParseAbort;
+  const tm=setTimeout(()=>ctrl.abort(),15000);
   try{
-    let buf;
-    if(typeof file.arrayBuffer==='function')buf=await file.arrayBuffer();
-    else buf=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsArrayBuffer(file)});
-    const hybrid=await extractPdfTextHybrid(buf,file.name);
-    extractedText=(hybrid.fullText||'').replace(/\u00A0/g,' ');
-  }catch(e){console.warn('[parse] text extraction failed:',e.message);}
-  const MAX_RETRIES=2;
-  const TIMEOUTS=[55000,130000];
-  for(let attempt=0;attempt<MAX_RETRIES;attempt++){
-    if(_pdfParseCancelled)return{ok:false,reason:'cancelled'};
-    const fd=new FormData();
-    fd.append('file',file,file.name||'script.pdf');
-    if(extractedText.length>30000)fd.append('extracted_text',extractedText);
-    _pdfParseAbort=new AbortController();
-    const ctrl=_pdfParseAbort;
-    const tm=setTimeout(()=>ctrl.abort(),TIMEOUTS[attempt]||130000);
-    try{
-      console.info('[parse] attempt '+(attempt+1)+'/'+MAX_RETRIES+' timeout='+TIMEOUTS[attempt]+'ms textLen='+extractedText.length);
-      const rsp=await fetch('/api/parse-script',{method:'POST',body:fd,signal:ctrl.signal});
-      const data=await rsp.json().catch(()=>({ok:false,error:'invalid_json_response'}));
-      if(!rsp.ok||!data||data.ok!==true||!Array.isArray(data.script)){
-        console.warn('[parse] attempt '+(attempt+1)+' bad response:',data&&data.error||rsp.status);
+    const rsp=await fetch('/api/validate-characters',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({candidates:candidatesStr,lang:lang||''}),
+      signal:ctrl.signal
+    });
+    const data=await rsp.json().catch(()=>({}));
+    if(Array.isArray(data.characters))return data.characters.map(c=>String(c).trim()).filter(Boolean);
+    console.warn('[validate-chars] bad response:',data);
+    return[];
+  }catch(e){
+    console.warn('[validate-chars] failed:',e.message);
+    return[];
+  }finally{clearTimeout(tm)}
+}
+
+function classifyWithValidatedChars(rawText,validChars){
+  const charSet=new Set(validChars.map(c=>c.toUpperCase().trim()));
+  const lines=rawText.split('\n'),res=[];
+  const sceneRx=/^(INT[\.\s\/]|EXT[\.\s\/]|SÉQUENCE\b|SEQUENCE\b|SCÈNE\b|SCENE\b)/i;
+  const pageRx=/^\d{1,4}\s*\.?\s*$/;
+  const didasRx=/^\s*[\(\[].+[\)\]]\s*$/;
+  let cur=null;
+  for(let i=0;i<lines.length;i++){
+    const l=lines[i].trim();
+    if(!l){cur=null;continue}
+    if(pageRx.test(l))continue;
+    if(sceneRx.test(l)){
+      res.push({kind:'slug',char:'',line:l,isStageDirection:false,isSpoken:false,parenthetical:null});
+      cur=null;continue;
+    }
+    if(didasRx.test(l))continue;
+    const cleaned=l.replace(/\s*\(.*\)\s*$/,'').replace(/:$/,'').trim();
+    const upper=cleaned.toUpperCase();
+    if(charSet.has(upper)){
+      cur=cleaned;continue;
+    }
+    const inlineMatch=l.match(/^([A-ZÀ-Ö][A-ZÀ-Ö\s]{1,30}?)\s*[:\-–—]\s*(.+)$/);
+    if(inlineMatch){
+      const sp=inlineMatch[1].replace(/\s*\(.*\)\s*$/,'').trim();
+      if(charSet.has(sp.toUpperCase())){
+        cur=sp;
+        const dial=inlineMatch[2].trim();
+        if(dial)res.push({kind:'dialogue',char:cur,line:dial,isStageDirection:false,isSpoken:true,parenthetical:null});
         continue;
       }
-      const mapped=data.script.map(row=>{
-        if(row.kind==='dialogue'){
-          return{kind:'dialogue',char:String(row.char||'').trim(),line:String(row.text||'').trim(),isStageDirection:false,isSpoken:true,parenthetical:null};
-        }
-        if(row.kind==='slug'){
-          return{kind:'slug',char:'',line:String(row.text||'').trim(),isStageDirection:false,isSpoken:false,parenthetical:null};
-        }
-        return{kind:'action',char:'',line:String(row.text||'').trim(),isStageDirection:true,isSpoken:false,parenthetical:null};
-      }).filter(x=>x.line);
-      return{
-        ok:true,
-        parsedScript:mapped,
-        provider:data.provider||'anthropic',
-        model:data.model||'',
-        language:data.language||'',
-        meta:data.meta||{}
-      };
-    }catch(err){
-      const isTimeout=String(err&&err.name||'').toLowerCase()==='aborterror';
-      console.warn('[parse] attempt '+(attempt+1)+' failed: '+(isTimeout?'timeout':err.message));
-    }finally{
-      clearTimeout(tm);
     }
+    if(cur&&l.length>1){
+      res.push({kind:'dialogue',char:cur,line:l,isStageDirection:false,isSpoken:true,parenthetical:null});
+      continue;
+    }
+    res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
+    cur=null;
   }
-  return{ok:false,reason:'all_attempts_failed'};
+  return res;
 }
 
 function getTTSEndpointCandidates(){
@@ -3722,31 +3750,35 @@ async function processPDF(n,file){
   showLoadingCancel();
   startFakeProgress();
   try{
-    let parsedScript=[];
-    let rawText='';
-    let cleanText='';
-    let remoteLang='';
-    let parseProvider='';
-    const remote=await tryRemoteClaudeParse(file);
+    let buf;
+    if(typeof file.arrayBuffer==='function')buf=await file.arrayBuffer();
+    else buf=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsArrayBuffer(file)});
+    const hybrid=await extractPdfTextHybrid(buf,file.name);
+    const rawText=(hybrid.fullText||'').replace(/\u00A0/g,' ');
     stopFakeProgress();
     if(_pdfParseCancelled){setLoading(false);return}
-    if(remote.ok&&Array.isArray(remote.parsedScript)&&remote.parsedScript.length){
-      parsedScript=remote.parsedScript;
-      rawText=remote.parsedScript.map(x=>x.kind==='dialogue'?`${x.char}: ${x.line}`:x.line).join('\n');
-      cleanText=rawText;
-      remoteLang=remote.language||'';
-      parseProvider='anthropic';
-      console.info('[parse] provider=anthropic model='+(remote.model||'')+' lang='+remoteLang);
-      showToast('Script analysé par IA',1800);
+    if(!rawText||rawText.trim().length<10){
+      showToast('PDF vide ou non lisible – essaie de coller le texte directement',6000);
+      document.getElementById('scriptInput'+n).focus();
+      setLoading(false);return;
+    }
+    const candidatesStr=extractCandidateCharacters(rawText);
+    console.info('[parse] candidates:',candidatesStr.slice(0,200));
+    if(!candidatesStr){
+      showToast('Aucun personnage détecté dans le PDF. Colle le texte manuellement.',5000);
+      document.getElementById('scriptInput'+n).value=rawText;
+      document.getElementById('setupStatus'+n).textContent=t('pdfImportedRaw');
+      setLoading(false);return;
+    }
+    const detectedLang=detectTextLanguage(rawText);
+    const validChars=await validateCharactersRemote(candidatesStr,detectedLang);
+    if(_pdfParseCancelled){setLoading(false);return}
+    console.info('[parse] validated characters:',validChars);
+    let parsedScript;
+    if(validChars.length>0){
+      parsedScript=classifyWithValidatedChars(rawText,validChars);
     }else{
-      console.warn('[parse] Claude API failed, reason=',remote.reason||'unknown');
-      const reason=remote.reason||'';
-      const msg=reason==='cancelled'?'Annulé.'
-        :reason==='payload_too_large_for_remote_parse'?'PDF trop volumineux (max 10 Mo). Réduis le fichier ou colle le texte.'
-        :'Le serveur est occupé. Réessaie dans quelques secondes.';
-      showToast(msg,5000);
-      setLoading(false);
-      return;
+      parsedScript=parsePDFScript(rawText);
     }
     pdfScript=mergeConsecutiveDialogues(sanitizeDialogueVsAction(sanitizeCharacterNames(parsedScript)));
     syncPdfScriptDebugMirror();
@@ -3758,11 +3790,9 @@ async function processPDF(n,file){
     if(pdfScript.length>0&&chars.length>0){
       renderChars(n,chars);
       document.getElementById('charSection'+n).style.display='block';
-      document.getElementById('setupStatus'+n).textContent=pdfScript.length+' '+t('pdfLinesDetected')+' · parsed by: '+parseProvider;
+      const provider=validChars.length>0?'claude-validate':'local';
+      document.getElementById('setupStatus'+n).textContent=pdfScript.length+' '+t('pdfLinesDetected')+' · parsed by: '+provider;
       if(n===1)showToast(t('pickCharacterFirst'),3000);
-      const langMap={fr:'french',en:'english',es:'spanish',de:'german',it:'italian',pt:'portuguese',ar:'arabic',zh:'chinese',ja:'japanese',ko:'korean',tr:'turkish',ru:'russian',hi:'hindi'};
-      const claudeLang=remoteLang?(langMap[remoteLang.toLowerCase().slice(0,2)]||''):'';
-      const detectedLang=claudeLang||detectTextLanguage(rawText||cleanText);
       if(detectedLang&&VOICE_LOCALES.some(l=>l.id===detectedLang)){
         lockedVoiceLocale=detectedLang;
         applyLocaleVoices(detectedLang,false);
@@ -3774,12 +3804,11 @@ async function processPDF(n,file){
       pdfScript=[];
       syncPdfScriptDebugMirror();
       document.getElementById('charSection'+n).style.display='none';
-      document.getElementById('scriptInput'+n).value=cleanText||rawText;
+      document.getElementById('scriptInput'+n).value=rawText;
       document.getElementById('setupStatus'+n).textContent=t('pdfImportedRaw');
-      const detectedLangRaw=detectTextLanguage(rawText||cleanText);
-      if(detectedLangRaw&&VOICE_LOCALES.some(l=>l.id===detectedLangRaw)){
-        lockedVoiceLocale=detectedLangRaw;
-        applyLocaleVoices(detectedLangRaw,false);
+      if(detectedLang&&VOICE_LOCALES.some(l=>l.id===detectedLang)){
+        lockedVoiceLocale=detectedLang;
+        applyLocaleVoices(detectedLang,false);
         initVoiceCountrySelect();
         initVoiceGrid();
       }

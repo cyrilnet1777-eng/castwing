@@ -1214,6 +1214,70 @@ async function handleParseScript(request, env) {
 }
 
 /* =========================================================
+   VALIDATE CHARACTERS (lightweight)
+========================================================= */
+
+async function handleValidateCharacters(request, env) {
+  if (!env.ANTHROPIC_API_KEY) {
+    return json({ ok: false, error: "missing_anthropic_api_key", characters: [] }, 500);
+  }
+  let body;
+  try { body = await request.json(); } catch (_) {
+    return json({ ok: false, error: "invalid_json", characters: [] }, 400);
+  }
+  const candidates = String(body.candidates || "").slice(0, 2000);
+  const lang = String(body.lang || "").slice(0, 20);
+  if (!candidates) return json({ ok: false, error: "empty_candidates", characters: [] }, 400);
+
+  const prompt = [
+    `You are a screenplay expert. Below are candidate character names extracted from a ${lang || "unknown language"} screenplay.`,
+    "Each candidate is followed by its occurrence count in parentheses.",
+    "Return ONLY a JSON array of strings containing the REAL character names.",
+    "Exclude any that are: common words, shouted dialogue, stage directions, scene headings, or noise.",
+    "A real character name is a proper noun (first name, last name, or nickname) that appears as a speaker cue.",
+    "",
+    `Candidates: ${candidates}`,
+  ].join("\n");
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort("timeout"), 15000);
+  try {
+    const rsp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": String(env.ANTHROPIC_API_KEY),
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 1024,
+        temperature: 0,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    const data = await rsp.json().catch(() => ({}));
+    if (!rsp.ok) return json({ ok: false, error: `http_${rsp.status}`, characters: [] }, 502);
+    const text = Array.isArray(data.content)
+      ? data.content.filter(x => x && x.type === "text").map(x => x.text || "").join("")
+      : "";
+    const cleaned = stripJsonFence(text);
+    let parsed;
+    try { parsed = JSON.parse(cleaned); } catch (_) {
+      return json({ ok: false, error: "invalid_json_response", characters: [] }, 502);
+    }
+    if (!Array.isArray(parsed)) return json({ ok: false, error: "not_array", characters: [] }, 502);
+    const characters = parsed.map(c => String(c).trim()).filter(Boolean).slice(0, 100);
+    return json({ ok: true, characters });
+  } catch (err) {
+    return json({ ok: false, error: "timeout_or_exception", characters: [] }, 502);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/* =========================================================
    D1 MIGRATION HELPER
 ========================================================= */
 
@@ -1262,6 +1326,7 @@ export default {
 
     if (url.pathname === "/api/tts" && request.method === "POST") return handleTTS(request, env);
     if (url.pathname === "/api/parse-script" && request.method === "POST") return handleParseScript(request, env);
+    if (url.pathname === "/api/validate-characters" && request.method === "POST") return handleValidateCharacters(request, env);
     if (url.pathname === "/api/auth" && request.method === "POST") return handleAuth(request, env);
     if (url.pathname === "/api/auth/google" && request.method === "POST") return handleGoogleAuth(request, env);
     if (url.pathname === "/api/session" && request.method === "GET") return handleSession(request, env);
@@ -1274,7 +1339,7 @@ export default {
     if (url.pathname === "/api/admin/list-invites" && request.method === "GET") return handleListInvites(request, env);
     if (url.pathname === "/api/admin/revoke-invite" && request.method === "POST") return handleRevokeInvite(request, env);
 
-    const apiPaths = ["/api/tts", "/api/parse-script", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/consume", "/api/invite/redeem", "/api/admin/"];
+    const apiPaths = ["/api/tts", "/api/parse-script", "/api/validate-characters", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/consume", "/api/invite/redeem", "/api/admin/"];
     if (apiPaths.some(p => url.pathname.startsWith(p))) {
       return json({ error: "Method not allowed" }, 405);
     }
