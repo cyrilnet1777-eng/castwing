@@ -1635,7 +1635,30 @@ async function validateCharactersRemote(candidatesStr,lang){
 
 function classifyWithValidatedChars(rawText,validChars){
   const charSet=new Set(validChars.map(c=>c.toUpperCase().trim()));
-  const lines=rawText.split('\n'),res=[];
+  // Pre-process: split lines that mix dialogue and stage directions
+  const actionStartRx=/(?<=[.!?])\s+(?=(?:L'|Le |La |Les |Un |Une |Il |Elle |Ils |Elles |On |Et ))/i;
+  const charFirstWords=new Set([...charSet].map(n=>n.split(/\s+/)[0]));
+  const rawLines=rawText.split('\n');
+  const lines=[];
+  for(const raw of rawLines){
+    const t=raw.trim();
+    if(!t){lines.push('');continue}
+    // Split at sentence boundaries where action starts
+    const parts=t.split(actionStartRx).filter(p=>p&&p.trim().length>1);
+    if(parts.length>1){
+      for(const p of parts)if(p.trim())lines.push(p.trim());
+    }else{
+      // Also split when a character name appears mid-line after punctuation
+      let pushed=false;
+      for(const cfw of charFirstWords){
+        const rx=new RegExp('(?<=[.!?])\\s+(?='+cfw.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s)','i');
+        const sp=t.split(rx);
+        if(sp.length>1){for(const s of sp)if(s.trim())lines.push(s.trim());pushed=true;break}
+      }
+      if(!pushed)lines.push(t);
+    }
+  }
+  const res=[];
   const sceneRx=/^(INT[\.\s\/]|EXT[\.\s\/]|SÉQUENCE\b|SEQUENCE\b|SCÈNE\b|SCENE\b)/i;
   const sceneRxAlt=/^\d{1,4}\s+[A-ZÀ-Ö].*\b(INT|EXT|JOUR|NUIT|SOIR|MATIN|DAY|NIGHT|AUBE|CRÉPUSCULE)\b/i;
   const cartonRx=/^(CARTON|FONDU|NOIR|GÉNÉRIQUE|GENERIQUE|FIN\b)/i;
