@@ -2625,10 +2625,15 @@ class VoiceActivityDetector{
         this.hasSpoken=false;
       }
     }
-    if(!this._lastLog||now-this._lastLog>=500){
+    if(!this._lastLog||now-this._lastLog>=300){
       this._lastLog=now;
       const silMs=this.state==='TRAILING'?now-this.trailingSince:0;
-      console.info('[VAD] state:'+this.state+' rms:'+rms.toFixed(4)+' threshold:'+this.speechThreshold+' spoken:'+this.hasSpoken+' silenceMs:'+silMs+'/'+this.silenceDuration);
+      const micOk=window._cwMicStream&&window._cwMicStream.getAudioTracks().some(t=>t.readyState==='live');
+      const trackState=window._cwMicStream?window._cwMicStream.getAudioTracks().map(t=>t.readyState).join(','):'NONE';
+      const txt='MIC:'+(micOk?'OK':'DEAD')+' TRK:'+trackState+' RMS:'+rms.toFixed(4)+' THR:'+this.speechThreshold+' ST:'+this.state+' SIL:'+silMs+'/'+this.silenceDuration+'ms CTX:'+((this.audioContext&&this.audioContext.state)||'?');
+      console.info('[VAD]',txt);
+      let d=document.getElementById('vad-debug');
+      if(d)d.textContent=txt;
     }
     this.rafId=requestAnimationFrame(()=>this.loop());
   }
@@ -4209,10 +4214,11 @@ function cancelSpeechFlow(){
 }
 let _vadArmTimer=null;
 async function armAutoVADForActorLine(){
-  if(sessionPaused)return;
-  if((mode!=='auto'&&mode!=='ai')||sessionMode!=='ai'){console.info('[VAD] skip arm: mode='+mode+' sessionMode='+sessionMode);return}
+  const _dbg=document.getElementById('vad-debug');
+  if(sessionPaused){if(_dbg)_dbg.textContent='VAD: paused';return}
+  if((mode!=='auto'&&mode!=='ai')||sessionMode!=='ai'){if(_dbg)_dbg.textContent='VAD skip: mode='+mode;return}
   const line=prompterLines[prompterIndex];
-  if(!line||line.type!=='actor'){console.info('[VAD] skip arm: no actor line');return}
+  if(!line||line.type!=='actor'){if(_dbg)_dbg.textContent='VAD skip: not actor ('+((line&&line.type)||'none')+')';return}
 
   let stream=window._cwMicStream;
   let liveTracks=stream?stream.getAudioTracks().filter(t=>t.readyState==='live'):[];
@@ -4230,10 +4236,12 @@ async function armAutoVADForActorLine(){
       console.info('[VAD] new mic stream acquired, tracks:',liveTracks.map(t=>t.readyState));
     }catch(err){
       console.error('[VAD] cannot get mic:',err);
+      if(_dbg)_dbg.textContent='VAD ERROR: mic denied — '+err.name;
       showToast('Autorise le micro pour que l\'IA détecte quand tu as fini de parler',5000);
       return;
     }
   }
+  if(_dbg)_dbg.textContent='VAD: arming… track='+liveTracks[0].readyState;
   console.info('[VAD] audio track:',liveTracks[0].label,'enabled:',liveTracks[0].enabled,'readyState:',liveTracks[0].readyState);
   stopAutoVAD();
   if(_vadArmTimer){clearTimeout(_vadArmTimer);_vadArmTimer=null;}
@@ -4707,6 +4715,7 @@ async function startAiSession(){
   prompterIndex=0;
   lastAutoSpokenIndex=-1;
   showScreen('session');renderPrompter();
+  if(!document.getElementById('vad-debug')){const dbg=document.createElement('div');dbg.id='vad-debug';dbg.style.cssText='position:fixed;top:60px;left:10px;right:10px;background:rgba(0,0,0,0.92);color:#7FE3A3;font-size:11px;padding:8px 10px;border-radius:8px;z-index:99999;font-family:monospace;pointer-events:none;white-space:nowrap;overflow:hidden';dbg.textContent='VAD: waiting…';document.body.appendChild(dbg)}
   if(mode==='ai'||mode==='auto'){document.getElementById('aiPanel').classList.add('active');populateSessionVoiceSelect();setStatus('',mode==='auto'?'🎤 Auto prêt':'🦾 IA prête')}
   else setStatus('','Manuel');
   await ensureSessionStream();
@@ -4770,6 +4779,7 @@ function endSession(){
   if(isRecording)stopRecording();if(call){call.close();call=null}if(conn){conn.close();conn=null}if(peer){peer.destroy();peer=null}
   if(window._cwMicStream){window._cwMicStream.getTracks().forEach(t=>t.stop());window._cwMicStream=null}
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null}
+  const _vdbg=document.getElementById('vad-debug');if(_vdbg)_vdbg.remove();
   const lv=document.getElementById('localVideo');lv.srcObject=null;lv.style.display='';lv.classList.remove('mirror');
   document.getElementById('remoteVideo').srcObject=null;document.getElementById('remoteVideo').style.display='none';
   document.getElementById('remoteAudio').srcObject=null;
