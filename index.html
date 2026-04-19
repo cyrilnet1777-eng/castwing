@@ -4363,6 +4363,15 @@ function handleCurrentLineAutomation(){
   if(line.isSpoken!==true){
     const currentIndex=prompterIndex;
     lastAutoSpokenIndex=currentIndex;
+    // Skip context/action lines instantly until first spoken line
+    if(prompterIndex<prompterLines.length-1){
+      const hasSpokenBefore=prompterLines.slice(0,prompterIndex).some(l=>l.isSpoken);
+      if(!hasSpokenBefore){
+        prompterIndex++;renderPrompter();syncPrompter();
+        setTimeout(()=>handleCurrentLineAutomation(),20);
+        return;
+      }
+    }
     scheduleAfterPartner(currentIndex);
     return;
   }
