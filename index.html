@@ -4140,6 +4140,7 @@ function clearPDF(n){pdfScript=[];syncPdfScriptDebugMirror();selectedChar=null;s
 
 // ── Prompter ──
 function buildLines(n){
+  console.info('[buildLines] pdfScript.length='+pdfScript.length+' selectedChar='+selectedChar+' first5kinds='+pdfScript.slice(0,20).map(s=>s.kind+'|'+s.char+'|'+(s.line||'').slice(0,20)).join(' / '));
   if(pdfScript.length>0&&selectedChar){
     let rows=pdfScript;
     const selNorm=(selectedChar||'').toUpperCase().trim();
