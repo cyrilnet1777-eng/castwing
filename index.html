@@ -2564,12 +2564,14 @@ function updateEmotionLock(){
 }
 
 class VoiceActivityDetector{
-  constructor({speechThreshold=0.012,silenceDuration=1500,onSpeechEnd}={}){
+  constructor({speechThreshold=0.012,silenceDuration=1500,minSpeechMs=0,onSpeechEnd}={}){
     this.speechThreshold=speechThreshold;
     this.silenceDuration=silenceDuration;
+    this.minSpeechMs=minSpeechMs;
     this.onSpeechEnd=typeof onSpeechEnd==='function'?onSpeechEnd:()=>{};
     this.state='WAITING';
     this.trailingSince=0;
+    this.speakingStartedAt=0;
     this.hasSpoken=false;
     this.audioContext=null;
     this.source=null;
@@ -2599,6 +2601,7 @@ class VoiceActivityDetector{
     this.running=true;
     this.state='WAITING';
     this.hasSpoken=false;
+    this.speakingStartedAt=0;
     this.loop();
     return true;
   }
@@ -2614,9 +2617,12 @@ class VoiceActivityDetector{
     const now=Date.now();
     const rms=this.getRms();
     if(this.state==='WAITING'){
-      if(rms>=this.speechThreshold){this.state='SPEAKING';this.hasSpoken=true}
+      if(rms>=this.speechThreshold){this.state='SPEAKING';this.hasSpoken=true;if(!this.speakingStartedAt)this.speakingStartedAt=now}
     }else if(this.state==='SPEAKING'){
-      if(rms<this.speechThreshold){this.state='TRAILING';this.trailingSince=now}
+      if(rms<this.speechThreshold){
+        const spokenFor=now-this.speakingStartedAt;
+        if(spokenFor>=this.minSpeechMs){this.state='TRAILING';this.trailingSince=now}
+      }
     }else if(this.state==='TRAILING'){
       if(rms>=this.speechThreshold)this.state='SPEAKING';
       else if(this.hasSpoken&&now-this.trailingSince>=this.silenceDuration){
@@ -4199,6 +4205,10 @@ function renderPrompter(){
 function computeSilenceMsForActorLine(line){
   return 3000;
 }
+function estimateMinSpeechDuration(text){
+  const words=(text||'').split(/\s+/).filter(Boolean).length;
+  return Math.max(2000,Math.floor(words*500*0.6));
+}
 function stopAutoVAD(){if(_vadArmTimer){clearTimeout(_vadArmTimer);_vadArmTimer=null;}if(vad)vad.stop()}
 function cancelSpeechFlow(){
   activeSpeechToken++;
@@ -4241,8 +4251,9 @@ async function armAutoVADForActorLine(){
     _vadArmTimer=null;
     if((mode!=='auto'&&mode!=='ai')||sessionPaused)return;
     const silenceMs=computeSilenceMsForActorLine(line);
-    console.info('[VAD] arming with live track, silenceThreshold='+silenceMs+'ms, postTtsDelay='+postTtsDelay+'ms');
-    vad=new VoiceActivityDetector({speechThreshold:0.015,silenceDuration:silenceMs,onSpeechEnd:onAutoSpeechEnd});
+    const minSpeak=estimateMinSpeechDuration(line.text);
+    console.info('[VAD] arming: silence='+silenceMs+'ms, minSpeech='+minSpeak+'ms, postTtsDelay='+postTtsDelay+'ms');
+    vad=new VoiceActivityDetector({speechThreshold:0.015,silenceDuration:silenceMs,minSpeechMs:minSpeak,onSpeechEnd:onAutoSpeechEnd});
     await vad.start(new MediaStream(liveTracks));
   };
   if(postTtsDelay>100){
