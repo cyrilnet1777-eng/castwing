@@ -4062,8 +4062,9 @@ function sanitizeCharacterNames(script){
     if(ALWAYS_BAD.has(trimmed.toUpperCase())){bad.add(name);continue}
     if(words.length>3){bad.add(name);continue}
     if(/^\d+$/.test(trimmed)||trimmed.length<=1){bad.add(name);continue}
-    if(words.some(w=>PRONOUNS.has(w.toUpperCase()))){bad.add(name);continue}
-    if(L_PATTERN.test(trimmed)){bad.add(name);continue}
+    if(words.length===1&&PRONOUNS.has(trimmed.toUpperCase())){bad.add(name);continue}
+    if(words.length>=2&&words.every(w=>PRONOUNS.has(w.toUpperCase()))){bad.add(name);continue}
+    if(words.length===1&&L_PATTERN.test(trimmed)){bad.add(name);continue}
     if(words.length===1&&charCounts[name]<3){bad.add(name);continue}
   }
   const kept=Object.keys(charCounts).filter(n=>!bad.has(n));
@@ -4075,14 +4076,11 @@ function sanitizeCharacterNames(script){
   });
 }
 function sanitizeDialogueVsAction(script){
-  const ACTION_VERBS=/\b(pose|entre|sort|regarde|s[''\u2019]?assoit|se\s+l[eè]ve|prend|ouvre|ferme|traverse|appara[iî]t|dispara[iî]t|claque|frappe|court|marche|tient|porte|d[ée]pose|saisit|s[''\u2019]?approche|s[''\u2019]?arr[eê]te|se\s+tourne|se\s+retourne|se\s+dirige|s[''\u2019]?en\s+va|monte|descend|recule|avance|lance|attrape|pousse|tire|jette|ram[aà]sse|allume|[ée]teint|d[ée]croche|raccroche)\b/i;
-  const SUBJ_VERB=/^(un|une|le|la|les|des|il|elle|ils|elles|on)\s+\w*(e|ent|t|s)\b/i;
-  const NO_DIALOGUE=/pas de dialogue|sans parler/i;
   let reclassed=0;
   const res=script.map(row=>{
     if(!row||row.kind!=='dialogue'||!row.line)return row;
-    const txt=row.line.trim();
-    if(ACTION_VERBS.test(txt)||SUBJ_VERB.test(txt)||NO_DIALOGUE.test(txt)){
+    if(row.char&&row.isSpoken)return row;
+    if(!row.char){
       reclassed++;
       return{kind:'action',char:'',line:row.line,isStageDirection:true,isSpoken:false,parenthetical:null};
     }
@@ -4255,8 +4253,10 @@ function renderPrompter(){
     groupEl.appendChild(segWrap);
     a.appendChild(groupEl);
   }
-  const act=a.querySelector('.prompter-line.active');
-  if(act&&!userScrolledUp)act.scrollIntoView({behavior:'smooth',block:'center'});
+  if(!userScrolledUp){
+    const act=a.querySelector('.prompter-line.active');
+    if(act)requestAnimationFrame(()=>act.scrollIntoView({behavior:'smooth',block:'center'}));
+  }
 }
 let vadSilenceSeconds=parseFloat(localStorage.getItem('cw_vadSilence')||'2');
 function onVadSliderChange(val){
