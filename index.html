@@ -1641,7 +1641,7 @@ function classifyWithValidatedChars(rawText,validChars){
   let firstSlugFound=false;
   for(let i=0;i<lines.length;i++){
     const l=lines[i].trim();
-    if(!l){cur=null;continue}
+    if(!l){continue}
     if(pageRx.test(l))continue;
     if(sceneRx.test(l))firstSlugFound=true;
     if(!firstSlugFound){
