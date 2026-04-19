@@ -4209,16 +4209,32 @@ function cancelSpeechFlow(){
 }
 let _vadArmTimer=null;
 async function armAutoVADForActorLine(){
+  if(sessionPaused)return;
   if((mode!=='auto'&&mode!=='ai')||sessionMode!=='ai'){console.info('[VAD] skip arm: mode='+mode+' sessionMode='+sessionMode);return}
   const line=prompterLines[prompterIndex];
-  if(!line||line.type!=='actor'||!localStream){console.info('[VAD] skip arm: no actor line or no stream');return}
-  const tracks=localStream.getAudioTracks().filter(t=>t.readyState==='live'&&t.enabled);
-  if(!tracks.length){
-    console.info('[VAD] skip arm: no live enabled audio tracks. All tracks:',localStream.getAudioTracks().map(t=>t.label+'/'+t.readyState+'/enabled:'+t.enabled));
-    showToast('Autorise le micro pour que l\'IA détecte quand tu as fini de parler',5000);
-    return;
+  if(!line||line.type!=='actor'){console.info('[VAD] skip arm: no actor line');return}
+
+  let stream=window._cwMicStream;
+  let liveTracks=stream?stream.getAudioTracks().filter(t=>t.readyState==='live'):[];
+  if(!liveTracks.length){
+    console.warn('[VAD] mic track dead or missing, requesting new one');
+    try{
+      stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      window._cwMicStream=stream;
+      liveTracks=stream.getAudioTracks();
+      liveTracks.forEach(t=>{t.onended=()=>console.warn('[VAD] audio track ended unexpectedly')});
+      if(localStream){
+        localStream.getAudioTracks().forEach(t=>{localStream.removeTrack(t);t.stop()});
+        liveTracks.forEach(t=>localStream.addTrack(t));
+      }
+      console.info('[VAD] new mic stream acquired, tracks:',liveTracks.map(t=>t.readyState));
+    }catch(err){
+      console.error('[VAD] cannot get mic:',err);
+      showToast('Autorise le micro pour que l\'IA détecte quand tu as fini de parler',5000);
+      return;
+    }
   }
-  console.info('[VAD] audio track:',tracks[0].label,'enabled:',tracks[0].enabled,'readyState:',tracks[0].readyState);
+  console.info('[VAD] audio track:',liveTracks[0].label,'enabled:',liveTracks[0].enabled,'readyState:',liveTracks[0].readyState);
   stopAutoVAD();
   if(_vadArmTimer){clearTimeout(_vadArmTimer);_vadArmTimer=null;}
   const postTtsDelay=Math.max(0,2000-(Date.now()-lastTTSEndTs));
@@ -4226,10 +4242,9 @@ async function armAutoVADForActorLine(){
     _vadArmTimer=null;
     if((mode!=='auto'&&mode!=='ai')||sessionPaused)return;
     const silenceMs=computeSilenceMsForActorLine(line);
-    console.info('[VAD] arming: silenceThreshold='+silenceMs+'ms, postTtsDelay='+postTtsDelay+'ms');
+    console.info('[VAD] arming with live track, silenceThreshold='+silenceMs+'ms, postTtsDelay='+postTtsDelay+'ms');
     vad=new VoiceActivityDetector({speechThreshold:0.015,silenceDuration:silenceMs,onSpeechEnd:onAutoSpeechEnd});
-    const armed=await vad.start(new MediaStream(tracks));
-    if(!armed)showToast('Autorise le micro pour que l\'IA détecte quand tu as fini de parler',5000);
+    await vad.start(new MediaStream(liveTracks));
   };
   if(postTtsDelay>100){
     _vadArmTimer=setTimeout(doArm,postTtsDelay);
@@ -4373,12 +4388,17 @@ async function startCamera(){
   }
   return null
 }
+function _storeMicStream(stream){
+  window._cwMicStream=stream;
+  stream.getAudioTracks().forEach(t=>{t.onended=()=>console.warn('[VAD] audio track ended unexpectedly')});
+}
 async function ensureSessionStream(){
   if(!isCamOn){
     try{
       if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null}
       localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
       localStream.getAudioTracks().forEach(t=>t.enabled=isMicOn);
+      _storeMicStream(localStream);
       document.getElementById('localVideo').srcObject=null;
       document.getElementById('noVideoMsg').style.display='flex';
       document.getElementById('noVideoMsg').textContent='Caméra désactivée';
@@ -4398,10 +4418,12 @@ async function ensureSessionStream(){
         if(micTrack){micTrack.enabled=isMicOn;cam.addTrack(micTrack)}
       }catch(e){}
     }
+    _storeMicStream(cam);
     return cam;
   }
   try{
     localStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    _storeMicStream(localStream);
     document.getElementById('localVideo').srcObject=null;
     document.getElementById('noVideoMsg').style.display='flex';
     document.getElementById('noVideoMsg').textContent='Caméra indisponible, audio uniquement';
@@ -4750,6 +4772,7 @@ function endSession(){
   if(connectionTimeout)clearTimeout(connectionTimeout);cancelSpeechFlow();
   if(isRecording)stopRecording();if(call){call.close();call=null}if(conn){conn.close();conn=null}if(peer){peer.destroy();peer=null}
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null}
+  window._cwMicStream=null;
   const lv=document.getElementById('localVideo');lv.srcObject=null;lv.style.display='';lv.classList.remove('mirror');
   document.getElementById('remoteVideo').srcObject=null;document.getElementById('remoteVideo').style.display='none';
   document.getElementById('remoteAudio').srcObject=null;
