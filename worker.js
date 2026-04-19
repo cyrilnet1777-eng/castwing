@@ -1316,7 +1316,7 @@ Lines:
 ${numberedLines}`;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort("timeout"), 20000);
+  const timeout = setTimeout(() => controller.abort("timeout"), 30000);
   try {
     const rsp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",

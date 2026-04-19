@@ -1637,7 +1637,7 @@ function setLoadingMsg(msg){const el=document.getElementById('loadingMsg');if(el
 
 async function classifyLinesViaAPI(rawText,validChars,lang){
   const allLines=rawText.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
-  const CHUNK=100;
+  const CHUNK=200;
   const chunks=[];
   for(let i=0;i<allLines.length;i+=CHUNK){
     chunks.push(allLines.slice(i,i+CHUNK));
@@ -1645,12 +1645,12 @@ async function classifyLinesViaAPI(rawText,validChars,lang){
   console.info('[classify-api] total lines:',allLines.length,'chunks:',chunks.length);
   
   const results=new Array(allLines.length).fill(null);
-  const PARALLEL=3;
+  const PARALLEL=5;
   
   for(let batch=0;batch<chunks.length;batch+=PARALLEL){
     if(_pdfParseCancelled)return null;
     const batchChunks=chunks.slice(batch,batch+PARALLEL);
-    setLoadingMsg('Classification… '+(batch+1)+'/'+chunks.length);
+    setLoadingMsg('Classification… '+Math.round(((batch+batchChunks.length)/chunks.length)*100)+'%');
     
     const promises=batchChunks.map((chunk,ci)=>{
       const chunkIdx=batch+ci;
