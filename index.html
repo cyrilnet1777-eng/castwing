@@ -121,11 +121,13 @@ input[type="file"]{display:none}
 .mob-controls-row{display:none;position:fixed;top:calc(50vh - 70px);top:calc(50dvh - 70px);left:50%;transform:translateX(-50%);z-index:200;align-items:center;gap:12px}
 .mob-nav-btn{width:36px;height:36px;border-radius:50%;background:rgba(30,30,30,.8);backdrop-filter:blur(6px);border:1.5px solid rgba(255,255,255,.15);color:#fff;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .mob-nav-btn:active{background:rgba(255,255,255,.15);transform:scale(.9)}
-.mob-main-btn{display:none;width:48px;height:48px;border-radius:50%;background:#c1121f;border:3px solid rgba(255,255,255,.25);color:#fff;cursor:pointer;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(193,18,31,.5);transition:all .2s}
-.mob-main-btn .rec-dot-mob{width:16px;height:16px;border-radius:50%;background:#fff}
+.mob-main-btn{display:none;width:48px;height:48px;border-radius:50%;background:rgba(30,30,30,.8);backdrop-filter:blur(6px);border:1.5px solid rgba(255,255,255,.15);color:#fff;cursor:pointer;align-items:center;justify-content:center;transition:all .2s}
+.mob-main-btn svg{width:20px;height:20px;fill:currentColor}
 .mob-main-btn.is-paused{background:rgba(30,160,80,.9);border-color:rgba(127,227,163,.5);box-shadow:0 4px 16px rgba(30,160,80,.4)}
-.mob-main-btn.is-paused .play-tri{display:block}.mob-main-btn.is-paused .rec-dot-mob{display:none}
+.mob-main-btn.is-paused .pause-bars{display:none}.mob-main-btn.is-paused .play-tri{display:block}
 .mob-main-btn .play-tri{display:none;width:0;height:0;border-style:solid;border-width:10px 0 10px 18px;border-color:transparent transparent transparent #fff;margin-left:3px}
+.rec-indicator{position:fixed;top:14px;left:52px;width:12px;height:12px;background:#FF0000;border-radius:50%;z-index:10002;display:none;animation:rec-blink 1s infinite}
+@keyframes rec-blink{0%,100%{opacity:1}50%{opacity:.3}}
 .mob-settings-gear{width:36px;height:36px;border-radius:50%;background:rgba(30,30,30,.85);backdrop-filter:blur(8px);border:1.5px solid rgba(127,247,231,.3);color:#7ff7e7;font-size:.9rem;cursor:pointer;display:none;align-items:center;justify-content:center;transition:all .2s}
 .mob-settings-gear:hover{background:rgba(63,233,211,.18)}
 .end-take-modal{display:none;position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);align-items:center;justify-content:center}.end-take-modal.active{display:flex}
@@ -191,6 +193,9 @@ input[type="file"]{display:none}
 .vctrl-pause.is-paused{background:rgba(127,227,163,.25);border-color:rgba(127,227,163,.4)}
 .pause-overlay{display:none;position:absolute;inset:0;z-index:55;background:rgba(0,0,0,.55);align-items:center;justify-content:center;flex-direction:column;gap:.5rem;pointer-events:none}.pause-overlay.active{display:flex}
 .pause-overlay span{font-size:1.3rem;font-weight:700;color:rgba(255,255,255,.85);letter-spacing:.1em;text-transform:uppercase}
+.take-info{text-align:center;font-family:'DM Sans',sans-serif;color:rgba(255,255,255,.9);pointer-events:none}
+.take-info .take-scene{font-size:1.1rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase}
+.take-info .take-prod{font-size:.75rem;font-weight:400;color:rgba(255,255,255,.5);margin-top:4px;font-variant:small-caps}
 .pause-settings-btn{pointer-events:auto;margin-top:.6rem;padding:.5rem 1.2rem;border-radius:10px;border:1.5px solid rgba(127,247,231,.35);background:rgba(7,30,26,.85);color:#7ff7e7;font-size:.82rem;font-weight:700;cursor:pointer;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:all .2s}
 .pause-settings-btn:hover{background:rgba(63,233,211,.18);border-color:#7ff7e7}
 .pause-settings-panel{display:none;pointer-events:auto;position:absolute;bottom:80px;left:50%;transform:translateX(-50%);width:min(92vw,380px);background:rgba(7,22,20,.95);border:1.5px solid rgba(127,247,231,.25);border-radius:14px;padding:1rem 1.1rem;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:60;max-height:60vh;overflow-y:auto}
@@ -285,6 +290,8 @@ input[type="file"]{display:none}
 .prompter-area{position:fixed;bottom:0;left:0;right:0;height:50vh;height:50dvh;margin-top:0;max-width:none;background:#000;z-index:55;padding-bottom:2rem;border-top:2px solid #222}
 .video-controls{display:none!important}
 .session-bottom,.ai-panel,.vctrl-flip{display:none!important}
+#creditBadge{display:none!important}
+.session-top .status{display:none!important}
 .mob-controls-row{display:flex!important}
 .mob-main-btn{display:flex!important}
 .mob-settings-gear{display:none}
@@ -623,9 +630,9 @@ input[type="file"]{display:none}
   <div id="creditBadge" style="position:fixed;top:12px;right:56px;background:rgba(0,0,0,.6);color:#fff;padding:4px 10px;border-radius:12px;font-size:13px;font-family:'DM Sans',sans-serif;z-index:1000;display:none;pointer-events:none">⏱ <span id="creditCount">60:00</span></div>
   <div class="session-top"><div class="status"><div class="status-dot waiting" id="statusDot"></div><span id="statusText">En attente…</span></div><button class="back-btn" onclick="showEndTakeModal()" style="color:#fff;font-size:1rem;position:fixed;top:16px;left:16px;z-index:10001">✕</button></div>
   <div class="session-body">
-    <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><video id="remoteVideo" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:contain;background:#000"></video><div class="no-video" id="noVideoMsg">Caméra en attente…</div><div class="video-controls"><button class="vctrl" id="btnMic" onclick="toggleMic()"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/></svg></button><button class="vctrl" id="btnRec" onclick="toggleRecording()"><span class="rec-dot"></span></button><button class="vctrl vctrl-pause" id="btnPause" onclick="togglePause()"><svg id="pauseIcon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button><div class="speed-btns speed-btns-overlay" id="speedBtnsOverlay"></div><button class="vctrl vctrl-flip" id="btnCam" onclick="toggleCam()"><svg viewBox="0 0 24 24"><path d="M20 5h-3.17L15 3H9L7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-8 13a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/><path d="M12 17l-2.5-2h1.5v-2h2v2h1.5L12 17zm0-10l2.5 2h-1.5v2h-2V9H9.5L12 7z"/></svg></button></div></div><div class="mob-controls-row" id="mobControlsRow"><button class="mob-nav-btn" onclick="prompterPrev()">◀</button><button class="mob-main-btn" id="mobMainBtn" onclick="togglePause()"><span class="rec-dot-mob"></span><span class="play-tri"></span></button><button class="mob-nav-btn" onclick="prompterNext()">▶</button><button class="mob-settings-gear" id="mobSettingsGear" onclick="togglePauseSettings()">⚙</button></div></div>
+    <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><video id="remoteVideo" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:contain;background:#000"></video><div class="no-video" id="noVideoMsg">Caméra en attente…</div><div class="video-controls"><button class="vctrl" id="btnMic" onclick="toggleMic()"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/></svg></button><button class="vctrl" id="btnRec" onclick="toggleRecording()"><span class="rec-dot"></span></button><button class="vctrl vctrl-pause" id="btnPause" onclick="togglePause()"><svg id="pauseIcon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button><div class="speed-btns speed-btns-overlay" id="speedBtnsOverlay"></div><button class="vctrl vctrl-flip" id="btnCam" onclick="toggleCam()"><svg viewBox="0 0 24 24"><path d="M20 5h-3.17L15 3H9L7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-8 13a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/><path d="M12 17l-2.5-2h1.5v-2h2v2h1.5L12 17zm0-10l2.5 2h-1.5v2h-2V9H9.5L12 7z"/></svg></button></div></div><div class="rec-indicator" id="recIndicator"></div><div class="mob-controls-row" id="mobControlsRow"><button class="mob-nav-btn" onclick="prompterPrev()">◀</button><button class="mob-main-btn" id="mobMainBtn" onclick="togglePause()"><svg class="pause-bars" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></svg><span class="play-tri"></span></button><button class="mob-nav-btn" onclick="prompterNext()">▶</button><button class="mob-settings-gear" id="mobSettingsGear" onclick="togglePauseSettings()">⚙</button></div></div>
     <div class="prompter-area" id="prompterArea"><div class="prompter-empty" id="prompterEmptyText">Aucun texte chargé</div></div>
-    <div id="pauseOverlay" class="pause-overlay"><span>⏸ En pause</span><button class="pause-settings-btn" id="pauseSettingsBtn" onclick="togglePauseSettings()">⚙ Réglages</button><div class="pause-settings-panel" id="pauseSettingsPanel"><button class="ps-close" onclick="closePauseSettings();togglePause(false)">✕</button><label>Mon personnage</label><div class="char-grid" id="pauseCharGrid"></div><label>Voix IA</label><select id="pauseVoiceSelect" onchange="changePauseVoice()"></select><label>Vitesse</label><div class="speed-btns" id="speedBtnsPause"></div><div class="ps-row"><span class="ps-label">Italienne</span><button class="ps-toggle" id="psItalienneToggle" onclick="toggleItalienne()"></button></div><div class="ps-row"><span class="ps-label">Mode</span><button class="ps-toggle" id="psModeToggle" onclick="togglePauseMode()"></button><span class="ps-label" id="psModeLabel" style="min-width:50px">Auto</span></div><div class="ps-row"><span class="ps-label">Caméra</span><button class="etm-btn etm-resume" onclick="toggleCam();closePauseSettings()" style="flex:0;padding:.4rem .8rem;font-size:.75rem">↻ Flip</button></div><button class="ps-resume-btn" onclick="closePauseSettings();togglePause(false)">▶ Reprendre</button></div></div>
+    <div id="pauseOverlay" class="pause-overlay"><span>⏸ En pause</span><div class="take-info" id="takeInfo"></div><button class="pause-settings-btn" id="pauseSettingsBtn" onclick="togglePauseSettings()">⚙ Réglages</button><div class="pause-settings-panel" id="pauseSettingsPanel"><button class="ps-close" onclick="closePauseSettings();togglePause(false)">✕</button><label>Mon personnage</label><div class="char-grid" id="pauseCharGrid"></div><label>Voix IA</label><select id="pauseVoiceSelect" onchange="changePauseVoice()"></select><label>Vitesse</label><div class="speed-btns" id="speedBtnsPause"></div><div class="ps-row"><span class="ps-label">Italienne</span><button class="ps-toggle" id="psItalienneToggle" onclick="toggleItalienne()"></button></div><div class="ps-row"><span class="ps-label">Mode</span><button class="ps-toggle" id="psModeToggle" onclick="togglePauseMode()"></button><span class="ps-label" id="psModeLabel" style="min-width:50px">Auto</span></div><div class="ps-row"><span class="ps-label">Caméra</span><button class="etm-btn etm-resume" onclick="toggleCam();closePauseSettings()" style="flex:0;padding:.4rem .8rem;font-size:.75rem">↻ Flip</button></div><button class="ps-resume-btn" onclick="closePauseSettings();togglePause(false)">▶ Reprendre</button></div></div>
     <div class="italienne-badge" id="italienneBadge">ITALIENNE</div>
   </div>
   <div class="ai-panel" id="aiPanel"><span class="ai-label" id="sessionVoiceLabel">🦾 Voix :</span><select id="sessionVoiceSelect" onchange="changeSessionVoice()"></select></div>
@@ -683,7 +690,7 @@ const SFX={
   freeze:'/sounds/freeze.mp3',
   glitch:'/sounds/glitch.mp3',
   signup:'/sounds/signup.mp3',
-  login:'/sounds/login.mp3',
+  login:'/sounds/swoosh-login.mp3',
   clock:'/sounds/clock.mp3',
   ambienceValley:'/sounds/ambience-valley.mp3',
   ambienceHorror:'/sounds/ambience-horror.mp3',
@@ -1118,45 +1125,44 @@ function showPaywallModal(){
     if(cdEl){const iv=setInterval(()=>{const rem=Math.max(0,cooldownEnd-Date.now());cdEl.textContent=fmtTimer(rem);if(rem<=0){clearInterval(iv);dismissPaywall();unfreezeTimer();}},1000);}
   }
 }
+function getSceneLabel(){
+  for(let i=prompterIndex;i>=0;i--){
+    const l=prompterLines[i];
+    if(l&&(l.kind==='slug'||l.type==='context')&&/sc[eè]ne|scene|seq/i.test(l.text)){
+      const m=l.text.match(/(\d+)/);if(m)return m[1];
+    }
+  }
+  return '1';
+}
+function updateTakeInfo(){
+  const el=document.getElementById('takeInfo');if(!el)return;
+  const sc=getSceneLabel();
+  const prod=currentScriptName?currentScriptName.replace(/\.pdf$/i,''):'—';
+  el.innerHTML=`<div class="take-scene">Scène ${sc} — TAKE ${takeNumber}</div><div class="take-prod">Prod: ${prod}</div>`;
+}
 function showClapperboard(onComplete){
   const existing=document.getElementById('clapOverlay');
   if(existing)existing.remove();
   takeNumber++;
-  const userName=userAccess.email?userAccess.email.split('@')[0]:(getUserTier()==='visitor'?'Guest':'Actor');
-  const charName=selectedChar||'—';
-  const scriptName=currentScriptName||t('pasteScriptLabel');
-  const sceneName=pdfScript.length>0&&selectedChar?charName+' scene':'Scene';
   const overlay=document.createElement('div');
   overlay.id='clapOverlay';
   overlay.className='clap-overlay';
-  overlay.innerHTML=`<div class="clap-card">
-    <div class="clap-top"><span>CASTWING</span></div>
-    <div class="clap-body">
-      <div class="clap-row"><span class="clap-label">Scene</span><span class="clap-val">${sceneName}</span></div>
-      <div class="clap-row"><span class="clap-label">Take</span><span class="clap-val">${String(takeNumber).padStart(2,'0')}</span></div>
-      <div class="clap-row"><span class="clap-label">Actor</span><span class="clap-val">${userName}</span></div>
-      <div class="clap-row"><span class="clap-label">Role</span><span class="clap-val">${charName}</span></div>
-      <div class="clap-row"><span class="clap-label">Script</span><span class="clap-val">${scriptName}</span></div>
-    </div>
-  </div>`;
+  overlay.innerHTML='<div class="clap-countdown">3</div>';
   document.body.appendChild(overlay);
   playSfx('countdown',0.5);
+  warmAudioForMobile();
   setTimeout(()=>{
-    overlay.innerHTML='<div class="clap-countdown">3</div>';
+    overlay.innerHTML='<div class="clap-countdown">2</div>';
     warmAudioForMobile();
     setTimeout(()=>{
-      overlay.innerHTML='<div class="clap-countdown">2</div>';
+      overlay.innerHTML='<div class="clap-countdown">1</div>';
       warmAudioForMobile();
       setTimeout(()=>{
-        overlay.innerHTML='<div class="clap-countdown">1</div>';
-        warmAudioForMobile();
-        setTimeout(()=>{
-          if(overlay.parentElement)overlay.remove();
-          if(typeof onComplete==='function')onComplete();
-        },1000);
+        if(overlay.parentElement)overlay.remove();
+        if(typeof onComplete==='function')onComplete();
       },1000);
     },1000);
-  },2000);
+  },1000);
 }
 function buyPaygBlock(){
   dismissPaywall();
@@ -1322,8 +1328,7 @@ function updateChronoDisplay(remainingSec){
   const progress=document.getElementById('zelda-chrono-progress');
   const txt=document.getElementById('zelda-chrono-text');
   if(!wrap||!progress||!txt)return;
-  const sess=document.getElementById('session');
-  if(!sess||!sess.classList.contains('active')){wrap.style.display='none';return;}
+  wrap.style.display='none';return;
   let rem=remainingSec;
   if(rem===undefined||rem===null){
     rem=Math.max(0,Math.floor(getRemainingSessionMs()/1000));
@@ -3174,7 +3179,7 @@ function switchSessionMode(nextMode){
     return;
   }
   document.getElementById('aiPanel').classList.add('active');
-  setStatus('',mode==='auto'?'🎤 Auto prêt':'🦾 IA prête');
+  setStatus('','');
   handleCurrentLineAutomation();
 }
 function setMode(m){
@@ -4488,16 +4493,19 @@ function togglePause(forceState){
   const overlay=document.getElementById('pauseOverlay');
   const mobBtn=document.getElementById('mobMainBtn');
   const gear=document.getElementById('mobSettingsGear');
+  const recInd=document.getElementById('recIndicator');
   if(sessionPaused){
     cancelTTSPlayback();
     stopAutoVAD();
     clearAutoTimer();
     freezeTimer();
+    updateTakeInfo();
     if(overlay)overlay.classList.add('active');
     if(btn)btn.classList.add('is-paused');
     if(icon)icon.innerHTML='<polygon points="6,4 20,12 6,20" fill="currentColor"/>';
     if(mobBtn)mobBtn.classList.add('is-paused');
     if(gear)gear.classList.add('visible');
+    if(recInd)recInd.style.display='none';
     if(conn&&conn.open)conn.send({type:'pause'});
   }else{
     unfreezeTimer();
@@ -4506,6 +4514,7 @@ function togglePause(forceState){
     if(icon)icon.innerHTML='<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>';
     if(mobBtn)mobBtn.classList.remove('is-paused');
     if(gear)gear.classList.remove('visible');
+    if(recInd&&isRecording)recInd.style.display='block';
     if(conn&&conn.open)conn.send({type:'resume'});
     closePauseSettings();
     handleCurrentLineAutomation();
@@ -4614,10 +4623,10 @@ function startRecording(){
   try{mediaRecorder=new MediaRecorder(localStream,{mimeType:MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm'});
   mediaRecorder.ondataavailable=e=>{if(e.data.size>0)recordedChunks.push(e.data)};
   mediaRecorder.onstop=()=>{const b=new Blob(recordedChunks,{type:'video/webm'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`castwing-${Date.now()}.webm`;a.click();URL.revokeObjectURL(u);showToast('Audition téléchargée !')};
-  mediaRecorder.start(1000);isRecording=true;document.getElementById('btnRec').classList.add('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';showToast('Enregistrement…')}
+  mediaRecorder.start(1000);isRecording=true;document.getElementById('btnRec').classList.add('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='block';showToast('Enregistrement…')}
   catch(e){showToast('Erreur enregistrement')}
 }
-function stopRecording(){if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>'}
+function stopRecording(){if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='none'}
 
 // ── WebRTC ──
 function createPeer(id){return new Peer(id,{config:{iceServers:ICE_SERVERS}})}
@@ -4721,8 +4730,8 @@ async function startAiSession(){
   prompterIndex=0;
   lastAutoSpokenIndex=-1;
   showScreen('session');renderPrompter();
-  if(mode==='ai'||mode==='auto'){document.getElementById('aiPanel').classList.add('active');populateSessionVoiceSelect();setStatus('',mode==='auto'?'🎤 Auto prêt':'🦾 IA prête')}
-  else setStatus('','Manuel');
+  if(mode==='ai'||mode==='auto'){document.getElementById('aiPanel').classList.add('active');populateSessionVoiceSelect();}
+  setStatus('','');
   await ensureSessionStream();
   if(canRecord()&&localStream&&!isRecording)startRecording();
   showClapperboard(()=>{
@@ -4789,10 +4798,11 @@ function endSession(){
   document.getElementById('remoteAudio').srcObject=null;
   document.getElementById('noVideoMsg').style.display='flex';document.getElementById('noVideoMsg').textContent='Caméra en attente…';
   document.getElementById('aiPanel').classList.remove('active');
+  const _riEnd=document.getElementById('recIndicator');if(_riEnd)_riEnd.style.display='none';
   hideTimerBadge();
   lockedVoiceLocale='';userScrolledUp=false;
   const _pa=document.getElementById('prompterArea');if(_pa)_pa.classList.remove('rear-cam');
-  hideOverlay();isMicOn=true;isCamOn=true;currentFacingMode='user';prompterLines=[];prompterIndex=0;pdfScript=[];syncPdfScriptDebugMirror();selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;currentScriptName='';takeNumber=0;showScreen('home');
+  hideOverlay();isMicOn=true;isCamOn=true;currentFacingMode='user';prompterLines=[];prompterIndex=0;pdfScript=[];syncPdfScriptDebugMirror();selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;currentScriptName='';showScreen('home');
 }
 function cancelConnection(){hideOverlay();if(!conn||!conn.open)endSession()}
 
