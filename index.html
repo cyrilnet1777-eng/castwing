@@ -4062,7 +4062,7 @@ async function processPDF(n,file){
     const norm=await normalizeScreenplayWhitespaceAsync(rawText);
     if(_pdfParseCancelled)return;
     await runImportedScriptPipeline(n,norm,file.name||'PDF');
-    void fillScriptInputProgressive(n,norm);
+    void fillScriptInputProgressive(n,scriptRawText||norm);
     scheduleDeferredPdfOcrImprovement(n,hybrid.pdf,hybrid.pageTexts,hybrid.deferredOcrPageNumbers||[]);
   }catch(e){
     console.error('PDF read error:',e);
@@ -5253,7 +5253,37 @@ async function runImportedScriptPipeline(n,normText,displayName){
   const detectedLang=detectTextLanguage(normText);
   setLoading(false);
   stopFakeProgress();
-  const rawForHash=(typeof scriptRawText==='string'&&scriptRawText.length)?scriptRawText:String(normText||'');
+  let workingNorm=normText;
+  let validatedCharacters=[];
+  try{
+    const candidatesStr=extractCandidateCharacters(normText);
+    if(candidatesStr){
+      validatedCharacters=await validateCharactersRemote(candidatesStr,detectedLang||'');
+    }
+    if(Array.isArray(validatedCharacters)&&validatedCharacters.length){
+      scriptValidatedCharKeys=new Set(validatedCharacters.map(c=>normCharKeyForWhitelist(String(c))));
+    }
+    if(validatedCharacters.length){
+      const rawLines=normText.split(/\r?\n/);
+      const firstValidCharIndex=(()=>{
+        for(let i=0;i<rawLines.length;i++){
+          const line=rawLines[i].trim().toUpperCase();
+          if(!line)continue;
+          if(validatedCharacters.some(char=>line===String(char||'').trim().toUpperCase()))return i;
+        }
+        return 0;
+      })();
+      if(firstValidCharIndex>0){
+        const startIdx=Math.max(0,firstValidCharIndex-2);
+        const cleanedLines=rawLines.slice(startIdx);
+        workingNorm=await normalizeScreenplayWhitespaceAsync(cleanedLines.join('\n'));
+      }
+    }
+  }catch(e){
+    console.warn('[import] validate/slice',e);
+  }
+  scriptRawText=String(workingNorm||'');
+  const rawForHash=scriptRawText;
   const hKey=scriptContentHash(rawForHash);
   let fromCache=false;
   try{
@@ -5264,7 +5294,7 @@ async function runImportedScriptPipeline(n,normText,displayName){
     }
   }catch(_e){}
   if(!fromCache){
-    const rawLines=normText.split('\n').map(l=>l.trim()).filter(Boolean);
+    const rawLines=workingNorm.split('\n').map(l=>l.trim()).filter(Boolean);
     const useHeadFastStart=rawLines.length>CW_INSTANT_HEAD_MAX_RAW_LINES;
     let scheduledTail=false;
     if(useHeadFastStart){
@@ -5273,18 +5303,18 @@ async function runImportedScriptPipeline(n,normText,displayName){
         pdfScript=headRows;
         scheduledTail=true;
         headOnlyPending=true;
-        scheduleFullLightweightParseAfterHead(n,normText,_fastFullParseToken);
+        scheduleFullLightweightParseAfterHead(n,workingNorm,_fastFullParseToken);
       }
     }
     if(!scheduledTail){
-      if(normText.length>45000){
+      if(workingNorm.length>45000){
         const st=document.getElementById('setupStatus'+n);
         if(st)st.textContent='Analyse du script…';
       }
-      pdfScript=await parseScriptLightweightYielding(normText,true);
+      pdfScript=await parseScriptLightweightYielding(workingNorm,true);
     }
     if(!pdfScript||!pdfScript.length){
-      pdfScript=[{kind:'action',char:'',line:String(normText||'').slice(0,12000),isStageDirection:true,isSpoken:false,parenthetical:null}];
+      pdfScript=[{kind:'action',char:'',line:String(workingNorm||'').slice(0,12000),isStageDirection:true,isSpoken:false,parenthetical:null}];
     }
   }
   syncPdfScriptDebugMirror();
@@ -5294,24 +5324,9 @@ async function runImportedScriptPipeline(n,normText,displayName){
     initVoiceCountrySelect();
     initVoiceGrid();
   }
-  const chars=getChars();
-  if(chars.length>0){
-    document.getElementById('uploadZone'+n).style.display='none';
-    document.getElementById('uploadOk'+n).style.display='flex';
-    const fname=document.getElementById('fileName'+n);
-    if(fname&&(!fname.textContent||fname.textContent==='PDF'))fname.textContent=currentScriptName||'Script';
-    try{
-      const entered=await requestRehearsalStart({source:'import',importScreenN:n});
-      if(!entered&&!__cwSessionActive)finishPdfSetupUi(n,normText,[],detectedLang);
-    }catch(err){
-      console.error('[import] requestRehearsalStart',err);
-      if(!__cwSessionActive)finishPdfSetupUi(n,normText,[],detectedLang);
-    }
-  }else{
-    finishPdfSetupUi(n,normText,[],detectedLang);
-  }
+  finishPdfSetupUi(n,workingNorm,validatedCharacters,detectedLang);
   if(!headOnlyPending)schedulePersistScriptSnapshot();
-  const refineDelay=normText.length>120000?90000:normText.length>45000?18000:420;
+  const refineDelay=workingNorm.length>120000?90000:workingNorm.length>45000?18000:420;
   setTimeout(()=>scheduleOptionalBackgroundRefinement(n),refineDelay);
 }
 async function processTextImport(n){
@@ -5323,7 +5338,7 @@ async function processTextImport(n){
   currentScriptName='Texte collé';
   try{
     await runImportedScriptPipeline(n,norm,'Texte collé');
-    void fillScriptInputProgressive(n,norm);
+    void fillScriptInputProgressive(n,scriptRawText||norm);
   }catch(e){
     console.error(e);
     showToast('Erreur import texte',4000);
