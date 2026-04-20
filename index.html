@@ -1880,7 +1880,6 @@ function classifyWithValidatedChars(rawText,validChars){
     }
   }
   const res=[];
-  const sceneRx=/^(INT[\.\s\/]|EXT[\.\s\/]|SÉQUENCE\b|SEQUENCE\b|SCÈNE\b|SCENE\b)/i;
   const sceneRxAlt=/^\d{1,4}\s+[A-ZÀ-Ö].*\b(INT|EXT|JOUR|NUIT|SOIR|MATIN|DAY|NIGHT|AUBE|CRÉPUSCULE)\b/i;
   const cartonRx=/^(CARTON|FONDU|NOIR|GÉNÉRIQUE|GENERIQUE|FIN\b)/i;
   const pageRx=/^\d{1,4}\s*\.?\s*$/;
@@ -1890,13 +1889,13 @@ function classifyWithValidatedChars(rawText,validChars){
   for(let i=0;i<lines.length;i++){
     const l=lines[i].trim();
     if(!l){continue}
-    if(pageRx.test(l))continue;
-    if(sceneRx.test(l)||sceneRxAlt.test(l))firstSlugFound=true;
+    if(pageRx.test(l)&&!isSlugOrSceneHeadingLine(l))continue;
+    if(isSlugOrSceneHeadingLine(l)||sceneRxAlt.test(l))firstSlugFound=true;
     if(!firstSlugFound){
       if(l.length>1)res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
       continue;
     }
-    if(sceneRx.test(l)||sceneRxAlt.test(l)||cartonRx.test(l)){
+    if(isSlugOrSceneHeadingLine(l)||sceneRxAlt.test(l)||cartonRx.test(l)){
       res.push({kind:'slug',char:'',line:l,isStageDirection:false,isSpoken:false,parenthetical:null});
       cur=null;continue;
     }
@@ -4156,8 +4155,8 @@ function parsePDFScript(text){
     if(!l){cur=null;pendingParenthetical=null;continue}
     const nextPeek=nextNonEmptyLine(lines,idx);
     const prevPeek=prevNonEmptyLine(lines,idx);
-    if(pageRx.test(l))continue;
-    if(sceneRx.test(l)){
+    if(pageRx.test(l)&&!isSlugOrSceneHeadingLine(l))continue;
+    if(isSlugOrSceneHeadingLine(l)||sceneRx.test(l)){
       pdfAppendContext(res,LINE_TYPE.SLUG,l);
       cur=null;
       pendingParenthetical=null;
@@ -4615,6 +4614,9 @@ const _PAGE_LINE=/^\d{1,4}\s*\.?\s*$/;
 function isSlugOrSceneHeadingLine(line){
   const l=String(line||'').trim();
   if(!l)return false;
+  // Numéro de scène seul (ex. Fantômas « 1890 ») ou « 1890 PARIS » — avant exclusion page
+  if(/^\d+$/.test(l)&&l.length>=3)return true;
+  if(/^\d+\s+[A-ZÀ-Ö]/.test(l))return true;
   if(_PAGE_LINE.test(l))return false;
   if(/^(?:\d{1,3}[A-Za-z]?\s*\.\s*)(?:INT\.?|EXT\.?|INT\/EXT|INT\/|EXT\/|I\/E\.?)\b/i.test(l))return true;
   if(/^(?:\d{1,3}[A-Za-z]?\s+)(?:INT\.|EXT\.|INT\/|EXT\/|I\/E\.)\b/i.test(l))return true;
@@ -4677,8 +4679,8 @@ function parseScreenplaySmartLocal(rawText){
   const cartonRx=/^(CARTON|FONDU|NOIR|GÉNÉRIQUE|GENERIQUE)\b/i;
   for(let i=0;i<rawLines.length;i++){
     const l=rawLines[i];
-    if(_PAGE_LINE.test(l))continue;
-    if(sceneRx.test(l)||cartonRx.test(l)){firstSlug=true;res.push({kind:'slug',char:'',line:l,isStageDirection:false,isSpoken:false,parenthetical:null});cur=null;continue}
+    if(_PAGE_LINE.test(l)&&!isSlugOrSceneHeadingLine(l))continue;
+    if(isSlugOrSceneHeadingLine(l)||sceneRx.test(l)||cartonRx.test(l)){firstSlug=true;res.push({kind:'slug',char:'',line:l,isStageDirection:false,isSpoken:false,parenthetical:null});cur=null;continue}
     if(!firstSlug){if(l.length>1)res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});continue}
     if(lineIsParentheticalOnly(l)){res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:l.trim()});continue}
     const lead=extractLeadingParenthetical(l);
@@ -4738,7 +4740,7 @@ function buildLightweightParseQueue(rawLines){
   const out=[];
   for(const l of rawLines){
     if(!l)continue;
-    if(_PAGE_LINE.test(l))continue;
+    if(_PAGE_LINE.test(l)&&!isSlugOrSceneHeadingLine(l))continue;
     if(SCENE_HEAD.test(l)||lineIsParentheticalOnly(l)||!/\(/.test(l)){
       out.push({segment:'logicalLine',text:l});
       continue;
@@ -4780,7 +4782,7 @@ function createLightweightLogicalClassifier(){
   return function classifyLogicalLine(state,line){
     const res=state.rows;
     const l=line;
-    if(_PAGE_LINE.test(l))return;
+    if(_PAGE_LINE.test(l)&&!isSlugOrSceneHeadingLine(l))return;
     if(isSlugOrSceneHeadingLine(l)){
       res.push({kind:'slug',char:'',line:l,isStageDirection:false,isSpoken:false,parenthetical:null});
       state.curChar=null;
