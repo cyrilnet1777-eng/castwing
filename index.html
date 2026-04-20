@@ -1782,10 +1782,6 @@ function fallbackValidatedCharacterNames(candidateNames){
 async function validateCharactersRemote(candidatesStr,lang){
   const candidates=candidatesStr||'';
   console.log('[API] calling validate-characters with',candidates);
-  if(!String(candidates).trim()){
-    console.log('[API] skip fetch — empty candidates payload');
-    return[];
-  }
   _pdfParseAbort=new AbortController();
   const ctrl=_pdfParseAbort;
   const tm=setTimeout(()=>ctrl.abort(),15000);
@@ -1793,7 +1789,7 @@ async function validateCharactersRemote(candidatesStr,lang){
     const rsp=await fetch('/api/validate-characters',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({candidates:candidatesStr,lang:lang||''}),
+      body:JSON.stringify({candidates:String(candidates).trim(),lang:lang||''}),
       signal:ctrl.signal
     });
     console.log('[API] response status',rsp.status);
@@ -5380,11 +5376,11 @@ async function runImportedScriptPipeline(n,normText,displayName){
   let validatedCharacters=[];
   const candidateNames=extractCandidateCharacterNames(normText);
   const candidatesStrFormatted=extractCandidateCharacters(normText);
-  const candidatesPayload=(candidatesStrFormatted&&candidatesStrFormatted.trim())?candidatesStrFormatted:candidateNames.join(', ');
+  const candidatesPayload=(candidatesStrFormatted&&candidatesStrFormatted.trim())
+    ?candidatesStrFormatted
+    :candidateNames.join(', ');
   try{
-    if(String(candidatesPayload||'').trim()){
-      validatedCharacters=await validateCharactersRemote(candidatesPayload,detectedLang||'');
-    }
+    validatedCharacters=await validateCharactersRemote(candidatesPayload,detectedLang||'');
     if(!validatedCharacters||!validatedCharacters.length){
       validatedCharacters=fallbackValidatedCharacterNames(candidateNames);
     }
@@ -5404,9 +5400,9 @@ async function runImportedScriptPipeline(n,normText,displayName){
           if(!line)continue;
           if(validatedCharacters.some(char=>line===String(char||'').trim().toUpperCase()))return i;
         }
-        return 0;
+        return-1;
       })();
-      if(firstValidCharIndex>0){
+      if(firstValidCharIndex>=0){
         const startIdx=Math.max(0,firstValidCharIndex-2);
         const cleanedLines=rawLines.slice(startIdx);
         workingNorm=await normalizeScreenplayWhitespaceAsync(cleanedLines.join('\n'));
@@ -5414,6 +5410,25 @@ async function runImportedScriptPipeline(n,normText,displayName){
     }
   }catch(e){
     console.warn('[import] validate/slice',e);
+    try{
+      validatedCharacters=fallbackValidatedCharacterNames(candidateNames);
+      if(validatedCharacters&&validatedCharacters.length){
+        scriptValidatedCharKeys=new Set(validatedCharacters.map(c=>normCharKeyForWhitelist(String(c))));
+        const rawLines=normText.split(/\r?\n/);
+        const firstValidCharIndex=(()=>{
+          for(let i=0;i<rawLines.length;i++){
+            const line=rawLines[i].trim().toUpperCase();
+            if(!line)continue;
+            if(validatedCharacters.some(char=>line===String(char||'').trim().toUpperCase()))return i;
+          }
+          return-1;
+        })();
+        if(firstValidCharIndex>=0){
+          const startIdx=Math.max(0,firstValidCharIndex-2);
+          workingNorm=await normalizeScreenplayWhitespaceAsync(rawLines.slice(startIdx).join('\n'));
+        }
+      }
+    }catch(_e2){}
   }
   scriptRawText=String(workingNorm||'');
   const rawForHash=scriptRawText;
