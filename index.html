@@ -1895,6 +1895,11 @@ async function classifyLinesViaAPI(rawText,validChars,lang){
   return final;
 }
 
+function isActionLine(text){
+  const t=String(text||'');
+  const actionVerbs=/^(il|elle|on|ils|elles)\s+|\s+(entre|ferme|se retourne|s'approche|se jette|regarde|sort|prend|pose|s'assoit|se lève|sourit|hausse|marche|court|s'arrête|ouvre|monte|descend|passe|reste|devient|semble|paraît|continue|commence|finit|reprend|ajoute|répond|crie|chuchote|murmure|dit|fait|voit|entend|sent|pense|croit|sait|veut|peut|doit|va|vient|arrive|part)/i;
+  return actionVerbs.test(t)||t.includes(' :')||t.includes(' —');
+}
 function classifyWithValidatedChars(rawText,validChars){
   const charSet=new Set(validChars.map(c=>c.toUpperCase().trim()));
   // Pre-process: split lines that mix dialogue and stage directions
@@ -1952,23 +1957,18 @@ function classifyWithValidatedChars(rawText,validChars){
       if(charSet.has(sp.toUpperCase())){
         cur=sp;
         const dial=inlineMatch[2].trim();
-        if(dial)res.push({kind:'dialogue',char:cur,line:dial,isStageDirection:false,isSpoken:true,parenthetical:null});
+        if(dial){
+          if(isActionLine(dial)){
+            res.push({kind:'action',char:'',line:dial,isStageDirection:true,isSpoken:false,parenthetical:null});
+          }else{
+            res.push({kind:'dialogue',char:cur,line:dial,isStageDirection:false,isSpoken:true,parenthetical:null});
+          }
+        }
         continue;
       }
     }
     if(cur&&l.length>1){
-      // Detect stage directions mixed into dialogue blocks
-      const firstWord=l.split(/[\s,.'!?]+/)[0];
-      const isThirdPerson=/^(il|elle|ils|elles|on|celui|celle|ceux)\s/i.test(l);
-      const startsWithArticleNoun=/^(l'|le |la |les |un |une |des |du |au |aux |son |sa |ses |leur |leurs |ce |cet |cette |ces )/i.test(l);
-      const startsWithCharName=firstWord.length>1&&charSet.has(firstWord.toUpperCase());
-      const startsWithEtAction=/^et\s+(il|elle|se|le|la|les|s'|ferme|ouvre|sort|entre|prend|pose|quitte)/i.test(l);
-      const actionVerbs=/\b(regarde|prend|ouvre|ferme|sort|entre|quitte|marche|court|tombe|frappe|attrape|lance|pose|lève|assied|tourne|embrasse|rient|pleure|soupire|recule|avance|approche|éloigne|monte|descend|arrive|part|revient|disparaît|apparaît|s'approche|se jette|se lève|se tourne|se retourne|s'en va|s'arrête|s'assoit|se retourne|se dirige|se précipite|s'écroule|se penche|se redresse)\b/i;
-      const hasActionVerb=actionVerbs.test(l);
-      const hasFirstPerson=/\b(je |j'|tu |moi|toi|nous |vous |mon |ma |mes |te |me |m'|t')\b/i.test(l);
-      const isNarrative=(isThirdPerson||startsWithArticleNoun||startsWithEtAction)&&hasActionVerb;
-      const isActionLine=startsWithCharName||(isNarrative&&!hasFirstPerson);
-      if(isActionLine){
+      if(isActionLine(l)){
         res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
         continue;
       }
@@ -4843,7 +4843,12 @@ function createLightweightLogicalClassifier(){
     if(lead.paren&&lead.rest&&lead.rest.length){
       if(state.curChar){
         res.push({kind:'action',char:'',line:lead.paren,isStageDirection:true,isSpoken:false,parenthetical:lead.paren});
-        res.push({kind:'dialogue',char:state.curChar,line:lead.rest,isStageDirection:false,isSpoken:true,parenthetical:null});
+        const restBody=lead.rest.trim();
+        if(isActionLine(restBody)){
+          res.push({kind:'action',char:'',line:restBody,isStageDirection:true,isSpoken:false,parenthetical:null});
+        }else{
+          res.push({kind:'dialogue',char:state.curChar,line:lead.rest,isStageDirection:false,isSpoken:true,parenthetical:null});
+        }
       }else{
         res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
       }
@@ -4858,7 +4863,12 @@ function createLightweightLogicalClassifier(){
         return;
       }
       state.curChar=name;
-      res.push({kind:'dialogue',char:name,line:inl[2].trim(),isStageDirection:false,isSpoken:true,parenthetical:null});
+      const dial=inl[2].trim();
+      if(isActionLine(dial)){
+        res.push({kind:'action',char:'',line:dial,isStageDirection:true,isSpoken:false,parenthetical:null});
+      }else{
+        res.push({kind:'dialogue',char:name,line:dial,isStageDirection:false,isSpoken:true,parenthetical:null});
+      }
       return;
     }
     if(mostlyCapsCue(l)){
@@ -4872,7 +4882,11 @@ function createLightweightLogicalClassifier(){
       return;
     }
     if(state.curChar){
-      res.push({kind:'dialogue',char:state.curChar,line:l,isStageDirection:false,isSpoken:true,parenthetical:null});
+      if(isActionLine(l)){
+        res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
+      }else{
+        res.push({kind:'dialogue',char:state.curChar,line:l,isStageDirection:false,isSpoken:true,parenthetical:null});
+      }
     }else{
       res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
     }
