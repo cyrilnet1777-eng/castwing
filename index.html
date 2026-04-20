@@ -3580,15 +3580,20 @@ function initDragDrop(zoneId){
   const n=parseInt(zoneId.replace('uploadZone',''));
   ['dragenter','dragover'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();zone.classList.add('dragover')}));
   ['dragleave','drop'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();zone.classList.remove('dragover')}));
-  zone.addEventListener('drop',e=>{const f=e.dataTransfer.files;if(f.length>0&&f[0].type==='application/pdf')processPDF(n,f[0]);else showToast('Seuls les PDF sont acceptés')});
+  zone.addEventListener('drop',e=>{
+    const f=e.dataTransfer.files;
+    if(f.length>0&&f[0].type==='application/pdf'){
+      void (async()=>{await clearScriptCache();await processPDF(n,f[0]);})();
+    }else showToast('Seuls les PDF sont acceptés');
+  });
 }
 
-function handlePDFInput(n,input){
+async function handlePDFInput(n,input){
   const f=input.files[0];if(!f)return;
   const isPdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name||'');
   if(!isPdf){showToast('Seuls les fichiers PDF sont acceptés',4000);input.value='';return}
-  /* IndexDB parse + snapshot vidés au début de processPDF */
-  void processPDF(n,f);
+  await clearScriptCache();
+  await processPDF(n,f);
 }
 function openPdfPicker(n){
   const el=document.getElementById('pdfInput'+n);
@@ -3596,7 +3601,7 @@ function openPdfPicker(n){
   if(el)el.click();
 }
 async function newScriptReset(n){
-  await cwClearParseCacheBeforeImport();
+  await clearScriptCache();
   clearPDF(n);
 }
 
@@ -4087,7 +4092,6 @@ function stripPdfWatermarkNoise(text,pageCount,fileName){
 }
 
 async function processPDF(n,file){
-  await cwClearParseCacheBeforeImport();
   currentScriptName=file.name||'PDF';
   takeNumber=0;
   _pdfParseCancelled=false;
@@ -4487,37 +4491,44 @@ async function cwIdbDel(key){
     });
   }catch(_e){}
 }
-/** Supprime toutes les entrées dont la clé commence par prefix (ex. caches parse). */
-async function cwIdbClear(prefix){
-  const p=String(prefix||'');
-  if(!p)return;
+/**
+ * Vide le cache script (IndexedDB clés cw.parse.* / cw.script.*) + localStorage + snapshot persistant.
+ * Utilise la base réelle du projet (castwing-script-db / store « kv »).
+ */
+async function clearScriptCache(){
+  if(typeof indexedDB==='undefined')return;
+  const prefixes=['cw.parse.','cw.script.'];
   try{
     const db=await _cwOpenDb();
-    await new Promise((res,rej)=>{
+    if(!db.objectStoreNames.contains(CW_IDB_STORE)){
+      try{
+        localStorage.removeItem('cw.lastPdfHash');
+        localStorage.removeItem('cw.lastPdfName');
+      }catch(_e){}
+      await cwIdbDel('cw.snapshot.v1');
+      return;
+    }
+    await new Promise(resolve=>{
       const tx=db.transaction(CW_IDB_STORE,'readwrite');
-      tx.oncomplete=()=>res();
-      tx.onerror=()=>rej(tx.error);
-      const store=tx.objectStore(CW_IDB_STORE);
-      const rq=store.openCursor();
-      rq.onerror=()=>rej(rq.error);
-      rq.onsuccess=()=>{
-        const cur=rq.result;
-        if(cur){
-          const k=cur.key;
-          if(typeof k==='string'&&k.startsWith(p))store.delete(k);
-          cur.continue();
-        }
+      tx.oncomplete=()=>{
+        try{
+          localStorage.removeItem('cw.lastPdfHash');
+          localStorage.removeItem('cw.lastPdfName');
+        }catch(_e){}
+        console.log('[cache] cleared');
+        resolve();
       };
+      tx.onerror=()=>resolve();
+      const store=tx.objectStore(CW_IDB_STORE);
+      prefixes.forEach(prefix=>{
+        try{
+          const range=IDBKeyRange.bound(prefix,prefix+'\uffff',false,false);
+          store.delete(range);
+        }catch(_e){}
+      });
     });
+    await cwIdbDel('cw.snapshot.v1');
   }catch(_e){}
-}
-async function cwClearParseCacheBeforeImport(){
-  await cwIdbClear('cw.parse.');
-  try{
-    localStorage.removeItem('cw.lastPdfHash');
-    localStorage.removeItem('cw.lastPdfName');
-  }catch(_e){}
-  await cwIdbDel('cw.snapshot.v1');
 }
 /** Hash stable du contenu (texte canonique) pour dédoublonner imports identiques */
 function scriptContentHash(raw){
@@ -5444,7 +5455,7 @@ async function processTextImport(n){
   scriptRawText=raw;
   const norm=await normalizeScreenplayWhitespaceAsync(raw);
   if(norm.length<24){showToast('Colle au moins quelques lignes de scénario',3500);return}
-  await cwClearParseCacheBeforeImport();
+  await clearScriptCache();
   takeNumber=0;
   currentScriptName='Texte collé';
   try{
