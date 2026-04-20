@@ -685,6 +685,8 @@ let autoAdvanceTimer=null,lastAutoSpokenIndex=-1,activeSpeechToken=0;
 let ttsAudio=null,vad=null,lastTTSEndTs=0;
 let userScrolledUp=false,_lastPrompterScrollTop=0,_scrollResumeTimer=null;
 let takeNumber=0,currentScriptName='';
+/** Set of uppercase accent-stripped keys from last /api/validate-characters — never locally "rejected" */
+let scriptValidatedCharKeys=null;
 const LINE_TYPE={SLUG:'slug',ACTION:'action',DIALOGUE:'dialogue'};
 const PARSER_DEBUG=true;
 try{
@@ -3908,6 +3910,7 @@ async function processPDF(n,file){
   showLoadingCancel();
   startFakeProgress();
   try{
+    scriptValidatedCharKeys=null;
     let buf;
     if(typeof file.arrayBuffer==='function')buf=await file.arrayBuffer();
     else buf=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsArrayBuffer(file)});
@@ -3932,6 +3935,10 @@ async function processPDF(n,file){
     const validChars=await validateCharactersRemote(candidatesStr,detectedLang);
     if(_pdfParseCancelled){setLoading(false);return}
     console.info('[parse] validated characters:',validChars);
+    if(validChars&&validChars.length){
+      scriptValidatedCharKeys=new Set(validChars.map(c=>normCharKeyForWhitelist(String(c))));
+      console.info('[parse] whitelist (validated) size:',scriptValidatedCharKeys.size,'— local filters skip these names');
+    }
     let parsedScript;
     if(validChars.length>0){
       setLoadingMsg('Classification des répliques…');
@@ -4189,6 +4196,14 @@ function parsePDFScript(text){
   }
   return res;
 }
+function normCharKeyForWhitelist(s){
+  try{
+    const t=String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\u2019/g,"'");
+    return t.toUpperCase().trim().replace(/\s+/g,' ');
+  }catch(_e){
+    return String(s||'').toUpperCase().trim();
+  }
+}
 function sanitizeCharacterNames(script){
   const ALWAYS_BAD=new Set(['OUI','NON','MINUTES','ABSOLUMENT','ÉCRAN','CONTINUED','CONT','CONT\'D','CUT','FADE','MORE','YES','NO','NOT','MERDE','VERNIS','LABO','LOUVRE','POURQUOI','PUTAIN','BRAVO','FINALEMENT','ABSENTE','SCANDALISÉE','CINGLÉS','MONSIEUR','MADAME','STOP','SILENCE','ATTENTION','PARDON','MERCI','VOILÀ','ALLEZ','ENFIN','EXACTEMENT','ÉVIDEMMENT','PARFAIT','SUPER','GENIAL','GÉNIAL','HORRIBLE','IMPOSSIBLE','INCROYABLE','JAMAIS','TOUJOURS','MAINTENANT','ENSEMBLE','DEHORS','DEDANS','DESSUS','DESSOUS','DEVANT','DERRIÈRE','PARTOUT','AILLEURS','SOUDAIN','BREF','HÉLAS','TANT PIS','TANT MIEUX']);
   const PRONOUNS=new Set(['JE','TU','IL','ELLE','ON','NOUS','VOUS','ILS','ELLES','SE','TE','ME','MON','TON','SON','MA','TA','SA','MES','TES','SES','CE','CET','CETTE','CES','LE','LA','LES','UN','UNE','DES','DU','DE','AU','AUX','EN','Y','QUI','QUE','QUOI','DONT','OÙ']);
@@ -4201,6 +4216,7 @@ function sanitizeCharacterNames(script){
   const bad=new Set();
   for(const name of Object.keys(charCounts)){
     const trimmed=name.trim();
+    if(scriptValidatedCharKeys&&scriptValidatedCharKeys.has(normCharKeyForWhitelist(trimmed)))continue;
     const words=trimmed.split(/\s+/);
     if(ALWAYS_BAD.has(trimmed.toUpperCase())){bad.add(name);continue}
     if(words.length>5){bad.add(name);continue}
