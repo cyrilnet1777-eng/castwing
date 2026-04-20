@@ -1285,29 +1285,31 @@ async function handleClassifyLines(request, env) {
   try { body = await request.json(); } catch (_) {
     return json({ ok: false, error: "invalid_json" }, 400);
   }
-  const lines = Array.isArray(body.lines) ? body.lines.slice(0, 200) : [];
+  /** Keep chunks small: large prompts + 200-line outputs hit timeouts and truncation. */
+  const MAX_LINES = 55;
+  const lines = Array.isArray(body.lines) ? body.lines.slice(0, MAX_LINES) : [];
   const characters = Array.isArray(body.characters) ? body.characters : [];
   const lang = String(body.lang || "fr").slice(0, 10);
   if (!lines.length) return json({ ok: true, classified: [] });
 
+  let charList = characters.join(", ");
+  if (charList.length > 6000) charList = charList.slice(0, 6000) + " …";
+
   const numberedLines = lines.map((l, i) => `${i}: ${l}`).join("\n");
-  const charList = characters.join(", ");
 
   const prompt = `You are a screenplay classification expert. The validated character names are: ${charList}
 
-Below are lines from a ${lang} screenplay. For each line number, respond with ONLY:
-D:CHARACTER_NAME if it's dialogue (words the character actually SPEAKS)
-A if it's action/stage direction (describes what happens, not spoken)
-S if it's a scene heading/slug
+Below are ${lines.length} lines from a ${lang} screenplay. For EACH line index from 0 to ${lines.length - 1}, output EXACTLY one classification (same number of lines as input):
+D:CHARACTER_NAME — dialogue (spoken words only; CHARACTER must be one of the validated names or the best match)
+A — action / stage direction (not spoken)
+S — scene heading / slug (INT./EXT./SCÈNE…)
 
 Rules:
-- Lines describing physical actions (enters, exits, looks, takes, opens, etc.) are ALWAYS action (A), even if they follow a character name
-- Lines with 3rd person narration (Il/Elle/Ils + verb) are action (A)
-- Lines starting with articles (L'/Le/La/Les/Un/Une) + noun + action verb are action (A)
-- Only actual spoken words are dialogue (D)
-- If a line contains BOTH dialogue and action, classify as D with only the dialogue part
+- Physical actions (enters, exits, looks…) → A
+- Third-person narration (Il/Elle + verb) → A
+- Only spoken lines → D with speaker name
 
-Respond in this exact format, one per line:
+Output format ONLY (no prose, no markdown fences):
 0:D:JUVE
 1:A
 2:S
@@ -1315,46 +1317,69 @@ Respond in this exact format, one per line:
 Lines:
 ${numberedLines}`;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort("timeout"), 30000);
-  try {
-    const rsp = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      signal: controller.signal,
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": String(env.ANTHROPIC_API_KEY),
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 4096,
-        temperature: 0,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    const data = await rsp.json().catch(() => ({}));
-    if (!rsp.ok) return json({ ok: false, error: `http_${rsp.status}` }, 502);
-    const text = Array.isArray(data.content)
-      ? data.content.filter(x => x && x.type === "text").map(x => x.text || "").join("")
-      : "";
-    
-    const classified = [];
-    for (const line of text.split("\n")) {
-      const m = line.match(/^(\d+):(D):(.+)$/) || line.match(/^(\d+):(A|S)$/);
-      if (m) {
-        const idx = parseInt(m[1]);
-        const type = m[2];
-        const char = m[3] ? m[3].trim() : "";
-        classified[idx] = { type, char };
+  const apiKey = String(env.ANTHROPIC_API_KEY).trim().replace(/^['"]|['"]$/g, "").replace(/^Bearer\s+/i, "");
+  const payloadBase = {
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 8192,
+    temperature: 0,
+    messages: [{ role: "user", content: prompt }],
+  };
+
+  let lastErr = "";
+  let lastDetail = "";
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const controller = new AbortController();
+    /** Stay under typical Workers HTTP wall-clock limits; small chunks keep Haiku fast. */
+    const timeout = setTimeout(() => controller.abort("timeout"), 75000);
+    try {
+      const rsp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify(payloadBase),
+      });
+      const data = await rsp.json().catch(() => ({}));
+      if (!rsp.ok) {
+        lastErr = `anthropic_${rsp.status}`;
+        lastDetail = toText(data.error || data.message || data.type || "");
+        clearTimeout(timeout);
+        if (rsp.status === 429 || rsp.status >= 500) {
+          await new Promise((r) => setTimeout(r, 800 * attempt));
+          continue;
+        }
+        return json({ ok: false, error: lastErr, detail: lastDetail.slice(0, 500) }, 502);
       }
+      let text = Array.isArray(data.content)
+        ? data.content.filter((x) => x && x.type === "text").map((x) => x.text || "").join("")
+        : "";
+      text = text.replace(/^```[\w]*\n?/m, "").replace(/\n?```$/m, "").trim();
+
+      const classified = new Array(lines.length).fill(null);
+      for (const raw of text.split("\n")) {
+        const line = raw.trim();
+        if (!line) continue;
+        const m = line.match(/^(\d+)\s*:\s*(D)\s*:\s*(.+)$/i) || line.match(/^(\d+)\s*:\s*(A|S)$/i);
+        if (m) {
+          const idx = parseInt(m[1], 10);
+          const type = m[2].toUpperCase();
+          const char = m[3] ? String(m[3]).trim() : "";
+          if (idx >= 0 && idx < lines.length) classified[idx] = { type, char };
+        }
+      }
+      clearTimeout(timeout);
+      return json({ ok: true, classified });
+    } catch (err) {
+      clearTimeout(timeout);
+      lastErr = err && err.name === "AbortError" ? "timeout" : "exception";
+      lastDetail = toText(err && err.message);
+      await new Promise((r) => setTimeout(r, 600 * attempt));
     }
-    return json({ ok: true, classified });
-  } catch (err) {
-    return json({ ok: false, error: "timeout_or_exception" }, 502);
-  } finally {
-    clearTimeout(timeout);
   }
+  return json({ ok: false, error: lastErr || "classify_failed", detail: lastDetail.slice(0, 500) }, 502);
 }
 
 /* =========================================================
@@ -1420,7 +1445,7 @@ export default {
     if (url.pathname === "/api/admin/list-invites" && request.method === "GET") return handleListInvites(request, env);
     if (url.pathname === "/api/admin/revoke-invite" && request.method === "POST") return handleRevokeInvite(request, env);
 
-    const apiPaths = ["/api/tts", "/api/parse-script", "/api/validate-characters", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/consume", "/api/invite/redeem", "/api/admin/"];
+    const apiPaths = ["/api/tts", "/api/parse-script", "/api/validate-characters", "/api/classify-lines", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/consume", "/api/invite/redeem", "/api/admin/"];
     if (apiPaths.some(p => url.pathname.startsWith(p))) {
       return json({ error: "Method not allowed" }, 405);
     }

@@ -1644,15 +1644,15 @@ function setLoadingMsg(msg){const el=document.getElementById('loadingMsg');if(el
 
 async function classifyLinesViaAPI(rawText,validChars,lang){
   const allLines=rawText.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
-  const CHUNK=200;
+  const CHUNK=50;
   const chunks=[];
   for(let i=0;i<allLines.length;i+=CHUNK){
     chunks.push(allLines.slice(i,i+CHUNK));
   }
-  console.info('[classify-api] total lines:',allLines.length,'chunks:',chunks.length);
+  console.info('[classify-api] total lines:',allLines.length,'chunks:',chunks.length,'(size '+CHUNK+')');
   
   const results=new Array(allLines.length).fill(null);
-  const PARALLEL=5;
+  const PARALLEL=2;
   
   for(let batch=0;batch<chunks.length;batch+=PARALLEL){
     if(_pdfParseCancelled)return null;
@@ -1666,14 +1666,20 @@ async function classifyLinesViaAPI(rawText,validChars,lang){
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({lines:chunk,characters:validChars,lang:lang||'fr'})
-      }).then(r=>r.json()).then(data=>{
-        if(data.ok&&data.classified){
-          for(let i=0;i<chunk.length;i++){
-            const c=data.classified[i];
-            if(c){
+      }).then(async r=>{
+        let data={};
+        try{data=await r.json()}catch(_e){}
+        if(!r.ok||!data.ok){
+          console.warn('[classify-api] chunk',chunkIdx,'HTTP',r.status,data.error||'',data.detail||'');
+          return;
+        }
+        const classified=data.classified;
+        if(!Array.isArray(classified))return;
+        for(let i=0;i<chunk.length;i++){
+          const c=classified[i];
+          if(c&&c.type){
               const lineText=chunk[i];
               const isCharNameOnly=c.type==='D'&&c.char&&lineText.replace(/[\s:–—\-]+$/,'').toUpperCase().trim()===c.char.toUpperCase().trim();
-              // Strip character name prefix from dialogue text
               let cleanLine=lineText;
               if(c.type==='D'&&c.char){
                 const rx=new RegExp('^'+c.char.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*[:\\-–—]?\\s*','i');
@@ -1687,7 +1693,6 @@ async function classifyLinesViaAPI(rawText,validChars,lang){
                 isSpoken:!isCharNameOnly&&c.type==='D',
                 parenthetical:null
               };
-            }
           }
         }
       }).catch(err=>{
