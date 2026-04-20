@@ -212,13 +212,22 @@ input[type="file"]{display:none}
 .script-review-inner h3{font-size:1.15rem;margin-bottom:.35rem;color:#fff}
 .script-review-inner .sr-sub{font-size:.78rem;color:rgba(255,255,255,.45);margin-bottom:.75rem;line-height:1.4}
 .script-review-inner .sr-meta{font-size:.72rem;color:rgba(127,227,163,.65);margin-bottom:.6rem}
+.script-review-toolbar{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.55rem;align-items:center}
+.script-review-inner .sr-progress-hint{font-size:.75rem;color:rgba(255,255,255,.55);margin:-.15rem 0 .5rem;padding:.35rem .5rem;background:rgba(0,0,0,.25);border-radius:8px;border:1px solid rgba(82,183,136,.12)}
+.sr-btn-ok:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.4)}
+.script-review-toolbar .sr-btn-fast,.script-review-toolbar .sr-btn-showall{padding:.38rem .6rem;font-size:.72rem;border-radius:8px;border:1px solid rgba(82,183,136,.35);background:rgba(45,106,79,.35);color:#eaf5ef;cursor:pointer;font-family:inherit;font-weight:600}
+.script-review-toolbar .sr-btn-showall{border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:rgba(255,255,255,.82)}
+.script-review-overlay.sr-focus-mode .sr-row.sr-auto-accepted{display:none!important}
 .script-review-list{display:flex;flex-direction:column;gap:.45rem;max-height:min(52vh,420px);overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:4px}
 .sr-row{display:grid;grid-template-columns:88px 1fr auto;gap:.35rem .5rem;align-items:start;background:rgba(22,28,26,.95);border:1px solid rgba(82,183,136,.15);border-radius:10px;padding:.45rem .5rem;font-size:.8rem}
+.sr-row.sr-low-conf{background:rgba(210,140,90,.09);border-color:rgba(230,160,110,.28)}
+.sr-row.sr-auto-accepted:not(.sr-low-conf){opacity:.82;border-color:rgba(82,183,136,.28)}
+.sr-conf-badge{font-size:.58rem;color:rgba(255,255,255,.35);align-self:flex-end;padding-top:.2rem}
 .sr-row.slug{opacity:.95;border-color:rgba(156,163,175,.25)}
 .sr-kind{padding:.25rem .2rem;font-size:.68rem;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:#161d1b;color:#c8ced0;max-width:88px}
 .sr-char{width:100%;padding:.28rem .35rem;font-size:.72rem;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:#0e1311;color:#fff}
 .sr-text{width:100%;min-height:2.4rem;padding:.35rem .45rem;font-size:.78rem;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:#0c0f0e;color:#e8e8e8;resize:vertical;font-family:inherit;line-height:1.35}
-.sr-tools{display:flex;flex-direction:column;gap:.25rem;align-items:stretch}
+.sr-tools{display:flex;flex-direction:column;gap:.25rem;align-items:stretch;min-width:5.2rem}
 .sr-tools button{padding:.22rem .35rem;font-size:.65rem;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:rgba(40,48,46,.9);color:#c8ced0;cursor:pointer;white-space:nowrap}
 .sr-tools button:active{background:rgba(60,72,68,.95)}
 .sr-flag{display:flex;align-items:center;gap:.25rem;font-size:.65rem;color:rgba(255,255,255,.45);white-space:nowrap}
@@ -314,16 +323,12 @@ input[type="file"]{display:none}
 .pay-lock{font-size:.76rem;color:#95bbb0;margin-top:.35rem}
 .emotion-locked{opacity:.55}
 .emotion-locked option[value="neutral"]{opacity:1}
-#creditBadge{display:none!important}
-#zelda-chrono{display:none!important}
-
 @media(max-width:767px){
 .video-area{height:50vh;height:50dvh}
 .video-container video{object-fit:cover}
 .prompter-area{position:fixed;bottom:0;left:0;right:0;height:50vh;height:50dvh;margin-top:0;max-width:none;background:#000;z-index:55;padding-bottom:2rem;border-top:2px solid #222}
 .video-controls{display:none!important}
 .session-bottom,.ai-panel,.vctrl-flip{display:none!important}
-#creditBadge{display:none!important}
 .session-top .status{display:none!important}
 .mob-controls-row{display:flex!important}
 .mob-main-btn{display:flex!important}
@@ -404,6 +409,13 @@ input[type="file"]{display:none}
 .cw-burger-link:hover{background:rgba(127,227,163,.08)}
 #zelda-chrono{position:fixed;top:12px;right:108px;width:56px;height:56px;z-index:1005;pointer-events:none;display:none}
 #zelda-chrono svg{display:block}
+.session-time-rail{position:fixed;top:38px;right:12px;width:min(168px,38vw);height:4px;border-radius:6px;background:rgba(255,255,255,.1);overflow:hidden;z-index:999;pointer-events:none;display:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+.session-time-rail-fill{display:block;height:100%;width:100%;background:linear-gradient(90deg,#52B788,#39E7D0);transform-origin:left center;transform:scaleX(1);transition:transform .45s linear,background .25s ease}
+.session-time-rail.low .session-time-rail-fill{background:linear-gradient(90deg,#e8a055,#d96f6f)}
+.session-top .status span#statusText{font-weight:600;letter-spacing:.02em;color:rgba(232,248,243,.92)}
+.no-video{font-size:.82rem;font-weight:600;letter-spacing:.03em;color:rgba(180,210,200,.88);backdrop-filter:blur(4px);background:rgba(8,22,18,.35)!important}
+.status-dot.waiting{animation:pulse-wait 1.8s ease-in-out infinite}
+@keyframes pulse-wait{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
 </style>
 </head>
 <body>
@@ -467,11 +479,11 @@ input[type="file"]{display:none}
 <div id="home" class="screen active">
   <div class="home-inner">
     <div class="logo"><h1>Cast<span class="logo-rec-dot">REC</span><span>wing</span></h1></div>
-    <p id="homeHook" style="text-align:center;font-size:.85rem;color:#8FBCA8;font-weight:500;margin:-.2rem 0 .4rem">Your acting partner is always available.</p>
+    <p id="homeHook" style="text-align:center;font-size:.85rem;color:#8FBCA8;font-weight:500;margin:-.2rem 0 .4rem">Ton partenaire de jeu, toujours disponible.</p>
     <div class="home-cards">
       <div class="hcard" onclick="goSetupAi()">
         <div class="hcard-icon navy">🦾</div>
-        <div class="hcard-text"><h3 id="homeSoloTitle">Start a scene</h3><p id="homeSoloDesc">Solo with AI or manual reading</p></div>
+        <div class="hcard-text"><h3 id="homeSoloTitle">Commencer une scène</h3><p id="homeSoloDesc">Solo avec l'IA ou lecture manuelle</p></div>
       </div>
       <div class="hcard" onclick="handlePartnerClick()">
         <div class="hcard-icon blue">🎭</div>
@@ -578,6 +590,7 @@ input[type="file"]{display:none}
     <div class="upload-ok" id="uploadOk1" style="display:none"><span>✓</span><span class="fname" id="fileName1"></span><button class="clear-btn" onclick="clearPDF(1)">✕</button></div>
     <input type="file" id="pdfInput1" accept=".pdf,application/pdf,*/*" onchange="handlePDFInput(1,this)">
     <div class="setup-status" id="setupStatus1"></div>
+    <button type="button" class="btn btn-secondary btn-full" style="margin-top:.45rem;display:none;padding:.45rem;font-size:.78rem" onclick="openOptionalScriptReview(1)" id="optionalReviewBtn1">Affiner / vérifier le script…</button>
     <div class="nda-badge" id="ndaBadgeSetup"><svg viewBox="0 0 24 24"><path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zM9 6a3 3 0 0 1 6 0v2H9V6zm9 14H6V10h12v10zm-6-3a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg><span>Peer-to-peer · Aucun script stocké</span></div>
     <div id="charSection1" style="display:none;margin-top:1rem"><label id="myCharacterLabel1">Mon personnage</label><div class="char-grid" id="charGrid1"></div><div id="partnerAssignWrap1" style="display:none;margin-top:1rem"><label id="partnerReadsLabel1">IA lit les répliques de :</label><div class="char-grid partner-char-grid" id="partnerCharGrid1"></div><div class="mode-hint" id="partnerAssignHint1"></div></div></div>
     <div style="margin-top:1rem"><label id="pasteScriptLabel1">Ou colle le texte</label><textarea id="scriptInput1" placeholder="MOI: Ma réplique&#10;PARTENAIRE: Sa réplique"></textarea><button type="button" class="btn btn-secondary btn-full" style="margin-top:.5rem;padding:.55rem" onclick="processTextImport(1)" id="importPastedBtn1">Importer le texte collé</button></div>
@@ -643,6 +656,7 @@ input[type="file"]{display:none}
     <div class="upload-ok" id="uploadOk2" style="display:none"><span>✓</span><span class="fname" id="fileName2"></span><button class="clear-btn" onclick="clearPDF(2)">✕</button></div>
     <input type="file" id="pdfInput2" accept=".pdf,application/pdf,*/*" onchange="handlePDFInput(2,this)">
     <div class="setup-status" id="setupStatus2"></div>
+    <button type="button" class="btn btn-secondary btn-full" style="margin-top:.45rem;display:none;padding:.45rem;font-size:.78rem" onclick="openOptionalScriptReview(2)" id="optionalReviewBtn2">Affiner / vérifier le script…</button>
     <div id="charSection2" style="display:none;margin-top:1rem"><label id="myCharacterLabel2">Mon personnage</label><div class="char-grid" id="charGrid2"></div></div>
     <div style="margin-top:1rem"><label id="pasteScriptLabel2">Ou colle le texte</label><textarea id="scriptInput2" placeholder="MOI: Ma réplique&#10;PARTENAIRE: Sa réplique"></textarea><button type="button" class="btn btn-secondary btn-full" style="margin-top:.5rem;padding:.55rem" onclick="processTextImport(2)" id="importPastedBtn2">Importer le texte collé</button></div>
   </div>
@@ -661,11 +675,12 @@ input[type="file"]{display:none}
 <!-- ═══ SESSION ═══ -->
 <div id="session" class="screen">
   <div id="creditBadge" style="position:fixed;top:12px;right:56px;background:rgba(0,0,0,.6);color:#fff;padding:4px 10px;border-radius:12px;font-size:13px;font-family:'DM Sans',sans-serif;z-index:1000;display:none;pointer-events:none">⏱ <span id="creditCount">60:00</span></div>
-  <div class="session-top"><div class="status"><div class="status-dot waiting" id="statusDot"></div><span id="statusText">En attente…</span></div><button class="back-btn" onclick="showEndTakeModal()" style="color:#fff;font-size:1rem;position:fixed;top:16px;left:16px;z-index:10001">✕</button></div>
+  <div id="sessionTimeRail" class="session-time-rail" aria-hidden="true"><span id="sessionTimeRailFill" class="session-time-rail-fill"></span></div>
+  <div class="session-top"><div class="status"><div class="status-dot waiting" id="statusDot"></div><span id="statusText">Préparation du flux…</span></div><button class="back-btn" onclick="showEndTakeModal()" style="color:#fff;font-size:1rem;position:fixed;top:16px;left:16px;z-index:10001">✕</button></div>
   <div class="session-body">
-    <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><video id="remoteVideo" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:contain;background:#000"></video><div class="no-video" id="noVideoMsg">Caméra en attente…</div><div class="video-controls"><button class="vctrl" id="btnMic" onclick="toggleMic()"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/></svg></button><button class="vctrl" id="btnRec" onclick="toggleRecording()"><span class="rec-dot"></span></button><button class="vctrl vctrl-pause" id="btnPause" onclick="togglePause()"><svg id="pauseIcon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button><div class="speed-btns speed-btns-overlay" id="speedBtnsOverlay"></div><button class="vctrl vctrl-flip" id="btnCam" onclick="toggleCam()"><svg viewBox="0 0 24 24"><path d="M20 5h-3.17L15 3H9L7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-8 13a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/><path d="M12 17l-2.5-2h1.5v-2h2v2h1.5L12 17zm0-10l2.5 2h-1.5v2h-2V9H9.5L12 7z"/></svg></button></div></div><div class="rec-indicator" id="recIndicator"></div><div class="mob-controls-row" id="mobControlsRow"><button class="mob-nav-btn" onclick="prompterPrev()">◀</button><button class="mob-main-btn" id="mobMainBtn" onclick="togglePause()"><svg class="pause-bars" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></svg><span class="play-tri"></span></button><button class="mob-nav-btn" onclick="prompterNext()">▶</button></div></div>
+    <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><video id="remoteVideo" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:contain;background:#000"></video><div class="no-video" id="noVideoMsg">Caméra · activation ou désactivée</div><div class="video-controls"><button class="vctrl" id="btnMic" onclick="toggleMic()"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/></svg></button><button class="vctrl" id="btnRec" onclick="toggleRecording()"><span class="rec-dot"></span></button><button class="vctrl vctrl-pause" id="btnPause" onclick="togglePause()"><svg id="pauseIcon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button><div class="speed-btns speed-btns-overlay" id="speedBtnsOverlay"></div><button class="vctrl vctrl-flip" id="btnCam" onclick="toggleCam()"><svg viewBox="0 0 24 24"><path d="M20 5h-3.17L15 3H9L7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-8 13a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/><path d="M12 17l-2.5-2h1.5v-2h2v2h1.5L12 17zm0-10l2.5 2h-1.5v2h-2V9H9.5L12 7z"/></svg></button></div></div><div class="rec-indicator" id="recIndicator"></div><div class="mob-controls-row" id="mobControlsRow"><button class="mob-nav-btn" onclick="prompterPrev()">◀</button><button class="mob-main-btn" id="mobMainBtn" onclick="togglePause()"><svg class="pause-bars" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></svg><span class="play-tri"></span></button><button class="mob-nav-btn" onclick="prompterNext()">▶</button></div></div>
     <div class="prompter-area" id="prompterArea"><div class="prompter-empty" id="prompterEmptyText">Aucun texte chargé</div></div>
-    <div id="pauseOverlay" class="pause-overlay"><div class="take-info" id="takeInfo"></div><div class="pause-controls" id="pauseControls"><button class="ps-resume-btn" onclick="togglePause(false)">▶ Reprendre</button><label>Vitesse</label><div class="speed-btns" id="speedBtnsPause"></div><div class="ps-row"><span class="ps-label">Italienne</span><button class="ps-toggle" id="psItalienneToggle" onclick="toggleItalienne()"></button></div><div class="ps-row"><span class="ps-label">Attente</span><input type="range" id="vadSilenceSlider" min="1" max="5" step="0.5" value="2" oninput="onVadSliderChange(this.value)"><span class="ps-label" id="vadSilenceLabel">2s</span></div><button class="ps-quit-btn" onclick="showEndTakeModal()">✕ Quitter la prise</button></div></div>
+    <div id="pauseOverlay" class="pause-overlay"><div class="take-info" id="takeInfo"></div><div class="pause-controls" id="pauseControls"><button class="ps-resume-btn" onclick="togglePause(false)">▶ Reprendre</button><label>Vitesse</label><div class="speed-btns" id="speedBtnsPause"></div><div class="ps-row"><span class="ps-label">Italienne</span><button class="ps-toggle" id="psItalienneToggle" onclick="toggleItalienne()"></button></div><div class="ps-row"><span class="ps-label">Attente silence</span><input type="range" id="vadSilenceSlider" min="0.5" max="5" step="0.25" value="1.25" oninput="onVadSliderChange(this.value)"><span class="ps-label" id="vadSilenceLabel">1.25s</span></div><button class="ps-quit-btn" onclick="showEndTakeModal()">✕ Quitter la prise</button></div></div>
     <div class="italienne-badge" id="italienneBadge">ITALIENNE</div>
   </div>
   <div class="ai-panel" id="aiPanel"><span class="ai-label" id="sessionVoiceLabel">🦾 Voix :</span><select id="sessionVoiceSelect" onchange="changeSessionVoice()"></select></div>
@@ -681,7 +696,7 @@ input[type="file"]{display:none}
   </div>
 </div>
 
-<div id="scriptReviewOverlay" class="script-review-overlay" aria-hidden="true"><div class="script-review-inner"><h3 id="scriptReviewTitle">Vérifier le script</h3><p class="sr-sub" id="scriptReviewHint">Corrige les noms, fusionne les lignes ou marque les didascalies. Tu peux valider en quelques secondes.</p><p class="sr-meta" id="scriptReviewMeta"></p><div id="scriptReviewList" class="script-review-list"></div><div class="script-review-actions"><button type="button" class="sr-btn-skip" onclick="closeScriptReview(false)">Utiliser tel quel</button><button type="button" class="sr-btn-ok" onclick="closeScriptReview(true)">Valider et continuer</button></div></div></div>
+<div id="scriptReviewOverlay" class="script-review-overlay" aria-hidden="true"><div class="script-review-inner"><h3 id="scriptReviewTitle">Vérifier le script</h3><p class="sr-sub" id="scriptReviewHint">Corrige au besoin les répliques, puis valide ou utilise tel quel pour revenir au setup.</p><p class="sr-meta" id="scriptReviewMeta"></p><div id="scriptReviewList" class="script-review-list"></div><div class="script-review-actions"><button type="button" class="sr-btn-skip" onclick="closeScriptReview(false)">Utiliser tel quel</button><button type="button" class="sr-btn-ok" id="scriptReviewValidateBtn" onclick="closeScriptReview(true)">Valider et continuer</button></div></div></div>
 
 <div class="end-take-modal" id="endTakeModal"><div class="end-take-card"><h3>Terminer la prise ?</h3><div class="etm-btns"><button class="etm-btn etm-end" onclick="confirmEndTake()">Terminer</button><button class="etm-btn etm-resume" onclick="hideEndTakeModal()">Reprendre</button></div></div></div>
 <audio id="remoteAudio" autoplay></audio>
@@ -707,11 +722,44 @@ let autoAdvanceTimer=null,lastAutoSpokenIndex=-1,activeSpeechToken=0;
 let ttsAudio=null,vad=null,lastTTSEndTs=0;
 let userScrolledUp=false,_lastPrompterScrollTop=0,_scrollResumeTimer=null;
 let takeNumber=0,currentScriptName='';
+/** Source brute (PDF ou collage) — jamais réécrite par le parseur ; seul l’affichage dérivé peut diverger */
+let scriptRawText='';
 /** Set of uppercase accent-stripped keys from last /api/validate-characters — never locally "rejected" */
 let scriptValidatedCharKeys=null;
 let _scriptReviewCtx=null;
+let _bgRefinementToken=0;
+/** Annule le parse « fin de script » lancé après un parse tête (gros PDF) */
+let _fastFullParseToken=0;
+/** Annulation OCR différé + doc PDF.js gardé pour post-traitement */
+let _pdfOcrDeferredToken=0;
+let _cwPdfDoc=null;
 const LINE_TYPE={SLUG:'slug',ACTION:'action',DIALOGUE:'dialogue'};
-const PARSER_DEBUG=true;
+/** Aligné sur LINE_TYPE.DIALOGUE — tolère vieux caches / chaînes dérivées */
+function isPdfDialogueRow(s){
+  if(!s)return false;
+  const k=s.kind;
+  return k===LINE_TYPE.DIALOGUE||(typeof k==='string'&&k.toLowerCase()==='dialogue');
+}
+function debugPrompterPdfScriptKinds(tag){
+  const p0=prompterLines[0];
+  const s0=pdfScript[0];
+  console.log('[DEBUG] prompterLines[0] type=',p0?.type,'kind=',p0?.kind,'pdfScript[0] kind=',s0?.kind,'['+tag+']');
+}
+function fallbackPrompterLinesFromPdfScript(){
+  const selN=(selectedChar||'').toUpperCase().trim();
+  return pdfScript.map(s=>{
+    const isDial=isPdfDialogueRow(s);
+    const isActor=isDial&&selN&&(s.char||'').toUpperCase().trim()===selN;
+    return{text:s.line,type:isDial?(isActor?'actor':'partner'):'context',char:s.char||'',kind:isDial?(s.kind||LINE_TYPE.DIALOGUE):(s.kind||LINE_TYPE.ACTION),isStageDirection:!!s.isStageDirection,isSpoken:isDial,parenthetical:s.parenthetical||null};
+  });
+}
+function setPrompterLinesForSession(n,tag){
+  const num=Number(n)||1;
+  prompterLines=buildLines(num);
+  if(!prompterLines.length&&pdfScript.length>0)prompterLines=fallbackPrompterLinesFromPdfScript();
+  debugPrompterPdfScriptKinds(tag);
+}
+const PARSER_DEBUG=false;
 try{
   if(typeof window!=='undefined'){
     Object.defineProperty(window,'pdfScript',{
@@ -719,6 +767,12 @@ try{
       enumerable:true,
       get(){return Array.isArray(pdfScript)?pdfScript:[];},
       set(v){pdfScript=Array.isArray(v)?v:[];}
+    });
+    Object.defineProperty(window,'scriptRawText',{
+      configurable:true,
+      enumerable:true,
+      get(){return typeof scriptRawText==='string'?scriptRawText:'';},
+      set(){}
     });
   }
 }catch(_e){}
@@ -809,6 +863,7 @@ let chronoLastTs=0;
 let chronoLowSoundArmed=true;
 let chronoHadPositiveBalance=false;
 let chronoPaywallShown=false;
+let chronoWarn5minShown=false;
 const ELEVEN_ACCOUNT_BACKOFF_MS=5*60*1000;
 let ttsEndpointCache='';
 let elevenLabsTemporarilyDisabled=false;
@@ -1053,6 +1108,21 @@ function fmtTimer(ms){
   const s=totalSec%60;
   return m+':'+(s<10?'0':'')+s;
 }
+function updateSessionTimeRail(ms){
+  const rail=document.getElementById('sessionTimeRail');
+  const fill=document.getElementById('sessionTimeRailFill');
+  if(!rail||!fill)return;
+  if(isServerAdmin()||ms<=0){rail.style.display='none';return}
+  const tier=getSpecTier();
+  const totals={figurant:30*60,audition:120*60,oscar:300*60,palme:1200*60};
+  let totalSec=totals[tier]||30*60;
+  if(tier==='payg')totalSec=Math.max(60,Math.ceil(ms/1000));
+  const remSec=Math.max(0,Math.ceil(ms/1000));
+  const pct=totalSec>0?Math.min(1,remSec/totalSec):0;
+  fill.style.transform='scaleX('+pct+')';
+  rail.classList.toggle('low',remSec>0&&remSec<=300);
+  rail.style.display='block';
+}
 function updateTimerBadge(){
   const badge=document.getElementById('creditBadge');
   const el=document.getElementById('creditCount');
@@ -1063,13 +1133,17 @@ function updateTimerBadge(){
   if(ms<=60000)badge.style.background='rgba(220,53,69,.85)';
   else if(ms<=180000)badge.style.background='rgba(255,165,0,.85)';
   else badge.style.background='rgba(0,0,0,.6)';
-  updateChronoDisplay(Math.max(0,Math.floor(ms/1000)));
+  const sec=Math.max(0,Math.floor(ms/1000));
+  updateChronoDisplay(sec);
+  updateSessionTimeRail(ms);
 }
 function hideTimerBadge(){
   const b=document.getElementById('creditBadge');
   if(b)b.style.display='none';
   const z=document.getElementById('zelda-chrono');
   if(z)z.style.display='none';
+  const r=document.getElementById('sessionTimeRail');
+  if(r)r.style.display='none';
 }
 function maybePlayLowTimeSound(ms){
   const sec=Math.ceil(ms/1000);
@@ -1082,6 +1156,7 @@ function startSessionTimer(){
   chronoLowSoundArmed=true;
   chronoHadPositiveBalance=false;
   chronoPaywallShown=false;
+  chronoWarn5minShown=false;
   updateTimerBadge();
   chronoRunning=true;
   chronoLastTs=performance.now();
@@ -1101,6 +1176,10 @@ function startSessionTimer(){
       const ms=getRemainingSessionMs();
       if(ms>0)chronoHadPositiveBalance=true;
       maybePlayLowTimeSound(ms);
+      if(ms>0&&ms<=300000&&!chronoWarn5minShown&&!isServerAdmin()){
+        chronoWarn5minShown=true;
+        showToast('Il te reste environ 5 minutes de session IA.',6500);
+      }
       if(ms<=0&&!chronoPaywallShown&&(chronoHadPositiveBalance||getSpecTier()!=='figurant')){
         chronoPaywallShown=true;
         stopSessionTimer();
@@ -1115,6 +1194,7 @@ function startSessionTimer(){
 function stopSessionTimer(){
   chronoRunning=false;
   chronoPaywallShown=false;
+  chronoWarn5minShown=false;
   if(chronoRafId){cancelAnimationFrame(chronoRafId);chronoRafId=null;}
   if(sessionTimerInterval){clearInterval(sessionTimerInterval);sessionTimerInterval=null;}
 }
@@ -1382,7 +1462,7 @@ function updateChronoDisplay(remainingSec){
   const progress=document.getElementById('zelda-chrono-progress');
   const txt=document.getElementById('zelda-chrono-text');
   if(!wrap||!progress||!txt)return;
-  wrap.style.display='none';return;
+  if(isServerAdmin()){wrap.style.display='none';return;}
   let rem=remainingSec;
   if(rem===undefined||rem===null){
     rem=Math.max(0,Math.floor(getRemainingSessionMs()/1000));
@@ -1564,6 +1644,16 @@ function showOcrToast(msg){
 function hideOcrToast(){
   if(ocrToastEl)ocrToastEl.style.display='none';
 }
+/** Rend la main au navigateur (double rAF) pour garder l’UI réactive */
+function yieldToBrowser(){
+  return new Promise(resolve=>{
+    if(typeof requestAnimationFrame==='function'){
+      requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()));
+    }else{
+      setTimeout(resolve,0);
+    }
+  });
+}
 async function extractPdfPageTextWithOcr(page,lang){
   const viewport=page.getViewport({scale:2.2});
   const canvas=document.createElement('canvas');
@@ -1594,32 +1684,32 @@ async function extractPdfTextHybrid(arrayBuffer,fileName){
     pdf=await pdfjsLib.getDocument({data:new Uint8Array(arrayBuffer)}).promise;
   }
   const pageTexts=[];
-  const ocrPages=[];
-  let usedOcr=false;
+  const deferredOcrPageNumbers=[];
+  await yieldToBrowser();
   for(let i=1;i<=pdf.numPages;i++){
+    if(_pdfParseCancelled)break;
+    await yieldToBrowser();
     const page=await pdf.getPage(i);
     const textContent=await page.getTextContent();
+    await yieldToBrowser();
     let rawText=extractPageText(textContent);
     let cleaned=normalizeWatermarkNoise(rawText);
     if(isPoorPdfTextExtraction(cleaned)){
-      console.info('[PDF] Poor text on page',i,'- trying OCR fallback');
-      showOcrToast('OCR page '+i+'/'+pdf.numPages+'…');
-      try{
-        const ocrText=await extractPdfPageTextWithOcr(page,'eng');
-        if(ocrText&&ocrText.length>cleaned.length*1.5){
-          cleaned=ocrText;
-          usedOcr=true;
-          ocrPages.push(i);
-          console.info('[PDF] OCR improved page',i);
-        }
-      }catch(ocrErr){
-        console.warn('[OCR] Failed on page',i,ocrErr);
-      }
+      deferredOcrPageNumbers.push(i);
+      console.info('[PDF] Page',i,'— texte faible ; OCR reporté en arrière-plan');
     }
     pageTexts.push(cleaned);
   }
   hideOcrToast();
-  return{fullText:pageTexts.join('\n\n'),pageTexts,usedOcr,ocrPages,pdf};
+  const fullText=pageTexts.join('\n\n');
+  return{
+    fullText,
+    pageTexts,
+    usedOcr:deferredOcrPageNumbers.length>0,
+    ocrPages:deferredOcrPageNumbers.slice(),
+    deferredOcrPageNumbers,
+    pdf
+  };
 }
 function extractCandidateCharacters(rawText){
   const lines=rawText.split('\n');
@@ -2104,8 +2194,8 @@ const UI_LANGUAGES=[
   {id:'ru',label:'Русский',flag:'🇷🇺'},
 ];
 const UI_I18N={
-  fr:{siteLanguageLabel:'Langue du site',homeSoloTitle:'Commencer une scène',homeSoloDesc:"Solo avec l'IA ou lecture manuelle",homePartnerTitle:'Répéter avec un partenaire',homePartnerDesc:'Invite quelqu\'un pour jouer la scène en vrai',homeFooterText:'Pair-à-pair · Aucune donnée stockée',ndaText:'Peer-to-peer · Aucun script stocké',partnerChoiceTitle:'Session partenaire',partnerCreateTitle:'Je crée la session (acteur)',partnerCreateDesc:'Générer un code et inviter un partenaire',partnerJoinTitle:'Je rejoins une session (partenaire)',partnerJoinDesc:"Entrer le code de l'acteur",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF ou texte)',uploadLabel:'Glisse ton PDF ici ou clique',uploadSub:'Format scénario standard',myCharacterLabel:'Mon personnage',partnerReadsLabel:'IA lit les répliques de :',partnerAllOthersBtn:'Tous les autres personnages',partnerHintAll:'L’IA joue tous les rôles sauf le tien.',partnerHintDuo:'Mode duo : uniquement les échanges entre toi et ce personnage.',pickCharacterFirst:'Choisis d’abord ton personnage',pasteScriptLabel:'Ou colle le texte',replyModeLabel:'Mode réplique',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuel',modeAutoBtn:'🎤 Auto',voiceSectionLabel:"Voix de l'IA",voiceLanguageLabel:'Langue voix',emotionLabel:'Émotion',speedLabel:'Vitesse',speedSlowBtn:'Lent x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rapide x1.6',launchAiBtn:'Lancer la session 🦾',setupPartnerTitle:'Avec un partenaire',sessionCodeLabel:'Ton code de session',sessionCodeHint:'Partage ce code à ton partenaire',copyCodeBtn:'📋 Copier code',copyLinkBtn:'🔗 Copier lien',shareBtn:'📤 Partager',launchPartnerBtn:'Lancer la session 🎬',joinScreenTitle:'Rejoindre une session',joinCodeLabel:'Code de session',joinCodePlaceholder:"Entre le code de l'acteur",joinSessionBtn:'Rejoindre 🎙️',prompterEmptyText:'Aucun texte chargé',sessionVoiceLabel:'🦾 Voix :',prevBtn:'◀ Préc',nextBtn:'Suiv ▶',quitBtn:'Quitter',modeHintAi:"L'IA lit les répliques du partenaire automatiquement.",modeHintManual:'Avance les répliques manuellement avec les boutons.',modeHintAuto:"L'IA lit le partenaire puis détecte la fin de ta phrase (silence) pour avancer — durée adaptée à la longueur de ta réplique.",toastEmotion:'Émotion',toastSpeed:'Vitesse',toastVoice:'Voix',toastAccent:'Langue voix',toastLanguage:'Langue du site',toastVoiceFallback:'Voix de secours utilisée'},
-  en:{siteLanguageLabel:'Website language',homeSoloTitle:'Start a scene',homeSoloDesc:'Solo with AI or manual reading',homePartnerTitle:'Rehearse with a partner',homePartnerDesc:'Invite someone to play the scene for real',homeFooterText:'Peer-to-peer · No data stored',ndaText:'Peer-to-peer · No script stored',partnerChoiceTitle:'Partner session',partnerCreateTitle:'Create session (actor)',partnerCreateDesc:'Generate a code and invite a partner',partnerJoinTitle:'Join session (partner)',partnerJoinDesc:"Enter the actor's code",setupAiTitle:'Solo + AI',scriptLabel:'Script (PDF or text)',uploadLabel:'Drop your PDF here or click',uploadSub:'Standard screenplay format',myCharacterLabel:'My character',partnerReadsLabel:'Scene partner reads:',partnerAllOthersBtn:'All other characters',partnerHintAll:'The AI plays every role except yours.',partnerHintDuo:'Duo mode: only lines between you and this character.',pickCharacterFirst:'Choose your character first',pasteScriptLabel:'Or paste text',replyModeLabel:'Reply mode',modeAiBtn:'🦾 Voice AI',modeManBtn:'✋ Manual',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'AI voice',voiceLanguageLabel:'Voice language',emotionLabel:'Emotion',speedLabel:'Speed',speedSlowBtn:'Slow x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Fast x1.6',launchAiBtn:'Start session 🦾',setupPartnerTitle:'With a partner',sessionCodeLabel:'Your session code',sessionCodeHint:'Share this code with your partner',copyCodeBtn:'📋 Copy code',copyLinkBtn:'🔗 Copy link',shareBtn:'📤 Share',launchPartnerBtn:'Start session 🎬',joinScreenTitle:'Join a session',joinCodeLabel:'Session code',joinCodePlaceholder:"Enter actor's code",joinSessionBtn:'Join 🎙️',prompterEmptyText:'No script loaded',sessionVoiceLabel:'🦾 Voice:',prevBtn:'◀ Prev',nextBtn:'Next ▶',quitBtn:'Quit',modeHintAi:'AI reads partner lines automatically.',modeHintManual:'Advance lines manually with the buttons.',modeHintAuto:'AI reads partner lines, then waits for the end of your line (silence) — pause scales with line length.',toastEmotion:'Emotion',toastSpeed:'Speed',toastVoice:'Voice',toastAccent:'Voice language',toastLanguage:'Website language',toastVoiceFallback:'Backup voice used'},
+  fr:{siteLanguageLabel:'Langue du site',homeSoloTitle:'Commencer une scène',homeSoloDesc:"Solo avec l'IA ou lecture manuelle",homePartnerTitle:'Répéter avec un partenaire',homePartnerDesc:'Invite quelqu\'un pour jouer la scène en vrai',homeFooterText:'Pair-à-pair · Aucune donnée stockée',ndaText:'Peer-to-peer · Aucun script stocké',partnerChoiceTitle:'Session partenaire',partnerCreateTitle:'Je crée la session (acteur)',partnerCreateDesc:'Générer un code et inviter un partenaire',partnerJoinTitle:'Je rejoins une session (partenaire)',partnerJoinDesc:"Entrer le code de l'acteur",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF ou texte)',uploadLabel:'Glisse ton PDF ici ou clique',uploadSub:'Les personnages sont détectés automatiquement (format scénario habituel)',myCharacterLabel:'Quel rôle jouez-vous ?',partnerReadsLabel:'IA lit les répliques de :',partnerAllOthersBtn:'Tous les autres personnages',partnerHintAll:'L’IA joue tous les rôles sauf le tien.',partnerHintDuo:'Mode duo : uniquement les échanges entre toi et ce personnage.',pickCharacterFirst:'Choisis ton personnage pour continuer.',pasteScriptLabel:'Ou colle le texte',replyModeLabel:'Mode réplique',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuel',modeAutoBtn:'🎤 Auto',voiceSectionLabel:"Voix de l'IA",voiceLanguageLabel:'Langue voix',emotionLabel:'Émotion',speedLabel:'Vitesse',speedSlowBtn:'Lent x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rapide x1.6',launchAiBtn:'Lancer la session 🦾',setupPartnerTitle:'Avec un partenaire',sessionCodeLabel:'Ton code de session',sessionCodeHint:'Partage ce code à ton partenaire',copyCodeBtn:'📋 Copier code',copyLinkBtn:'🔗 Copier lien',shareBtn:'📤 Partager',launchPartnerBtn:'Lancer la session 🎬',joinScreenTitle:'Rejoindre une session',joinCodeLabel:'Code de session',joinCodePlaceholder:"Entre le code de l'acteur",joinSessionBtn:'Rejoindre 🎙️',prompterEmptyText:'Aucun texte chargé',sessionVoiceLabel:'🦾 Voix :',prevBtn:'◀ Préc',nextBtn:'Suiv ▶',quitBtn:'Quitter',modeHintAi:"L'IA lit les répliques du partenaire automatiquement.",modeHintManual:'Avance les répliques manuellement avec les boutons.',modeHintAuto:"L'IA lit le partenaire puis détecte la fin de ta phrase (silence) pour avancer — durée adaptée à la longueur de ta réplique.",toastEmotion:'Émotion',toastSpeed:'Vitesse',toastVoice:'Voix',toastAccent:'Langue voix',toastLanguage:'Langue du site',toastVoiceFallback:'Voix de secours utilisée',sessionReadyLabel:'Prêt · réplique IA'},
+  en:{siteLanguageLabel:'Website language',homeSoloTitle:'Start a scene',homeSoloDesc:'Solo with AI or manual reading',homePartnerTitle:'Rehearse with a partner',homePartnerDesc:'Invite someone to play the scene for real',homeFooterText:'Peer-to-peer · No data stored',ndaText:'Peer-to-peer · No script stored',partnerChoiceTitle:'Partner session',partnerCreateTitle:'Create session (actor)',partnerCreateDesc:'Generate a code and invite a partner',partnerJoinTitle:'Join session (partner)',partnerJoinDesc:"Enter the actor's code",setupAiTitle:'Solo + AI',scriptLabel:'Script (PDF or text)',uploadLabel:'Drop your PDF here or click',uploadSub:'Characters are detected automatically when the screenplay format matches',myCharacterLabel:'Which role are you playing?',partnerReadsLabel:'Scene partner reads:',partnerAllOthersBtn:'All other characters',partnerHintAll:'The AI plays every role except yours.',partnerHintDuo:'Duo mode: only lines between you and this character.',pickCharacterFirst:'Choose your character to continue.',pasteScriptLabel:'Or paste text',replyModeLabel:'Reply mode',modeAiBtn:'🦾 Voice AI',modeManBtn:'✋ Manual',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'AI voice',voiceLanguageLabel:'Voice language',emotionLabel:'Emotion',speedLabel:'Speed',speedSlowBtn:'Slow x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Fast x1.6',launchAiBtn:'Start session 🦾',setupPartnerTitle:'With a partner',sessionCodeLabel:'Your session code',sessionCodeHint:'Share this code with your partner',copyCodeBtn:'📋 Copy code',copyLinkBtn:'🔗 Copy link',shareBtn:'📤 Share',launchPartnerBtn:'Start session 🎬',joinScreenTitle:'Join a session',joinCodeLabel:'Session code',joinCodePlaceholder:"Enter actor's code",joinSessionBtn:'Join 🎙️',prompterEmptyText:'No script loaded',sessionVoiceLabel:'🦾 Voice:',prevBtn:'◀ Prev',nextBtn:'Next ▶',quitBtn:'Quit',modeHintAi:'AI reads partner lines automatically.',modeHintManual:'Advance lines manually with the buttons.',modeHintAuto:'AI reads partner lines, then waits for the end of your line (silence) — pause scales with line length.',toastEmotion:'Emotion',toastSpeed:'Speed',toastVoice:'Voice',toastAccent:'Voice language',toastLanguage:'Website language',toastVoiceFallback:'Backup voice used',sessionReadyLabel:'Ready · AI cue'},
   es:{siteLanguageLabel:'Idioma del sitio',homeVoicesLabel:'Voces IA disponibles',homeSoloTitle:'Solo + IA',homeSoloDesc:'La IA da la réplica con voz',homePartnerTitle:'Con un compañero',homePartnerDesc:'Invita a alguien para dar la réplica',homeFooterText:'WebRTC punto a punto · Sin datos guardados',ndaText:'Peer-to-peer · Ningún guion almacenado',partnerChoiceTitle:'Sesión con compañero',partnerCreateTitle:'Creo la sesión (actor)',partnerCreateDesc:'Generar código e invitar a un compañero',partnerJoinTitle:'Me uno a una sesión (compañero)',partnerJoinDesc:'Ingresar el código del actor',setupAiTitle:'Solo + IA',scriptLabel:'Guion (PDF o texto)',uploadLabel:'Arrastra tu PDF aquí o haz clic',uploadSub:'Formato estándar de guion',myCharacterLabel:'Mi personaje',pasteScriptLabel:'O pega el texto',replyModeLabel:'Modo de réplica',modeAiBtn:'🦾 IA vocal',modeManBtn:'✋ Manual',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'Voz de IA',voiceLanguageLabel:'Idioma de voz',emotionLabel:'Emoción',speedLabel:'Velocidad',speedSlowBtn:'Lento x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rápido x1.6',launchAiBtn:'Iniciar sesión 🦾',setupPartnerTitle:'Con un compañero',sessionCodeLabel:'Tu código de sesión',sessionCodeHint:'Comparte este código',copyCodeBtn:'📋 Copiar código',copyLinkBtn:'🔗 Copiar enlace',shareBtn:'📤 Compartir',launchPartnerBtn:'Iniciar sesión 🎬',joinScreenTitle:'Unirse a una sesión',joinCodeLabel:'Código de sesión',joinCodePlaceholder:'Ingresa el código del actor',joinSessionBtn:'Unirse 🎙️',prompterEmptyText:'Ningún texto cargado',sessionVoiceLabel:'🦾 Voz:',prevBtn:'◀ Ant',nextBtn:'Sig ▶',quitBtn:'Salir',modeHintAi:'La IA lee las líneas del compañero automáticamente.',modeHintManual:'Avanza manualmente con los botones.',modeHintAuto:'La IA lee y avanza tras 1.5s de silencio.',toastEmotion:'Emoción',toastSpeed:'Velocidad',toastVoice:'Voz',toastAccent:'Idioma de voz',toastLanguage:'Idioma del sitio',toastVoiceFallback:'Voz de respaldo usada'},
   it:{siteLanguageLabel:'Lingua del sito',homeVoicesLabel:'Voci IA disponibili',homeSoloTitle:'Solo + IA',homeSoloDesc:'L’IA recita le battute partner',homePartnerTitle:'Con un partner',homePartnerDesc:'Invita qualcuno a dare la replica',homeFooterText:'WebRTC peer-to-peer · Nessun dato salvato',ndaText:'Peer-to-peer · Nessuno script salvato',partnerChoiceTitle:'Sessione partner',partnerCreateTitle:'Creo sessione (attore)',partnerCreateDesc:'Genera codice e invita un partner',partnerJoinTitle:'Mi unisco a una sessione',partnerJoinDesc:"Inserisci il codice dell'attore",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF o testo)',uploadLabel:'Trascina il PDF o fai clic',uploadSub:'Formato copione standard',myCharacterLabel:'Il mio personaggio',pasteScriptLabel:'Oppure incolla il testo',replyModeLabel:'Modalità battuta',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuale',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'Voce IA',voiceLanguageLabel:'Lingua voce',emotionLabel:'Emozione',speedLabel:'Velocità',speedSlowBtn:'Lento x0.7',speedNormalBtn:'Normale x1',speedFastBtn:'Veloce x1.6',launchAiBtn:'Avvia sessione 🦾',setupPartnerTitle:'Con un partner',sessionCodeLabel:'Codice sessione',sessionCodeHint:'Condividi questo codice',copyCodeBtn:'📋 Copia codice',copyLinkBtn:'🔗 Copia link',shareBtn:'📤 Condividi',launchPartnerBtn:'Avvia sessione 🎬',joinScreenTitle:'Unisciti a una sessione',joinCodeLabel:'Codice sessione',joinCodePlaceholder:"Inserisci il codice dell'attore",joinSessionBtn:'Unisciti 🎙️',prompterEmptyText:'Nessun testo caricato',sessionVoiceLabel:'🦾 Voce:',prevBtn:'◀ Prec',nextBtn:'Succ ▶',quitBtn:'Esci',modeHintAi:'L’IA legge automaticamente le battute partner.',modeHintManual:'Avanza manualmente con i pulsanti.',modeHintAuto:'L’IA avanza dopo 1.5s di silenzio.',toastEmotion:'Emozione',toastSpeed:'Velocità',toastVoice:'Voce',toastAccent:'Lingua voce',toastLanguage:'Lingua sito',toastVoiceFallback:'Usata voce di backup'},
   zh:{siteLanguageLabel:'网站语言',homeVoicesLabel:'可用 AI 语音',homeSoloTitle:'单人 + AI',homeSoloDesc:'AI 朗读对手台词',homePartnerTitle:'与搭档',homePartnerDesc:'邀请他人一起对词',homeFooterText:'点对点 WebRTC · 不保存数据',ndaText:'点对点 · 不存储剧本',partnerChoiceTitle:'搭档会话',partnerCreateTitle:'创建会话（演员）',partnerCreateDesc:'生成代码并邀请搭档',partnerJoinTitle:'加入会话（搭档）',partnerJoinDesc:'输入演员代码',setupAiTitle:'单人 + AI',scriptLabel:'剧本（PDF 或文本）',uploadLabel:'拖放 PDF 或点击上传',uploadSub:'标准剧本格式',myCharacterLabel:'我的角色',pasteScriptLabel:'或粘贴文本',replyModeLabel:'台词模式',modeAiBtn:'🦾 AI 语音',modeManBtn:'✋ 手动',modeAutoBtn:'🎤 自动',voiceSectionLabel:'AI 语音',voiceLanguageLabel:'语音语言',emotionLabel:'情绪',speedLabel:'速度',speedSlowBtn:'慢速 x0.7',speedNormalBtn:'正常 x1',speedFastBtn:'快速 x1.6',launchAiBtn:'开始会话 🦾',setupPartnerTitle:'与搭档',sessionCodeLabel:'会话代码',sessionCodeHint:'把代码发给搭档',copyCodeBtn:'📋 复制代码',copyLinkBtn:'🔗 复制链接',shareBtn:'📤 分享',launchPartnerBtn:'开始会话 🎬',joinScreenTitle:'加入会话',joinCodeLabel:'会话代码',joinCodePlaceholder:'输入演员代码',joinSessionBtn:'加入 🎙️',prompterEmptyText:'尚未加载文本',sessionVoiceLabel:'🦾 语音:',prevBtn:'◀ 上一条',nextBtn:'下一条 ▶',quitBtn:'退出',modeHintAi:'AI 自动朗读对手台词。',modeHintManual:'使用按钮手动推进。',modeHintAuto:'静音 1.5 秒后自动推进。',toastEmotion:'情绪',toastSpeed:'速度',toastVoice:'语音',toastAccent:'语音语言',toastLanguage:'网站语言',toastVoiceFallback:'已使用备用语音'},
@@ -2867,7 +2957,7 @@ class VoiceActivityDetector{
         this.hasSpoken=false;
       }
     }
-    if(!this._lastLog||now-this._lastLog>=500){
+    if((localStorage.getItem('cw_vad_debug')==='1')&&(!this._lastLog||now-this._lastLog>=500)){
       this._lastLog=now;
       const silMs=this.state==='TRAILING'?now-this.trailingSince:0;
       console.info('[VAD] state:'+this.state+' rms:'+rms.toFixed(4)+' spoken:'+this.hasSpoken+' silenceMs:'+silMs+'/'+this.silenceDuration);
@@ -3270,6 +3360,7 @@ function setLoading(on,m){
 function showLoadingCancel(){const cb=document.getElementById('loadingCancelBtn');if(cb){cb.textContent=t('cancelBtn');cb.classList.add('active')}}
 function cancelPdfParse(){
   _pdfParseCancelled=true;
+  _pdfOcrDeferredToken++;
   if(_pdfParseAbort){_pdfParseAbort.abort();_pdfParseAbort=null}
   setLoading(false);
   showToast('Analyse annulée',2000);
@@ -3305,6 +3396,10 @@ function _updateRing(pct){
   const circ=2*Math.PI*28;
   fg.setAttribute('stroke-dashoffset',String(circ-(circ*pct/100)));
   label.textContent=pct+'%';
+}
+function setScriptReviewInteractive(enabled){
+  const ok=document.getElementById('scriptReviewValidateBtn');
+  if(ok)ok.disabled=!enabled;
 }
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');const bb=document.getElementById('homeBottomBar');if(bb)bb.style.display=id==='home'?'flex':'none'}
 function trModeReadyLabel(m){
@@ -3938,18 +4033,23 @@ async function processPDF(n,file){
     if(typeof file.arrayBuffer==='function')buf=await file.arrayBuffer();
     else buf=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsArrayBuffer(file)});
     const hybrid=await extractPdfTextHybrid(buf,file.name);
+    _cwPdfDoc=hybrid.pdf||null;
     const rawText=(hybrid.fullText||'').replace(/\u00A0/g,' ');
+    scriptRawText=rawText;
     stopFakeProgress();
-    if(_pdfParseCancelled){setLoading(false);return}
+    setLoading(false);
+    if(_pdfParseCancelled)return;
     if(!rawText||rawText.trim().length<10){
       showToast('PDF vide ou non lisible – essaie de coller le texte directement',6000);
       document.getElementById('scriptInput'+n).focus();
-      setLoading(false);return;
+      disposeCwPdfDoc();
+      return;
     }
-    const norm=normalizeScreenplayWhitespace(rawText);
-    document.getElementById('scriptInput'+n).value=norm;
-    if(_pdfParseCancelled){setLoading(false);return}
+    const norm=await normalizeScreenplayWhitespaceAsync(rawText);
+    if(_pdfParseCancelled)return;
     await runImportedScriptPipeline(n,norm,file.name||'PDF');
+    void fillScriptInputProgressive(n,norm);
+    scheduleDeferredPdfOcrImprovement(n,hybrid.pdf,hybrid.pageTexts,hybrid.deferredOcrPageNumbers||[]);
   }catch(e){
     console.error('PDF read error:',e);
     showToast('Erreur lecture PDF : '+(e&&e.message?e.message:'format non supporté')+'. Essaie de coller le texte.',6000);
@@ -4167,7 +4267,7 @@ function normCharKeyForWhitelist(s){
   }
 }
 function sanitizeCharacterNames(script){
-  const ALWAYS_BAD=new Set(['OUI','NON','MINUTES','ABSOLUMENT','ÉCRAN','CONTINUED','CONT','CONT\'D','CUT','FADE','MORE','YES','NO','NOT','MERDE','VERNIS','LABO','LOUVRE','POURQUOI','PUTAIN','BRAVO','FINALEMENT','ABSENTE','SCANDALISÉE','CINGLÉS','MONSIEUR','MADAME','STOP','SILENCE','ATTENTION','PARDON','MERCI','VOILÀ','ALLEZ','ENFIN','EXACTEMENT','ÉVIDEMMENT','PARFAIT','SUPER','GENIAL','GÉNIAL','HORRIBLE','IMPOSSIBLE','INCROYABLE','JAMAIS','TOUJOURS','MAINTENANT','ENSEMBLE','DEHORS','DEDANS','DESSUS','DESSOUS','DEVANT','DERRIÈRE','PARTOUT','AILLEURS','SOUDAIN','BREF','HÉLAS','TANT PIS','TANT MIEUX']);
+  const ALWAYS_BAD=new Set(['OUI','NON','MINUTES','ABSOLUMENT','ÉCRAN','CONTINUED','CONT','CONT\'D','CUT','FADE','MORE','YES','NO','NOT','MERDE','VERNIS','LABO','LOUVRE','POURQUOI','PUTAIN','BRAVO','FINALEMENT','ABSENTE','SCANDALISÉE','CINGLÉS','MONSIEUR','MADAME','STOP','SILENCE','ATTENTION','PARDON','MERCI','VOILÀ','ALLEZ','ENFIN','EXACTEMENT','ÉVIDEMMENT','PARFAIT','SUPER','GENIAL','GÉNIAL','HORRIBLE','IMPOSSIBLE','INCROYABLE','JAMAIS','TOUJOURS','MAINTENANT','ENSEMBLE','DEHORS','DEDANS','DESSUS','DESSOUS','DEVANT','DERRIÈRE','PARTOUT','AILLEURS','SOUDAIN','BREF','HÉLAS','TANT PIS','TANT MIEUX','SIDES','DRAFT','REVISION']);
   const PRONOUNS=new Set(['JE','TU','IL','ELLE','ON','NOUS','VOUS','ILS','ELLES','SE','TE','ME','MON','TON','SON','MA','TA','SA','MES','TES','SES','CE','CET','CETTE','CES','LE','LA','LES','UN','UNE','DES','DU','DE','AU','AUX','EN','Y','QUI','QUE','QUOI','DONT','OÙ']);
   const L_PATTERN=/L[''\u2019]/i;
   const charCounts={};
@@ -4189,8 +4289,7 @@ function sanitizeCharacterNames(script){
     if(words.length===1&&charCounts[name]<2){bad.add(name);continue}
   }
   const kept=Object.keys(charCounts).filter(n=>!bad.has(n));
-  console.info('[parse] characters kept:',kept.map(n=>n+' ('+charCounts[n]+')'));
-  if(bad.size>0)console.warn('[parse] characters rejected:',Array.from(bad).map(n=>n+' ('+charCounts[n]+')'));
+  try{if(typeof localStorage!=='undefined'&&localStorage.getItem('cw_parse_debug')==='1'){console.info('[parse] characters kept:',kept.map(n=>n+' ('+charCounts[n]+')'));if(bad.size>0)console.warn('[parse] characters rejected:',Array.from(bad).map(n=>n+' ('+charCounts[n]+')'));}}catch(_e){}
   return script.map(row=>{
     if(!row||row.kind!=='dialogue'||!bad.has(row.char))return row;
     return{kind:'action',char:'',line:row.line,isStageDirection:true,isSpoken:false,parenthetical:null};
@@ -4207,8 +4306,13 @@ function sanitizeDialogueVsAction(script){
     }
     return row;
   });
-  if(reclassed>0)console.info('[parse] sanitizeDialogueVsAction reclassed',reclassed,'dialogue(s) → action');
+  try{if(reclassed>0&&typeof localStorage!=='undefined'&&localStorage.getItem('cw_parse_debug')==='1')console.info('[parse] sanitizeDialogueVsAction reclassed',reclassed,'dialogue(s) → action');}catch(_e){}
   return res;
+}
+function mergeConfidenceScores(a,b){
+  const x=typeof a==='number'&&!Number.isNaN(a)?Math.max(0,Math.min(1,a)):0.55;
+  const y=typeof b==='number'&&!Number.isNaN(b)?Math.max(0,Math.min(1,b)):0.55;
+  return Math.round(Math.min(1,Math.max(x,y)*0.93+0.06)*1000)/1000;
 }
 function mergeConsecutiveDialogues(script){
   if(!script||!script.length)return script;
@@ -4218,12 +4322,15 @@ function mergeConsecutiveDialogues(script){
     const prev=out[out.length-1];
     if(row.kind===LINE_TYPE.DIALOGUE&&prev&&prev.kind===LINE_TYPE.DIALOGUE&&prev.char===row.char&&!prev.isStageDirection&&!row.isStageDirection){
       prev.line=(prev.line.replace(/[-–—]\s*$/,'')+' '+row.line).replace(/\s+/g,' ').trim();
+      if(typeof prev.confidence==='number'||typeof row.confidence==='number'){
+        prev.confidence=mergeConfidenceScores(prev.confidence,row.confidence);
+      }
     }else{
       out.push({...row});
     }
   }
   const merged=script.length-out.length;
-  if(merged>0)console.info('[parse] mergeConsecutiveDialogues merged',merged,'continuation line(s)');
+  try{if(merged>0&&typeof localStorage!=='undefined'&&localStorage.getItem('cw_parse_debug')==='1')console.info('[parse] mergeConsecutiveDialogues merged',merged,'continuation line(s)');}catch(_e){}
   return out;
 }
 
@@ -4241,15 +4348,292 @@ function normalizeScreenplayWhitespace(text){
   }
   return out.join('\n').replace(/\n{3,}/g,'\n\n').trim();
 }
+/** Normalisation identique, avec rends de main sur les très gros textes (évite le gel long) */
+async function normalizeScreenplayWhitespaceAsync(text){
+  if(String(text||'').length<100000)return normalizeScreenplayWhitespace(text);
+  const t=String(text||'').replace(/\u00A0/g,' ').replace(/\r\n?/g,'\n');
+  const lines=t.split('\n');
+  const out=[];
+  let blank=0;
+  for(let i=0;i<lines.length;i++){
+    if(i>0&&i%5000===0){
+      await yieldToBrowser();
+      if(_pdfParseCancelled)break;
+    }
+    const line=lines[i];
+    const x=line.replace(/[ \t]+$/,'');
+    if(!x.trim()){if(blank<1)out.push('');blank++;continue}
+    blank=0;
+    out.push(x.trim());
+  }
+  return out.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+
+/* ═══ Mémoire locale du script (IndexedDB) + cache parse par hash ═══ */
+const CW_IDB_NAME='castwing-script-db';
+const CW_IDB_STORE='kv';
+let _cwIdb=null;
+function _cwOpenDb(){
+  if(typeof indexedDB==='undefined')return Promise.reject(new Error('no-idb'));
+  if(_cwIdb)return Promise.resolve(_cwIdb);
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open(CW_IDB_NAME,1);
+    r.onupgradeneeded=()=>{
+      const db=r.result;
+      if(!db.objectStoreNames.contains(CW_IDB_STORE))db.createObjectStore(CW_IDB_STORE);
+    };
+    r.onsuccess=()=>{_cwIdb=r.result;res(_cwIdb)};
+    r.onerror=()=>rej(r.error);
+  });
+}
+async function cwIdbGet(key){
+  try{
+    const db=await _cwOpenDb();
+    return await new Promise((res,rej)=>{
+      const tx=db.transaction(CW_IDB_STORE,'readonly');
+      const rq=tx.objectStore(CW_IDB_STORE).get(key);
+      rq.onsuccess=()=>res(rq.result);
+      rq.onerror=()=>rej(rq.error);
+    });
+  }catch(_e){return undefined}
+}
+async function cwIdbSet(key,val){
+  try{
+    const db=await _cwOpenDb();
+    await new Promise((res,rej)=>{
+      const tx=db.transaction(CW_IDB_STORE,'readwrite');
+      tx.oncomplete=()=>res();
+      tx.onerror=()=>rej(tx.error);
+      tx.objectStore(CW_IDB_STORE).put(val,key);
+    });
+  }catch(_e){}
+}
+async function cwIdbDel(key){
+  try{
+    const db=await _cwOpenDb();
+    await new Promise((res,rej)=>{
+      const tx=db.transaction(CW_IDB_STORE,'readwrite');
+      tx.oncomplete=()=>res();
+      tx.onerror=()=>rej(tx.error);
+      tx.objectStore(CW_IDB_STORE).delete(key);
+    });
+  }catch(_e){}
+}
+/** Hash stable du contenu (texte canonique) pour dédoublonner imports identiques */
+function scriptContentHash(raw){
+  const canon=normalizeScreenplayWhitespace(String(raw||'').replace(/\u00A0/g,' '));
+  let h=2166136261;
+  for(let i=0;i<canon.length;i++)h=Math.imul(h^canon.charCodeAt(i),16777619);
+  return 'h'+(h>>>0).toString(36);
+}
+function schedulePersistScriptSnapshot(){
+  const run=()=>{persistScriptSnapshotNow().catch(()=>{})};
+  if(typeof requestIdleCallback==='function')requestIdleCallback(run,{timeout:1800});
+  else setTimeout(run,0);
+}
+async function persistScriptSnapshotNow(){
+  if(!scriptRawText||typeof scriptRawText!=='string'||scriptRawText.length<8)return;
+  if(!Array.isArray(pdfScript)||!pdfScript.length)return;
+  const h=scriptContentHash(scriptRawText);
+  await cwIdbSet('cw.parse.'+h,pdfScript);
+  await cwIdbSet('cw.snapshot.v1',{
+    scriptRawText,
+    pdfScript,
+    currentScriptName:currentScriptName||'Script',
+    lockedVoiceLocale:lockedVoiceLocale||'',
+    contentHash:h,
+    savedAt:Date.now()
+  });
+}
+async function clearPersistedScriptMemory(){
+  await cwIdbDel('cw.snapshot.v1');
+}
+
+/** Live session gate: solo/partner UI has taken over; cleared only in endSession() / clearPDF(). Never toggled by OCR/refinement. */
+let __cwSessionActive=false;
+/** Tag set just before bootstrap/partner UI so window.__cwSessionState.source is deterministic. */
+let __cwPendingSessionTag=null;
+/** Serializes async session bootstrap (restore, import, manual, partner) so parallel flows cannot double-enter. */
+let __cwSessionBootTail=Promise.resolve();
+
+if(typeof window!=='undefined'){
+  window.__cwSessionState={
+    active:false,
+    source:null,
+    startedAt:null,
+    phase:'idle',
+    endedAt:null,
+    lastEndReason:null,
+    lastSkip:null,
+    lastSkipReason:null
+  };
+}
+function cwCommitSessionLive(){
+  const tag=__cwPendingSessionTag||'unknown';
+  __cwPendingSessionTag=null;
+  __cwSessionActive=true;
+  if(typeof window!=='undefined'){
+    window.__cwSessionState={
+      active:true,
+      source:tag,
+      startedAt:Date.now(),
+      phase:'live',
+      endedAt:null,
+      lastEndReason:null,
+      lastSkip:null,
+      lastSkipReason:null
+    };
+  }
+}
+function cwSessionStateClear(reason){
+  __cwPendingSessionTag=null;
+  if(typeof window==='undefined')return;
+  const prev=window.__cwSessionState||{};
+  window.__cwSessionState={
+    active:false,
+    source:null,
+    startedAt:null,
+    phase:'idle',
+    endedAt:Date.now(),
+    lastEndReason:String(reason||'unknown'),
+    lastSkip:prev.lastSkip,
+    lastSkipReason:prev.lastSkipReason
+  };
+}
+function cwSessionStateMarkSkipped(reason){
+  if(typeof window==='undefined')return;
+  const base=window.__cwSessionState||{};
+  window.__cwSessionState=Object.assign({},base,{
+    lastSkip:Date.now(),
+    lastSkipReason:String(reason||'skipped')
+  });
+}
+
+function cwEnqueueSessionBoot(fn){
+  const p=__cwSessionBootTail.then(async()=>{
+    if(__cwSessionActive){
+      cwSessionStateMarkSkipped('already_active');
+      return null;
+    }
+    try{return await fn();}catch(e){console.warn('[session boot]',e);return null;}
+  });
+  __cwSessionBootTail=p.catch(()=>{});
+  return p;
+}
+/**
+ * Solo AI session entry: import, IDB restore, manual “Lancer”, or auto-rehearse after paste/PDF.
+ * All paths share the same serialized queue + active gate (partner/join use cwEnqueueSessionBoot separately).
+ * @param {{source?:string,importScreenN?:number,pdfScriptSnapshot?:Array,selectedCharacter?:string}} opts
+ */
+function requestRehearsalStart(opts){
+  opts=opts||{};
+  const source=opts.source||'import';
+  if(source==='manual'){
+    return cwEnqueueSessionBoot(async()=>{
+      if(__cwSessionActive)return false;
+      unlockAudio();
+      if(pdfScript.length>0&&!selectedChar){showToast(t('pickCharacterFirst'));return false}
+      try{
+        const perms=await navigator.mediaDevices.getUserMedia({audio:true,video:isCamOn});
+        perms.getTracks().forEach(t=>t.stop());
+      }catch(e){
+        console.warn('[session] permission denied:',e.message);
+        showToast(t('micDenied')||'Autorise le micro pour continuer',4000);
+      }
+      role='actor';sessionMode='ai';mode='ai';
+      __cwPendingSessionTag='manual';
+      const ok=await bootstrapAiSessionFromCurrentScript(1);
+      return ok!==false;
+    });
+  }
+  const importScreenN=opts.importScreenN!=null?opts.importScreenN:1;
+  const pdfScriptSnapshot=opts.pdfScriptSnapshot;
+  const selectedCharacter=opts.selectedCharacter;
+  const bootSource=opts.source||'import';
+  return cwEnqueueSessionBoot(async()=>{
+    if(__cwSessionActive)return false;
+    __cwPendingSessionTag=bootSource;
+    const ok=await enterRehearsalMode(importScreenN,pdfScriptSnapshot,selectedCharacter);
+    return !!ok;
+  });
+}
+
+/** Au chargement : restaure le dernier script et enchaîne la répétition sans étape manuelle */
+async function tryRestorePersistedScriptFromIdb(){
+  if(typeof indexedDB==='undefined')return false;
+  try{
+    const snap=await cwIdbGet('cw.snapshot.v1');
+    if(!snap||typeof snap.scriptRawText!=='string'||!snap.scriptRawText.trim())return false;
+    if(!Array.isArray(snap.pdfScript)||!snap.pdfScript.length)return false;
+    scriptRawText=snap.scriptRawText;
+    pdfScript=snap.pdfScript;
+    currentScriptName=snap.currentScriptName||'Script';
+    if(snap.lockedVoiceLocale&&VOICE_LOCALES.some(l=>l.id===snap.lockedVoiceLocale)){
+      lockedVoiceLocale=snap.lockedVoiceLocale;
+    }
+    syncPdfScriptDebugMirror();
+    const norm=normalizeScreenplayWhitespace(scriptRawText);
+    const ta=document.getElementById('scriptInput1');
+    if(ta)ta.value=norm;
+    const fname=document.getElementById('fileName1');
+    if(fname)fname.textContent=currentScriptName;
+    const uz=document.getElementById('uploadZone1');
+    const uo=document.getElementById('uploadOk1');
+    if(uz)uz.style.display='none';
+    if(uo)uo.style.display='flex';
+    if(!getChars().length)return false;
+    if(lockedVoiceLocale&&VOICE_LOCALES.some(l=>l.id===lockedVoiceLocale)){
+      applyLocaleVoices(lockedVoiceLocale,false);
+      initVoiceCountrySelect();
+      initVoiceGrid();
+    }
+    const boot=()=>{requestRehearsalStart({source:'restore',importScreenN:1}).catch(()=>{})};
+    if(typeof requestIdleCallback==='function')requestIdleCallback(boot,{timeout:350});
+    else setTimeout(boot,0);
+    return true;
+  }catch(_e){return false}
+}
+
 const _SCENE_HEAD=/^(INT\.|EXT\.|INT\ |EXT\ |SCÈNE|SCENE|SÉQUENCE|SEQUENCE|CARTON|FONDU|NOIR)/i;
 const _PAGE_LINE=/^\d{1,4}\s*\.?\s*$/;
+/** Slug / plan : coupe toujours le dialogue en cours (réinitialise curChar côté parse léger). */
+function isSlugOrSceneHeadingLine(line){
+  const l=String(line||'').trim();
+  if(!l)return false;
+  if(_PAGE_LINE.test(l))return false;
+  if(/^(?:\d{1,3}[A-Za-z]?\s*\.\s*)(?:INT\.?|EXT\.?|INT\/EXT|INT\/|EXT\/|I\/E\.?)\b/i.test(l))return true;
+  if(/^(?:\d{1,3}[A-Za-z]?\s+)(?:INT\.|EXT\.|INT\/|EXT\/|I\/E\.)\b/i.test(l))return true;
+  if(/^(?:\d{1,3}[A-Za-z]?\s*\.\s*)(?:INTÉRIEUR|EXTÉRIEUR|INTERIOR|EXTERIOR)\b/i.test(l))return true;
+  if(/^(?:INT\.?|EXT\.?|INT\/EXT|INT\/|EXT\/|I\/E\.?)\b/i.test(l))return true;
+  if(/^(?:INTÉRIEUR|EXTÉRIEUR|INTERIOR|EXTERIOR)\b/i.test(l))return true;
+  if(/^(?:SCÈNE|SCENE|SÉQUENCE|SEQUENCE)\b/i.test(l))return true;
+  if(/^(?:CARTON|FONDU|NOIR|TRANSITION|FLASHBACK)\b/i.test(l))return true;
+  if(/^(?:FADE\s+IN|FADE\s+OUT)\b/i.test(l))return true;
+  if(_SCENE_HEAD.test(l))return true;
+  return false;
+}
+/** Couverture / méta-script : pas un personnage ; coupe le flux dialogue comme une action. */
+function isScreenplayCoverMetaLine(line){
+  const raw=String(line||'').trim();
+  if(!raw||raw.length>140)return false;
+  const wc=raw.split(/\s+/).filter(Boolean).length;
+  if(/\b(WRITTEN\s+BY|DIRECTED\s+BY|PRODUCED\s+BY|SCREENPLAY\s+BY|BASED\s+ON|SHOOTING\s+SCRIPT)\b/i.test(raw))return true;
+  if(/\bPINK\s+REV\b|\bWHITE\s+REV\b|\bBLUE\s+REV\b|\bYELLOW\s+REV\b/i.test(raw))return true;
+  if(/^(?:SALVATOR\s+)?SIDES$/i.test(raw))return true;
+  if(/^\d+(?:ST|ND|RD|TH)\s+.+\b(?:DRAFT|REV)/i.test(raw))return true;
+  if(wc<=4&&/^(?:FINAL\s+)?DRAFT(?:\s*\d+|\s+[A-Z]+)?$/i.test(raw)&&raw.length<72)return true;
+  if(wc<=3&&/^REV(?:ISION)?[\s.:]*[\d.A-Z]*$/i.test(raw)&&raw.length<56)return true;
+  if(wc<=2&&/^SIDES$/i.test(raw))return true;
+  if(wc<=4&&/^DRAFT$/i.test(raw))return true;
+  return false;
+}
 function stripInlineParentheticalsForCue(s){
   return String(s||'').replace(/\s*\((?:CONT'?D|MORE|SUITE|\.\.\.)\)\s*$/gi,'').replace(/\s*\((?:V\.O\.|O\.S\.|OC)\)\s*$/gi,'').trim();
 }
 function isMostlyAllCapsCue(line){
   const core=stripInlineParentheticalsForCue(line).replace(/\([^)]*\)\s*$/,'').replace(/\s*[:\-–—]\s*:?\s*$/,'').trim();
   if(core.length<2||core.length>52)return false;
-  if(_SCENE_HEAD.test(core)||_PAGE_LINE.test(core))return false;
+  if(isSlugOrSceneHeadingLine(core)||isScreenplayCoverMetaLine(core)||_PAGE_LINE.test(core))return false;
   const letters=core.replace(/[^a-zA-ZÀ-ÿ']/g,'');
   if(letters.length<2)return false;
   let upper=0,total=0;
@@ -4309,6 +4693,347 @@ function parseScreenplaySmartLocal(rawText){
   }
   return mergeConsecutiveDialogues(res);
 }
+/* ═══ Lightweight screenplay parse : file unique → classification → merge (déterministe) ═══
+   Prétraitement : buildLightweightParseQueue(rawLines) — seul point d’entrée des segments.
+   Sortie file : { segment:'logicalLine', text } | { segment:'inlineStage', text } uniquement.
+   Pas de marqueurs texte, pas de second passage sur tout le script. */
+
+/** @returns {{ type:'text'|'act', text:string }[]} */
+function _splitLineIntoParenSegments(line){
+  const segments=[];
+  const re=/\([^)]*\)/g;
+  let last=0,m;
+  while((m=re.exec(line))!==null){
+    const before=line.slice(last,m.index).trim();
+    const inner=(m[0].length>=2?m[0].slice(1,-1):'').trim();
+    if(before)segments.push({type:'text',text:before});
+    if(inner)segments.push({type:'act',text:inner});
+    last=m.index+m[0].length;
+  }
+  const after=line.slice(last).trim();
+  if(after)segments.push({type:'text',text:after});
+  return segments.length?segments:[{type:'text',text:line}];
+}
+/**
+ * Prétraitement en une passe : uniquement des items structurés.
+ * @returns {Array<{segment:'logicalLine',text:string}|{segment:'inlineStage',text:string}>}
+ */
+function buildLightweightParseQueue(rawLines){
+  const SCENE_HEAD=/^(INT\.|EXT\.|INT\/|EXT\/|INT\s|EXT\s|I\/E\.|SCÈNE\b|SCENE\b|SÉQUENCE\b|SEQUENCE\b)/i;
+  const out=[];
+  for(const l of rawLines){
+    if(!l)continue;
+    if(_PAGE_LINE.test(l))continue;
+    if(SCENE_HEAD.test(l)||lineIsParentheticalOnly(l)||!/\(/.test(l)){
+      out.push({segment:'logicalLine',text:l});
+      continue;
+    }
+    const segs=_splitLineIntoParenSegments(l);
+    if(segs.length===1&&segs[0].type==='text'){
+      out.push({segment:'logicalLine',text:segs[0].text});
+      continue;
+    }
+    for(const seg of segs){
+      if(seg.type==='act'&&seg.text)out.push({segment:'inlineStage',text:seg.text});
+      else if(seg.type==='text'&&seg.text)out.push({segment:'logicalLine',text:seg.text});
+    }
+  }
+  return out;
+}
+function createLightweightParseState(){
+  return{curChar:null,rows:[]};
+}
+/**
+ * Classification d’une ligne logique (slug, personnage, réplique, action hors personnage).
+ * Mutate state.rows et state.curChar uniquement — pas d’effet de bord ailleurs.
+ */
+function createLightweightLogicalClassifier(){
+  const INLINE_SPEAKER=/^(.{2,42})\s*[:\-–—]\s*(.+)$/;
+  const mostlyCapsCue=(t)=>{
+    const core=String(t||'').replace(/\s*[:\-–—.]+\s*$/,'').trim();
+    if(core.length<2||core.length>48)return false;
+    if(isSlugOrSceneHeadingLine(core)||isScreenplayCoverMetaLine(core)||_PAGE_LINE.test(core))return false;
+    const letters=core.replace(/[^a-zA-ZÀ-ÿ']/g,'');
+    if(letters.length<2)return false;
+    let u=0,n=0;
+    for(let i=0;i<core.length;i++){
+      const ch=core[i];
+      if(/[a-zA-ZÀ-ÿ]/.test(ch)){n++;if(ch===ch.toUpperCase()&&/[A-ZÀ-Ö]/.test(ch))u++;}
+    }
+    return n>0&&u/n>=0.82;
+  };
+  return function classifyLogicalLine(state,line){
+    const res=state.rows;
+    const l=line;
+    if(_PAGE_LINE.test(l))return;
+    if(isSlugOrSceneHeadingLine(l)){
+      res.push({kind:'slug',char:'',line:l,isStageDirection:false,isSpoken:false,parenthetical:null});
+      state.curChar=null;
+      return;
+    }
+    if(isScreenplayCoverMetaLine(l)){
+      res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
+      state.curChar=null;
+      return;
+    }
+    if(lineIsParentheticalOnly(l)){
+      res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:l.trim()});
+      state.curChar=null;
+      return;
+    }
+    const lead=extractLeadingParenthetical(l);
+    if(lead.paren&&lead.rest&&lead.rest.length){
+      if(state.curChar){
+        res.push({kind:'action',char:'',line:lead.paren,isStageDirection:true,isSpoken:false,parenthetical:lead.paren});
+        res.push({kind:'dialogue',char:state.curChar,line:lead.rest,isStageDirection:false,isSpoken:true,parenthetical:null});
+      }else{
+        res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
+      }
+      return;
+    }
+    const inl=INLINE_SPEAKER.exec(l);
+    if(inl&&mostlyCapsCue(inl[1])&&inl[2]&&inl[2].trim()){
+      const name=inl[1].trim().replace(/\s*[:\-–—.]+\s*$/,'');
+      if(isScreenplayCoverMetaLine(name)||isSlugOrSceneHeadingLine(name)){
+        res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
+        state.curChar=null;
+        return;
+      }
+      state.curChar=name;
+      res.push({kind:'dialogue',char:name,line:inl[2].trim(),isStageDirection:false,isSpoken:true,parenthetical:null});
+      return;
+    }
+    if(mostlyCapsCue(l)){
+      const cue=l.replace(/\s*[:\-–—.]+\s*$/,'').trim();
+      if(isScreenplayCoverMetaLine(cue)||isSlugOrSceneHeadingLine(cue)){
+        res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
+        state.curChar=null;
+        return;
+      }
+      state.curChar=cue;
+      return;
+    }
+    if(state.curChar){
+      res.push({kind:'dialogue',char:state.curChar,line:l,isStageDirection:false,isSpoken:true,parenthetical:null});
+    }else{
+      res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
+    }
+  };
+}
+function _appendInlineStageRow(state,text){
+  const body=String(text||'').trim();
+  if(body)state.rows.push({kind:'action',char:'',line:body,isStageDirection:true,isSpoken:false,parenthetical:null});
+}
+/** Un item de file : même sémantique pour sync et yielding. */
+function _processLightweightQueueItem(item,state,classifyLogicalLine){
+  if(item.segment==='inlineStage'){
+    _appendInlineStageRow(state,item.text);
+    return;
+  }
+  if(item.segment==='logicalLine'){
+    classifyLogicalLine(state,item.text);
+    return;
+  }
+}
+function _runLightweightParseQueue(queue){
+  const state=createLightweightParseState();
+  const classifyLogicalLine=createLightweightLogicalClassifier();
+  for(let i=0;i<queue.length;i++){
+    _processLightweightQueueItem(queue[i],state,classifyLogicalLine);
+  }
+  return mergeConsecutiveDialogues(state.rows);
+}
+async function _runLightweightParseQueueYielding(queue){
+  const state=createLightweightParseState();
+  const classifyLogicalLine=createLightweightLogicalClassifier();
+  const step=720;
+  for(let i=0;i<queue.length;i++){
+    if(i>0&&i%step===0){
+      await yieldToBrowser();
+      if(_pdfParseCancelled)break;
+    }
+    _processLightweightQueueItem(queue[i],state,classifyLogicalLine);
+  }
+  return mergeConsecutiveDialogues(state.rows);
+}
+/** rawLines → queue (une fois) → lignes pdfScript. Point d’entrée déterministe hors normalisation. */
+function parseLightweightFromRawLines(rawLines){
+  return _runLightweightParseQueue(buildLightweightParseQueue(rawLines));
+}
+/** ~N premières lignes : session immédiate ; le reste est indexé en arrière-plan. */
+const CW_INSTANT_HEAD_MAX_RAW_LINES=900;
+function scriptRowsHaveSpeakableDialogue(rows){
+  return Array.isArray(rows)&&rows.some(r=>r&&r.kind===LINE_TYPE.DIALOGUE&&r.char&&String(r.line||'').trim().length>0);
+}
+function scheduleFullLightweightParseAfterHead(n,normText,myToken){
+  const runFull=async()=>{
+    if(myToken!==_fastFullParseToken)return;
+    try{
+      const full=await parseScriptLightweightYielding(normText,true);
+      if(myToken!==_fastFullParseToken||!full||!full.length)return;
+      pdfScript=full;
+      syncPdfScriptDebugMirror();
+      const st=document.getElementById('setupStatus'+n);
+      if(st&&!__cwSessionActive){
+        st.textContent=pdfScript.length+' lignes · lecture rapide · '+(pdfScript.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length)+' répliques';
+      }
+      if(__cwSessionActive){
+        try{
+          const prevIdx=prompterIndex;
+          setPrompterLinesForSession(n,'fullParseComplete');
+          prompterIndex=Math.min(Math.max(0,prevIdx),Math.max(0,prompterLines.length-1));
+          renderPrompter();
+          syncPrompter();
+          handleCurrentLineAutomation();
+        }catch(_e){}
+        showToast('Scénario complet chargé',2200);
+      }
+      schedulePersistScriptSnapshot();
+    }catch(err){console.warn('[parse] full script completion',err)}
+  };
+  if(typeof requestIdleCallback==='function')requestIdleCallback(runFull,{timeout:900});
+  else setTimeout(runFull,40);
+}
+function parseScriptLightweight(rawText){
+  const norm=normalizeScreenplayWhitespace(rawText);
+  const rawLines=norm.split('\n').map(l=>l.trim()).filter(Boolean);
+  return parseLightweightFromRawLines(rawLines);
+}
+/** Parse léger avec rends de main : même sortie que parseScriptLightweight ; yield uniquement ici. */
+async function parseScriptLightweightYielding(normText,skipNormalize){
+  const norm=skipNormalize?String(normText||''):normalizeScreenplayWhitespace(normText);
+  const rawLines=norm.split('\n').map(l=>l.trim()).filter(Boolean);
+  const queue=buildLightweightParseQueue(rawLines);
+  if(queue.length<700)return _runLightweightParseQueue(queue);
+  return await _runLightweightParseQueueYielding(queue);
+}
+const SCRIPT_INPUT_LINES_PER_FRAME=28;
+async function fillScriptInputProgressive(n,fullNorm){
+  const ta=document.getElementById('scriptInput'+n);
+  if(!ta)return;
+  const lines=fullNorm.split('\n');
+  if(lines.length<=SCRIPT_INPUT_LINES_PER_FRAME*4&&fullNorm.length<36000){
+    ta.value=fullNorm;
+    return;
+  }
+  ta.value='';
+  let acc='';
+  for(let i=0;i<lines.length;i+=SCRIPT_INPUT_LINES_PER_FRAME){
+    if(i>0)await yieldToBrowser();
+    if(_pdfParseCancelled)return;
+    const chunk=lines.slice(i,i+SCRIPT_INPUT_LINES_PER_FRAME);
+    acc+=(acc?'\n':'')+chunk.join('\n');
+    ta.value=acc;
+  }
+}
+async function finalizePdfTextAfterDeferredOcr(n,my,pageTextsArr){
+  if(my!==_pdfOcrDeferredToken)return;
+  try{
+    const raw=(pageTextsArr.join('\n\n')).replace(/\u00A0/g,' ');
+    scriptRawText=raw;
+    const norm=await normalizeScreenplayWhitespaceAsync(raw);
+    await fillScriptInputProgressive(n,norm);
+    const curSnap=deepClonePdfScript(pdfScript);
+    let next=await parseScriptLightweightYielding(norm,true);
+    if(!next||!next.length){
+      next=[{kind:'action',char:'',line:String(norm||'').slice(0,12000),isStageDirection:true,isSpoken:false,parenthetical:null}];
+    }
+    const hadDial=curSnap.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length;
+    const nextDial=next.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length;
+    const apply=isRefinementClearlyBetter(curSnap,next)||(hadDial===0&&nextDial>0);
+    if(apply){
+      pdfScript=next;
+      syncPdfScriptDebugMirror();
+      const chars=getChars();
+      const cs=document.getElementById('charSection'+n);
+      if(chars.length&&cs){
+        cs.style.display='block';
+        renderChars(n,chars);
+        const orb=document.getElementById('optionalReviewBtn'+n);
+        if(orb)orb.style.display='block';
+      }
+      const st=document.getElementById('setupStatus'+n);
+      if(st)st.textContent=pdfScript.length+' lignes · OCR · '+(pdfScript.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length)+' répliques';
+      showToast('Texte PDF amélioré (OCR)',2600);
+      schedulePersistScriptSnapshot();
+    }
+  }catch(err){console.warn('[deferred OCR finalize]',err)}
+}
+function disposeCwPdfDoc(){
+  try{
+    if(_cwPdfDoc&&typeof _cwPdfDoc.destroy==='function'){_cwPdfDoc.destroy()}
+  }catch(_e){}
+  _cwPdfDoc=null;
+}
+function scheduleDeferredPdfOcrImprovement(n,pdf,pageTextsArr,deferredPageNums){
+  if(!pdf||!pageTextsArr||!deferredPageNums||!deferredPageNums.length)return;
+  const my=++_pdfOcrDeferredToken;
+  let idx=0;
+  const runNext=()=>{
+    if(my!==_pdfOcrDeferredToken)return;
+    if(idx>=deferredPageNums.length){
+      hideOcrToast();
+      const fin=()=>finalizePdfTextAfterDeferredOcr(n,my,pageTextsArr);
+      if(typeof requestIdleCallback==='function')requestIdleCallback(fin,{timeout:4000});
+      else setTimeout(fin,140);
+      return;
+    }
+    const pageNum=deferredPageNums[idx++];
+    (async ()=>{
+      if(my!==_pdfOcrDeferredToken)return;
+      try{
+        await yieldToBrowser();
+        const page=await pdf.getPage(pageNum);
+        const prev=pageTextsArr[pageNum-1]||'';
+        showOcrToast('OCR arrière-plan · p.'+pageNum+'…');
+        const ocrText=await extractPdfPageTextWithOcr(page,'eng');
+        if(ocrText&&ocrText.length>Math.max(48,prev.length*1.25)){
+          pageTextsArr[pageNum-1]=normalizeWatermarkNoise(ocrText);
+        }
+      }catch(e){console.warn('[deferred OCR]',pageNum,e)}
+      hideOcrToast();
+      if(typeof requestIdleCallback==='function')requestIdleCallback(runNext,{timeout:2200});
+      else setTimeout(runNext,72);
+    })();
+  };
+  if(typeof requestIdleCallback==='function')requestIdleCallback(runNext,{timeout:3000});
+  else setTimeout(runNext,380);
+}
+function scheduleOptionalBackgroundRefinement(n){
+  const my=++_bgRefinementToken;
+  const heavy=()=>{
+    if(my!==_bgRefinementToken)return;
+    const src=getScriptNormalizationSource();
+    if(!src||src.length<1800)return;
+    const curSnap=deepClonePdfScript(pdfScript);
+    try{
+      let alt=parseScreenplaySmartLocal(src);
+      if(!alt||!alt.length)return;
+      alt=mergeConsecutiveDialogues(sanitizeDialogueVsAction(sanitizeCharacterNames(alt)));
+      if(!isRefinementClearlyBetter(curSnap,alt))return;
+      pdfScript=alt;
+      syncPdfScriptDebugMirror();
+      const cs=document.getElementById('charSection'+n);
+      const chars=getChars();
+      if(chars.length&&cs&&cs.style.display!=='none')renderChars(n,chars);
+      showToast('Analyse détaillée appliquée',2200);
+      schedulePersistScriptSnapshot();
+    }catch(_e){}
+  };
+  const run=()=>{
+    if(my!==_bgRefinementToken)return;
+    if(typeof requestIdleCallback==='function')requestIdleCallback(heavy,{timeout:6500});
+    else setTimeout(heavy,160);
+  };
+  if(typeof requestIdleCallback==='function')requestIdleCallback(run,{timeout:4200});
+  else setTimeout(run,560);
+}
+function openOptionalScriptReview(n){
+  const ta=document.getElementById('scriptInput'+n);
+  const norm=normalizeScreenplayWhitespace((ta&&ta.value)||scriptRawText||'');
+  const detectedLang=detectTextLanguage(norm);
+  openScriptReviewOverlay(n,norm||'',[],detectedLang,estimateParseConfidence(pdfScript));
+}
 function estimateParseConfidence(rows){
   if(!rows||!rows.length)return 0;
   const d=rows.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length;
@@ -4316,35 +5041,73 @@ function estimateParseConfidence(rows){
   const ratio=d/Math.max(1,d+a);
   return Math.round(55+Math.min(40,ratio*45));
 }
+function normalizeReviewBlockText(t){
+  return String(t||'').replace(/\u00A0/g,' ').replace(/\s+/g,' ').trim();
+}
+function deepClonePdfScript(arr){
+  try{
+    if(typeof structuredClone==='function')return structuredClone(Array.isArray(arr)?arr:[]);
+  }catch(_e){}
+  try{return JSON.parse(JSON.stringify(Array.isArray(arr)?arr:[]));}catch(_e){
+    return(Array.isArray(arr)?arr:[]).map(r=>(r&&typeof r==='object'?{...r}:r));
+  }
+}
+function isPdfScriptValidationBroken(next,snap){
+  if(!next||!next.length)return true;
+  const anyLine=next.some(r=>r&&String(r.line||'').trim().length>0);
+  if(!anyLine)return true;
+  const dialNext=next.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length;
+  const dialSnap=(snap||[]).filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length;
+  if(dialSnap>=4&&dialNext===0)return true;
+  return false;
+}
+/** Remplace pdfScript par le résultat affiné seulement si segmentation/dialogue nettement meilleurs */
+function isRefinementClearlyBetter(cur,alt){
+  if(!alt||!alt.length)return false;
+  if(!cur||!cur.length)return alt.some(r=>r&&String(r.line||'').trim());
+  if(isPdfScriptValidationBroken(alt,cur))return false;
+  const dC=cur.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length;
+  const dA=alt.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length;
+  const nC=cur.filter(r=>r&&String(r.line||'').trim()).length;
+  const nA=alt.filter(r=>r&&String(r.line||'').trim()).length;
+  if(dA<dC)return false;
+  if(dA>dC)return true;
+  if(nA<=nC)return false;
+  return true;
+}
+function getScriptNormalizationSource(){
+  return typeof scriptRawText==='string'&&scriptRawText.length?scriptRawText:'';
+}
+function buildScriptReviewRowEl(row,idx){
+  const wrap=document.createElement('div');
+  wrap.className='sr-row'+(row.kind===LINE_TYPE.SLUG?' slug':'');
+  wrap.dataset.idx=String(idx);
+  const sel=document.createElement('select');sel.className='sr-kind';
+  [['slug','Slug'],['dialogue','Réplique'],['action','Action']].forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;if((row.kind||'')===v)o.selected=true;sel.appendChild(o)});
+  const mid=document.createElement('div');mid.style.gridColumn='2';mid.style.display='flex';mid.style.flexDirection='column';mid.style.gap='4px';
+  const inp=document.createElement('input');inp.className='sr-char';inp.placeholder='Personnage';inp.value=(row.kind===LINE_TYPE.DIALOGUE&&(row.char||''))?row.char:'';inp.toggleAttribute('disabled',row.kind!==LINE_TYPE.DIALOGUE);
+  const ta=document.createElement('textarea');ta.className='sr-text';ta.rows=row.line&&row.line.length>90?3:2;ta.value=row.line||'';
+  mid.appendChild(inp);mid.appendChild(ta);
+  const tools=document.createElement('div');tools.className='sr-tools';
+  const flag=document.createElement('label');flag.className='sr-flag';
+  const cb=document.createElement('input');cb.type='checkbox';cb.className='sr-stage';cb.checked=!!(row.isStageDirection||row.kind===LINE_TYPE.ACTION);
+  flag.appendChild(cb);flag.appendChild(document.createTextNode(' Didascalie'));
+  const mergeBtn=document.createElement('button');mergeBtn.type='button';mergeBtn.textContent='↓ Fusionner';mergeBtn.onclick=()=>scriptReviewMergeDown(wrap);
+  tools.appendChild(flag);tools.appendChild(mergeBtn);
+  wrap.appendChild(sel);wrap.appendChild(mid);wrap.appendChild(tools);
+  sel.addEventListener('change',()=>{
+    const isD=sel.value==='dialogue';
+    inp.disabled=!isD;
+    if(!isD)inp.value='';
+  });
+  return wrap;
+}
 function pdfScriptToReviewHtml(script){
   const frag=document.createDocumentFragment();
   if(!script||!script.length){
     const d=document.createElement('div');d.className='sr-row';d.innerHTML='<span class="sr-kind">—</span><textarea class="sr-text" placeholder="Colle une ligne…"></textarea><span></span>';frag.appendChild(d);return frag;
   }
-  script.forEach((row,idx)=>{
-    const wrap=document.createElement('div');
-    wrap.className='sr-row'+(row.kind===LINE_TYPE.SLUG?' slug':'');
-    wrap.dataset.idx=String(idx);
-    const sel=document.createElement('select');sel.className='sr-kind';
-    [['slug','Slug'],['dialogue','Réplique'],['action','Action']].forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;if((row.kind||'')===v)o.selected=true;sel.appendChild(o)});
-    const mid=document.createElement('div');mid.style.gridColumn='2';mid.style.display='flex';mid.style.flexDirection='column';mid.style.gap='4px';
-    const inp=document.createElement('input');inp.className='sr-char';inp.placeholder='Personnage';inp.value=(row.kind===LINE_TYPE.DIALOGUE&&(row.char||''))?row.char:'';inp.toggleAttribute('disabled',row.kind!==LINE_TYPE.DIALOGUE);
-    const ta=document.createElement('textarea');ta.className='sr-text';ta.rows=row.line&&row.line.length>90?3:2;ta.value=row.line||'';
-    mid.appendChild(inp);mid.appendChild(ta);
-    const tools=document.createElement('div');tools.className='sr-tools';
-    const flag=document.createElement('label');flag.className='sr-flag';
-    const cb=document.createElement('input');cb.type='checkbox';cb.className='sr-stage';cb.checked=!!(row.isStageDirection||row.kind===LINE_TYPE.ACTION);
-    flag.appendChild(cb);flag.appendChild(document.createTextNode(' Didascalie'));
-    const mergeBtn=document.createElement('button');mergeBtn.type='button';mergeBtn.textContent='↓ Fusionner';mergeBtn.onclick=()=>scriptReviewMergeDown(wrap);
-    tools.appendChild(flag);tools.appendChild(mergeBtn);
-    wrap.appendChild(sel);wrap.appendChild(mid);wrap.appendChild(tools);
-    sel.addEventListener('change',()=>{
-      const isD=sel.value==='dialogue';
-      inp.disabled=!isD;
-      if(!isD)inp.value='';
-    });
-    frag.appendChild(wrap);
-  });
+  script.forEach((row,idx)=>frag.appendChild(buildScriptReviewRowEl(row,idx)));
   return frag;
 }
 function collectPdfScriptFromReviewDom(){
@@ -4352,25 +5115,39 @@ function collectPdfScriptFromReviewDom(){
   if(!wrap)return[];
   const rows=wrap.querySelectorAll('.sr-row');
   const out=[];
-  rows.forEach(row=>{
-    const kind=row.querySelector('.sr-kind').value;
-    const char=(row.querySelector('.sr-char')&&row.querySelector('.sr-char').value||'').trim();
-    const text=(row.querySelector('.sr-text')&&row.querySelector('.sr-text').value||'').trim();
-    const stage=row.querySelector('.sr-stage')&&row.querySelector('.sr-stage').checked;
-    if(!text)return;
-    if(kind==='slug')out.push({kind:'slug',char:'',line:text,isStageDirection:false,isSpoken:false,parenthetical:null});
-    else if(kind==='action'||stage)out.push({kind:'action',char:'',line:text,isStageDirection:true,isSpoken:false,parenthetical:null});
-    else out.push({kind:'dialogue',char:char||'?',line:text,isStageDirection:false,isSpoken:true,parenthetical:null});
-  });
+  try{
+    rows.forEach(row=>{
+      if(!row)return;
+      const sel=row.querySelector?.('.sr-kind');
+      const kind=(sel&&sel.value)||'action';
+      const charEl=row.querySelector?.('.sr-char');
+      const textEl=row.querySelector?.('.sr-text');
+      const stageEl=row.querySelector?.('.sr-stage');
+      const char=(charEl&&charEl.value||'').trim();
+      const text=normalizeReviewBlockText(textEl&&textEl.value);
+      const stage=!!(stageEl&&stageEl.checked);
+      if(!text)return;
+      if(kind==='slug')out.push({kind:'slug',char:'',line:text,isStageDirection:false,isSpoken:false,parenthetical:null});
+      else if(kind==='action'||stage)out.push({kind:'action',char:'',line:text,isStageDirection:true,isSpoken:false,parenthetical:null});
+      else out.push({kind:'dialogue',char:char||'?',line:text,isStageDirection:false,isSpoken:true,parenthetical:null});
+    });
+  }catch(e){
+    console.warn('[review] collectPdfScriptFromReviewDom',e);
+    throw e;
+  }
   return mergeConsecutiveDialogues(out);
 }
 function scriptReviewMergeDown(rowEl){
-  const next=rowEl.nextElementSibling;
+  const list=document.getElementById('scriptReviewList');
+  const prevScroll=list?list.scrollTop:0;
+  const next=rowEl&&rowEl.nextElementSibling;
   if(!next||!next.classList.contains('sr-row'))return;
   const ta=rowEl.querySelector('.sr-text');
   const nta=next.querySelector('.sr-text');
-  if(ta&&nta){ta.value=(ta.value.trim()+' '+nta.value.trim()).replace(/\s+/g,' ').trim();ta.rows=Math.min(12,Math.max(2,Math.ceil(ta.value.length/55)))}
+  if(ta&&nta){ta.value=normalizeReviewBlockText(ta.value+' '+nta.value);ta.rows=Math.min(12,Math.max(2,Math.ceil(ta.value.length/55)))}
   next.remove();
+  rowEl.classList.remove('sr-auto-accepted');
+  if(list)requestAnimationFrame(()=>{list.scrollTop=Math.min(prevScroll,Math.max(0,list.scrollHeight-list.clientHeight))});
 }
 function openScriptReviewOverlay(n,normText,validChars,detectedLang,confidence){
   setLoading(false);
@@ -4378,25 +5155,47 @@ function openScriptReviewOverlay(n,normText,validChars,detectedLang,confidence){
   const list=document.getElementById('scriptReviewList');
   const meta=document.getElementById('scriptReviewMeta');
   if(!ov||!list)return;
+  ov.classList.remove('sr-focus-mode');
   _scriptReviewCtx={n,rawNorm:normText,validChars:validChars||[],detectedLang:detectedLang||''};
   list.innerHTML='';
   list.appendChild(pdfScriptToReviewHtml(pdfScript));
   if(meta){
     const d=(pdfScript||[]).filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length;
-    meta.textContent=(typeof confidence==='number'?'Fiabilité estimée ~'+confidence+'% · ':'')+d+' répliques · '+(pdfScript||[]).length+' blocs';
+    meta.textContent=(typeof confidence==='number'&&confidence>0?'Indicateur ~'+confidence+'% · ':'')+d+' répliques · '+(pdfScript||[]).length+' blocs';
   }
   ov.classList.add('active');
   ov.setAttribute('aria-hidden','false');
+  setScriptReviewInteractive(true);
 }
 function closeScriptReview(applyEdits){
   const ov=document.getElementById('scriptReviewOverlay');
   if(!ov)return;
+  if(!applyEdits){
+    _bgRefinementToken++;
+  }
   if(applyEdits){
-    const next=collectPdfScriptFromReviewDom();
-    if(next&&next.length)pdfScript=mergeConsecutiveDialogues(sanitizeDialogueVsAction(sanitizeCharacterNames(next)));
+    const reviewSnapshot=deepClonePdfScript(pdfScript);
+    let collected=[];
+    try{
+      collected=collectPdfScriptFromReviewDom();
+    }catch(err){
+      console.warn('[review] collect failed',err);
+      showToast('Erreur lecture du formulaire — réessaie',3800);
+      return;
+    }
+    const merged=collected&&collected.length
+      ?mergeConsecutiveDialogues(sanitizeDialogueVsAction(sanitizeCharacterNames(collected)))
+      :[];
+    if(isPdfScriptValidationBroken(merged,reviewSnapshot)){
+      pdfScript=reviewSnapshot;
+      syncPdfScriptDebugMirror();
+      showToast('Résultat invalide — script restauré',4200);
+      return;
+    }
+    pdfScript=merged;
     syncPdfScriptDebugMirror();
   }
-  ov.classList.remove('active');
+  ov.classList.remove('active','sr-focus-mode');
   ov.setAttribute('aria-hidden','true');
   const ctx=_scriptReviewCtx;if(!ctx)return;
   finishPdfSetupUi(ctx.n,ctx.rawNorm,ctx.validChars,ctx.detectedLang);
@@ -4412,76 +5211,114 @@ function finishPdfSetupUi(n,rawText,validChars,detectedLang){
   if(pdfScript.length>0&&chars.length>0){
     renderChars(n,chars);
     document.getElementById('charSection'+n).style.display='block';
-    const provider=(validChars&&validChars.length)?'claude-validate':'local-smart';
-    document.getElementById('setupStatus'+n).textContent=pdfScript.length+' lignes · '+provider+(pdfScript.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length)+' répliques';
-    if(n===1)showToast(t('pickCharacterFirst'),2200);
+    document.getElementById('setupStatus'+n).textContent=pdfScript.length+' lignes · lecture rapide · '+(pdfScript.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length)+' répliques';
+    const orb=document.getElementById('optionalReviewBtn'+n);
+    if(orb)orb.style.display='block';
     if(detectedLang&&VOICE_LOCALES.some(l=>l.id===detectedLang)){lockedVoiceLocale=detectedLang;applyLocaleVoices(detectedLang,false);initVoiceCountrySelect();initVoiceGrid()}
-    showToast(chars.length+' personnages détectés',2200);
+    if(n===1)showToast(chars.length+' rôles repérés — '+t('myCharacterLabel'),4200);
   }else{
     pdfScript=[];
     syncPdfScriptDebugMirror();
     document.getElementById('charSection'+n).style.display='none';
     document.getElementById('scriptInput'+n).value=rawText||'';
     document.getElementById('setupStatus'+n).textContent=t('pdfImportedRaw');
+    const orb0=document.getElementById('optionalReviewBtn'+n);
+    if(orb0)orb0.style.display='none';
     if(detectedLang&&VOICE_LOCALES.some(l=>l.id===detectedLang)){lockedVoiceLocale=detectedLang;applyLocaleVoices(detectedLang,false);initVoiceCountrySelect();initVoiceGrid()}
     showToast('Peu de dialogue détecté — vérifie ou colle un autre fichier',4500);
   }
 }
 async function runImportedScriptPipeline(n,normText,displayName){
+  _fastFullParseToken++;
+  let headOnlyPending=false;
   currentScriptName=displayName||currentScriptName||'Script';
   scriptValidatedCharKeys=null;
   const detectedLang=detectTextLanguage(normText);
-  let validChars=[];
-  let candidatesStr=extractCandidateCharacters(normText);
-  if(!candidatesStr){
-    console.warn('[parse] no candidates string — smart local parse only');
-    let parsedScript=parseScreenplaySmartLocal(normText);
-    if(!parsedScript||!parsedScript.length)parsedScript=parsePDFScript(normText);
-    pdfScript=mergeConsecutiveDialogues(sanitizeDialogueVsAction(sanitizeCharacterNames(parsedScript)));
-    const conf=estimateParseConfidence(pdfScript);
-    openScriptReviewOverlay(n,normText,[],detectedLang,conf);
-    return;
+  setLoading(false);
+  stopFakeProgress();
+  const rawForHash=(typeof scriptRawText==='string'&&scriptRawText.length)?scriptRawText:String(normText||'');
+  const hKey=scriptContentHash(rawForHash);
+  let fromCache=false;
+  try{
+    const cached=await cwIdbGet('cw.parse.'+hKey);
+    if(Array.isArray(cached)&&cached.length){
+      pdfScript=cached;
+      fromCache=true;
+    }
+  }catch(_e){}
+  if(!fromCache){
+    const rawLines=normText.split('\n').map(l=>l.trim()).filter(Boolean);
+    const useHeadFastStart=rawLines.length>CW_INSTANT_HEAD_MAX_RAW_LINES;
+    let scheduledTail=false;
+    if(useHeadFastStart){
+      const headRows=parseLightweightFromRawLines(rawLines.slice(0,CW_INSTANT_HEAD_MAX_RAW_LINES));
+      if(scriptRowsHaveSpeakableDialogue(headRows)){
+        pdfScript=headRows;
+        scheduledTail=true;
+        headOnlyPending=true;
+        scheduleFullLightweightParseAfterHead(n,normText,_fastFullParseToken);
+      }
+    }
+    if(!scheduledTail){
+      if(normText.length>45000){
+        const st=document.getElementById('setupStatus'+n);
+        if(st)st.textContent='Analyse du script…';
+      }
+      pdfScript=await parseScriptLightweightYielding(normText,true);
+    }
+    if(!pdfScript||!pdfScript.length){
+      pdfScript=[{kind:'action',char:'',line:String(normText||'').slice(0,12000),isStageDirection:true,isSpoken:false,parenthetical:null}];
+    }
   }
-  validChars=await validateCharactersRemote(candidatesStr,detectedLang);
-  if(validChars&&validChars.length){
-    scriptValidatedCharKeys=new Set(validChars.map(c=>normCharKeyForWhitelist(String(c))));
-    console.info('[parse] whitelist size:',scriptValidatedCharKeys.size);
+  syncPdfScriptDebugMirror();
+  if(detectedLang&&VOICE_LOCALES.some(l=>l.id===detectedLang)){
+    lockedVoiceLocale=detectedLang;
+    applyLocaleVoices(detectedLang,false);
+    initVoiceCountrySelect();
+    initVoiceGrid();
   }
-  let parsedScript;
-  if(validChars.length>0){
-    setLoadingMsg('Classification des répliques…');
-    parsedScript=await classifyLinesViaAPI(normText,validChars,detectedLang);
-    if(!parsedScript||parsedScript.length===0)parsedScript=classifyWithValidatedChars(normText,validChars);
+  const chars=getChars();
+  if(chars.length>0){
+    document.getElementById('uploadZone'+n).style.display='none';
+    document.getElementById('uploadOk'+n).style.display='flex';
+    const fname=document.getElementById('fileName'+n);
+    if(fname&&(!fname.textContent||fname.textContent==='PDF'))fname.textContent=currentScriptName||'Script';
+    try{
+      const entered=await requestRehearsalStart({source:'import',importScreenN:n});
+      if(!entered&&!__cwSessionActive)finishPdfSetupUi(n,normText,[],detectedLang);
+    }catch(err){
+      console.error('[import] requestRehearsalStart',err);
+      if(!__cwSessionActive)finishPdfSetupUi(n,normText,[],detectedLang);
+    }
   }else{
-    parsedScript=parseScreenplaySmartLocal(normText);
-    if(!parsedScript||parsedScript.length===0)parsedScript=parsePDFScript(normText);
+    finishPdfSetupUi(n,normText,[],detectedLang);
   }
-  pdfScript=mergeConsecutiveDialogues(sanitizeDialogueVsAction(sanitizeCharacterNames(parsedScript)));
-  const _dc={d:0,a:0,s:0};
-  pdfScript.forEach(r=>{if(r.kind==='dialogue')_dc.d++;else if(r.kind==='slug')_dc.s++;else _dc.a++});
-  console.info('[parse] FINAL pdfScript:',pdfScript.length,'dialogue:',_dc.d,'action:',_dc.a,'slug:',_dc.s);
-  const conf=estimateParseConfidence(pdfScript);
-  openScriptReviewOverlay(n,normText,validChars,detectedLang,conf);
+  if(!headOnlyPending)schedulePersistScriptSnapshot();
+  const refineDelay=normText.length>120000?90000:normText.length>45000?18000:420;
+  setTimeout(()=>scheduleOptionalBackgroundRefinement(n),refineDelay);
 }
 async function processTextImport(n){
   const raw=document.getElementById('scriptInput'+n).value;
-  const norm=normalizeScreenplayWhitespace(raw);
+  scriptRawText=raw;
+  const norm=await normalizeScreenplayWhitespaceAsync(raw);
   if(norm.length<24){showToast('Colle au moins quelques lignes de scénario',3500);return}
   takeNumber=0;
   currentScriptName='Texte collé';
-  setLoading(true,'Import texte…');
-  showLoadingCancel();
   try{
     await runImportedScriptPipeline(n,norm,'Texte collé');
+    void fillScriptInputProgressive(n,norm);
   }catch(e){
     console.error(e);
     showToast('Erreur import texte',4000);
-  }finally{
-    setLoading(false);
   }
 }
 
 function getChars(){const c={};for(const row of pdfScript){if(!row||row.kind!==LINE_TYPE.DIALOGUE||!row.char)continue;c[row.char]=(c[row.char]||0)+1}return Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([char,count])=>({char,count}))}
+/** Personnage le plus fréquent (tri getChars) ; en cas d’égalité, premier détecté */
+function pickDefaultRehearsalCharacter(){
+  const chars=getChars();
+  return chars&&chars.length?chars[0].char:null;
+}
 function renderPartnerAssignment(n){
   if(n!==1)return;
   const wrap=document.getElementById('partnerAssignWrap1');
@@ -4512,28 +5349,28 @@ function renderChars(n,chars){
   chars.forEach(({char,count})=>{const el=document.createElement('div');el.className='char-item';el.innerHTML=`${char}<span class="cc">(${count})</span>`;el.onclick=()=>{selectedChar=char;soloPartnerMode='all';soloPartnerChar=null;g.querySelectorAll('.char-item').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');showToast('Tu joues '+char);if(n===1)renderPartnerAssignment(1)};g.appendChild(el)});
   if(n===1)renderPartnerAssignment(1);
 }
-function clearPDF(n){pdfScript=[];syncPdfScriptDebugMirror();selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;lockedVoiceLocale='';initVoiceCountrySelect();document.getElementById('uploadZone'+n).style.display='block';document.getElementById('uploadOk'+n).style.display='none';document.getElementById('charSection'+n).style.display='none';if(n===1){const w=document.getElementById('partnerAssignWrap1');if(w)w.style.display='none'}document.getElementById('setupStatus'+n).textContent='';document.getElementById('pdfInput'+n).value=''}
+function clearPDF(n){__cwSessionActive=false;cwSessionStateClear('clearPDF');pdfScript=[];scriptRawText='';_bgRefinementToken++;_fastFullParseToken++;_pdfOcrDeferredToken++;disposeCwPdfDoc();syncPdfScriptDebugMirror();clearPersistedScriptMemory().catch(()=>{});selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;lockedVoiceLocale='';initVoiceCountrySelect();document.getElementById('uploadZone'+n).style.display='block';document.getElementById('uploadOk'+n).style.display='none';document.getElementById('charSection'+n).style.display='none';if(n===1){const w=document.getElementById('partnerAssignWrap1');if(w)w.style.display='none'}document.getElementById('setupStatus'+n).textContent='';document.getElementById('pdfInput'+n).value='';const orb=document.getElementById('optionalReviewBtn'+n);if(orb)orb.style.display='none'}
 
 // ── Prompter ──
 function buildLines(n){
-  const _dials=pdfScript.filter(s=>s.kind==='dialogue');const _acts=pdfScript.filter(s=>s.kind==='action');const _slugs=pdfScript.filter(s=>s.kind==='slug');console.info('[buildLines] total='+pdfScript.length+' dialogues='+_dials.length+' actions='+_acts.length+' slugs='+_slugs.length+' selectedChar='+selectedChar);if(_dials.length>0)console.info('[buildLines] first3dialogues='+_dials.slice(0,3).map(s=>s.char+': '+s.line.slice(0,40)).join(' / '));else console.warn('[buildLines] ZERO DIALOGUES — all lines are action/context, AI will never speak');
+  const _dials=pdfScript.filter(isPdfDialogueRow);const _acts=pdfScript.filter(s=>s.kind===LINE_TYPE.ACTION||s.kind==='action');const _slugs=pdfScript.filter(s=>s.kind===LINE_TYPE.SLUG||s.kind==='slug');console.info('[buildLines] total='+pdfScript.length+' dialogues='+_dials.length+' actions='+_acts.length+' slugs='+_slugs.length+' selectedChar='+selectedChar);if(_dials.length>0)console.info('[buildLines] first3dialogues='+_dials.slice(0,3).map(s=>s.char+': '+s.line.slice(0,40)).join(' / '));else console.warn('[buildLines] ZERO DIALOGUES — all lines are action/context, AI will never speak');
   if(pdfScript.length>0&&selectedChar){
     let rows=pdfScript;
     const selNorm=(selectedChar||'').toUpperCase().trim();
     if(n===1&&soloPartnerMode==='single'&&soloPartnerChar){
       const keepNorm=new Set([selNorm,(soloPartnerChar||'').toUpperCase().trim()]);
-      rows=pdfScript.filter(s=>s.kind!==LINE_TYPE.DIALOGUE||keepNorm.has((s.char||'').toUpperCase().trim()));
+      rows=pdfScript.filter(s=>!isPdfDialogueRow(s)||keepNorm.has((s.char||'').toUpperCase().trim()));
     }
     const _result=rows.map(s=>{
-      const isDial=s.kind===LINE_TYPE.DIALOGUE;
+      const isDial=isPdfDialogueRow(s);
       const isActor=isDial&&(s.char||'').toUpperCase().trim()===selNorm;
-      return{text:s.line,type:isDial?(isActor?'actor':'partner'):'context',char:s.char||'',kind:s.kind||LINE_TYPE.DIALOGUE,isStageDirection:!!s.isStageDirection,isSpoken:isDial,parenthetical:s.parenthetical||null};
+      return{text:s.line,type:isDial?(isActor?'actor':'partner'):'context',char:s.char||'',kind:isDial?(s.kind||LINE_TYPE.DIALOGUE):(s.kind||LINE_TYPE.ACTION),isStageDirection:!!s.isStageDirection,isSpoken:isDial,parenthetical:s.parenthetical||null};
     });
     const _a=_result.filter(r=>r.type==='actor').length;const _p=_result.filter(r=>r.type==='partner').length;const _c=_result.filter(r=>r.type==='context').length;const _sp=_result.filter(r=>r.isSpoken).length;
     console.info('[buildLines] OUTPUT actors='+_a+' partners='+_p+' context='+_c+' spoken='+_sp+' firstSpokenIdx='+_result.findIndex(r=>r.isSpoken));
     return _result;
   }
-  if(pdfScript.length>0)return pdfScript.map(s=>{const isDial=s.kind===LINE_TYPE.DIALOGUE;return{text:isDial&&s.char?(s.char+': '+s.line):s.line,type:isDial?'actor':'context',char:s.char||'',kind:s.kind||LINE_TYPE.DIALOGUE,isStageDirection:!!s.isStageDirection,isSpoken:isDial,parenthetical:s.parenthetical||null}});
+  if(pdfScript.length>0)return pdfScript.map(s=>{const isDial=isPdfDialogueRow(s);return{text:isDial&&s.char?(s.char+': '+s.line):s.line,type:isDial?'actor':'context',char:s.char||'',kind:isDial?(s.kind||LINE_TYPE.DIALOGUE):(s.kind||LINE_TYPE.ACTION),isStageDirection:!!s.isStageDirection,isSpoken:isDial,parenthetical:s.parenthetical||null}});
   const rawText=document.getElementById('scriptInput'+n).value;if(!rawText||!rawText.trim())return[];
   const simpleRx=/^(PARTENAIRE|PARTNER|P|MOI|ME|ACTEUR|ACTOR|A)\s*:/i;
   const rawLines=rawText.split('\n').filter(l=>l.trim());
@@ -4638,19 +5475,37 @@ function renderPrompter(){
     if(act)requestAnimationFrame(()=>act.scrollIntoView({behavior:'smooth',block:'center'}));
   }
 }
-let vadSilenceSeconds=parseFloat(localStorage.getItem('cw_vadSilence')||'2');
+let vadSilenceSeconds=(()=>{
+  const raw=localStorage.getItem('cw_vadSilence');
+  if(raw===null||raw==='')return 1.25;
+  const v=parseFloat(raw);
+  return Number.isFinite(v)?Math.min(5,Math.max(0.5,v)):1.25;
+})();
 function onVadSliderChange(val){
-  vadSilenceSeconds=parseFloat(val)||2;
+  vadSilenceSeconds=parseFloat(val);
+  if(!Number.isFinite(vadSilenceSeconds))vadSilenceSeconds=1.25;
+  vadSilenceSeconds=Math.min(5,Math.max(0.5,vadSilenceSeconds));
   localStorage.setItem('cw_vadSilence',String(vadSilenceSeconds));
   const lbl=document.getElementById('vadSilenceLabel');
-  if(lbl)lbl.textContent=vadSilenceSeconds+'s';
+  if(lbl){
+    const r=Math.round(vadSilenceSeconds*100)/100;
+    lbl.textContent=(r%1===0?r.toFixed(1):String(r))+'s';
+  }
 }
 function computeSilenceMsForActorLine(line){
-  return Math.round(vadSilenceSeconds*1000);
+  let ms=Math.round(vadSilenceSeconds*1000);
+  try{if(window.matchMedia('(pointer:fine)').matches)ms=Math.max(380,ms-140)}catch(_e){}
+  return ms;
 }
 function estimateMinSpeechDuration(text){
   const words=(text||'').split(/\s+/).filter(Boolean).length;
-  return Math.max(2000,Math.floor(words*500*0.6));
+  const base=Math.floor(words*380*0.55);
+  let floor=520;
+  try{if(window.matchMedia('(pointer:fine)').matches)floor=360}catch(_e){}
+  return Math.min(14000,Math.max(floor,base));
+}
+function getPostTtsArmDelayCapMs(){
+  try{return window.matchMedia('(pointer:fine)').matches?680:1500}catch(_e){return 1050;}
 }
 function stopAutoVAD(){if(_vadArmTimer){clearTimeout(_vadArmTimer);_vadArmTimer=null;}if(vad)vad.stop()}
 function cancelSpeechFlow(){
@@ -4689,7 +5544,7 @@ async function armAutoVADForActorLine(){
   console.info('[VAD] audio track:',liveTracks[0].label,'enabled:',liveTracks[0].enabled,'readyState:',liveTracks[0].readyState);
   stopAutoVAD();
   if(_vadArmTimer){clearTimeout(_vadArmTimer);_vadArmTimer=null;}
-  const postTtsDelay=Math.max(0,2000-(Date.now()-lastTTSEndTs));
+  const postTtsDelay=Math.max(0,getPostTtsArmDelayCapMs()-(Date.now()-lastTTSEndTs));
   const doArm=async()=>{
     _vadArmTimer=null;
     if((mode!=='auto'&&mode!=='ai')||sessionPaused)return;
@@ -5054,7 +5909,7 @@ function populatePauseCharGrid(){
       selectedChar=char;
       g.querySelectorAll('.char-item').forEach(c=>c.classList.remove('selected'));
       el.classList.add('selected');
-      prompterLines=buildLines(1);
+      setPrompterLinesForSession(1,'pauseCharChange');
       prompterIndex=0;
       renderPrompter();
       showToast('Tu joues '+char);
@@ -5106,8 +5961,9 @@ function handleDataMessage(d){
     prompterIndex=d.index;
     renderPrompter();
   }else if(d.type==='script'){
-    prompterLines=d.lines;
+    prompterLines=(d.lines||[]).map(l=>({...l}));
     prompterIndex=d.index||0;
+    debugPrompterPdfScriptKinds('peerScript');
     renderPrompter();
   }else if(d.type==='ready'){
     if(role==='actor'){
@@ -5176,33 +6032,20 @@ function autoAssignVoiceByGender(){
 }
 
 // ── START SESSIONS ──
-async function startAiSession(){
-  unlockAudio();
-  if(pdfScript.length>0&&!selectedChar){showToast(t('pickCharacterFirst'));return}
-  try{
-    const perms=await navigator.mediaDevices.getUserMedia({audio:true,video:isCamOn});
-    perms.getTracks().forEach(t=>t.stop());
-  }catch(e){
-    console.warn('[session] permission denied:',e.message);
-    showToast(t('micDenied')||'Autorise le micro pour continuer',4000);
-  }
+async function bootstrapAiSessionFromCurrentScript(importScreenN){
   const tier=getUserTier();
-  if(!isServerAdmin()&&tier!=='visitor'&&getRemainingSessionMs()<=0){showPaywallModal();return}
+  const n=Number(importScreenN)||1;
+  if(!isServerAdmin()&&tier!=='visitor'&&getRemainingSessionMs()<=0){showPaywallModal();__cwPendingSessionTag=null;return false}
   if(!canUseElevenLabs()){elevenLabsTemporarilyDisabled=true;elevenLabsDisableReason='quota';}
   else{elevenLabsTemporarilyDisabled=false;if(elevenLabsDisableReason==='visitor'||elevenLabsDisableReason==='quota')elevenLabsDisableReason='';}
   if(!canUseEmotions())selectedEmotion='neutral';
-  role='actor';sessionMode='ai';mode='ai';
   voiceSpeed=getCurrentVoiceSpeed();
   selectedEmotion=document.getElementById('emotionSelect').value||selectedEmotion;
   if(!canUseEmotions())selectedEmotion='neutral';
   if(!selectedVoice)selectedVoice=VOICE_PRESETS[0]||null;
   autoAssignVoiceByGender();
-  if(!currentScriptName){const si=document.getElementById('scriptInput1');currentScriptName=si&&si.value.trim()?t('clapPastedText'):'—';}
-  prompterLines=buildLines(1);
-  if(!prompterLines.length&&pdfScript.length>0){
-    const selN=(selectedChar||'').toUpperCase().trim();
-    prompterLines=pdfScript.map(s=>{const isDial=s.kind===LINE_TYPE.DIALOGUE;const isActor=isDial&&selN&&(s.char||'').toUpperCase().trim()===selN;return{text:s.line,type:isDial?(isActor?'actor':'partner'):'context',char:s.char||'',kind:s.kind||LINE_TYPE.DIALOGUE,isStageDirection:!!s.isStageDirection,isSpoken:isDial,parenthetical:s.parenthetical||null}});
-  }
+  if(!currentScriptName){const si=document.getElementById('scriptInput'+n);currentScriptName=si&&si.value.trim()?t('clapPastedText'):'—';}
+  setPrompterLinesForSession(n,'bootstrapAiSession');
   prompterIndex=0;
   lastAutoSpokenIndex=-1;
   const _pCounts={actor:0,partner:0,context:0};
@@ -5210,9 +6053,11 @@ async function startAiSession(){
   console.info('[session] prompterLines:',prompterLines.length,'→ actor:',_pCounts.actor,'partner:',_pCounts.partner,'context:',_pCounts.context,'mode:',mode,'sessionMode:',sessionMode);
   if(!_pCounts.partner)console.error('[session] ⚠ ZERO partner lines — AI has nothing to speak!');
   if(!_pCounts.actor)console.warn('[session] ⚠ ZERO actor lines — VAD will never arm');
-  showScreen('session');renderPrompter();
+  showScreen('session');
+  cwCommitSessionLive();
+  renderPrompter();
   if(mode==='ai'||mode==='auto'){document.getElementById('aiPanel').classList.add('active');populateSessionVoiceSelect();}
-  setStatus('','');
+  setStatus('',sessionMode==='ai'?t('sessionReadyLabel'):'');
   await ensureSessionStream();
   if(canRecord()&&localStream&&!isRecording)startRecording();
   showClapperboard(()=>{
@@ -5220,45 +6065,100 @@ async function startAiSession(){
     else hideTimerBadge();
     handleCurrentLineAutomation();
   });
+  return true;
+}
+/**
+ * Entrée répétition immédiate après import : même pipeline que la session IA, personnage choisi automatiquement, mode Auto (défilement / enchaînement).
+ * pdfScriptSnapshot optionnel : si fourni, remplace le script global (référence inchangée côté lignes).
+ */
+async function enterRehearsalMode(importScreenN,pdfScriptSnapshot,selectedCharacter){
+  const n=Number(importScreenN)||1;
+  if(Array.isArray(pdfScriptSnapshot)&&pdfScriptSnapshot.length){
+    pdfScript=pdfScriptSnapshot;
+    syncPdfScriptDebugMirror();
+  }
+  const chosen=selectedCharacter||pickDefaultRehearsalCharacter();
+  if(!chosen){
+    __cwPendingSessionTag=null;
+    console.warn('[rehearsal] aucun personnage détecté');
+    return false;
+  }
+  selectedChar=chosen;
+  soloPartnerMode='all';
+  soloPartnerChar=null;
+  userScrolledUp=false;
+  cancelSpeechFlow();
+  unlockAudio();
+  try{
+    const perms=await navigator.mediaDevices.getUserMedia({audio:true,video:isCamOn});
+    perms.getTracks().forEach(t=>t.stop());
+  }catch(e){
+    console.warn('[rehearsal] permission:',e.message);
+    showToast(t('micDenied')||'Autorise le micro pour continuer',4000);
+  }
+  role='actor';
+  sessionMode='ai';
+  mode='auto';
+  syncSessionModeButtons();
+  const ok=await bootstrapAiSessionFromCurrentScript(n);
+  return ok!==false;
+}
+async function startAiSession(){
+  await requestRehearsalStart({source:'manual'});
 }
 
 async function startPartnerSession(){
-  unlockAudio();
-  if(pdfScript.length>0&&!selectedChar){showToast(t('pickCharacterFirst'));return}
-  if(!isSignedUp()){showPartnerGate();return}
-  role='actor';sessionMode='partner';mode='manual';
-  cancelSpeechFlow();
-  const code=document.getElementById('mySessionCode').textContent;if(!code||code==='—')return;
-  prompterLines=buildLines(2);prompterIndex=0;
-  showScreen('session');renderPrompter();setStatus('waiting','En attente du partenaire…');hideOverlay();
-  showClapperboard();
-  showToast('Partage le code '+code,4500);
-  await ensureSessionStream();
-  if(canRecord()&&localStream&&!isRecording)startRecording();
-  const pid='castwing-'+code;peer=createPeer(pid);
-  peer.on('open',()=>{});
-  peer.on('connection',c=>setupDataConnection(c));
-  peer.on('call',ic=>{if(localStream)ic.answer(localStream);else ic.answer();setupCallHandlers(ic)});
-  peer.on('error',e=>{hideOverlay();showToast('Erreur : '+e.message,5000)});
-  connectionTimeout=setTimeout(()=>{if(!conn||!conn.open){hideOverlay();setStatus('waiting','En attente… (tu peux commencer seul)')}},15000);
+  await cwEnqueueSessionBoot(async()=>{
+    if(__cwSessionActive)return false;
+    unlockAudio();
+    if(pdfScript.length>0&&!selectedChar){showToast(t('pickCharacterFirst'));return false}
+    if(!isSignedUp()){showPartnerGate();return false}
+    role='actor';sessionMode='partner';mode='manual';
+    cancelSpeechFlow();
+    const code=document.getElementById('mySessionCode').textContent;if(!code||code==='—')return false;
+    setPrompterLinesForSession(2,'startPartnerSession');
+    prompterIndex=0;
+    __cwPendingSessionTag='partner';
+    showScreen('session');renderPrompter();setStatus('waiting','En attente du partenaire…');hideOverlay();
+    cwCommitSessionLive();
+    showClapperboard();
+    showToast('Partage le code '+code,4500);
+    await ensureSessionStream();
+    if(canRecord()&&localStream&&!isRecording)startRecording();
+    const pid='castwing-'+code;peer=createPeer(pid);
+    peer.on('open',()=>{});
+    peer.on('connection',c=>setupDataConnection(c));
+    peer.on('call',ic=>{if(localStream)ic.answer(localStream);else ic.answer();setupCallHandlers(ic)});
+    peer.on('error',e=>{hideOverlay();showToast('Erreur : '+e.message,5000)});
+    connectionTimeout=setTimeout(()=>{if(!conn||!conn.open){hideOverlay();setStatus('waiting','En attente… (tu peux commencer seul)')}},15000);
+    return true;
+  });
 }
 
 async function joinAsPartner(){
-  role='partner';sessionMode='partner';
-  cancelSpeechFlow();
-  const code=document.getElementById('joinCodeInput').value.trim().toUpperCase();if(!code){showToast('Entre un code');return}
-  showScreen('session');setStatus('waiting','Connexion…');showOverlay('Connexion…','Recherche de '+code+'…');
-  document.getElementById('noVideoMsg').textContent='Caméra en attente…';
-  await ensureSessionStream();
-  const mid='castwing-p-'+code+'-'+Math.random().toString(36).substr(2,4);peer=createPeer(mid);
-  peer.on('open',()=>{const c=peer.connect('castwing-'+code,{reliable:true});setupDataConnection(c)});
-  peer.on('call',ic=>{if(localStream)ic.answer(localStream);else ic.answer();setupCallHandlers(ic)});
-  peer.on('error',e=>{hideOverlay();showToast('Session introuvable.',5000);setStatus('disconnected','Introuvable')});
-  connectionTimeout=setTimeout(()=>{if(!conn||!conn.open){hideOverlay();showToast('Connexion lente',5000)}},12000);
+  await cwEnqueueSessionBoot(async()=>{
+    if(__cwSessionActive)return false;
+    role='partner';sessionMode='partner';
+    cancelSpeechFlow();
+    const code=document.getElementById('joinCodeInput').value.trim().toUpperCase();if(!code){showToast('Entre un code');return false}
+    __cwPendingSessionTag='partner_join';
+    showScreen('session');setStatus('waiting','Connexion…');showOverlay('Connexion…','Recherche de '+code+'…');
+    cwCommitSessionLive();
+    document.getElementById('noVideoMsg').textContent='Caméra · activation ou désactivée';
+    await ensureSessionStream();
+    const mid='castwing-p-'+code+'-'+Math.random().toString(36).substr(2,4);peer=createPeer(mid);
+    peer.on('open',()=>{const c=peer.connect('castwing-'+code,{reliable:true});setupDataConnection(c)});
+    peer.on('call',ic=>{if(localStream)ic.answer(localStream);else ic.answer();setupCallHandlers(ic)});
+    peer.on('error',e=>{hideOverlay();showToast('Session introuvable.',5000);setStatus('disconnected','Introuvable')});
+    connectionTimeout=setTimeout(()=>{if(!conn||!conn.open){hideOverlay();showToast('Connexion lente',5000)}},12000);
+    return true;
+  });
 }
 
 // ── Cleanup ──
 function endSession(){
+  __cwSessionActive=false;
+  cwSessionStateClear('endSession');
   stopSessionTimer();
   sessionPaused=false;
   closePauseSettings();
@@ -5277,13 +6177,13 @@ function endSession(){
   const lv=document.getElementById('localVideo');lv.srcObject=null;lv.style.display='';lv.classList.remove('mirror');
   document.getElementById('remoteVideo').srcObject=null;document.getElementById('remoteVideo').style.display='none';
   document.getElementById('remoteAudio').srcObject=null;
-  document.getElementById('noVideoMsg').style.display='flex';document.getElementById('noVideoMsg').textContent='Caméra en attente…';
+  document.getElementById('noVideoMsg').style.display='flex';document.getElementById('noVideoMsg').textContent='Caméra · activation ou désactivée';
   document.getElementById('aiPanel').classList.remove('active');
   const _riEnd=document.getElementById('recIndicator');if(_riEnd)_riEnd.style.display='none';
   hideTimerBadge();
   lockedVoiceLocale='';userScrolledUp=false;
   const _pa=document.getElementById('prompterArea');if(_pa)_pa.classList.remove('rear-cam');
-  hideOverlay();isMicOn=true;isCamOn=true;currentFacingMode='user';prompterLines=[];prompterIndex=0;pdfScript=[];syncPdfScriptDebugMirror();selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;currentScriptName='';showScreen('home');
+  hideOverlay();isMicOn=true;isCamOn=true;currentFacingMode='user';prompterLines=[];prompterIndex=0;pdfScript=[];scriptRawText='';_bgRefinementToken++;_fastFullParseToken++;_pdfOcrDeferredToken++;disposeCwPdfDoc();syncPdfScriptDebugMirror();selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;currentScriptName='';showScreen('home');
 }
 function cancelConnection(){hideOverlay();if(!conn||!conn.open)endSession()}
 
@@ -5349,6 +6249,15 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   if(emo)emo.value=selectedEmotion;
   updateEmotionLock();
   setMode(mode);
+  (function syncVadSliderFromStorage(){
+    const slider=document.getElementById('vadSilenceSlider');
+    const slbl=document.getElementById('vadSilenceLabel');
+    if(slider)slider.value=String(vadSilenceSeconds);
+    if(slbl){
+      const r=Math.round(vadSilenceSeconds*100)/100;
+      slbl.textContent=(r%1===0?r.toFixed(1):String(r))+'s';
+    }
+  })();
   updateSetupCameraButton();
   renderAllSpeedBtns();
   initCardTilt();
@@ -5358,8 +6267,11 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   redeemInviteFromURL();
   const joinedFromURL=applyJoinCodeFromURL();
   if(!joinedFromURL){
-    showScreen('home');
-    if(isUsageBlocked())openPaywallModal(t('usageBlocked'));
+    const restoredFromIdb=await tryRestorePersistedScriptFromIdb();
+    if(!restoredFromIdb){
+      showScreen('home');
+      if(isUsageBlocked())openPaywallModal(t('usageBlocked'));
+    }
   }
   document.addEventListener('keydown',e=>{
     if(e.key!=='Escape')return;
