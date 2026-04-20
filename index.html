@@ -191,7 +191,7 @@ input[type="file"]{display:none}
 @keyframes pulse-rec{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}50%{box-shadow:0 0 0 10px rgba(239,68,68,0)}}
 .vctrl-pause{min-width:48px;min-height:48px;width:48px;height:48px}
 .vctrl-pause.is-paused{background:rgba(127,227,163,.25);border-color:rgba(127,227,163,.4)}
-.pause-overlay{display:none;position:absolute;inset:0;z-index:55;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;flex-direction:column;gap:1rem;pointer-events:auto}.pause-overlay.active{display:flex}
+.pause-overlay{display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.82);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center;flex-direction:column;gap:1rem;pointer-events:auto;padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}.pause-overlay.active{display:flex}
 .take-info{text-align:center;font-family:'DM Sans',sans-serif;color:rgba(255,255,255,.9)}
 .take-info .take-scene{font-size:1.1rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase}
 .take-info .take-prod{font-size:.75rem;font-weight:400;color:rgba(255,255,255,.5);margin-top:4px;font-variant:small-caps}
@@ -761,7 +761,7 @@ let usageTimer=null;
 let cwServerSession={email:null,isAdmin:false,plan:'visitor',creditsRemaining:null};
 
 const useElevenLabs=true;
-function getPauseBetweenLines(){return voiceSpeed>=2.0?300:600;}
+function getPauseBetweenLines(){return voiceSpeed>=2.0?80:180;}
 const SETTINGS_KEY='castwing_user_settings_v3';
 const ACCESS_KEY='castwing_user_access_v1';
 const PLAN_KEY='castwing_plan_v2';
@@ -4203,12 +4203,12 @@ function sanitizeCharacterNames(script){
     const trimmed=name.trim();
     const words=trimmed.split(/\s+/);
     if(ALWAYS_BAD.has(trimmed.toUpperCase())){bad.add(name);continue}
-    if(words.length>3){bad.add(name);continue}
+    if(words.length>5){bad.add(name);continue}
     if(/^\d+$/.test(trimmed)||trimmed.length<=1){bad.add(name);continue}
     if(words.length===1&&PRONOUNS.has(trimmed.toUpperCase())){bad.add(name);continue}
     if(words.length>=2&&words.every(w=>PRONOUNS.has(w.toUpperCase()))){bad.add(name);continue}
     if(words.length===1&&L_PATTERN.test(trimmed)){bad.add(name);continue}
-    if(words.length===1&&charCounts[name]<3){bad.add(name);continue}
+    if(words.length===1&&charCounts[name]<2){bad.add(name);continue}
   }
   const kept=Object.keys(charCounts).filter(n=>!bad.has(n));
   console.info('[parse] characters kept:',kept.map(n=>n+' ('+charCounts[n]+')'));
