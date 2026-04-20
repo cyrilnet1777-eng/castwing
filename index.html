@@ -1747,9 +1747,42 @@ function extractCandidateCharacters(rawText){
     .map(([name,count])=>`${name} (${count})`)
     .join(', ');
 }
+/** Noms bruts (mêmes filtres que extractCandidateCharacters) pour fallback / coupe */
+function extractCandidateCharacterNames(rawText){
+  const lines=String(rawText||'').split('\n');
+  const candidates={};
+  for(const line of lines){
+    const trimmed=line.trim();
+    if(!trimmed||trimmed.length>40)continue;
+    if(/^(INT\.|EXT\.|SCÈNE|SCENE|FADE|CUT|FONDU|SÉQUENCE|SEQUENCE|TRANSITION)/i.test(trimmed))continue;
+    const letters=trimmed.replace(/[^a-zA-ZÀ-ÿ]/g,'');
+    if(letters.length===0)continue;
+    const uppers=trimmed.replace(/[^A-ZÀ-Ö]/g,'');
+    if(uppers.length/letters.length<0.8)continue;
+    const cleaned=trimmed.replace(/\s*\(.*\)\s*$/,'').replace(/:$/,'').trim();
+    if(cleaned.length<2||cleaned.split(/\s+/).length>4)continue;
+    candidates[cleaned]=(candidates[cleaned]||0)+1;
+  }
+  return Object.entries(candidates)
+    .filter(([name,c])=>c>=2||name.split(/\s+/).length>=2)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([name])=>name);
+}
+function fallbackValidatedCharacterNames(candidateNames){
+  const BAD=/^(WY|SND|FFF|LENOUVEAUMONDE|FFFFFF)$/i;
+  return candidateNames.filter(c=>{
+    const t=String(c||'').trim();
+    return t.length>=3&&!BAD.test(t);
+  });
+}
 
 async function validateCharactersRemote(candidatesStr,lang){
-  if(!candidatesStr)return[];
+  const candidates=candidatesStr||'';
+  console.log('[API] calling validate-characters with',candidates);
+  if(!String(candidates).trim()){
+    console.log('[API] skip fetch — empty candidates payload');
+    return[];
+  }
   _pdfParseAbort=new AbortController();
   const ctrl=_pdfParseAbort;
   const tm=setTimeout(()=>ctrl.abort(),15000);
@@ -1760,9 +1793,17 @@ async function validateCharactersRemote(candidatesStr,lang){
       body:JSON.stringify({candidates:candidatesStr,lang:lang||''}),
       signal:ctrl.signal
     });
+    console.log('[API] response status',rsp.status);
     const data=await rsp.json().catch(()=>({}));
-    if(Array.isArray(data.characters))return data.characters.map(c=>String(c).trim()).filter(Boolean);
-    console.warn('[validate-chars] bad response:',data);
+    console.log('[API] response data',data);
+    if(rsp.status!==200||!rsp.ok){
+      console.warn('[validate-chars] HTTP non-OK',rsp.status);
+      return[];
+    }
+    if(Array.isArray(data.characters)&&data.characters.length){
+      return data.characters.map(c=>String(c).trim()).filter(Boolean);
+    }
+    console.warn('[validate-chars] bad or empty data.characters:',data);
     return[];
   }catch(e){
     console.warn('[validate-chars] failed:',e.message);
@@ -5255,15 +5296,25 @@ async function runImportedScriptPipeline(n,normText,displayName){
   stopFakeProgress();
   let workingNorm=normText;
   let validatedCharacters=[];
+  const candidateNames=extractCandidateCharacterNames(normText);
+  const candidatesStrFormatted=extractCandidateCharacters(normText);
+  const candidatesPayload=(candidatesStrFormatted&&candidatesStrFormatted.trim())?candidatesStrFormatted:candidateNames.join(', ');
   try{
-    const candidatesStr=extractCandidateCharacters(normText);
-    if(candidatesStr){
-      validatedCharacters=await validateCharactersRemote(candidatesStr,detectedLang||'');
+    if(String(candidatesPayload||'').trim()){
+      validatedCharacters=await validateCharactersRemote(candidatesPayload,detectedLang||'');
     }
-    if(Array.isArray(validatedCharacters)&&validatedCharacters.length){
+    if(!validatedCharacters||!validatedCharacters.length){
+      validatedCharacters=fallbackValidatedCharacterNames(candidateNames);
+    }
+    try{
+      if(typeof window!=='undefined'){
+        window.__lastValidatedChars=Array.isArray(validatedCharacters)?validatedCharacters.slice():[];
+      }
+    }catch(_e){}
+    if(validatedCharacters&&validatedCharacters.length){
       scriptValidatedCharKeys=new Set(validatedCharacters.map(c=>normCharKeyForWhitelist(String(c))));
     }
-    if(validatedCharacters.length){
+    if(validatedCharacters&&validatedCharacters.length){
       const rawLines=normText.split(/\r?\n/);
       const firstValidCharIndex=(()=>{
         for(let i=0;i<rawLines.length;i++){
