@@ -586,9 +586,10 @@ input[type="file"]{display:none}
   <div class="setup-header"><button class="back-btn" onclick="goHome()">←</button><h2 id="setupAiTitle">Solo + IA</h2></div>
   <div class="setup-card">
     <label id="scriptLabel1">Script (PDF ou texte)</label>
-    <div class="upload-zone" id="uploadZone1" onclick="document.getElementById('pdfInput1').click()"><div class="up-icon">📄</div><div class="up-label" id="uploadLabel1">Glisse ton PDF ici ou clique</div><div class="up-sub" id="uploadSub1">Format scénario standard</div></div>
+    <div class="upload-zone" id="uploadZone1" onclick="openPdfPicker(1)"><div class="up-icon">📄</div><div class="up-label" id="uploadLabel1">Glisse ton PDF ici ou clique</div><div class="up-sub" id="uploadSub1">Format scénario standard</div></div>
     <div class="upload-ok" id="uploadOk1" style="display:none"><span>✓</span><span class="fname" id="fileName1"></span><button class="clear-btn" onclick="clearPDF(1)">✕</button></div>
     <input type="file" id="pdfInput1" accept=".pdf,application/pdf,*/*" onchange="handlePDFInput(1,this)">
+    <button type="button" class="btn btn-secondary btn-full" style="margin-top:.35rem;padding:.45rem;font-size:.78rem" onclick="void newScriptReset(1)" id="newScriptBtn1">Nouveau script</button>
     <div class="setup-status" id="setupStatus1"></div>
     <button type="button" class="btn btn-secondary btn-full" style="margin-top:.45rem;display:none;padding:.45rem;font-size:.78rem" onclick="openOptionalScriptReview(1)" id="optionalReviewBtn1">Affiner / vérifier le script…</button>
     <div class="nda-badge" id="ndaBadgeSetup"><svg viewBox="0 0 24 24"><path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zM9 6a3 3 0 0 1 6 0v2H9V6zm9 14H6V10h12v10zm-6-3a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg><span>Peer-to-peer · Aucun script stocké</span></div>
@@ -652,9 +653,10 @@ input[type="file"]{display:none}
   </div>
   <div class="setup-card">
     <label id="scriptLabel2">Script (PDF ou texte)</label>
-    <div class="upload-zone" id="uploadZone2" onclick="document.getElementById('pdfInput2').click()"><div class="up-icon">📄</div><div class="up-label" id="uploadLabel2">Glisse ton PDF ici ou clique</div><div class="up-sub" id="uploadSub2">Format scénario standard</div></div>
+    <div class="upload-zone" id="uploadZone2" onclick="openPdfPicker(2)"><div class="up-icon">📄</div><div class="up-label" id="uploadLabel2">Glisse ton PDF ici ou clique</div><div class="up-sub" id="uploadSub2">Format scénario standard</div></div>
     <div class="upload-ok" id="uploadOk2" style="display:none"><span>✓</span><span class="fname" id="fileName2"></span><button class="clear-btn" onclick="clearPDF(2)">✕</button></div>
     <input type="file" id="pdfInput2" accept=".pdf,application/pdf,*/*" onchange="handlePDFInput(2,this)">
+    <button type="button" class="btn btn-secondary btn-full" style="margin-top:.35rem;padding:.45rem;font-size:.78rem" onclick="void newScriptReset(2)" id="newScriptBtn2">Nouveau script</button>
     <div class="setup-status" id="setupStatus2"></div>
     <button type="button" class="btn btn-secondary btn-full" style="margin-top:.45rem;display:none;padding:.45rem;font-size:.78rem" onclick="openOptionalScriptReview(2)" id="optionalReviewBtn2">Affiner / vérifier le script…</button>
     <div id="charSection2" style="display:none;margin-top:1rem"><label id="myCharacterLabel2">Mon personnage</label><div class="char-grid" id="charGrid2"></div></div>
@@ -3585,7 +3587,17 @@ function handlePDFInput(n,input){
   const f=input.files[0];if(!f)return;
   const isPdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name||'');
   if(!isPdf){showToast('Seuls les fichiers PDF sont acceptés',4000);input.value='';return}
-  processPDF(n,f);
+  /* IndexDB parse + snapshot vidés au début de processPDF */
+  void processPDF(n,f);
+}
+function openPdfPicker(n){
+  const el=document.getElementById('pdfInput'+n);
+  if(el)el.value='';
+  if(el)el.click();
+}
+async function newScriptReset(n){
+  await cwClearParseCacheBeforeImport();
+  clearPDF(n);
 }
 
 function extractPageText(textContent){
@@ -4075,6 +4087,7 @@ function stripPdfWatermarkNoise(text,pageCount,fileName){
 }
 
 async function processPDF(n,file){
+  await cwClearParseCacheBeforeImport();
   currentScriptName=file.name||'PDF';
   takeNumber=0;
   _pdfParseCancelled=false;
@@ -4473,6 +4486,38 @@ async function cwIdbDel(key){
       tx.objectStore(CW_IDB_STORE).delete(key);
     });
   }catch(_e){}
+}
+/** Supprime toutes les entrées dont la clé commence par prefix (ex. caches parse). */
+async function cwIdbClear(prefix){
+  const p=String(prefix||'');
+  if(!p)return;
+  try{
+    const db=await _cwOpenDb();
+    await new Promise((res,rej)=>{
+      const tx=db.transaction(CW_IDB_STORE,'readwrite');
+      tx.oncomplete=()=>res();
+      tx.onerror=()=>rej(tx.error);
+      const store=tx.objectStore(CW_IDB_STORE);
+      const rq=store.openCursor();
+      rq.onerror=()=>rej(rq.error);
+      rq.onsuccess=()=>{
+        const cur=rq.result;
+        if(cur){
+          const k=cur.key;
+          if(typeof k==='string'&&k.startsWith(p))store.delete(k);
+          cur.continue();
+        }
+      };
+    });
+  }catch(_e){}
+}
+async function cwClearParseCacheBeforeImport(){
+  await cwIdbClear('cw.parse.');
+  try{
+    localStorage.removeItem('cw.lastPdfHash');
+    localStorage.removeItem('cw.lastPdfName');
+  }catch(_e){}
+  await cwIdbDel('cw.snapshot.v1');
 }
 /** Hash stable du contenu (texte canonique) pour dédoublonner imports identiques */
 function scriptContentHash(raw){
@@ -5399,6 +5444,7 @@ async function processTextImport(n){
   scriptRawText=raw;
   const norm=await normalizeScreenplayWhitespaceAsync(raw);
   if(norm.length<24){showToast('Colle au moins quelques lignes de scénario',3500);return}
+  await cwClearParseCacheBeforeImport();
   takeNumber=0;
   currentScriptName='Texte collé';
   try{
