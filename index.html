@@ -1617,6 +1617,21 @@ function normalizeWatermarkNoise(text){
     .replace(/\n{3,}/g,'\n\n')
     .trim();
 }
+/** Après extraction PDF.js : noms scène collés aux répliques + lettres espacées (bug fontes) */
+function repairPdfText(rawText){
+  let fixed=String(rawText||'');
+  fixed=fixed.replace(/([A-Z]{2,})\s+([a-z])/g,'$1\n$2');
+  fixed=fixed.replace(/([A-ZÀ-ÖØ-Þ]{2,})\s+(I\s)/g,'$1\n$2');
+  const words=fixed.split(/\s+/);
+  let isolated=0;
+  for(const w of words){
+    if(w.length===1&&/[a-zA-Z]/.test(w))isolated++;
+  }
+  if(words.length&&isolated/words.length>0.2){
+    fixed=fixed.replace(/\b([a-zA-Z])\s+(?=[a-zA-Z])/g,'$1');
+  }
+  return fixed;
+}
 function isPoorPdfTextExtraction(text){
   const t=String(text||'').trim();
   if(!t)return true;
@@ -1701,7 +1716,7 @@ async function extractPdfTextHybrid(arrayBuffer,fileName){
     pageTexts.push(cleaned);
   }
   hideOcrToast();
-  const fullText=pageTexts.join('\n\n');
+  const fullText=repairPdfText(pageTexts.join('\n\n'));
   return{
     fullText,
     pageTexts,
@@ -4929,7 +4944,7 @@ async function fillScriptInputProgressive(n,fullNorm){
 async function finalizePdfTextAfterDeferredOcr(n,my,pageTextsArr){
   if(my!==_pdfOcrDeferredToken)return;
   try{
-    const raw=(pageTextsArr.join('\n\n')).replace(/\u00A0/g,' ');
+    const raw=repairPdfText((pageTextsArr.join('\n\n')).replace(/\u00A0/g,' '));
     scriptRawText=raw;
     const norm=await normalizeScreenplayWhitespaceAsync(raw);
     await fillScriptInputProgressive(n,norm);
