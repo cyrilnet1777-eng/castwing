@@ -589,7 +589,7 @@ input[type="file"]{display:none}
     <div class="upload-zone" id="uploadZone1" onclick="openPdfPicker(1)"><div class="up-icon">📄</div><div class="up-label" id="uploadLabel1">Glisse ton PDF ici ou clique</div><div class="up-sub" id="uploadSub1">Format scénario standard</div></div>
     <div class="upload-ok" id="uploadOk1" style="display:none"><span>✓</span><span class="fname" id="fileName1"></span><button class="clear-btn" onclick="clearPDF(1)">✕</button></div>
     <input type="file" id="pdfInput1" accept=".pdf,application/pdf,*/*" onchange="handlePDFInput(1,this)">
-    <button type="button" class="btn btn-secondary btn-full" style="margin-top:.35rem;padding:.45rem;font-size:.78rem" onclick="void newScriptReset(1)" id="newScriptBtn1">Nouveau script</button>
+    <button type="button" class="btn btn-secondary btn-full" style="margin-top:.35rem;padding:.45rem;font-size:.78rem" onclick="void newScriptReset(1)" id="newScriptBtn1">🗑️ Nouveau script</button>
     <div class="setup-status" id="setupStatus1"></div>
     <button type="button" class="btn btn-secondary btn-full" style="margin-top:.45rem;display:none;padding:.45rem;font-size:.78rem" onclick="openOptionalScriptReview(1)" id="optionalReviewBtn1">Affiner / vérifier le script…</button>
     <div class="nda-badge" id="ndaBadgeSetup"><svg viewBox="0 0 24 24"><path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zM9 6a3 3 0 0 1 6 0v2H9V6zm9 14H6V10h12v10zm-6-3a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg><span>Peer-to-peer · Aucun script stocké</span></div>
@@ -656,7 +656,7 @@ input[type="file"]{display:none}
     <div class="upload-zone" id="uploadZone2" onclick="openPdfPicker(2)"><div class="up-icon">📄</div><div class="up-label" id="uploadLabel2">Glisse ton PDF ici ou clique</div><div class="up-sub" id="uploadSub2">Format scénario standard</div></div>
     <div class="upload-ok" id="uploadOk2" style="display:none"><span>✓</span><span class="fname" id="fileName2"></span><button class="clear-btn" onclick="clearPDF(2)">✕</button></div>
     <input type="file" id="pdfInput2" accept=".pdf,application/pdf,*/*" onchange="handlePDFInput(2,this)">
-    <button type="button" class="btn btn-secondary btn-full" style="margin-top:.35rem;padding:.45rem;font-size:.78rem" onclick="void newScriptReset(2)" id="newScriptBtn2">Nouveau script</button>
+    <button type="button" class="btn btn-secondary btn-full" style="margin-top:.35rem;padding:.45rem;font-size:.78rem" onclick="void newScriptReset(2)" id="newScriptBtn2">🗑️ Nouveau script</button>
     <div class="setup-status" id="setupStatus2"></div>
     <button type="button" class="btn btn-secondary btn-full" style="margin-top:.45rem;display:none;padding:.45rem;font-size:.78rem" onclick="openOptionalScriptReview(2)" id="optionalReviewBtn2">Affiner / vérifier le script…</button>
     <div id="charSection2" style="display:none;margin-top:1rem"><label id="myCharacterLabel2">Mon personnage</label><div class="char-grid" id="charGrid2"></div></div>
@@ -3592,10 +3592,10 @@ function initDragDrop(zoneId){
 }
 
 async function handlePDFInput(n,input){
+  await clearScriptCache();
   const f=input.files[0];if(!f)return;
   const isPdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name||'');
   if(!isPdf){showToast('Seuls les fichiers PDF sont acceptés',4000);input.value='';return}
-  await clearScriptCache();
   await processPDF(n,f);
 }
 function openPdfPicker(n){
@@ -3604,6 +3604,7 @@ function openPdfPicker(n){
   if(el)el.click();
 }
 async function newScriptReset(n){
+  try{localStorage.setItem(CW_RESTORE_SUPPRESS_KEY,'1')}catch(_e){}
   await clearScriptCache();
   clearPDF(n);
 }
@@ -4446,8 +4447,21 @@ async function normalizeScreenplayWhitespaceAsync(text){
 
 /* ═══ Mémoire locale du script (IndexedDB) + cache parse par hash ═══ */
 const CW_IDB_NAME='castwing-script-db';
+const CW_LEGACY_IDB_NAME='CastwingDB';
 const CW_IDB_STORE='kv';
+const CW_RESTORE_SUPPRESS_KEY='cw.suppressScriptRestore';
+const CW_SNAPSHOT_MAX_AGE_MS=86400000*24;
 let _cwIdb=null;
+function cwAwaitIndexedDbDelete(dbName){
+  return new Promise(resolve=>{
+    if(typeof indexedDB==='undefined'){resolve();return}
+    try{
+      if(dbName===CW_IDB_NAME&&_cwIdb){try{_cwIdb.close()}catch(_e){}_cwIdb=null}
+      const rq=indexedDB.deleteDatabase(dbName);
+      rq.onsuccess=rq.onerror=rq.onblocked=()=>resolve();
+    }catch(_e){resolve()}
+  });
+}
 function _cwOpenDb(){
   if(typeof indexedDB==='undefined')return Promise.reject(new Error('no-idb'));
   if(_cwIdb)return Promise.resolve(_cwIdb);
@@ -4495,42 +4509,24 @@ async function cwIdbDel(key){
   }catch(_e){}
 }
 /**
- * Vide le cache script (IndexedDB clés cw.parse.* / cw.script.*) + localStorage + snapshot persistant.
- * Utilise la base réelle du projet (castwing-script-db / store « kv »).
+ * Purge : deleteDatabase(CastwingDB) → localStorage cw.lastPdf* → deleteDatabase(castwing-script-db).
  */
 async function clearScriptCache(){
-  if(typeof indexedDB==='undefined')return;
-  const prefixes=['cw.parse.','cw.script.'];
+  if(typeof indexedDB==='undefined'){
+    try{
+      localStorage.removeItem('cw.lastPdfHash');
+      localStorage.removeItem('cw.lastPdfName');
+    }catch(_e){}
+    return;
+  }
   try{
-    const db=await _cwOpenDb();
-    if(!db.objectStoreNames.contains(CW_IDB_STORE)){
-      try{
-        localStorage.removeItem('cw.lastPdfHash');
-        localStorage.removeItem('cw.lastPdfName');
-      }catch(_e){}
-      await cwIdbDel('cw.snapshot.v1');
-      return;
-    }
-    await new Promise(resolve=>{
-      const tx=db.transaction(CW_IDB_STORE,'readwrite');
-      tx.oncomplete=()=>{
-        try{
-          localStorage.removeItem('cw.lastPdfHash');
-          localStorage.removeItem('cw.lastPdfName');
-        }catch(_e){}
-        console.log('[cache] cleared');
-        resolve();
-      };
-      tx.onerror=()=>resolve();
-      const store=tx.objectStore(CW_IDB_STORE);
-      prefixes.forEach(prefix=>{
-        try{
-          const range=IDBKeyRange.bound(prefix,prefix+'\uffff',false,false);
-          store.delete(range);
-        }catch(_e){}
-      });
-    });
-    await cwIdbDel('cw.snapshot.v1');
+    await cwAwaitIndexedDbDelete(CW_LEGACY_IDB_NAME);
+    try{
+      localStorage.removeItem('cw.lastPdfHash');
+      localStorage.removeItem('cw.lastPdfName');
+    }catch(_e){}
+    await cwAwaitIndexedDbDelete(CW_IDB_NAME);
+    console.log('[cache] cleared');
   }catch(_e){}
 }
 /** Hash stable du contenu (texte canonique) pour dédoublonner imports identiques */
@@ -4558,6 +4554,7 @@ async function persistScriptSnapshotNow(){
     contentHash:h,
     savedAt:Date.now()
   });
+  try{localStorage.removeItem(CW_RESTORE_SUPPRESS_KEY)}catch(_e){}
 }
 async function clearPersistedScriptMemory(){
   await cwIdbDel('cw.snapshot.v1');
@@ -4676,9 +4673,13 @@ function requestRehearsalStart(opts){
 async function tryRestorePersistedScriptFromIdb(){
   if(typeof indexedDB==='undefined')return false;
   try{
+    try{
+      if(localStorage.getItem(CW_RESTORE_SUPPRESS_KEY)==='1')return false;
+    }catch(_e){}
     const snap=await cwIdbGet('cw.snapshot.v1');
     if(!snap||typeof snap.scriptRawText!=='string'||!snap.scriptRawText.trim())return false;
     if(!Array.isArray(snap.pdfScript)||!snap.pdfScript.length)return false;
+    if(typeof snap.savedAt==='number'&&Date.now()-snap.savedAt>CW_SNAPSHOT_MAX_AGE_MS)return false;
     scriptRawText=snap.scriptRawText;
     pdfScript=snap.pdfScript;
     currentScriptName=snap.currentScriptName||'Script';
