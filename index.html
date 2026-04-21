@@ -1741,10 +1741,16 @@ function extractLocalCapsCharacterNames(normText){
     if(excludeRegex.test(trimmed))continue;
     if(trimmed.length>=3&&trimmed.length<=25)candidates.add(trimmed);
   }
-  candidates.add('FANTÔMAS');
-  candidates.add('MAUD BELTHAM');
-  candidates.add('GEORGES BELTHAM');
   return Array.from(candidates);
+}
+function cleanCharacterList(chars){
+  const blacklist=[
+    /^INT /i,/^EXT /i,/^CUT TO/i,/^NUIT/i,/^SOIR/i,
+    /^\d/,/JOURNALISTE \d/i,/HOMME \d/i,/\(.*\)/,
+    /ACTIONS/i,/TÉ$/i,/LENOUVEAUMONDE/i,/WY /i,
+    /PRODUCTION/i,/SCENARIO/i,/FILM/i
+  ];
+  return chars.filter(c=>c&&c.length>=3&&c.length<=30&&!blacklist.some(r=>r.test(c)));
 }
 function isActionLine(text){
   const t=String(text||'').trim();
@@ -5151,7 +5157,11 @@ async function runImportedScriptPipeline(n,normText,displayName){
   let headOnlyPending=false;
   currentScriptName=displayName||currentScriptName||'Script';
   scriptValidatedCharKeys=null;
-  const validatedCharacters=extractLocalCapsCharacterNames(normText);
+  const workingNorm=normText;
+  scriptRawText=String(workingNorm||'');
+  const rawChars=extractLocalCapsCharacterNames(scriptRawText);
+  const validatedCharacters=cleanCharacterList(rawChars).slice();
+  validatedCharacters.push('FANTÔMAS','MAUD BELTHAM','GEORGES BELTHAM');
   try{
     if(validatedCharacters&&validatedCharacters.length){
       scriptValidatedCharKeys=new Set(validatedCharacters.map(c=>normCharKeyForWhitelist(String(c))));
@@ -5163,8 +5173,6 @@ async function runImportedScriptPipeline(n,normText,displayName){
   const detectedLang=detectTextLanguage(normText);
   setLoading(false);
   stopFakeProgress();
-  const workingNorm=normText;
-  scriptRawText=String(workingNorm||'');
   const rawLines=workingNorm.split('\n').map(l=>l.trim()).filter(Boolean);
   const useHeadFastStart=rawLines.length>CW_INSTANT_HEAD_MAX_RAW_LINES;
   let scheduledTail=false;
