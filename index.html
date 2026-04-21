@@ -1749,7 +1749,7 @@ function extractLocalCapsCharacterNames(normText){
     line=line.trim();
     if(!line)continue;
 
-    const upperRatio=(line.match(/[A-ZÀ-Ö]/g)||[]).length/line.length;
+    const upperRatio=(line.match(/[A-ZÀ-ÖØ-Þ]/g)||[]).length/line.length;
     if(upperRatio<0.7)continue;
     if(line.length<3)continue;
 
@@ -4649,6 +4649,17 @@ function createLightweightParseState(){
  */
 function createLightweightLogicalClassifier(){
   const INLINE_SPEAKER=/^(.{2,42})\s*[:\-–—]\s*(.+)$/;
+  /** Sous un personnage : réplique si phrase parlée probable ; didascalie sinon (complète isActionLine). */
+  const isLikelySpokenDialogueUnderCue=(trimmed)=>{
+    const s=String(trimmed||'').trim();
+    if(!s)return false;
+    if(isActionLine(s))return false;
+    if(/^["«—–-]/.test(s))return true;
+    const fw=s.split(/\s+/)[0]||'';
+    if(fw.length>=2&&/[a-zà-öéèêëîïôœùûç]/.test(fw))return true;
+    if(/^(je|j'|tu|nous|vous|on|ça|c'|ce |rien|plus|non|oui|bien|merci|allez|ah |oh |eh |bonjour|salut)/i.test(s))return true;
+    return false;
+  };
   const mostlyCapsCue=(t)=>{
     const core=String(t||'').replace(/\s*[:\-–—.]+\s*$/,'').trim();
     if(core.length<2||core.length>48)return false;
@@ -4724,6 +4735,15 @@ function createLightweightLogicalClassifier(){
       return;
     }
     if(state.curChar){
+      const trimmed=l.trim();
+      const firstWord=trimmed.split(/\s+/)[0]||'';
+      const isSlugLine=isSlugOrSceneHeadingLine(trimmed)||isScreenplayCoverMetaLine(trimmed);
+      const isEmptyLine=!trimmed.length;
+      const isCharacterLine=/^[A-ZÀ-Ö]{3,}$/.test(firstWord)||/^[A-ZÀ-Ö]{3,}\s+[A-ZÀ-Ö]{3,}/.test(trimmed.substring(0,30));
+      if(!isCharacterLine&&!isSlugLine&&!isEmptyLine&&!isLikelySpokenDialogueUnderCue(trimmed)){
+        res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
+        return;
+      }
       if(isActionLine(l)){
         res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
       }else{
