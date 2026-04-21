@@ -1729,34 +1729,47 @@ async function extractPdfTextHybrid(arrayBuffer,fileName){
     pdf
   };
 }
-/** Blacklist simple pour noms détectés en majuscules (classification 100 % locale). */
-const CHAR_NAME_LOCAL_BLACKLIST=new Set(['WY','SND','FFF','PRODUCTION','SCENARIO','FILM','MAI','LENOUVEAUMONDE']);
-function isCapsNameBlacklisted(cleaned){
-  const parts=String(cleaned||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().split(/\s+/).filter(Boolean);
-  for(const w of parts){if(CHAR_NAME_LOCAL_BLACKLIST.has(w))return true}
-  return false;
-}
-/** Noms en majuscules ≥ 3 lettres (heuristique lignes « cue »), sans API. */
-function extractLocalCapsCharacterNames(rawText){
-  const lines=String(rawText||'').split('\n');
-  const candidates={};
-  for(const line of lines){
-    const trimmed=line.trim();
-    if(!trimmed||trimmed.length>48)continue;
-    if(/^(INT\.|EXT\.|SCÈNE|SCENE|FADE|CUT|FONDU|SÉQUENCE|SEQUENCE|TRANSITION)/i.test(trimmed))continue;
-    const letters=trimmed.replace(/[^a-zA-ZÀ-ÿ]/g,'');
-    if(letters.length<3)continue;
-    const uppers=trimmed.replace(/[^A-ZÀ-Ö]/g,'');
-    if(letters.length===0||uppers.length/letters.length<0.78)continue;
-    const cleaned=trimmed.replace(/\s*\(.*\)\s*$/,'').replace(/:$/,'').trim();
-    if(cleaned.length<3||cleaned.split(/\s+/).length>5)continue;
-    if(isCapsNameBlacklisted(cleaned))continue;
-    candidates[cleaned]=(candidates[cleaned]||0)+1;
+function extractLocalCapsCharacterNames(normText){
+  const lines=normText.split(/\r?\n/);
+  const candidates=new Set();
+
+  const KEEP_LIST=['FANTOMAS','FANTÔMAS'];
+  const SLUG_BLACKLIST=[
+    /^INT\.? /i,/^EXT\.? /i,/^CUT TO/i,/^FADE /i,
+    /^NUIT/i,/^SOIR/i,/^JOUR/i,/^MATIN/i,
+    /^\d+\s+[A-Z]/i,
+    /^[A-Z]{3,}\s+\d+$/i
+  ];
+  const TITLE_BLACKLIST=[
+    /^WY /i,/^SND/i,/^FFF/i,/^PRODUCTION/i,/^SCENARIO/i,
+    /^FILM/i,/^MAI /i,/^LENOUVEAUMONDE/i
+  ];
+
+  for(let line of lines){
+    line=line.trim();
+    if(!line)continue;
+
+    const upperRatio=(line.match(/[A-ZÀ-Ö]/g)||[]).length/line.length;
+    if(upperRatio<0.7)continue;
+    if(line.length<3)continue;
+
+    const upperLine=line.toUpperCase();
+
+    if(KEEP_LIST.some(k=>upperLine.includes(k))){
+      candidates.add(line);
+      continue;
+    }
+
+    if(SLUG_BLACKLIST.some(p=>p.test(line)))continue;
+
+    if(TITLE_BLACKLIST.some(p=>p.test(line)))continue;
+
+    if(line.length<3||line.length>30)continue;
+
+    candidates.add(line);
   }
-  return Object.entries(candidates)
-    .filter(([name,c])=>c>=2||name.split(/\s+/).length>=2)
-    .sort((a,b)=>b[1]-a[1])
-    .map(([name])=>name);
+
+  return Array.from(candidates);
 }
 function isActionLine(text){
   const t=String(text||'').trim();
