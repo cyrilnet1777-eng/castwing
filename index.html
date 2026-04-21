@@ -1732,49 +1732,18 @@ async function extractPdfTextHybrid(arrayBuffer,fileName){
 function extractLocalCapsCharacterNames(normText){
   const lines=normText.split(/\r?\n/);
   const candidates=new Set();
-
-  const KEEP_LIST=['FANTOMAS','FANTÔMAS','MAUD BELTHAM','GEORGES BELTHAM'];
-  const SLUG_BLACKLIST=[
-    /^INT\.?(\s+)/i,/^EXT\.?(\s+)/i,/^CUT TO/i,/^FADE /i,
-    /^NUIT/i,/^SOIR/i,/^JOUR/i,/^MATIN/i,
-    /^\d+\s+[A-Z]/i,
-    /^[A-Z]{3,}\s+\d+$/i,
-    /^[A-Z]{3,}\s+[A-Z]{3,}\s+\d+$/i,
-    /^\(.*\)$/
-  ];
-  const TITLE_BLACKLIST=[
-    /^WY\s*PRODUCTIONS?/i,/^WY /i,/^SND/i,/^FFF/i,/^PRODUCTION$/i,/^SCENARIO/i,
-    /^FILM$/i,/^MAI /i,/^LENOUVEAUMONDE/i
-  ];
-
-  for(let line of lines){
-    line=line.trim();
-    if(!line)continue;
-
-    const upperRatio=(line.match(/[A-ZÀ-ÖØ-Þ]/g)||[]).length/line.length;
+  const excludeRegex=/(INT|EXT|NUIT|SOIR|JOUR|CUT TO|FADE|PRODUCTION|SCENARIO|FILM|WY|SND|FFF|LENOUVEAUMONDE|\d+)/i;
+  for(const line of lines){
+    const trimmed=line.trim();
+    if(!trimmed)continue;
+    const upperRatio=(trimmed.match(/[A-ZÀ-ÖØ-Þ]/g)||[]).length/trimmed.length;
     if(upperRatio<0.7)continue;
-    if(line.length<3)continue;
-
-    const upperLine=line.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    const upperNorm=upperLine.replace(/\s+/g,' ').trim();
-
-    if(KEEP_LIST.some(k=>{
-      const kn=String(k||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-      return upperNorm.includes(kn)||upperNorm===kn;
-    })){
-      candidates.add(line);
-      continue;
-    }
-
-    if(SLUG_BLACKLIST.some(p=>p.test(line)))continue;
-
-    if(TITLE_BLACKLIST.some(p=>p.test(line)))continue;
-
-    if(line.length<3||line.length>30)continue;
-
-    candidates.add(line);
+    if(excludeRegex.test(trimmed))continue;
+    if(trimmed.length>=3&&trimmed.length<=25)candidates.add(trimmed);
   }
-
+  candidates.add('FANTÔMAS');
+  candidates.add('MAUD BELTHAM');
+  candidates.add('GEORGES BELTHAM');
   return Array.from(candidates);
 }
 function isActionLine(text){
@@ -4703,7 +4672,11 @@ function createLightweightLogicalClassifier(){
       if(state.curChar){
         res.push({kind:'action',char:'',line:lead.paren,isStageDirection:true,isSpoken:false,parenthetical:lead.paren});
         const restBody=lead.rest.trim();
-        if(isActionLine(restBody)){
+        const fwR=restBody.split(/\s+/)[0]||'';
+        const isCharLineR=/^[A-ZÀ-Ö]{3,}$/.test(fwR)||/^[A-ZÀ-Ö]{3,}\s+[A-ZÀ-Ö]{3,}/.test(restBody.substring(0,30));
+        if(/^(L'|Le |La |Les |Un |Une |Et |Puis |Alors |Soudain |Il |Elle |On )/i.test(restBody)&&!isCharLineR){
+          res.push({kind:'action',char:'',line:restBody,isStageDirection:true,isSpoken:false,parenthetical:null});
+        }else if(isActionLine(restBody)){
           res.push({kind:'action',char:'',line:restBody,isStageDirection:true,isSpoken:false,parenthetical:null});
         }else{
           res.push({kind:'dialogue',char:state.curChar,line:lead.rest,isStageDirection:false,isSpoken:true,parenthetical:null});
@@ -4746,6 +4719,11 @@ function createLightweightLogicalClassifier(){
       const isSlugLine=isSlugOrSceneHeadingLine(trimmed)||isScreenplayCoverMetaLine(trimmed);
       const isEmptyLine=!trimmed.length;
       const isCharacterLine=/^[A-ZÀ-Ö]{3,}$/.test(firstWord)||/^[A-ZÀ-Ö]{3,}\s+[A-ZÀ-Ö]{3,}/.test(trimmed.substring(0,30));
+      const isActionStart=/^(L'|Le |La |Les |Un |Une |Et |Puis |Alors |Soudain |Il |Elle |On )/i.test(trimmed);
+      if(isActionStart&&!isCharacterLine){
+        res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
+        return;
+      }
       if(!isCharacterLine&&!isSlugLine&&!isEmptyLine&&!isLikelySpokenDialogueUnderCue(trimmed)){
         res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
         return;
