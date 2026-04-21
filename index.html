@@ -1733,16 +1733,18 @@ function extractLocalCapsCharacterNames(normText){
   const lines=normText.split(/\r?\n/);
   const candidates=new Set();
 
-  const KEEP_LIST=['FANTOMAS','FANTÔMAS'];
+  const KEEP_LIST=['FANTOMAS','FANTÔMAS','MAUD BELTHAM','GEORGES BELTHAM'];
   const SLUG_BLACKLIST=[
-    /^INT\.? /i,/^EXT\.? /i,/^CUT TO/i,/^FADE /i,
+    /^INT\.?(\s+)/i,/^EXT\.?(\s+)/i,/^CUT TO/i,/^FADE /i,
     /^NUIT/i,/^SOIR/i,/^JOUR/i,/^MATIN/i,
     /^\d+\s+[A-Z]/i,
-    /^[A-Z]{3,}\s+\d+$/i
+    /^[A-Z]{3,}\s+\d+$/i,
+    /^[A-Z]{3,}\s+[A-Z]{3,}\s+\d+$/i,
+    /^\(.*\)$/
   ];
   const TITLE_BLACKLIST=[
-    /^WY /i,/^SND/i,/^FFF/i,/^PRODUCTION/i,/^SCENARIO/i,
-    /^FILM/i,/^MAI /i,/^LENOUVEAUMONDE/i
+    /^WY\s*PRODUCTIONS?/i,/^WY /i,/^SND/i,/^FFF/i,/^PRODUCTION$/i,/^SCENARIO/i,
+    /^FILM$/i,/^MAI /i,/^LENOUVEAUMONDE/i
   ];
 
   for(let line of lines){
@@ -1753,9 +1755,13 @@ function extractLocalCapsCharacterNames(normText){
     if(upperRatio<0.7)continue;
     if(line.length<3)continue;
 
-    const upperLine=line.toUpperCase();
+    const upperLine=line.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const upperNorm=upperLine.replace(/\s+/g,' ').trim();
 
-    if(KEEP_LIST.some(k=>upperLine.includes(k))){
+    if(KEEP_LIST.some(k=>{
+      const kn=String(k||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      return upperNorm.includes(kn)||upperNorm===kn;
+    })){
       candidates.add(line);
       continue;
     }
