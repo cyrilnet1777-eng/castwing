@@ -18,11 +18,19 @@ npx wrangler dev
 
 Uses `worker.js` + static assets from `wrangler.toml` (`[assets]`).
 
-Define secrets (once):
+Define secrets (once) — localement ou dans le dashboard Worker :
 
 ```sh
 wrangler secret put ANTHROPIC_API_KEY
 ```
+
+### Déploiement continu (GitHub → Cloudflare)
+
+Le workflow **`.github/workflows/deploy-cloudflare.yml`** exécute `wrangler deploy` à chaque push sur `main`.
+
+Dans GitHub : **Settings → Secrets and variables → Actions** → ajouter **`CLOUDFLARE_API_TOKEN`** (token API Cloudflare avec droit **Edit Cloudflare Workers**). Sans ce secret, le workflow échoue jusqu’à configuration.
+
+Alternative : **`wrangler deploy`** sur ta machine (Node + `npx wrangler deploy`) si tu es déjà authentifié (`wrangler login`).
 
 Optional vars in `wrangler.toml` or dashboard: `ANTHROPIC_MODEL`, `ANTHROPIC_MAX_TOKENS`.
 
