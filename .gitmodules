@@ -1,0 +1,3 @@
+[submodule "tools/pdf-mcp-server"]
+	path = tools/pdf-mcp-server
+	url = https://github.com/EEager/pdf-mcp-server

@@ -4,3 +4,4 @@
 .wrangler/
 .dev.vars
 .tmp-deploy/
+tools/pdf-mcp-server/node_modules/

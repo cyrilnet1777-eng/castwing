@@ -19,8 +19,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -705,13 +703,6 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-try{
-  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-}catch(e){
-  console.warn('pdf.js worker init failed, using main thread',e);
-  pdfjsLib.GlobalWorkerOptions.workerSrc='';
-}
-
 let role='actor',sessionMode='ai',mode='ai';
 let peer=null,conn=null,call=null,localStream=null,mediaRecorder=null,recordedChunks=[];
 let isRecording=false,isMicOn=true,isCamOn=true,currentFacingMode='user',prompterLines=[],prompterIndex=0,connectionTimeout=null;
@@ -726,7 +717,7 @@ let userScrolledUp=false,_lastPrompterScrollTop=0,_scrollResumeTimer=null;
 let takeNumber=0,currentScriptName='';
 /** Source brute (PDF ou collage) — jamais réécrite par le parseur ; seul l’affichage dérivé peut diverger */
 let scriptRawText='';
-/** Clés normalisées des noms repérés localement (majuscules + blacklist) — protège sanitizeCharacterNames */
+/** Clés normalisées des personnages (liste Claude + principaux forcés) — utilisé par sanitizeCharacterNames */
 let scriptValidatedCharKeys=null;
 let _scriptReviewCtx=null;
 let _bgRefinementToken=0;
@@ -1606,62 +1597,6 @@ function hasPastedDialogueStructure(text){
   return lines.some(l=>/^[A-ZÀ-ÖØ-Ý0-9 _''.\-]{2,}\s*:\s*.+$/.test(l));
 }
 
-// ── OCR Fallback Helpers ──
-function normalizeWatermarkNoise(text){
-  return String(text||'')
-    .replace(/WA[ËE]L\s+SERSOUB/gi,' ')
-    .replace(/Pink\s+Rev\.\s*\([^\)]+\)/gi,' ')
-    .replace(/--\s*\d+\s*(?:of|sur|de|von|di)\s*\d+\s*--/gi,' ')
-    .replace(/\b\d+\/\d+\b/g,' ')
-    .replace(/\bSCENE\s+\d+\b/gi,' ')
-    .replace(/\bSTART\b\s*[—\-]*>/gi,' ')
-    .replace(/<\s*[—\-]*\bEND\b/gi,' ')
-    .replace(/[ \t]+/g,' ')
-    .replace(/\n{3,}/g,'\n\n')
-    .trim();
-}
-/** Après extraction PDF.js : noms scène collés aux répliques + lettres espacées (bug fontes) */
-function repairPdfText(rawText){
-  let fixed=String(rawText||'');
-  fixed=fixed.replace(/([A-Z]{2,})\s+([a-z])/g,'$1\n$2');
-  fixed=fixed.replace(/([A-ZÀ-ÖØ-Þ]{2,})\s+(I\s)/g,'$1\n$2');
-  const words=fixed.split(/\s+/);
-  let isolated=0;
-  for(const w of words){
-    if(w.length===1&&/[a-zA-Z]/.test(w))isolated++;
-  }
-  if(words.length&&isolated/words.length>0.2){
-    fixed=fixed.replace(/\b([a-zA-Z])\s+(?=[a-zA-Z])/g,'$1');
-  }
-  return fixed;
-}
-function isPoorPdfTextExtraction(text){
-  const t=String(text||'').trim();
-  if(!t)return true;
-  if(t.length<120)return true;
-  const watermarkHits=(t.match(/WA[ËE]L\s+SERSOUB/gi)||[]).length;
-  const sceneHits=(t.match(/\b(INT\.|EXT\.|INT\/EXT\.)\b/g)||[]).length;
-  const dialogueSignals=(t.match(/\b[A-Z][A-Z''\- ]{2,}(?:\s*\((?:CONT['’'\/]?D|O\.S\.|V\.O\.)\))?\s*$/gm)||[]).length;
-  const words=t.split(/\s+/).filter(Boolean);
-  const uniqueWords=new Set(words.map(w=>w.toLowerCase()));
-  const diversity=words.length?(uniqueWords.size/words.length):0;
-  if(watermarkHits>=2&&t.length<500)return true;
-  if(sceneHits===0&&dialogueSignals===0&&diversity<0.35)return true;
-  return false;
-}
-let ocrToastEl=null;
-function showOcrToast(msg){
-  if(!ocrToastEl){
-    ocrToastEl=document.createElement('div');
-    ocrToastEl.className='ocr-progress-toast';
-    document.body.appendChild(ocrToastEl);
-  }
-  ocrToastEl.textContent=msg;
-  ocrToastEl.style.display='block';
-}
-function hideOcrToast(){
-  if(ocrToastEl)ocrToastEl.style.display='none';
-}
 /** Rend la main au navigateur (double rAF) pour garder l’UI réactive */
 function yieldToBrowser(){
   return new Promise(resolve=>{
@@ -1672,92 +1607,67 @@ function yieldToBrowser(){
     }
   });
 }
-async function extractPdfPageTextWithOcr(page,lang){
-  const viewport=page.getViewport({scale:2.2});
-  const canvas=document.createElement('canvas');
-  const ctx=canvas.getContext('2d',{willReadFrequently:true});
-  canvas.width=Math.ceil(viewport.width);
-  canvas.height=Math.ceil(viewport.height);
-  await page.render({canvasContext:ctx,viewport}).promise;
-  const ocrLang=lang||'eng';
-  let result;
-  if(typeof Tesseract!=='undefined'&&Tesseract.recognize){
-    result=await Tesseract.recognize(canvas,ocrLang,{
-      logger:m=>{if(m&&m.status)console.info('[OCR]',m.status,Math.round((m.progress||0)*100)+'%');}
-    });
-  }else{
-    console.warn('[OCR] Tesseract.js not loaded');
-    canvas.width=1;canvas.height=1;
-    return '';
-  }
-  canvas.width=1;canvas.height=1;
-  return normalizeWatermarkNoise(result&&result.data&&result.data.text||'');
+function getParseScreenplayEndpoint(){
+  return '/.netlify/functions/parse-screenplay';
 }
-async function extractPdfTextHybrid(arrayBuffer,fileName){
-  let pdf=null;
+function arrayBufferToBase64(buffer){
+  const bytes=new Uint8Array(buffer);
+  let binary='';
+  const chunk=0x8000;
+  for(let i=0;i<bytes.length;i+=chunk){
+    binary+=String.fromCharCode.apply(null,bytes.subarray(i,i+chunk));
+  }
+  return btoa(binary);
+}
+async function fetchParseScreenplay(payload){
+  const ac=new AbortController();
+  _pdfParseAbort=ac;
   try{
-    pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
-  }catch(e){
-    pdfjsLib.GlobalWorkerOptions.workerSrc='';
-    pdf=await pdfjsLib.getDocument({data:new Uint8Array(arrayBuffer)}).promise;
-  }
-  const pageTexts=[];
-  const deferredOcrPageNumbers=[];
-  await yieldToBrowser();
-  for(let i=1;i<=pdf.numPages;i++){
-    if(_pdfParseCancelled)break;
-    await yieldToBrowser();
-    const page=await pdf.getPage(i);
-    const textContent=await page.getTextContent();
-    await yieldToBrowser();
-    let rawText=extractPageText(textContent);
-    let cleaned=normalizeWatermarkNoise(rawText);
-    if(isPoorPdfTextExtraction(cleaned)){
-      deferredOcrPageNumbers.push(i);
-      console.info('[PDF] Page',i,'— texte faible ; OCR reporté en arrière-plan');
+    const res=await fetch(getParseScreenplayEndpoint(),{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload),
+      signal:ac.signal
+    });
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok){
+      const msg=data.error||data.message||('HTTP '+res.status);
+      throw new Error(typeof msg==='string'?msg:JSON.stringify(msg));
     }
-    pageTexts.push(cleaned);
+    if(!data.characters||!Array.isArray(data.lines))throw new Error('Réponse serveur invalide');
+    return data;
+  }finally{
+    if(_pdfParseAbort===ac)_pdfParseAbort=null;
   }
-  hideOcrToast();
-  const fullText=repairPdfText(pageTexts.join('\n\n'));
-  return{
-    fullText,
-    pageTexts,
-    usedOcr:deferredOcrPageNumbers.length>0,
-    ocrPages:deferredOcrPageNumbers.slice(),
-    deferredOcrPageNumbers,
-    pdf
-  };
 }
-function extractLocalCapsCharacterNames(normText){
-  const lines=normText.split(/\r?\n/);
-  const candidates=new Set();
-  const excludeRegex=/(INT|EXT|NUIT|SOIR|JOUR|CUT TO|FADE|PRODUCTION|SCENARIO|FILM|WY|SND|FFF|LENOUVEAUMONDE|\d+)/i;
-  for(const line of lines){
-    const trimmed=line.trim();
-    if(!trimmed)continue;
-    const upperRatio=(trimmed.match(/[A-ZÀ-ÖØ-Þ]/g)||[]).length/trimmed.length;
-    if(upperRatio<0.7)continue;
-    if(excludeRegex.test(trimmed))continue;
-    if(trimmed.length>=3&&trimmed.length<=25)candidates.add(trimmed);
+function mapClaudeScriptToPdfScript(parsed){
+  const lines=parsed.lines||[];
+  const out=[];
+  for(const item of lines){
+    const text=String(item.text||'').trim();
+    if(!text)continue;
+    const typ=String(item.type||'action').toLowerCase();
+    const character=item.character!=null&&String(item.character).trim()!==''?String(item.character).trim():null;
+    if(typ==='dialogue'&&character){
+      out.push({kind:LINE_TYPE.DIALOGUE,char:character,line:text,isStageDirection:false,isSpoken:true,parenthetical:null});
+      continue;
+    }
+    if(typ==='slug'){
+      out.push({kind:LINE_TYPE.SLUG,char:'',line:text,isStageDirection:false,isSpoken:false,parenthetical:null});
+      continue;
+    }
+    out.push({kind:LINE_TYPE.ACTION,char:'',line:text,isStageDirection:true,isSpoken:false,parenthetical:null});
   }
-  return Array.from(candidates);
+  return mergeConsecutiveDialogues(out);
 }
-function cleanCharacterList(chars){
-  const blacklist=[
-    /^INT /i,/^EXT /i,/^CUT TO/i,/^NUIT/i,/^SOIR/i,
-    /^\d/,/JOURNALISTE \d/i,/HOMME \d/i,/\(.*\)/,
-    /ACTIONS/i,/TÉ$/i,/LENOUVEAUMONDE/i,/WY /i,
-    /PRODUCTION/i,/SCENARIO/i,/FILM/i
-  ];
-  return chars.filter(c=>c&&c.length>=3&&c.length<=30&&!blacklist.some(r=>r.test(c)));
-}
-function isActionLine(text){
-  const t=String(text||'').trim();
-  if(/^\(CONT['’'\/]?D\)/i.test(t))return true;
-  const raw=String(text||'');
-  const actionVerbs=/^(il|elle|on|ils|elles)\s+|\s+(entre|ferme|se retourne|s'approche|se jette|regarde|sort|prend|pose|s'assoit|se lève|sourit|hausse|marche|court|s'arrête|ouvre|monte|descend|passe|reste|devient|semble|paraît|continue|commence|finit|reprend|ajoute|répond|crie|chuchote|murmure|dit|fait|voit|entend|sent|pense|croit|sait|veut|peut|doit|va|vient|arrive|part)/i;
-  return actionVerbs.test(raw)||raw.includes(' :')||raw.includes(' —');
+function applyValidatedCharactersFromParsed(parsed){
+  const chars=[...(parsed.characters||[])].map(c=>String(c||'').trim()).filter(Boolean);
+  const extras=['FANTÔMAS','MAUD BELTHAM','GEORGES BELTHAM'];
+  for(const x of extras){
+    if(!chars.some(c=>normCharKeyForWhitelist(c)===normCharKeyForWhitelist(x)))chars.push(x);
+  }
+  scriptValidatedCharKeys=new Set(chars.map(c=>normCharKeyForWhitelist(c)));
+  try{if(typeof window!=='undefined')window.__lastValidatedChars=chars.slice();}catch(_e){}
 }
 
 function getTTSEndpointCandidates(){
@@ -3380,33 +3290,6 @@ async function newScriptReset(n){
   clearPDF(n);
 }
 
-function extractPageText(textContent){
-  const rows=new Map();
-  for(const it of textContent.items){
-    const clean=(it.str||'').replace(/\u00A0/g,' ').trim();
-    if(!clean)continue;
-    const tf=it.transform||[1,0,0,1,0,0];
-    const scaleX=Math.sqrt(tf[0]*tf[0]+tf[1]*tf[1]);
-    const scaleY=Math.sqrt(tf[2]*tf[2]+tf[3]*tf[3]);
-    const fontSize=Math.max(scaleX,scaleY);
-    const isRotated=Math.abs(tf[1])>0.1||Math.abs(tf[2])>0.1;
-    if(isRotated&&fontSize>18)continue;
-    if(fontSize>60)continue;
-    const yKey=Math.round((tf[5]||0)/2);
-    if(!rows.has(yKey))rows.set(yKey,[]);
-    rows.get(yKey).push({x:tf[4]||0,str:clean,fontSize});
-  }
-  return [...rows.entries()]
-    .sort((a,b)=>b[0]-a[0])
-    .map(([,items])=>{
-      let line=items.sort((a,b)=>a.x-b.x).map(i=>i.str).join(' ').replace(/\s{2,}/g,' ').trim();
-      line=line.replace(/\b((?:[A-ZÀ-Þ]\s){2,}[A-ZÀ-Þ])\b/g,m=>m.replace(/\s/g,''));
-      return line;
-    })
-    .filter(Boolean)
-    .join('\n');
-}
-
 function normalizeScriptLine(line){
   return String(line||'')
     .normalize('NFD')
@@ -3871,35 +3754,42 @@ async function processPDF(n,file){
   takeNumber=0;
   _pdfParseCancelled=false;
   try{if(typeof window!=='undefined')window.__parserDebugLogs=[];}catch(_e){}
-  setLoading(true,t('pdfReading'));
+  setLoading(true,'Analyse du scénario (Claude)…');
   showLoadingCancel();
-  startFakeProgress();
   try{
     scriptValidatedCharKeys=null;
     let buf;
     if(typeof file.arrayBuffer==='function')buf=await file.arrayBuffer();
     else buf=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsArrayBuffer(file)});
-    const hybrid=await extractPdfTextHybrid(buf,file.name);
-    _cwPdfDoc=hybrid.pdf||null;
-    const rawText=(hybrid.fullText||'').replace(/\u00A0/g,' ');
-    scriptRawText=rawText;
-    stopFakeProgress();
-    setLoading(false);
     if(_pdfParseCancelled)return;
-    if(!rawText||rawText.trim().length<10){
-      showToast('PDF vide ou non lisible – essaie de coller le texte directement',6000);
-      document.getElementById('scriptInput'+n).focus();
-      disposeCwPdfDoc();
+    const pdfBase64=arrayBufferToBase64(buf);
+    const parsed=await fetchParseScreenplay({pdfBase64,fileName:file.name||'script.pdf'});
+    scriptRawText=(parsed.lines||[]).map(l=>String(l.text||'').trim()).filter(Boolean).join('\n');
+    pdfScript=mapClaudeScriptToPdfScript(parsed);
+    applyValidatedCharactersFromParsed(parsed);
+    const detectedLang=detectTextLanguage(scriptRawText);
+    if(!pdfScript||!pdfScript.length){
+      pdfScript=[];
+      syncPdfScriptDebugMirror();
+      showToast('Analyse vide — réessaie ou colle le texte.',5000);
+      finishPdfSetupUi(n,scriptRawText,typeof window!=='undefined'&&window.__lastValidatedChars?window.__lastValidatedChars:[],detectedLang);
+      void fillScriptInputProgressive(n,scriptRawText);
       return;
     }
-    const norm=await normalizeScreenplayWhitespaceAsync(rawText);
-    if(_pdfParseCancelled)return;
-    await runImportedScriptPipeline(n,norm,file.name||'PDF');
-    void fillScriptInputProgressive(n,scriptRawText||norm);
-    scheduleDeferredPdfOcrImprovement(n,hybrid.pdf,hybrid.pageTexts,hybrid.deferredOcrPageNumbers||[]);
+    syncPdfScriptDebugMirror();
+    if(detectedLang&&VOICE_LOCALES.some(l=>l.id===detectedLang)){
+      lockedVoiceLocale=detectedLang;
+      applyLocaleVoices(detectedLang,false);
+      initVoiceCountrySelect();
+      initVoiceGrid();
+    }
+    finishPdfSetupUi(n,scriptRawText,typeof window!=='undefined'&&window.__lastValidatedChars?window.__lastValidatedChars:[],detectedLang);
+    void fillScriptInputProgressive(n,scriptRawText);
   }catch(e){
-    console.error('PDF read error:',e);
-    showToast('Erreur lecture PDF : '+(e&&e.message?e.message:'format non supporté')+'. Essaie de coller le texte.',6000);
+    console.error('PDF parse error:',e);
+    showToast('Échec analyse : '+(e&&e.message?e.message:'configure ANTHROPIC_API_KEY (Netlify) ou netlify dev'),6500);
+    pdfScript=[];
+    syncPdfScriptDebugMirror();
   }
   setLoading(false);
 }
@@ -4500,336 +4390,12 @@ function isScreenplayCoverMetaLine(line){
   if(wc<=4&&/^DRAFT$/i.test(raw))return true;
   return false;
 }
-function stripInlineParentheticalsForCue(s){
-  return String(s||'').replace(/\s*\((?:CONT['’'\/]?D|MORE|SUITE|\.\.\.)\)\s*$/gi,'').replace(/\s*\((?:V\.O\.|O\.S\.|OC)\)\s*$/gi,'').trim();
-}
-function isMostlyAllCapsCue(line){
-  const core=stripInlineParentheticalsForCue(line).replace(/\([^)]*\)\s*$/,'').replace(/\s*[:\-–—]\s*:?\s*$/,'').trim();
-  if(core.length<2||core.length>52)return false;
-  if(isSlugOrSceneHeadingLine(core)||isScreenplayCoverMetaLine(core)||_PAGE_LINE.test(core))return false;
-  const letters=core.replace(/[^a-zA-ZÀ-ÿ']/g,'');
-  if(letters.length<2)return false;
-  let upper=0,total=0;
-  for(let i=0;i<core.length;i++){
-    const ch=core[i];
-    if(/[a-zA-ZÀ-ÿ]/.test(ch)){total++;if(ch===ch.toUpperCase()&&/[A-ZÀ-Ö]/.test(ch.toUpperCase()))upper++}
-  }
-  return total>0&&upper/total>=0.82;
-}
-function lineIsParentheticalOnly(line){
-  const t=line.trim();
-  if(/^\(CONT['’'\/]?D\)\s*$/i.test(t))return true;
-  return/^\([^)]+\)\s*$/.test(t)||/^\[[^\]]+\]\s*$/.test(t);
-}
-function extractLeadingParenthetical(line){
-  const m=String(line||'').match(/^\s*\(([^)]*)\)\s*(.*)$/);
-  if(m)return{paren:m[1]?'('+m[1]+')':null,rest:(m[2]||'').trim()};
-  return{paren:null,rest:String(line||'').trim()};
-}
 /** Affichage : unifier CONTD / CONT/D / (CONT'D) stocké → libellé « CONT'D » entre parenthèses */
 function normalizeContParenDisplay(stored){
   const raw=String(stored||'').trim();
   const inner=raw.replace(/^\(([^)]*)\)$/,'$1').trim();
   if(/^CONT['’'\/]?D$/i.test(inner))return "CONT'D";
   return inner;
-}
-function parseScreenplaySmartLocal(rawText){
-  const norm=normalizeScreenplayWhitespace(rawText);
-  const rawLines=norm.split('\n').map(l=>l.trim()).filter(l=>l.length);
-  const res=[];
-  let cur=null;
-  let firstSlug=false;
-  const sceneRx=/^(INT[\.\s\/]|EXT[\.\s\/]|SCÈNE\b|SCENE\b|SÉQUENCE\b|SEQUENCE\b)/i;
-  const cartonRx=/^(CARTON|FONDU|NOIR|GÉNÉRIQUE|GENERIQUE)\b/i;
-  for(let i=0;i<rawLines.length;i++){
-    const l=rawLines[i];
-    if(_PAGE_LINE.test(l)&&!isSlugOrSceneHeadingLine(l))continue;
-    if(isSlugOrSceneHeadingLine(l)||sceneRx.test(l)||cartonRx.test(l)){firstSlug=true;res.push({kind:'slug',char:'',line:l,isStageDirection:false,isSpoken:false,parenthetical:null});cur=null;continue}
-    if(!firstSlug){if(l.length>1)res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});continue}
-    if(lineIsParentheticalOnly(l)){res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:l.trim()});continue}
-    const lead=extractLeadingParenthetical(l);
-    if(lead.paren&&!lead.rest){res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:lead.paren});continue}
-    const inline=/^([A-ZÀ-Ö][A-ZÀ-Ö0-9\s\-'\.]{1,42}?)\s*[:\-–—]\s*(.+)$/.exec(l);
-    if(inline&&inline[2]&&inline[2].trim()){
-      cur=inline[1].trim();
-      res.push({kind:'dialogue',char:cur,line:inline[2].trim(),isStageDirection:false,isSpoken:true,parenthetical:null});
-      continue;
-    }
-    if(isMostlyAllCapsCue(l)&&!/^[\d\s\.]+$/.test(l)){
-      const cue=stripInlineParentheticalsForCue(l).replace(/\([^)]*\)\s*$/,'').replace(/\s*[:\-–—]+\s*$/,'').trim();
-      if(cue.length>=2){cur=cue;continue}
-    }
-    const body=lead.rest||l;
-    if(cur&&body.length){
-      const prev=res[res.length-1];
-      if(prev&&prev.kind===LINE_TYPE.DIALOGUE&&prev.char===cur&&!prev.isStageDirection){
-        prev.line=(prev.line+' '+body.replace(/\s+/g,' ')).trim();
-      }else{
-        res.push({kind:'dialogue',char:cur,line:body,isStageDirection:false,isSpoken:true,parenthetical:lead.paren||null});
-      }
-      continue;
-    }
-    res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
-    cur=null;
-  }
-  return mergeConsecutiveDialogues(res);
-}
-/* ═══ Lightweight screenplay parse : file unique → classification → merge (déterministe) ═══
-   Prétraitement : buildLightweightParseQueue(rawLines) — seul point d’entrée des segments.
-   Sortie file : { segment:'logicalLine', text } | { segment:'inlineStage', text } uniquement.
-   Pas de marqueurs texte, pas de second passage sur tout le script. */
-
-/** @returns {{ type:'text'|'act', text:string }[]} */
-function _splitLineIntoParenSegments(line){
-  const segments=[];
-  const re=/\([^)]*\)/g;
-  let last=0,m;
-  while((m=re.exec(line))!==null){
-    const before=line.slice(last,m.index).trim();
-    const inner=(m[0].length>=2?m[0].slice(1,-1):'').trim();
-    if(before)segments.push({type:'text',text:before});
-    if(inner)segments.push({type:'act',text:inner});
-    last=m.index+m[0].length;
-  }
-  const after=line.slice(last).trim();
-  if(after)segments.push({type:'text',text:after});
-  return segments.length?segments:[{type:'text',text:line}];
-}
-/**
- * Prétraitement en une passe : uniquement des items structurés.
- * @returns {Array<{segment:'logicalLine',text:string}|{segment:'inlineStage',text:string}>}
- */
-function buildLightweightParseQueue(rawLines){
-  const SCENE_HEAD=/^(INT\.|EXT\.|INT\/|EXT\/|INT\s|EXT\s|I\/E\.|SCÈNE\b|SCENE\b|SÉQUENCE\b|SEQUENCE\b)/i;
-  const out=[];
-  for(const l of rawLines){
-    if(!l)continue;
-    if(_PAGE_LINE.test(l)&&!isSlugOrSceneHeadingLine(l))continue;
-    if(SCENE_HEAD.test(l)||lineIsParentheticalOnly(l)||!/\(/.test(l)){
-      out.push({segment:'logicalLine',text:l});
-      continue;
-    }
-    const segs=_splitLineIntoParenSegments(l);
-    if(segs.length===1&&segs[0].type==='text'){
-      out.push({segment:'logicalLine',text:segs[0].text});
-      continue;
-    }
-    for(const seg of segs){
-      if(seg.type==='act'&&seg.text)out.push({segment:'inlineStage',text:seg.text});
-      else if(seg.type==='text'&&seg.text)out.push({segment:'logicalLine',text:seg.text});
-    }
-  }
-  return out;
-}
-function createLightweightParseState(){
-  return{curChar:null,rows:[]};
-}
-/**
- * Classification d’une ligne logique (slug, personnage, réplique, action hors personnage).
- * Mutate state.rows et state.curChar uniquement — pas d’effet de bord ailleurs.
- */
-function createLightweightLogicalClassifier(){
-  const INLINE_SPEAKER=/^(.{2,42})\s*[:\-–—]\s*(.+)$/;
-  /** Sous un personnage : réplique si phrase parlée probable ; didascalie sinon (complète isActionLine). */
-  const isLikelySpokenDialogueUnderCue=(trimmed)=>{
-    const s=String(trimmed||'').trim();
-    if(!s)return false;
-    if(isActionLine(s))return false;
-    if(/^["«—–-]/.test(s))return true;
-    const fw=s.split(/\s+/)[0]||'';
-    if(fw.length>=2&&/[a-zà-öéèêëîïôœùûç]/.test(fw))return true;
-    if(/^(je|j'|tu|nous|vous|on|ça|c'|ce |rien|plus|non|oui|bien|merci|allez|ah |oh |eh |bonjour|salut)/i.test(s))return true;
-    return false;
-  };
-  const mostlyCapsCue=(t)=>{
-    const core=String(t||'').replace(/\s*[:\-–—.]+\s*$/,'').trim();
-    if(core.length<2||core.length>48)return false;
-    if(isSlugOrSceneHeadingLine(core)||isScreenplayCoverMetaLine(core)||_PAGE_LINE.test(core))return false;
-    const letters=core.replace(/[^a-zA-ZÀ-ÿ']/g,'');
-    if(letters.length<2)return false;
-    let u=0,n=0;
-    for(let i=0;i<core.length;i++){
-      const ch=core[i];
-      if(/[a-zA-ZÀ-ÿ]/.test(ch)){n++;if(ch===ch.toUpperCase()&&/[A-ZÀ-Ö]/.test(ch))u++;}
-    }
-    return n>0&&u/n>=0.82;
-  };
-  return function classifyLogicalLine(state,line){
-    const res=state.rows;
-    const l=line;
-    if(_PAGE_LINE.test(l)&&!isSlugOrSceneHeadingLine(l))return;
-    if(isSlugOrSceneHeadingLine(l)){
-      res.push({kind:'slug',char:'',line:l,isStageDirection:false,isSpoken:false,parenthetical:null});
-      state.curChar=null;
-      return;
-    }
-    if(isScreenplayCoverMetaLine(l)){
-      res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
-      state.curChar=null;
-      return;
-    }
-    if(lineIsParentheticalOnly(l)){
-      res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:l.trim()});
-      state.curChar=null;
-      return;
-    }
-    const lead=extractLeadingParenthetical(l);
-    if(lead.paren&&lead.rest&&lead.rest.length){
-      if(state.curChar){
-        res.push({kind:'action',char:'',line:lead.paren,isStageDirection:true,isSpoken:false,parenthetical:lead.paren});
-        const restBody=lead.rest.trim();
-        const fwR=restBody.split(/\s+/)[0]||'';
-        const isCharLineR=/^[A-ZÀ-Ö]{3,}$/.test(fwR)||/^[A-ZÀ-Ö]{3,}\s+[A-ZÀ-Ö]{3,}/.test(restBody.substring(0,30));
-        if(/^(L'|Le |La |Les |Un |Une |Et |Puis |Alors |Soudain |Il |Elle |On )/i.test(restBody)&&!isCharLineR){
-          res.push({kind:'action',char:'',line:restBody,isStageDirection:true,isSpoken:false,parenthetical:null});
-        }else if(isActionLine(restBody)){
-          res.push({kind:'action',char:'',line:restBody,isStageDirection:true,isSpoken:false,parenthetical:null});
-        }else{
-          res.push({kind:'dialogue',char:state.curChar,line:lead.rest,isStageDirection:false,isSpoken:true,parenthetical:null});
-        }
-      }else{
-        res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
-      }
-      return;
-    }
-    const inl=INLINE_SPEAKER.exec(l);
-    if(inl&&mostlyCapsCue(inl[1])&&inl[2]&&inl[2].trim()){
-      const name=inl[1].trim().replace(/\s*[:\-–—.]+\s*$/,'');
-      if(isScreenplayCoverMetaLine(name)||isSlugOrSceneHeadingLine(name)){
-        res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
-        state.curChar=null;
-        return;
-      }
-      state.curChar=name;
-      const dial=inl[2].trim();
-      if(isActionLine(dial)){
-        res.push({kind:'action',char:'',line:dial,isStageDirection:true,isSpoken:false,parenthetical:null});
-      }else{
-        res.push({kind:'dialogue',char:name,line:dial,isStageDirection:false,isSpoken:true,parenthetical:null});
-      }
-      return;
-    }
-    if(mostlyCapsCue(l)){
-      const cue=l.replace(/\s*[:\-–—.]+\s*$/,'').trim();
-      if(isScreenplayCoverMetaLine(cue)||isSlugOrSceneHeadingLine(cue)){
-        res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
-        state.curChar=null;
-        return;
-      }
-      state.curChar=cue;
-      return;
-    }
-    if(state.curChar){
-      const trimmed=l.trim();
-      const firstWord=trimmed.split(/\s+/)[0]||'';
-      const isSlugLine=isSlugOrSceneHeadingLine(trimmed)||isScreenplayCoverMetaLine(trimmed);
-      const isEmptyLine=!trimmed.length;
-      const isCharacterLine=/^[A-ZÀ-Ö]{3,}$/.test(firstWord)||/^[A-ZÀ-Ö]{3,}\s+[A-ZÀ-Ö]{3,}/.test(trimmed.substring(0,30));
-      const isActionStart=/^(L'|Le |La |Les |Un |Une |Et |Puis |Alors |Soudain |Il |Elle |On )/i.test(trimmed);
-      if(isActionStart&&!isCharacterLine){
-        res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
-        return;
-      }
-      if(!isCharacterLine&&!isSlugLine&&!isEmptyLine&&!isLikelySpokenDialogueUnderCue(trimmed)){
-        res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
-        return;
-      }
-      if(isActionLine(l)){
-        res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
-      }else{
-        res.push({kind:'dialogue',char:state.curChar,line:l,isStageDirection:false,isSpoken:true,parenthetical:null});
-      }
-    }else{
-      res.push({kind:'action',char:'',line:l,isStageDirection:true,isSpoken:false,parenthetical:null});
-    }
-  };
-}
-function _appendInlineStageRow(state,text){
-  const body=String(text||'').trim();
-  if(body)state.rows.push({kind:'action',char:'',line:body,isStageDirection:true,isSpoken:false,parenthetical:null});
-}
-/** Un item de file : même sémantique pour sync et yielding. */
-function _processLightweightQueueItem(item,state,classifyLogicalLine){
-  if(item.segment==='inlineStage'){
-    _appendInlineStageRow(state,item.text);
-    return;
-  }
-  if(item.segment==='logicalLine'){
-    classifyLogicalLine(state,item.text);
-    return;
-  }
-}
-function _runLightweightParseQueue(queue){
-  const state=createLightweightParseState();
-  const classifyLogicalLine=createLightweightLogicalClassifier();
-  for(let i=0;i<queue.length;i++){
-    _processLightweightQueueItem(queue[i],state,classifyLogicalLine);
-  }
-  return mergeConsecutiveDialogues(state.rows);
-}
-async function _runLightweightParseQueueYielding(queue){
-  const state=createLightweightParseState();
-  const classifyLogicalLine=createLightweightLogicalClassifier();
-  const step=720;
-  for(let i=0;i<queue.length;i++){
-    if(i>0&&i%step===0){
-      await yieldToBrowser();
-      if(_pdfParseCancelled)break;
-    }
-    _processLightweightQueueItem(queue[i],state,classifyLogicalLine);
-  }
-  return mergeConsecutiveDialogues(state.rows);
-}
-/** rawLines → queue (une fois) → lignes pdfScript. Point d’entrée déterministe hors normalisation. */
-function parseLightweightFromRawLines(rawLines){
-  return _runLightweightParseQueue(buildLightweightParseQueue(rawLines));
-}
-/** ~N premières lignes : session immédiate ; le reste est indexé en arrière-plan. */
-const CW_INSTANT_HEAD_MAX_RAW_LINES=900;
-function scriptRowsHaveSpeakableDialogue(rows){
-  return Array.isArray(rows)&&rows.some(r=>r&&r.kind===LINE_TYPE.DIALOGUE&&r.char&&String(r.line||'').trim().length>0);
-}
-function scheduleFullLightweightParseAfterHead(n,normText,myToken){
-  const runFull=async()=>{
-    if(myToken!==_fastFullParseToken)return;
-    try{
-      const full=await parseScriptLightweightYielding(normText,true);
-      if(myToken!==_fastFullParseToken||!full||!full.length)return;
-      pdfScript=full;
-      syncPdfScriptDebugMirror();
-      const st=document.getElementById('setupStatus'+n);
-      if(st&&!__cwSessionActive){
-        st.textContent=pdfScript.length+' lignes · lecture rapide · '+(pdfScript.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length)+' répliques';
-      }
-      if(__cwSessionActive){
-        try{
-          const prevIdx=prompterIndex;
-          setPrompterLinesForSession(n,'fullParseComplete');
-          prompterIndex=Math.min(Math.max(0,prevIdx),Math.max(0,prompterLines.length-1));
-          renderPrompter();
-          syncPrompter();
-          handleCurrentLineAutomation();
-        }catch(_e){}
-        showToast('Scénario complet chargé',2200);
-      }
-      schedulePersistScriptSnapshot();
-    }catch(err){console.warn('[parse] full script completion',err)}
-  };
-  if(typeof requestIdleCallback==='function')requestIdleCallback(runFull,{timeout:900});
-  else setTimeout(runFull,40);
-}
-function parseScriptLightweight(rawText){
-  const norm=normalizeScreenplayWhitespace(rawText);
-  const rawLines=norm.split('\n').map(l=>l.trim()).filter(Boolean);
-  return parseLightweightFromRawLines(rawLines);
-}
-/** Parse léger avec rends de main : même sortie que parseScriptLightweight ; yield uniquement ici. */
-async function parseScriptLightweightYielding(normText,skipNormalize){
-  const norm=skipNormalize?String(normText||''):normalizeScreenplayWhitespace(normText);
-  const rawLines=norm.split('\n').map(l=>l.trim()).filter(Boolean);
-  const queue=buildLightweightParseQueue(rawLines);
-  if(queue.length<700)return _runLightweightParseQueue(queue);
-  return await _runLightweightParseQueueYielding(queue);
 }
 const SCRIPT_INPUT_LINES_PER_FRAME=28;
 async function fillScriptInputProgressive(n,fullNorm){
@@ -4850,108 +4416,7 @@ async function fillScriptInputProgressive(n,fullNorm){
     ta.value=acc;
   }
 }
-async function finalizePdfTextAfterDeferredOcr(n,my,pageTextsArr){
-  if(my!==_pdfOcrDeferredToken)return;
-  try{
-    const raw=repairPdfText((pageTextsArr.join('\n\n')).replace(/\u00A0/g,' '));
-    scriptRawText=raw;
-    const norm=await normalizeScreenplayWhitespaceAsync(raw);
-    await fillScriptInputProgressive(n,norm);
-    const curSnap=deepClonePdfScript(pdfScript);
-    let next=await parseScriptLightweightYielding(norm,true);
-    if(!next||!next.length){
-      next=[{kind:'action',char:'',line:String(norm||'').slice(0,12000),isStageDirection:true,isSpoken:false,parenthetical:null}];
-    }
-    const hadDial=curSnap.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length;
-    const nextDial=next.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length;
-    const apply=isRefinementClearlyBetter(curSnap,next)||(hadDial===0&&nextDial>0);
-    if(apply){
-      pdfScript=next;
-      syncPdfScriptDebugMirror();
-      const chars=getChars();
-      const cs=document.getElementById('charSection'+n);
-      if(chars.length&&cs){
-        cs.style.display='block';
-        renderChars(n,chars);
-        const orb=document.getElementById('optionalReviewBtn'+n);
-        if(orb)orb.style.display='block';
-      }
-      const st=document.getElementById('setupStatus'+n);
-      if(st)st.textContent=pdfScript.length+' lignes · OCR · '+(pdfScript.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length)+' répliques';
-      showToast('Texte PDF amélioré (OCR)',2600);
-      schedulePersistScriptSnapshot();
-    }
-  }catch(err){console.warn('[deferred OCR finalize]',err)}
-}
-function disposeCwPdfDoc(){
-  try{
-    if(_cwPdfDoc&&typeof _cwPdfDoc.destroy==='function'){_cwPdfDoc.destroy()}
-  }catch(_e){}
-  _cwPdfDoc=null;
-}
-function scheduleDeferredPdfOcrImprovement(n,pdf,pageTextsArr,deferredPageNums){
-  if(!pdf||!pageTextsArr||!deferredPageNums||!deferredPageNums.length)return;
-  const my=++_pdfOcrDeferredToken;
-  let idx=0;
-  const runNext=()=>{
-    if(my!==_pdfOcrDeferredToken)return;
-    if(idx>=deferredPageNums.length){
-      hideOcrToast();
-      const fin=()=>finalizePdfTextAfterDeferredOcr(n,my,pageTextsArr);
-      if(typeof requestIdleCallback==='function')requestIdleCallback(fin,{timeout:4000});
-      else setTimeout(fin,140);
-      return;
-    }
-    const pageNum=deferredPageNums[idx++];
-    (async ()=>{
-      if(my!==_pdfOcrDeferredToken)return;
-      try{
-        await yieldToBrowser();
-        const page=await pdf.getPage(pageNum);
-        const prev=pageTextsArr[pageNum-1]||'';
-        showOcrToast('OCR arrière-plan · p.'+pageNum+'…');
-        const ocrText=await extractPdfPageTextWithOcr(page,'eng');
-        if(ocrText&&ocrText.length>Math.max(48,prev.length*1.25)){
-          pageTextsArr[pageNum-1]=normalizeWatermarkNoise(ocrText);
-        }
-      }catch(e){console.warn('[deferred OCR]',pageNum,e)}
-      hideOcrToast();
-      if(typeof requestIdleCallback==='function')requestIdleCallback(runNext,{timeout:2200});
-      else setTimeout(runNext,72);
-    })();
-  };
-  if(typeof requestIdleCallback==='function')requestIdleCallback(runNext,{timeout:3000});
-  else setTimeout(runNext,380);
-}
-function scheduleOptionalBackgroundRefinement(n){
-  const my=++_bgRefinementToken;
-  const heavy=()=>{
-    if(my!==_bgRefinementToken)return;
-    const src=getScriptNormalizationSource();
-    if(!src||src.length<1800)return;
-    const curSnap=deepClonePdfScript(pdfScript);
-    try{
-      let alt=parseScreenplaySmartLocal(src);
-      if(!alt||!alt.length)return;
-      alt=mergeConsecutiveDialogues(sanitizeDialogueVsAction(sanitizeCharacterNames(alt)));
-      if(!isRefinementClearlyBetter(curSnap,alt))return;
-      pdfScript=alt;
-      syncPdfScriptDebugMirror();
-      const cs=document.getElementById('charSection'+n);
-      const chars=getChars();
-      if(chars.length&&cs&&cs.style.display!=='none')renderChars(n,chars);
-      showToast('Analyse détaillée appliquée',2200);
-      schedulePersistScriptSnapshot();
-    }catch(_e){}
-  };
-  const run=()=>{
-    if(my!==_bgRefinementToken)return;
-    if(typeof requestIdleCallback==='function')requestIdleCallback(heavy,{timeout:6500});
-    else setTimeout(heavy,160);
-  };
-  if(typeof requestIdleCallback==='function')requestIdleCallback(run,{timeout:4200});
-  else setTimeout(run,560);
-}
+
 function openOptionalScriptReview(n){
   const ta=document.getElementById('scriptInput'+n);
   const norm=normalizeScreenplayWhitespace((ta&&ta.value)||scriptRawText||'');
@@ -4984,23 +4449,6 @@ function isPdfScriptValidationBroken(next,snap){
   const dialSnap=(snap||[]).filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length;
   if(dialSnap>=4&&dialNext===0)return true;
   return false;
-}
-/** Remplace pdfScript par le résultat affiné seulement si segmentation/dialogue nettement meilleurs */
-function isRefinementClearlyBetter(cur,alt){
-  if(!alt||!alt.length)return false;
-  if(!cur||!cur.length)return alt.some(r=>r&&String(r.line||'').trim());
-  if(isPdfScriptValidationBroken(alt,cur))return false;
-  const dC=cur.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length;
-  const dA=alt.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length;
-  const nC=cur.filter(r=>r&&String(r.line||'').trim()).length;
-  const nA=alt.filter(r=>r&&String(r.line||'').trim()).length;
-  if(dA<dC)return false;
-  if(dA>dC)return true;
-  if(nA<=nC)return false;
-  return true;
-}
-function getScriptNormalizationSource(){
-  return typeof scriptRawText==='string'&&scriptRawText.length?scriptRawText:'';
 }
 function buildScriptReviewRowEl(row,idx){
   const wrap=document.createElement('div');
@@ -5135,7 +4583,7 @@ function finishPdfSetupUi(n,rawText,validChars,detectedLang){
   if(pdfScript.length>0&&chars.length>0){
     renderChars(n,chars);
     document.getElementById('charSection'+n).style.display='block';
-    document.getElementById('setupStatus'+n).textContent=pdfScript.length+' lignes · lecture rapide · '+(pdfScript.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length)+' répliques';
+    document.getElementById('setupStatus'+n).textContent=pdfScript.length+' lignes · Claude · '+(pdfScript.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length)+' répliques';
     const orb=document.getElementById('optionalReviewBtn'+n);
     if(orb)orb.style.display='block';
     if(detectedLang&&VOICE_LOCALES.some(l=>l.id===detectedLang)){lockedVoiceLocale=detectedLang;applyLocaleVoices(detectedLang,false);initVoiceCountrySelect();initVoiceGrid()}
@@ -5154,48 +4602,34 @@ function finishPdfSetupUi(n,rawText,validChars,detectedLang){
 }
 async function runImportedScriptPipeline(n,normText,displayName){
   _fastFullParseToken++;
-  let headOnlyPending=false;
   currentScriptName=displayName||currentScriptName||'Script';
   scriptValidatedCharKeys=null;
-  const workingNorm=normText;
-  scriptRawText=String(workingNorm||'');
-  const rawChars=extractLocalCapsCharacterNames(scriptRawText);
-  const validatedCharacters=cleanCharacterList(rawChars).slice();
-  validatedCharacters.push('FANTÔMAS','MAUD BELTHAM','GEORGES BELTHAM');
+  const workingNorm=String(normText||'');
+  scriptRawText=workingNorm;
+  setLoading(true,'Analyse du scénario (Claude)…');
+  let parsed;
   try{
-    if(validatedCharacters&&validatedCharacters.length){
-      scriptValidatedCharKeys=new Set(validatedCharacters.map(c=>normCharKeyForWhitelist(String(c))));
-    }
-    if(typeof window!=='undefined'){
-      window.__lastValidatedChars=Array.isArray(validatedCharacters)?validatedCharacters.slice():[];
-    }
-  }catch(_e){}
-  const detectedLang=detectTextLanguage(normText);
+    parsed=await fetchParseScreenplay({screenplayText:workingNorm,fileName:displayName||'script.txt'});
+  }catch(e){
+    console.error(e);
+    showToast(String(e.message||e||'Échec analyse Claude'),5000);
+    pdfScript=[];
+    syncPdfScriptDebugMirror();
+    setLoading(false);
+    finishPdfSetupUi(n,workingNorm,[],detectTextLanguage(workingNorm));
+    return;
+  }
   setLoading(false);
-  stopFakeProgress();
-  const rawLines=workingNorm.split('\n').map(l=>l.trim()).filter(Boolean);
-  const useHeadFastStart=rawLines.length>CW_INSTANT_HEAD_MAX_RAW_LINES;
-  let scheduledTail=false;
-  if(useHeadFastStart){
-    const headRows=parseLightweightFromRawLines(rawLines.slice(0,CW_INSTANT_HEAD_MAX_RAW_LINES));
-    if(scriptRowsHaveSpeakableDialogue(headRows)){
-      pdfScript=headRows;
-      scheduledTail=true;
-      headOnlyPending=true;
-      scheduleFullLightweightParseAfterHead(n,workingNorm,_fastFullParseToken);
-    }
-  }
-  if(!scheduledTail){
-    if(workingNorm.length>45000){
-      const st=document.getElementById('setupStatus'+n);
-      if(st)st.textContent='Analyse du script…';
-    }
-    pdfScript=await parseScriptLightweightYielding(workingNorm,true);
-  }
+  pdfScript=mapClaudeScriptToPdfScript(parsed);
+  applyValidatedCharactersFromParsed(parsed);
+  const validatedCharacters=typeof window!=='undefined'&&Array.isArray(window.__lastValidatedChars)?window.__lastValidatedChars.slice():[];
+  const detectedLang=detectTextLanguage(workingNorm);
   if(!pdfScript||!pdfScript.length){
-    pdfScript=[{kind:'action',char:'',line:String(workingNorm||'').slice(0,12000),isStageDirection:true,isSpoken:false,parenthetical:null}];
+    pdfScript=[];
+    syncPdfScriptDebugMirror();
+  }else{
+    syncPdfScriptDebugMirror();
   }
-  syncPdfScriptDebugMirror();
   if(detectedLang&&VOICE_LOCALES.some(l=>l.id===detectedLang)){
     lockedVoiceLocale=detectedLang;
     applyLocaleVoices(detectedLang,false);
@@ -5203,8 +4637,6 @@ async function runImportedScriptPipeline(n,normText,displayName){
     initVoiceGrid();
   }
   finishPdfSetupUi(n,workingNorm,validatedCharacters,detectedLang);
-  const refineDelay=workingNorm.length>120000?90000:workingNorm.length>45000?18000:420;
-  setTimeout(()=>scheduleOptionalBackgroundRefinement(n),refineDelay);
 }
 async function processTextImport(n){
   const raw=document.getElementById('scriptInput'+n).value;
@@ -5257,6 +4689,12 @@ function renderChars(n,chars){
   const g=document.getElementById('charGrid'+n);g.innerHTML='';
   chars.forEach(({char,count})=>{const el=document.createElement('div');el.className='char-item';el.innerHTML=`${char}<span class="cc">(${count})</span>`;el.onclick=()=>{selectedChar=char;soloPartnerMode='all';soloPartnerChar=null;g.querySelectorAll('.char-item').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');showToast('Tu joues '+char);if(n===1)renderPartnerAssignment(1)};g.appendChild(el)});
   if(n===1)renderPartnerAssignment(1);
+}
+function disposeCwPdfDoc(){
+  try{
+    if(_cwPdfDoc&&typeof _cwPdfDoc.destroy==='function'){_cwPdfDoc.destroy()}
+  }catch(_e){}
+  _cwPdfDoc=null;
 }
 function clearPDF(n){__cwSessionActive=false;cwSessionStateClear('clearPDF');pdfScript=[];scriptRawText='';_bgRefinementToken++;_fastFullParseToken++;_pdfOcrDeferredToken++;disposeCwPdfDoc();syncPdfScriptDebugMirror();clearPersistedScriptMemory().catch(()=>{});selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;lockedVoiceLocale='';initVoiceCountrySelect();document.getElementById('uploadZone'+n).style.display='block';document.getElementById('uploadOk'+n).style.display='none';document.getElementById('charSection'+n).style.display='none';if(n===1){const w=document.getElementById('partnerAssignWrap1');if(w)w.style.display='none'}document.getElementById('setupStatus'+n).textContent='';document.getElementById('pdfInput'+n).value='';const orb=document.getElementById('optionalReviewBtn'+n);if(orb)orb.style.display='none'}
 

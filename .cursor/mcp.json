@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "pdf-parser": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "tsx",
+        "${workspaceFolder}/tools/pdf-mcp-server/src/index.ts"
+      ]
+    }
+  }
+}
