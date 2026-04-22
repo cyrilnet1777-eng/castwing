@@ -1,7 +1,8 @@
 /* =========================================================
    CASTWING WORKER — Backend
-   Routes: /api/tts, /api/parse-script, /api/auth, /api/auth/google, /api/geo,
-           /api/session, /api/credits/consume,
+   Routes: /api/tts, /api/parse-screenplay (JSON PDF/text → Claude),
+           /api/parse-script (multipart legacy), /api/auth, /api/auth/google,
+           /api/geo, /api/session, /api/credits/consume,
            /api/invite/redeem,
            /api/admin/create-invite, /api/admin/list-invites,
            /api/admin/revoke-invite
@@ -836,6 +837,176 @@ async function handleCreditsConsume(request, env) {
 }
 
 /* =========================================================
+   PARSE SCREENPLAY JSON (ANTHROPIC) — contrat index.html
+========================================================= */
+
+const PARSE_SCREENPLAY_CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+function buildCastwingPlaySchemaPrompt() {
+  return [
+    "Tu extrais un scénario pour une application de répétition (ordre des répliques et didascalies).",
+    "Réponds uniquement avec un objet JSON UTF-8 valide, sans markdown ni texte hors JSON.",
+    "Schéma exact :",
+    '{"characters":["NOM",...],"lines":[{"character":"NOM ou null","text":"…","type":"dialogue | action | slug"}]}',
+    "- characters : personnages ayant au moins une réplique (orthographe du document).",
+    "- lines : ordre chronologique du document.",
+    '- type "dialogue" : réplique ; character = locuteur ; texte sans répéter le nom en tête.',
+    '- type "action" : didascalie, description, transitions ; character doit être null.',
+    '- type "slug" : INT./EXT./SCÈNE uniquement ; character null.',
+    '- Si nom et réplique sont collés sur une ligne (ex: "LUCIE I leave"), sépare character "LUCIE" et texte "I leave".',
+  ].join("\n");
+}
+
+function extractAnthropicMessageTextBlocks(message) {
+  const blocks = message && message.content ? message.content : [];
+  let out = "";
+  for (let i = 0; i < blocks.length; i += 1) {
+    const b = blocks[i];
+    if (b && b.type === "text" && b.text) out += b.text;
+  }
+  return out;
+}
+
+function parseCastwingPlayModelJson(rawText) {
+  let s = String(rawText || "").trim();
+  const fence = /^```(?:json)?\s*([\s\S]*?)```/im.exec(s);
+  if (fence) s = fence[1].trim();
+  const start = s.indexOf("{");
+  const end = s.lastIndexOf("}");
+  if (start < 0 || end <= start) throw new Error("Pas de JSON dans la réponse");
+  return JSON.parse(s.slice(start, end + 1));
+}
+
+async function handleParseScreenplay(request, env) {
+  const apiKey = String(env.ANTHROPIC_API_KEY || "").trim();
+  if (!apiKey) {
+    return json({ error: "Missing ANTHROPIC_API_KEY" }, 500, PARSE_SCREENPLAY_CORS);
+  }
+
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return json({ error: "Invalid JSON body" }, 400, PARSE_SCREENPLAY_CORS);
+  }
+
+  const pdfBase64 =
+    typeof body.pdfBase64 === "string"
+      ? body.pdfBase64.replace(/^data:application\/pdf[^,]*,/i, "").trim()
+      : "";
+  const screenplayText = typeof body.screenplayText === "string" ? body.screenplayText : "";
+  const fileName = typeof body.fileName === "string" ? body.fileName : "";
+
+  if (!pdfBase64 && !screenplayText.trim()) {
+    return json({ error: "Provide pdfBase64 or screenplayText" }, 400, PARSE_SCREENPLAY_CORS);
+  }
+
+  if (pdfBase64.length > 45 * 1024 * 1024) {
+    return json({ error: "PDF trop volumineux pour l’API" }, 413, PARSE_SCREENPLAY_CORS);
+  }
+
+  const model = env.ANTHROPIC_MODEL || "claude-sonnet-4-20250514";
+  const maxTokensRaw = Number(env.ANTHROPIC_MAX_TOKENS);
+  const max_tokens =
+    Number.isFinite(maxTokensRaw) && maxTokensRaw > 0 ? Math.min(32768, maxTokensRaw) : 16384;
+
+  const userContent = [];
+  if (pdfBase64) {
+    userContent.push({
+      type: "document",
+      source: {
+        type: "base64",
+        media_type: "application/pdf",
+        data: pdfBase64,
+      },
+    });
+    userContent.push({
+      type: "text",
+      text:
+        (fileName ? `Fichier : ${fileName}\n\n` : "") +
+        buildCastwingPlaySchemaPrompt() +
+        "\nAnalyse le PDF joint et produis le JSON.",
+    });
+  } else {
+    userContent.push({
+      type: "text",
+      text:
+        "Scénario en texte :\n---\n" +
+        screenplayText +
+        "\n---\n\n" +
+        buildCastwingPlaySchemaPrompt(),
+    });
+  }
+
+  const payload = {
+    model,
+    max_tokens,
+    system:
+      "Tu renvoies uniquement un JSON compact avec les clés characters (tableau de chaînes) et lines (tableau d’objets). Aucune prose en dehors du JSON.",
+    messages: [{ role: "user", content: userContent }],
+  };
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PARSE_TIMEOUT_MS);
+  try {
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const raw = await resp.text();
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch (_) {
+      data = null;
+    }
+
+    if (!resp.ok) {
+      const msg =
+        (data && data.error && data.error.message) ||
+        raw.slice(0, 400) ||
+        `HTTP ${resp.status}`;
+      return json({ error: msg }, resp.status >= 400 && resp.status < 600 ? resp.status : 502, PARSE_SCREENPLAY_CORS);
+    }
+
+    const textOut = extractAnthropicMessageTextBlocks(data);
+    let parsed;
+    try {
+      parsed = parseCastwingPlayModelJson(textOut);
+    } catch (e) {
+      return json(
+        {
+          error: "Réponse non JSON : " + (e && e.message ? e.message : String(e)),
+          rawPreview: textOut.slice(0, 1200),
+        },
+        502,
+        PARSE_SCREENPLAY_CORS,
+      );
+    }
+
+    if (!parsed.characters || !Array.isArray(parsed.lines)) {
+      return json({ error: "JSON invalide : characters ou lines manquants" }, 502, PARSE_SCREENPLAY_CORS);
+    }
+
+    return json({ characters: parsed.characters, lines: parsed.lines }, 200, PARSE_SCREENPLAY_CORS);
+  } catch (e) {
+    const msg = e && e.name === "AbortError" ? "anthropic_timeout" : toText(e);
+    return json({ error: msg }, 502, PARSE_SCREENPLAY_CORS);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/* =========================================================
    REMOTE SCRIPT PARSE (ANTHROPIC)
 ========================================================= */
 
@@ -1430,6 +1601,11 @@ export default {
     }
 
     if (url.pathname === "/api/tts" && request.method === "POST") return handleTTS(request, env);
+    if (url.pathname === "/api/parse-screenplay") {
+      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: PARSE_SCREENPLAY_CORS });
+      if (request.method === "POST") return handleParseScreenplay(request, env);
+      return json({ error: "Method not allowed" }, 405, PARSE_SCREENPLAY_CORS);
+    }
     if (url.pathname === "/api/parse-script" && request.method === "POST") return handleParseScript(request, env);
     if (url.pathname === "/api/validate-characters" && request.method === "POST") return handleValidateCharacters(request, env);
     if (url.pathname === "/api/classify-lines" && request.method === "POST") return handleClassifyLines(request, env);
@@ -1445,7 +1621,7 @@ export default {
     if (url.pathname === "/api/admin/list-invites" && request.method === "GET") return handleListInvites(request, env);
     if (url.pathname === "/api/admin/revoke-invite" && request.method === "POST") return handleRevokeInvite(request, env);
 
-    const apiPaths = ["/api/tts", "/api/parse-script", "/api/validate-characters", "/api/classify-lines", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/consume", "/api/invite/redeem", "/api/admin/"];
+    const apiPaths = ["/api/tts", "/api/parse-screenplay", "/api/parse-script", "/api/validate-characters", "/api/classify-lines", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/consume", "/api/invite/redeem", "/api/admin/"];
     if (apiPaths.some(p => url.pathname.startsWith(p))) {
       return json({ error: "Method not allowed" }, 405);
     }

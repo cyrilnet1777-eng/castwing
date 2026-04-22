@@ -1608,7 +1608,7 @@ function yieldToBrowser(){
   });
 }
 function getParseScreenplayEndpoint(){
-  return '/.netlify/functions/parse-screenplay';
+  return '/api/parse-screenplay';
 }
 function arrayBufferToBase64(buffer){
   const bytes=new Uint8Array(buffer);
@@ -3787,7 +3787,7 @@ async function processPDF(n,file){
     void fillScriptInputProgressive(n,scriptRawText);
   }catch(e){
     console.error('PDF parse error:',e);
-    showToast('Échec analyse : '+(e&&e.message?e.message:'configure ANTHROPIC_API_KEY (Netlify) ou netlify dev'),6500);
+    showToast('Échec analyse : '+(e&&e.message?e.message:'configure ANTHROPIC_API_KEY sur le Worker (wrangler secret) ou wrangler dev'),6500);
     pdfScript=[];
     syncPdfScriptDebugMirror();
   }

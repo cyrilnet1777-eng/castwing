@@ -4,30 +4,37 @@
 
 ### Overview
 
-Castwing is a French-language audition studio web app. The UI is a single-page app in `index.html` (inline CSS/JS). **PDF and pasted screenplay parsing** is done server-side: `netlify/functions/parse-screenplay.js` calls the **Anthropic Messages API** with the PDF (base64) or plain text and returns structured JSON (`characters` + `lines`). The browser no longer runs a regex/lightweight parser.
+Castwing is a French-language audition studio web app. The UI is `index.html` (inline CSS/JS). **PDF and pasted screenplay parsing** runs on **`worker.js`** (Cloudflare Workers): **`POST /api/parse-screenplay`** sends the PDF (base64) or plain text to **Anthropic Messages API** and returns JSON `{ characters, lines }`.
 
-Optional **Cursor MCP** integration: submodule `tools/pdf-mcp-server` ([EEager/pdf-mcp-server](https://github.com/EEager/pdf-mcp-server)) — see `.cursor/mcp.json`. To build the MCP server locally: `cd tools/pdf-mcp-server && npm install && npm run build` (then point MCP at `dist/index.js` instead of `npx tsx` if you prefer). MCP is for the IDE only; **visitors on cast-wing.com** use the Netlify function, not MCP.
+Optional **Cursor MCP**: submodule `tools/pdf-mcp-server` — see `.cursor/mcp.json`.
 
-### Running the dev server
+### Running locally
 
-Static UI only (import PDF/text will fail until you hit the parse function):
-
-```sh
-python3 -m http.server 8080 --directory /workspace
-```
-
-Full stack (UI + `/.netlify/functions/*`):
+**Recommended (same stack as prod — parsing + `/api/*`) :**
 
 ```sh
-netlify dev
+npx wrangler dev
 ```
 
-Then open the URL Netlify prints (often `http://localhost:8888`). Set `ANTHROPIC_API_KEY` in Netlify env or a root `.env` for `netlify dev`.
+Uses `worker.js` + static assets from `wrangler.toml` (`[assets]`).
+
+Define secrets (once):
+
+```sh
+wrangler secret put ANTHROPIC_API_KEY
+```
+
+Optional vars in `wrangler.toml` or dashboard: `ANTHROPIC_MODEL`, `ANTHROPIC_MAX_TOKENS`.
+
+Static-only (UI only; import script will fail until `/api/parse-screenplay` is reachable):
+
+```sh
+python3 -m http.server 8080 --directory .
+```
 
 ### Key caveats
 
-- **Anthropic:** Deploy with `ANTHROPIC_API_KEY` in Netlify environment variables. Optional: `ANTHROPIC_MODEL`, `ANTHROPIC_MAX_TOKENS`.
-- **No client-side PDF.js:** PDFs are sent to the API as base64; no OCR/Tesseract path in the browser.
-- **Camera/mic permissions:** Solo + AI and Partner modes use `getUserMedia`. In headless/CI, camera access fails gracefully.
-- **`signaling.js`** is a legacy Netlify handler; partner WebRTC still uses PeerJS CDN.
-- **WebRTC partner mode** needs internet (PeerJS + STUN). Solo + AI can use Speech Synthesis offline once the script is loaded.
+- **`ANTHROPIC_API_KEY`** must be set on the Worker (`wrangler secret put` or Cloudflare dashboard → Workers/Pages → Settings → Variables).
+- No client-side PDF.js for parsing; PDF is sent as base64 to Claude.
+- **TTS** (`/api/tts`) still uses Worker + ElevenLabs when deployed on Pages.
+- **Legacy** `POST /api/parse-script` (multipart) remains for older clients; the SPA uses **`/api/parse-screenplay`** only.
