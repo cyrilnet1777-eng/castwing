@@ -3262,6 +3262,17 @@ function setMode(m){
 }
 
 // ── Drag & Drop PDF ──
+/** macOS / Safari : souvent type vide ou application/octet-stream depuis Téléchargements */
+function isPdfUploadFile(file){
+  if(!file)return false;
+  const name=String(file.name||'');
+  const t=String(file.type||'').toLowerCase().trim();
+  if(/\.pdf$/i.test(name))return true;
+  if(t==='application/pdf'||t==='application/x-pdf')return true;
+  if((t==='application/octet-stream'||t==='binary/octet-stream')&&/\.pdf$/i.test(name))return true;
+  if(!t&&/\.pdf$/i.test(name))return true;
+  return false;
+}
 function initDragDrop(zoneId){
   const zone=document.getElementById(zoneId);if(!zone||zone.dataset.dd)return;zone.dataset.dd='1';
   const n=parseInt(zoneId.replace('uploadZone',''));
@@ -3269,15 +3280,16 @@ function initDragDrop(zoneId){
   ['dragleave','drop'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();zone.classList.remove('dragover')}));
   zone.addEventListener('drop',e=>{
     const f=e.dataTransfer.files;
-    if(f.length>0&&f[0].type==='application/pdf'){void processPDF(n,f[0])}
+    if(!f||!f.length){showToast('Seuls les PDF sont acceptés');return}
+    const file=f[0];
+    if(isPdfUploadFile(file)){void processPDF(n,file)}
     else showToast('Seuls les PDF sont acceptés');
   });
 }
 
 async function handlePDFInput(n,input){
   const f=input.files[0];if(!f)return;
-  const isPdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name||'');
-  if(!isPdf){showToast('Seuls les fichiers PDF sont acceptés',4000);input.value='';return}
+  if(!isPdfUploadFile(f)){showToast('Seuls les fichiers PDF sont acceptés',4000);input.value='';return}
   await processPDF(n,f);
 }
 function openPdfPicker(n){
