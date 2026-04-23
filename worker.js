@@ -1,6 +1,7 @@
 /* =========================================================
    CASTWING WORKER — Backend
-   Routes: /api/tts, /api/parse-screenplay (JSON PDF/text → Claude),
+   Routes: /api/tts, /api/claude-parse-script (pdfText → Claude JSON),
+           /api/parse-screenplay (JSON PDF/text → Claude),
            /api/parse-script (multipart legacy), /api/auth, /api/auth/google,
            /api/geo, /api/session, /api/credits/consume,
            /api/invite/redeem,
@@ -1575,6 +1576,95 @@ async function ensureD1Tables(db) {
 }
 
 /* =========================================================
+   CLAUDE PARSE SCRIPT (texte PDF extrait → JSON)
+========================================================= */
+
+async function handleClaudeParseScript(request, env) {
+  const cors = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: cors });
+  }
+  if (request.method !== "POST") {
+    return Response.json({ success: false, error: "Method not allowed" }, { status: 405, headers: cors });
+  }
+
+  const apiKey = String(env.ANTHROPIC_API_KEY || "").trim();
+  if (!apiKey) {
+    return Response.json({ success: false, error: "Missing ANTHROPIC_API_KEY" }, { status: 500, headers: cors });
+  }
+
+  try {
+    const body = await request.json().catch(() => null);
+    const pdfText = body && typeof body.pdfText === "string" ? body.pdfText : "";
+    if (!pdfText.trim()) {
+      return Response.json({ success: false, error: "Missing pdfText" }, { status: 400, headers: cors });
+    }
+
+    const slice = pdfText.substring(0, 15000);
+
+    const prompt = `Parse ce script de théâtre. Retourne UNIQUEMENT du JSON sans aucun texte avant ou après.
+
+Règles :
+- Une ligne qui commence par un NOM EN MAJUSCULES (ex: JUVE, FANTÔMAS) = dialogue → type "dialogue", isSpoken true
+- Sinon = action → type "action", isSpoken false
+- Les lignes INT./EXT./SCÈNE = type "slug", isSpoken false
+
+Format JSON attendu :
+{"characters":["NOM1","NOM2"],"lines":[{"character":"NOM","text":"la réplique","type":"dialogue","isSpoken":true}]}
+
+Texte à parser :
+${slice}`;
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 8192,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const msg = (data && data.error && data.error.message) || `anthropic_http_${response.status}`;
+      return Response.json({ success: false, error: msg }, { status: response.status >= 400 && response.status < 600 ? response.status : 502, headers: cors });
+    }
+
+    const blocks = data && Array.isArray(data.content) ? data.content : [];
+    const firstText = blocks.find((b) => b && b.type === "text" && b.text);
+    const jsonText = firstText ? String(firstText.text).trim() : "";
+    if (!jsonText) {
+      return Response.json({ success: false, error: "Empty model response" }, { status: 502, headers: cors });
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonText);
+    } catch (_) {
+      const start = jsonText.indexOf("{");
+      const end = jsonText.lastIndexOf("}");
+      if (start < 0 || end <= start) {
+        return Response.json({ success: false, error: "Invalid JSON from model", rawPreview: jsonText.slice(0, 400) }, { status: 502, headers: cors });
+      }
+      parsed = JSON.parse(jsonText.slice(start, end + 1));
+    }
+
+    return Response.json({ success: true, ...parsed }, { headers: cors });
+  } catch (e) {
+    return Response.json({ success: false, error: toText(e && e.message ? e.message : e) }, { status: 500, headers: cors });
+  }
+}
+
+/* =========================================================
    MAIN FETCH HANDLER
 ========================================================= */
 
@@ -1601,6 +1691,7 @@ export default {
     }
 
     if (url.pathname === "/api/tts" && request.method === "POST") return handleTTS(request, env);
+    if (url.pathname === "/api/claude-parse-script") return handleClaudeParseScript(request, env);
     if (url.pathname === "/api/parse-screenplay") {
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: PARSE_SCREENPLAY_CORS });
       if (request.method === "POST") return handleParseScreenplay(request, env);
@@ -1621,7 +1712,7 @@ export default {
     if (url.pathname === "/api/admin/list-invites" && request.method === "GET") return handleListInvites(request, env);
     if (url.pathname === "/api/admin/revoke-invite" && request.method === "POST") return handleRevokeInvite(request, env);
 
-    const apiPaths = ["/api/tts", "/api/parse-screenplay", "/api/parse-script", "/api/validate-characters", "/api/classify-lines", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/consume", "/api/invite/redeem", "/api/admin/"];
+    const apiPaths = ["/api/tts", "/api/claude-parse-script", "/api/parse-screenplay", "/api/parse-script", "/api/validate-characters", "/api/classify-lines", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/consume", "/api/invite/redeem", "/api/admin/"];
     if (apiPaths.some(p => url.pathname.startsWith(p))) {
       return json({ error: "Method not allowed" }, 405);
     }
