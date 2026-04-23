@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -703,6 +704,13 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
+try{
+  if(typeof pdfjsLib!=='undefined'){
+    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+}catch(e){
+  try{if(typeof pdfjsLib!=='undefined')pdfjsLib.GlobalWorkerOptions.workerSrc='';}catch(_e){}
+}
 let role='actor',sessionMode='ai',mode='ai';
 let peer=null,conn=null,call=null,localStream=null,mediaRecorder=null,recordedChunks=[];
 let isRecording=false,isMicOn=true,isCamOn=true,currentFacingMode='user',prompterLines=[],prompterIndex=0,connectionTimeout=null;
@@ -1607,26 +1615,45 @@ function yieldToBrowser(){
     }
   });
 }
-function getParseScreenplayEndpoint(){
-  return '/api/parse-screenplay';
+function getClaudeParseScriptEndpoint(){
+  return '/api/claude-parse-script';
 }
-function arrayBufferToBase64(buffer){
-  const bytes=new Uint8Array(buffer);
-  let binary='';
-  const chunk=0x8000;
-  for(let i=0;i<bytes.length;i+=chunk){
-    binary+=String.fromCharCode.apply(null,bytes.subarray(i,i+chunk));
+/** Extraction texte brut PDF (côté client) pour /api/claude-parse-script */
+async function extractPdfPlainTextForParse(arrayBuffer){
+  if(typeof pdfjsLib==='undefined')throw new Error('PDF.js non chargé');
+  let pdf=null;
+  try{
+    pdf=await pdfjsLib.getDocument({data:new Uint8Array(arrayBuffer)}).promise;
+  }catch(e){
+    try{
+      pdfjsLib.GlobalWorkerOptions.workerSrc='';
+      pdf=await pdfjsLib.getDocument({data:new Uint8Array(arrayBuffer)}).promise;
+    }catch(e2){
+      throw new Error(e2&&e2.message?e2.message:'PDF illisible');
+    }
   }
-  return btoa(binary);
+  const parts=[];
+  for(let i=1;i<=pdf.numPages;i++){
+    if(_pdfParseCancelled)break;
+    await yieldToBrowser();
+    const page=await pdf.getPage(i);
+    const tc=await page.getTextContent();
+    const line=(tc.items||[]).map(it=>String(it.str||'')).join(' ').replace(/\s+/g,' ').trim();
+    parts.push(line);
+  }
+  try{if(pdf&&typeof pdf.destroy==='function')pdf.destroy();}catch(_e){}
+  return parts.join('\n\n').replace(/\u00A0/g,' ');
 }
-async function fetchParseScreenplay(payload){
+async function fetchClaudeParseScript(pdfText){
+  const text=String(pdfText||'');
+  if(text.trim().length<8)throw new Error('Texte trop court pour l’analyse');
   const ac=new AbortController();
   _pdfParseAbort=ac;
   try{
-    const res=await fetch(getParseScreenplayEndpoint(),{
+    const res=await fetch(getClaudeParseScriptEndpoint(),{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(payload),
+      body:JSON.stringify({pdfText:text}),
       signal:ac.signal
     });
     const data=await res.json().catch(()=>({}));
@@ -1634,8 +1661,11 @@ async function fetchParseScreenplay(payload){
       const msg=data.error||data.message||('HTTP '+res.status);
       throw new Error(typeof msg==='string'?msg:JSON.stringify(msg));
     }
-    if(!data.characters||!Array.isArray(data.lines))throw new Error('Réponse serveur invalide');
-    return data;
+    if(data.success===false)throw new Error(String(data.error||'Échec parse'));
+    const characters=Array.isArray(data.characters)?data.characters:[];
+    const lines=Array.isArray(data.lines)?data.lines:[];
+    if(!lines.length)throw new Error('Réponse serveur vide');
+    return{characters,lines};
   }finally{
     if(_pdfParseAbort===ac)_pdfParseAbort=null;
   }
@@ -1648,8 +1678,9 @@ function mapClaudeScriptToPdfScript(parsed){
     if(!text)continue;
     const typ=String(item.type||'action').toLowerCase();
     const character=item.character!=null&&String(item.character).trim()!==''?String(item.character).trim():null;
+    const spoken=item.isSpoken!==false;
     if(typ==='dialogue'&&character){
-      out.push({kind:LINE_TYPE.DIALOGUE,char:character,line:text,isStageDirection:false,isSpoken:true,parenthetical:null});
+      out.push({kind:LINE_TYPE.DIALOGUE,char:character,line:text,isStageDirection:false,isSpoken:spoken,parenthetical:null});
       continue;
     }
     if(typ==='slug'){
@@ -3774,8 +3805,13 @@ async function processPDF(n,file){
     if(typeof file.arrayBuffer==='function')buf=await file.arrayBuffer();
     else buf=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsArrayBuffer(file)});
     if(_pdfParseCancelled)return;
-    const pdfBase64=arrayBufferToBase64(buf);
-    const parsed=await fetchParseScreenplay({pdfBase64,fileName:file.name||'script.pdf'});
+    const pdfText=await extractPdfPlainTextForParse(buf);
+    if(!pdfText||pdfText.trim().length<24){
+      showToast('PDF vide ou texte non extrait — colle le texte du scénario',6000);
+      document.getElementById('scriptInput'+n).focus();
+      return;
+    }
+    const parsed=await fetchClaudeParseScript(pdfText);
     scriptRawText=(parsed.lines||[]).map(l=>String(l.text||'').trim()).filter(Boolean).join('\n');
     pdfScript=mapClaudeScriptToPdfScript(parsed);
     applyValidatedCharactersFromParsed(parsed);
@@ -3799,7 +3835,7 @@ async function processPDF(n,file){
     void fillScriptInputProgressive(n,scriptRawText);
   }catch(e){
     console.error('PDF parse error:',e);
-    showToast('Échec analyse : '+(e&&e.message?e.message:'configure ANTHROPIC_API_KEY sur le Worker (wrangler secret) ou wrangler dev'),6500);
+    showToast('Échec analyse : '+(e&&e.message?e.message:'vérifie ANTHROPIC_API_KEY (Worker) et /api/claude-parse-script'),6500);
     pdfScript=[];
     syncPdfScriptDebugMirror();
   }
@@ -4621,7 +4657,7 @@ async function runImportedScriptPipeline(n,normText,displayName){
   setLoading(true,'Analyse du scénario (Claude)…');
   let parsed;
   try{
-    parsed=await fetchParseScreenplay({screenplayText:workingNorm,fileName:displayName||'script.txt'});
+    parsed=await fetchClaudeParseScript(workingNorm);
   }catch(e){
     console.error(e);
     showToast(String(e.message||e||'Échec analyse Claude'),5000);
