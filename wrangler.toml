@@ -1,4 +1,5 @@
 name = "castwing"
+account_id = "2b8941187fc013611cd2dd5379ad0534"
 compatibility_date = "2026-04-14"
 main = "worker.js"
 
