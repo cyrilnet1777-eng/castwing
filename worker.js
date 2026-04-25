@@ -1034,7 +1034,7 @@ async function handleParseScreenplay(request, env) {
 ========================================================= */
 
 const MAX_REMOTE_PARSE_BYTES = 10 * 1024 * 1024;
-const PARSE_TIMEOUT_MS = 120000;
+const PARSE_TIMEOUT_MS = 180000;
 
 function logParse(event, data = {}) {
   try {

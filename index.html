@@ -3756,7 +3756,7 @@ async function splitPdfIntoChunks(file,maxPages){
   return chunks;
 }
 async function fetchParseScreenplayChunked(file,onProgress){
-  var chunks=await splitPdfIntoChunks(file,30);
+  var chunks=await splitPdfIntoChunks(file,15);
   var allCharacters=[];
   var allLines=[];
   for(var i=0;i<chunks.length;i++){
