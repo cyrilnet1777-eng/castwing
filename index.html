@@ -3797,21 +3797,25 @@ async function processPDF(n,file){
   try{if(typeof window!=='undefined')window.__parserDebugLogs=[];}catch(_e){}
   setLoading(true,t('analyzingScript'));
   showLoadingCancel();
-  startFakeProgress();
   try{
     scriptValidatedCharKeys=null;
     if(_pdfParseCancelled)return;
     var parsed;
+    var needsChunking=false;
     try{
+      await loadPdfLib();
+      var buf=await file.arrayBuffer();
+      var probe=await PDFLib.PDFDocument.load(buf);
+      var pageCount=probe.getPageCount();
+      console.log('PDF has '+pageCount+' pages');
+      if(pageCount>100)needsChunking=true;
+    }catch(e){console.log('Could not probe PDF pages, trying direct upload')}
+    if(needsChunking){
+      stopFakeProgress();
+      parsed=await fetchParseScreenplayChunked(file,setRealProgress);
+    }else{
+      startFakeProgress();
       parsed=await fetchParseScreenplayFile(file);
-    }catch(e){
-      if(e&&e.message&&(/100 PDF pages/i.test(e.message)||/prompt is too long/i.test(e.message))){
-        console.log('PDF too large for single request, splitting into chunks');
-        stopFakeProgress();
-        parsed=await fetchParseScreenplayChunked(file,setRealProgress);
-      }else{
-        throw e;
-      }
     }
     scriptRawText=(parsed.lines||[]).map(l=>String(l.text||'').trim()).filter(Boolean).join('\n');
     pdfScript=mapClaudeScriptToPdfScript(parsed);
