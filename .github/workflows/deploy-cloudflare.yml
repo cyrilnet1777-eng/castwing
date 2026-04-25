@@ -1,6 +1,6 @@
-# Déploiement Workers + assets (wrangler.toml : main = worker.js, [assets])
-# Secret requis une fois dans le dépôt GitHub : CLOUDFLARE_API_TOKEN
-# (API Token avec permission Edit Cloudflare Workers)
+# Deploy Workers + assets (wrangler.toml: main = worker.js, [assets])
+# Secret required: CLOUDFLARE_API_TOKEN
+# (API Token with Edit Cloudflare Workers permission)
 
 name: Deploy Cloudflare Worker
 
@@ -23,8 +23,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           command: deploy
+          wranglerVersion: '3'
