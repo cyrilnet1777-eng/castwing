@@ -1370,7 +1370,7 @@ async function handleParseScript(request, env) {
   const attempts = [
     { model: "claude-haiku-4-5", attempt: 1 },
     { model: "claude-haiku-4-5", attempt: 2 },
-    { model: "claude-sonnet-4-6", attempt: 3 },
+    { model: "claude-haiku-4-5", attempt: 3 },
   ];
   let lastError = "unknown";
   for (const step of attempts) {
@@ -1649,7 +1649,7 @@ ${slice}`;
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-3-5-sonnet-20241022",
+        model: "claude-haiku-4-5",
         max_tokens: 8192,
         messages: [{ role: "user", content: prompt }],
       }),
