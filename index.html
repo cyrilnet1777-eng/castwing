@@ -3731,29 +3731,43 @@ function stripPdfWatermarkNoise(text,pageCount,fileName){
   return cleaned.join('\n').replace(/\n{3,}/g,'\n\n').trim();
 }
 
-async function loadPdfJsFallback(){
-  if(typeof pdfjsLib!=='undefined')return;
+async function loadPdfLib(){
+  if(typeof PDFLib!=='undefined')return;
   await new Promise(function(resolve,reject){
     var s=document.createElement('script');
-    s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
     s.onload=resolve;s.onerror=reject;document.head.appendChild(s);
   });
-  try{pdfjsLib.GlobalWorkerOptions.workerSrc='';}catch(e){}
 }
-async function extractPdfTextFallback(file){
-  await loadPdfJsFallback();
+async function splitPdfIntoChunks(file,maxPages){
+  await loadPdfLib();
   var buf=await file.arrayBuffer();
-  var pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
-  var parts=[];
-  for(var i=1;i<=pdf.numPages;i++){
-    if(_pdfParseCancelled)break;
-    var page=await pdf.getPage(i);
-    var tc=await page.getTextContent();
-    var line=(tc.items||[]).map(function(it){return String(it.str||'')}).join(' ').replace(/\s+/g,' ').trim();
-    parts.push(line);
+  var src=await PDFLib.PDFDocument.load(buf);
+  var total=src.getPageCount();
+  var chunks=[];
+  for(var start=0;start<total;start+=maxPages){
+    var end=Math.min(start+maxPages,total);
+    var doc=await PDFLib.PDFDocument.create();
+    var pages=await doc.copyPages(src,Array.from({length:end-start},function(_,i){return start+i}));
+    pages.forEach(function(p){doc.addPage(p)});
+    var bytes=await doc.save();
+    chunks.push(new File([bytes],file.name||'chunk.pdf',{type:'application/pdf'}));
   }
-  try{if(pdf&&typeof pdf.destroy==='function')pdf.destroy();}catch(e){}
-  return parts.join('\n\n').replace(/\u00A0/g,' ');
+  return chunks;
+}
+async function fetchParseScreenplayChunked(file){
+  var chunks=await splitPdfIntoChunks(file,99);
+  var allCharacters=[];
+  var allLines=[];
+  for(var i=0;i<chunks.length;i++){
+    if(_pdfParseCancelled)break;
+    var parsed=await fetchParseScreenplayFile(chunks[i]);
+    var chars=Array.isArray(parsed.characters)?parsed.characters:[];
+    chars.forEach(function(c){if(allCharacters.indexOf(c)===-1)allCharacters.push(c)});
+    allLines=allLines.concat(Array.isArray(parsed.lines)?parsed.lines:[]);
+  }
+  if(!allLines.length)throw new Error('Reponse serveur vide');
+  return{characters:allCharacters,lines:allLines};
 }
 async function processPDF(n,file){
   currentScriptName=file.name||'PDF';
@@ -3770,10 +3784,8 @@ async function processPDF(n,file){
       parsed=await fetchParseScreenplayFile(file);
     }catch(e){
       if(e&&e.message&&/100 PDF pages/i.test(e.message)){
-        console.log('PDF >100 pages, falling back to text extraction');
-        var pdfText=await extractPdfTextFallback(file);
-        if(!pdfText||pdfText.trim().length<24)throw new Error('Could not extract text from PDF');
-        parsed=await fetchClaudeParseScript(pdfText);
+        console.log('PDF >100 pages, splitting into chunks');
+        parsed=await fetchParseScreenplayChunked(file);
       }else{
         throw e;
       }
