@@ -437,7 +437,7 @@ input[type="file"]{display:none}
         <option value="audition">Audition (2 h / 3 h)</option>
         <option value="payg">Pay-as-you-go</option>
         <option value="oscar">Oscar (5 h / mois)</option>
-        <option value="palme">Palme d'Or (20 h / mois)</option>
+        <option value="palme">Palme d’Or (20 h / mois)</option>
       </select>
     </div>
     <div class="cw-burger-section" id="cwBurgerAdminLink" style="display:none">
@@ -535,7 +535,7 @@ input[type="file"]{display:none}
         <div class="auth-logged-plan" id="authLoggedPlan">Compte gratuit</div>
       </div>
       <div class="auth-actions-grid">
-        <button onclick="startChangeEmail()">Changer d'email</button>
+        <button onclick="startChangeEmail()">Changer d’email</button>
         <button class="auth-logout-btn" onclick="logoutUser()">Se déconnecter</button>
       </div>
     </div>
@@ -553,7 +553,7 @@ input[type="file"]{display:none}
       <button class="mode-opt" id="payAppleBtn" onclick="startPayment('apple')">Payer 1$ (Apple Pay)</button>
       <button class="mode-opt" id="payGoogleBtn" onclick="startPayment('google')">Payer 1$ (Google Pay)</button>
       <button class="mode-opt" id="payCardBtn" onclick="startPayment('card')">Payer 1$ (Carte)</button>
-      <button class="mode-opt" id="paidConfirmBtn" onclick="confirmPaidUnlock()">J'ai payé — débloquer</button>
+      <button class="mode-opt" id="paidConfirmBtn" onclick="confirmPaidUnlock()">J’ai payé — débloquer</button>
       <button class="mode-opt" id="waitOneHourBtn" onclick="activateCooldown()">Attendre 1 heure</button>
     </div>
     <p class="pay-lock" id="paywallStatusText"></p>
@@ -706,7 +706,7 @@ input[type="file"]{display:none}
 let role='actor',sessionMode='ai',mode='ai';
 let peer=null,conn=null,call=null,localStream=null,mediaRecorder=null,recordedChunks=[];
 let isRecording=false,isMicOn=true,isCamOn=true,currentFacingMode='user',prompterLines=[],prompterIndex=0,connectionTimeout=null;
-let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',selectedLocale='french',selectedUILanguage='fr',voiceSpeed=1,availableVoices=[],presetVoiceMap={};
+let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',selectedLocale='french',selectedUILanguage='en',voiceSpeed=1,availableVoices=[],presetVoiceMap={};
 let soloPartnerMode='all',soloPartnerChar=null;
 let lockedVoiceLocale='';
 let _preItalienneVoice=null;
@@ -715,7 +715,7 @@ let autoAdvanceTimer=null,lastAutoSpokenIndex=-1,activeSpeechToken=0;
 let ttsAudio=null,vad=null,lastTTSEndTs=0;
 let userScrolledUp=false,_lastPrompterScrollTop=0,_scrollResumeTimer=null;
 let takeNumber=0,currentScriptName='';
-/** Source brute (PDF ou collage) — jamais réécrite par le parseur ; seul l'affichage dérivé peut diverger */
+/** Source brute (PDF ou collage) — jamais réécrite par le parseur ; seul l’affichage dérivé peut diverger */
 let scriptRawText='';
 /** Clés normalisées des personnages (liste Claude + principaux forcés) — utilisé par sanitizeCharacterNames */
 let scriptValidatedCharKeys=null;
@@ -1445,7 +1445,7 @@ function adminApplyTestPlan(tier){
   updateTimerBadge();
   updateChronoDisplay();
   closeBurgerDrawer();
-  const lab={figurant:'Figurant',audition:'Audition',payg:'Pay-as-you-go',oscar:'Oscar',palme:'Palme d'Or'};
+  const lab={figurant:'Figurant',audition:'Audition',payg:'Pay-as-you-go',oscar:'Oscar',palme:'Palme d’Or'};
   showToast('Plan : '+(lab[tier]||tier),2500);
 }
 function updateChronoDisplay(remainingSec){
@@ -1594,7 +1594,7 @@ function hasPastedDialogueStructure(text){
   return lines.some(l=>/^[A-ZÀ-ÖØ-Ý0-9 _''.\-]{2,}\s*:\s*.+$/.test(l));
 }
 
-/** Rend la main au navigateur (double rAF) pour garder l'UI réactive */
+/** Rend la main au navigateur (double rAF) pour garder l’UI réactive */
 function yieldToBrowser(){
   return new Promise(resolve=>{
     if(typeof requestAnimationFrame==='function'){
@@ -1604,9 +1604,7 @@ function yieldToBrowser(){
     }
   });
 }
-/** Send raw PDF file to /api/parse-screenplay -- Claude reads it natively */
 async function fetchParseScreenplayFile(file){var ac=new AbortController();_pdfParseAbort=ac;try{var form=new FormData();form.append('file',file);var res=await fetch('/api/parse-screenplay',{method:'POST',body:form,signal:ac.signal});var data=await res.json().catch(function(){return{}});if(!res.ok){var msg=data.error||data.message||('HTTP '+res.status);throw new Error(typeof msg==='string'?msg:JSON.stringify(msg))}var characters=Array.isArray(data.characters)?data.characters:[];var lines=Array.isArray(data.lines)?data.lines:[];if(!lines.length)throw new Error('Reponse serveur vide');return{characters:characters,lines:lines}}finally{if(_pdfParseAbort===ac)_pdfParseAbort=null}}
-/** Send plain text to /api/claude-parse-script for pasted text imports */
 async function fetchClaudeParseScript(pdfText){var text=String(pdfText||'');if(text.trim().length<8)throw new Error('Texte trop court');var ac=new AbortController();_pdfParseAbort=ac;try{var res=await fetch('/api/claude-parse-script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pdfText:text}),signal:ac.signal});var data=await res.json().catch(function(){return{}});if(!res.ok){var msg=data.error||data.message||('HTTP '+res.status);throw new Error(typeof msg==='string'?msg:JSON.stringify(msg))}if(data.success===false)throw new Error(String(data.error||'Echec parse'));var characters=Array.isArray(data.characters)?data.characters:[];var lines=Array.isArray(data.lines)?data.lines:[];if(!lines.length)throw new Error('Reponse serveur vide');return{characters:characters,lines:lines}}finally{if(_pdfParseAbort===ac)_pdfParseAbort=null}}
 function mapClaudeScriptToPdfScript(parsed){
   const lines=parsed.lines||[];
@@ -1907,10 +1905,10 @@ const UI_LANGUAGES=[
   {id:'ru',label:'Русский',flag:'🇷🇺'},
 ];
 const UI_I18N={
-  fr:{siteLanguageLabel:'Langue du site',homeSoloTitle:'Commencer une scène',homeSoloDesc:"Solo avec l'IA ou lecture manuelle",homePartnerTitle:'Répéter avec un partenaire',homePartnerDesc:'Invite quelqu\'un pour jouer la scène en vrai',homeFooterText:'Pair-à-pair · Aucune donnée stockée',ndaText:'Peer-to-peer · Aucun script stocké',partnerChoiceTitle:'Session partenaire',partnerCreateTitle:'Je crée la session (acteur)',partnerCreateDesc:'Générer un code et inviter un partenaire',partnerJoinTitle:'Je rejoins une session (partenaire)',partnerJoinDesc:"Entrer le code de l'acteur",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF ou texte)',uploadLabel:'Glisse ton PDF ici ou clique',uploadSub:'Les personnages sont détectés automatiquement (format scénario habituel)',myCharacterLabel:'Quel rôle jouez-vous ?',partnerReadsLabel:'IA lit les répliques de :',partnerAllOthersBtn:'Tous les autres personnages',partnerHintAll:'L'IA joue tous les rôles sauf le tien.',partnerHintDuo:'Mode duo : uniquement les échanges entre toi et ce personnage.',pickCharacterFirst:'Choisis ton personnage pour continuer.',pasteScriptLabel:'Ou colle le texte',replyModeLabel:'Mode réplique',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuel',modeAutoBtn:'🎤 Auto',voiceSectionLabel:"Voix de l'IA",voiceLanguageLabel:'Langue voix',emotionLabel:'Émotion',speedLabel:'Vitesse',speedSlowBtn:'Lent x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rapide x1.6',launchAiBtn:'Lancer la session 🦾',setupPartnerTitle:'Avec un partenaire',sessionCodeLabel:'Ton code de session',sessionCodeHint:'Partage ce code à ton partenaire',copyCodeBtn:'📋 Copier code',copyLinkBtn:'🔗 Copier lien',shareBtn:'📤 Partager',launchPartnerBtn:'Lancer la session 🎬',joinScreenTitle:'Rejoindre une session',joinCodeLabel:'Code de session',joinCodePlaceholder:"Entre le code de l'acteur",joinSessionBtn:'Rejoindre 🎙️',prompterEmptyText:'Aucun texte chargé',sessionVoiceLabel:'🦾 Voix :',prevBtn:'◀ Préc',nextBtn:'Suiv ▶',quitBtn:'Quitter',modeHintAi:"L'IA lit les répliques du partenaire automatiquement.",modeHintManual:'Avance les répliques manuellement avec les boutons.',modeHintAuto:"L'IA lit le partenaire puis détecte la fin de ta phrase (silence) pour avancer — durée adaptée à la longueur de ta réplique.",toastEmotion:'Émotion',toastSpeed:'Vitesse',toastVoice:'Voix',toastAccent:'Langue voix',toastLanguage:'Langue du site',toastVoiceFallback:'Voix de secours utilisée',sessionReadyLabel:'Prêt · réplique IA'},
+  fr:{siteLanguageLabel:'Langue du site',homeSoloTitle:'Commencer une scène',homeSoloDesc:"Solo avec l'IA ou lecture manuelle",homePartnerTitle:'Répéter avec un partenaire',homePartnerDesc:'Invite quelqu\'un pour jouer la scène en vrai',homeFooterText:'Pair-à-pair · Aucune donnée stockée',ndaText:'Peer-to-peer · Aucun script stocké',partnerChoiceTitle:'Session partenaire',partnerCreateTitle:'Je crée la session (acteur)',partnerCreateDesc:'Générer un code et inviter un partenaire',partnerJoinTitle:'Je rejoins une session (partenaire)',partnerJoinDesc:"Entrer le code de l'acteur",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF ou texte)',uploadLabel:'Glisse ton PDF ici ou clique',uploadSub:'Les personnages sont détectés automatiquement (format scénario habituel)',myCharacterLabel:'Quel rôle jouez-vous ?',partnerReadsLabel:'IA lit les répliques de :',partnerAllOthersBtn:'Tous les autres personnages',partnerHintAll:'L’IA joue tous les rôles sauf le tien.',partnerHintDuo:'Mode duo : uniquement les échanges entre toi et ce personnage.',pickCharacterFirst:'Choisis ton personnage pour continuer.',pasteScriptLabel:'Ou colle le texte',replyModeLabel:'Mode réplique',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuel',modeAutoBtn:'🎤 Auto',voiceSectionLabel:"Voix de l'IA",voiceLanguageLabel:'Langue voix',emotionLabel:'Émotion',speedLabel:'Vitesse',speedSlowBtn:'Lent x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rapide x1.6',launchAiBtn:'Lancer la session 🦾',setupPartnerTitle:'Avec un partenaire',sessionCodeLabel:'Ton code de session',sessionCodeHint:'Partage ce code à ton partenaire',copyCodeBtn:'📋 Copier code',copyLinkBtn:'🔗 Copier lien',shareBtn:'📤 Partager',launchPartnerBtn:'Lancer la session 🎬',joinScreenTitle:'Rejoindre une session',joinCodeLabel:'Code de session',joinCodePlaceholder:"Entre le code de l'acteur",joinSessionBtn:'Rejoindre 🎙️',prompterEmptyText:'Aucun texte chargé',sessionVoiceLabel:'🦾 Voix :',prevBtn:'◀ Préc',nextBtn:'Suiv ▶',quitBtn:'Quitter',modeHintAi:"L'IA lit les répliques du partenaire automatiquement.",modeHintManual:'Avance les répliques manuellement avec les boutons.',modeHintAuto:"L'IA lit le partenaire puis détecte la fin de ta phrase (silence) pour avancer — durée adaptée à la longueur de ta réplique.",toastEmotion:'Émotion',toastSpeed:'Vitesse',toastVoice:'Voix',toastAccent:'Langue voix',toastLanguage:'Langue du site',toastVoiceFallback:'Voix de secours utilisée',sessionReadyLabel:'Prêt · réplique IA'},
   en:{siteLanguageLabel:'Website language',homeSoloTitle:'Start a scene',homeSoloDesc:'Solo with AI or manual reading',homePartnerTitle:'Rehearse with a partner',homePartnerDesc:'Invite someone to play the scene for real',homeFooterText:'Peer-to-peer · No data stored',ndaText:'Peer-to-peer · No script stored',partnerChoiceTitle:'Partner session',partnerCreateTitle:'Create session (actor)',partnerCreateDesc:'Generate a code and invite a partner',partnerJoinTitle:'Join session (partner)',partnerJoinDesc:"Enter the actor's code",setupAiTitle:'Solo + AI',scriptLabel:'Script (PDF or text)',uploadLabel:'Drop your PDF here or click',uploadSub:'Characters are detected automatically when the screenplay format matches',myCharacterLabel:'Which role are you playing?',partnerReadsLabel:'Scene partner reads:',partnerAllOthersBtn:'All other characters',partnerHintAll:'The AI plays every role except yours.',partnerHintDuo:'Duo mode: only lines between you and this character.',pickCharacterFirst:'Choose your character to continue.',pasteScriptLabel:'Or paste text',replyModeLabel:'Reply mode',modeAiBtn:'🦾 Voice AI',modeManBtn:'✋ Manual',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'AI voice',voiceLanguageLabel:'Voice language',emotionLabel:'Emotion',speedLabel:'Speed',speedSlowBtn:'Slow x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Fast x1.6',launchAiBtn:'Start session 🦾',setupPartnerTitle:'With a partner',sessionCodeLabel:'Your session code',sessionCodeHint:'Share this code with your partner',copyCodeBtn:'📋 Copy code',copyLinkBtn:'🔗 Copy link',shareBtn:'📤 Share',launchPartnerBtn:'Start session 🎬',joinScreenTitle:'Join a session',joinCodeLabel:'Session code',joinCodePlaceholder:"Enter actor's code",joinSessionBtn:'Join 🎙️',prompterEmptyText:'No script loaded',sessionVoiceLabel:'🦾 Voice:',prevBtn:'◀ Prev',nextBtn:'Next ▶',quitBtn:'Quit',modeHintAi:'AI reads partner lines automatically.',modeHintManual:'Advance lines manually with the buttons.',modeHintAuto:'AI reads partner lines, then waits for the end of your line (silence) — pause scales with line length.',toastEmotion:'Emotion',toastSpeed:'Speed',toastVoice:'Voice',toastAccent:'Voice language',toastLanguage:'Website language',toastVoiceFallback:'Backup voice used',sessionReadyLabel:'Ready · AI cue'},
   es:{siteLanguageLabel:'Idioma del sitio',homeVoicesLabel:'Voces IA disponibles',homeSoloTitle:'Solo + IA',homeSoloDesc:'La IA da la réplica con voz',homePartnerTitle:'Con un compañero',homePartnerDesc:'Invita a alguien para dar la réplica',homeFooterText:'WebRTC punto a punto · Sin datos guardados',ndaText:'Peer-to-peer · Ningún guion almacenado',partnerChoiceTitle:'Sesión con compañero',partnerCreateTitle:'Creo la sesión (actor)',partnerCreateDesc:'Generar código e invitar a un compañero',partnerJoinTitle:'Me uno a una sesión (compañero)',partnerJoinDesc:'Ingresar el código del actor',setupAiTitle:'Solo + IA',scriptLabel:'Guion (PDF o texto)',uploadLabel:'Arrastra tu PDF aquí o haz clic',uploadSub:'Formato estándar de guion',myCharacterLabel:'Mi personaje',pasteScriptLabel:'O pega el texto',replyModeLabel:'Modo de réplica',modeAiBtn:'🦾 IA vocal',modeManBtn:'✋ Manual',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'Voz de IA',voiceLanguageLabel:'Idioma de voz',emotionLabel:'Emoción',speedLabel:'Velocidad',speedSlowBtn:'Lento x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rápido x1.6',launchAiBtn:'Iniciar sesión 🦾',setupPartnerTitle:'Con un compañero',sessionCodeLabel:'Tu código de sesión',sessionCodeHint:'Comparte este código',copyCodeBtn:'📋 Copiar código',copyLinkBtn:'🔗 Copiar enlace',shareBtn:'📤 Compartir',launchPartnerBtn:'Iniciar sesión 🎬',joinScreenTitle:'Unirse a una sesión',joinCodeLabel:'Código de sesión',joinCodePlaceholder:'Ingresa el código del actor',joinSessionBtn:'Unirse 🎙️',prompterEmptyText:'Ningún texto cargado',sessionVoiceLabel:'🦾 Voz:',prevBtn:'◀ Ant',nextBtn:'Sig ▶',quitBtn:'Salir',modeHintAi:'La IA lee las líneas del compañero automáticamente.',modeHintManual:'Avanza manualmente con los botones.',modeHintAuto:'La IA lee y avanza tras 1.5s de silencio.',toastEmotion:'Emoción',toastSpeed:'Velocidad',toastVoice:'Voz',toastAccent:'Idioma de voz',toastLanguage:'Idioma del sitio',toastVoiceFallback:'Voz de respaldo usada'},
-  it:{siteLanguageLabel:'Lingua del sito',homeVoicesLabel:'Voci IA disponibili',homeSoloTitle:'Solo + IA',homeSoloDesc:'L'IA recita le battute partner',homePartnerTitle:'Con un partner',homePartnerDesc:'Invita qualcuno a dare la replica',homeFooterText:'WebRTC peer-to-peer · Nessun dato salvato',ndaText:'Peer-to-peer · Nessuno script salvato',partnerChoiceTitle:'Sessione partner',partnerCreateTitle:'Creo sessione (attore)',partnerCreateDesc:'Genera codice e invita un partner',partnerJoinTitle:'Mi unisco a una sessione',partnerJoinDesc:"Inserisci il codice dell'attore",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF o testo)',uploadLabel:'Trascina il PDF o fai clic',uploadSub:'Formato copione standard',myCharacterLabel:'Il mio personaggio',pasteScriptLabel:'Oppure incolla il testo',replyModeLabel:'Modalità battuta',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuale',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'Voce IA',voiceLanguageLabel:'Lingua voce',emotionLabel:'Emozione',speedLabel:'Velocità',speedSlowBtn:'Lento x0.7',speedNormalBtn:'Normale x1',speedFastBtn:'Veloce x1.6',launchAiBtn:'Avvia sessione 🦾',setupPartnerTitle:'Con un partner',sessionCodeLabel:'Codice sessione',sessionCodeHint:'Condividi questo codice',copyCodeBtn:'📋 Copia codice',copyLinkBtn:'🔗 Copia link',shareBtn:'📤 Condividi',launchPartnerBtn:'Avvia sessione 🎬',joinScreenTitle:'Unisciti a una sessione',joinCodeLabel:'Codice sessione',joinCodePlaceholder:"Inserisci il codice dell'attore",joinSessionBtn:'Unisciti 🎙️',prompterEmptyText:'Nessun testo caricato',sessionVoiceLabel:'🦾 Voce:',prevBtn:'◀ Prec',nextBtn:'Succ ▶',quitBtn:'Esci',modeHintAi:'L'IA legge automaticamente le battute partner.',modeHintManual:'Avanza manualmente con i pulsanti.',modeHintAuto:'L'IA avanza dopo 1.5s di silenzio.',toastEmotion:'Emozione',toastSpeed:'Velocità',toastVoice:'Voce',toastAccent:'Lingua voce',toastLanguage:'Lingua sito',toastVoiceFallback:'Usata voce di backup'},
+  it:{siteLanguageLabel:'Lingua del sito',homeVoicesLabel:'Voci IA disponibili',homeSoloTitle:'Solo + IA',homeSoloDesc:'L’IA recita le battute partner',homePartnerTitle:'Con un partner',homePartnerDesc:'Invita qualcuno a dare la replica',homeFooterText:'WebRTC peer-to-peer · Nessun dato salvato',ndaText:'Peer-to-peer · Nessuno script salvato',partnerChoiceTitle:'Sessione partner',partnerCreateTitle:'Creo sessione (attore)',partnerCreateDesc:'Genera codice e invita un partner',partnerJoinTitle:'Mi unisco a una sessione',partnerJoinDesc:"Inserisci il codice dell'attore",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF o testo)',uploadLabel:'Trascina il PDF o fai clic',uploadSub:'Formato copione standard',myCharacterLabel:'Il mio personaggio',pasteScriptLabel:'Oppure incolla il testo',replyModeLabel:'Modalità battuta',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuale',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'Voce IA',voiceLanguageLabel:'Lingua voce',emotionLabel:'Emozione',speedLabel:'Velocità',speedSlowBtn:'Lento x0.7',speedNormalBtn:'Normale x1',speedFastBtn:'Veloce x1.6',launchAiBtn:'Avvia sessione 🦾',setupPartnerTitle:'Con un partner',sessionCodeLabel:'Codice sessione',sessionCodeHint:'Condividi questo codice',copyCodeBtn:'📋 Copia codice',copyLinkBtn:'🔗 Copia link',shareBtn:'📤 Condividi',launchPartnerBtn:'Avvia sessione 🎬',joinScreenTitle:'Unisciti a una sessione',joinCodeLabel:'Codice sessione',joinCodePlaceholder:"Inserisci il codice dell'attore",joinSessionBtn:'Unisciti 🎙️',prompterEmptyText:'Nessun testo caricato',sessionVoiceLabel:'🦾 Voce:',prevBtn:'◀ Prec',nextBtn:'Succ ▶',quitBtn:'Esci',modeHintAi:'L’IA legge automaticamente le battute partner.',modeHintManual:'Avanza manualmente con i pulsanti.',modeHintAuto:'L’IA avanza dopo 1.5s di silenzio.',toastEmotion:'Emozione',toastSpeed:'Velocità',toastVoice:'Voce',toastAccent:'Lingua voce',toastLanguage:'Lingua sito',toastVoiceFallback:'Usata voce di backup'},
   zh:{siteLanguageLabel:'网站语言',homeVoicesLabel:'可用 AI 语音',homeSoloTitle:'单人 + AI',homeSoloDesc:'AI 朗读对手台词',homePartnerTitle:'与搭档',homePartnerDesc:'邀请他人一起对词',homeFooterText:'点对点 WebRTC · 不保存数据',ndaText:'点对点 · 不存储剧本',partnerChoiceTitle:'搭档会话',partnerCreateTitle:'创建会话（演员）',partnerCreateDesc:'生成代码并邀请搭档',partnerJoinTitle:'加入会话（搭档）',partnerJoinDesc:'输入演员代码',setupAiTitle:'单人 + AI',scriptLabel:'剧本（PDF 或文本）',uploadLabel:'拖放 PDF 或点击上传',uploadSub:'标准剧本格式',myCharacterLabel:'我的角色',pasteScriptLabel:'或粘贴文本',replyModeLabel:'台词模式',modeAiBtn:'🦾 AI 语音',modeManBtn:'✋ 手动',modeAutoBtn:'🎤 自动',voiceSectionLabel:'AI 语音',voiceLanguageLabel:'语音语言',emotionLabel:'情绪',speedLabel:'速度',speedSlowBtn:'慢速 x0.7',speedNormalBtn:'正常 x1',speedFastBtn:'快速 x1.6',launchAiBtn:'开始会话 🦾',setupPartnerTitle:'与搭档',sessionCodeLabel:'会话代码',sessionCodeHint:'把代码发给搭档',copyCodeBtn:'📋 复制代码',copyLinkBtn:'🔗 复制链接',shareBtn:'📤 分享',launchPartnerBtn:'开始会话 🎬',joinScreenTitle:'加入会话',joinCodeLabel:'会话代码',joinCodePlaceholder:'输入演员代码',joinSessionBtn:'加入 🎙️',prompterEmptyText:'尚未加载文本',sessionVoiceLabel:'🦾 语音:',prevBtn:'◀ 上一条',nextBtn:'下一条 ▶',quitBtn:'退出',modeHintAi:'AI 自动朗读对手台词。',modeHintManual:'使用按钮手动推进。',modeHintAuto:'静音 1.5 秒后自动推进。',toastEmotion:'情绪',toastSpeed:'速度',toastVoice:'语音',toastAccent:'语音语言',toastLanguage:'网站语言',toastVoiceFallback:'已使用备用语音'},
   ar:{siteLanguageLabel:'لغة الموقع',homeVoicesLabel:'أصوات الذكاء الاصطناعي المتاحة',homeSoloTitle:'منفرد + ذكاء اصطناعي',homeSoloDesc:'الذكاء الاصطناعي يقرأ دور الطرف الآخر',homePartnerTitle:'مع شريك',homePartnerDesc:'ادعُ شخصًا للقراءة معك',homeFooterText:'اتصال WebRTC مباشر · بلا تخزين بيانات',ndaText:'نظير لنظير · لا يتم تخزين النصوص',partnerChoiceTitle:'جلسة الشريك',partnerCreateTitle:'إنشاء جلسة (ممثل)',partnerCreateDesc:'أنشئ رمزًا وادعُ شريكًا',partnerJoinTitle:'انضمام إلى جلسة',partnerJoinDesc:'أدخل رمز الممثل',setupAiTitle:'منفرد + ذكاء اصطناعي',scriptLabel:'النص (PDF أو نص)',uploadLabel:'اسحب ملف PDF أو انقر',uploadSub:'تنسيق سيناريو قياسي',myCharacterLabel:'شخصيتي',pasteScriptLabel:'أو الصق النص',replyModeLabel:'وضع الرد',modeAiBtn:'🦾 ذكاء صوتي',modeManBtn:'✋ يدوي',modeAutoBtn:'🎤 تلقائي',voiceSectionLabel:'صوت الذكاء الاصطناعي',voiceLanguageLabel:'لغة الصوت',emotionLabel:'المشاعر',speedLabel:'السرعة',speedSlowBtn:'بطيء x0.7',speedNormalBtn:'عادي x1',speedFastBtn:'سريع x1.6',launchAiBtn:'بدء الجلسة 🦾',setupPartnerTitle:'مع شريك',sessionCodeLabel:'رمز الجلسة',sessionCodeHint:'شارك الرمز مع شريكك',copyCodeBtn:'📋 نسخ الرمز',copyLinkBtn:'🔗 نسخ الرابط',shareBtn:'📤 مشاركة',launchPartnerBtn:'بدء الجلسة 🎬',joinScreenTitle:'الانضمام إلى جلسة',joinCodeLabel:'رمز الجلسة',joinCodePlaceholder:'أدخل رمز الممثل',joinSessionBtn:'انضمام 🎙️',prompterEmptyText:'لا يوجد نص محمّل',sessionVoiceLabel:'🦾 الصوت:',prevBtn:'◀ السابق',nextBtn:'التالي ▶',quitBtn:'إنهاء',modeHintAi:'الذكاء الاصطناعي يقرأ الردود تلقائيًا.',modeHintManual:'تقدم يدويًا عبر الأزرار.',modeHintAuto:'يتقدم تلقائيًا بعد 1.5 ثانية صمت.',toastEmotion:'المشاعر',toastSpeed:'السرعة',toastVoice:'الصوت',toastAccent:'لغة الصوت',toastLanguage:'لغة الموقع',toastVoiceFallback:'تم استخدام صوت احتياطي'},
   de:{siteLanguageLabel:'Website-Sprache',homeVoicesLabel:'Verfügbare KI-Stimmen',homeSoloTitle:'Solo + KI',homeSoloDesc:'KI spricht die Partnerzeilen',homePartnerTitle:'Mit Partner',homePartnerDesc:'Jemanden zum Mitspielen einladen',homeFooterText:'Peer-to-Peer WebRTC · Keine Datenspeicherung',ndaText:'Peer-to-Peer · Kein Skript gespeichert',partnerChoiceTitle:'Partnersitzung',partnerCreateTitle:'Sitzung erstellen (Schauspieler)',partnerCreateDesc:'Code erzeugen und Partner einladen',partnerJoinTitle:'Sitzung beitreten',partnerJoinDesc:'Code des Schauspielers eingeben',setupAiTitle:'Solo + KI',scriptLabel:'Skript (PDF oder Text)',uploadLabel:'PDF hier ablegen oder klicken',uploadSub:'Standard-Drehbuchformat',myCharacterLabel:'Meine Rolle',pasteScriptLabel:'Oder Text einfügen',replyModeLabel:'Antwortmodus',modeAiBtn:'🦾 Sprach-KI',modeManBtn:'✋ Manuell',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'KI-Stimme',voiceLanguageLabel:'Stimmensprache',emotionLabel:'Emotion',speedLabel:'Tempo',speedSlowBtn:'Langsam x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Schnell x1.6',launchAiBtn:'Sitzung starten 🦾',setupPartnerTitle:'Mit Partner',sessionCodeLabel:'Sitzungscode',sessionCodeHint:'Code mit Partner teilen',copyCodeBtn:'📋 Code kopieren',copyLinkBtn:'🔗 Link kopieren',shareBtn:'📤 Teilen',launchPartnerBtn:'Sitzung starten 🎬',joinScreenTitle:'Sitzung beitreten',joinCodeLabel:'Sitzungscode',joinCodePlaceholder:'Code eingeben',joinSessionBtn:'Beitreten 🎙️',prompterEmptyText:'Kein Text geladen',sessionVoiceLabel:'🦾 Stimme:',prevBtn:'◀ Zurück',nextBtn:'Weiter ▶',quitBtn:'Beenden',modeHintAi:'KI liest Partnerzeilen automatisch.',modeHintManual:'Mit den Buttons manuell weiter.',modeHintAuto:'Automatisch nach 1,5 s Stille.',toastEmotion:'Emotion',toastSpeed:'Tempo',toastVoice:'Stimme',toastAccent:'Stimmensprache',toastLanguage:'Website-Sprache',toastVoiceFallback:'Ersatzstimme verwendet'},
@@ -1930,9 +1928,9 @@ const UI_FALLBACK_TRANSLATIONS={
   homeSoloDesc:{es:'Solo con IA o lectura manual',it:'Solo con IA o lettura manuale',zh:'独自与AI或手动阅读',ko:'AI와 솔로 또는 수동 읽기',ja:'AIとソロまたは手動読み',ar:'منفرد مع الذكاء الاصطناعي أو القراءة اليدوية',de:'Solo mit KI oder manuelles Lesen',pt:'Solo com IA ou leitura manual',hi:'AI के साथ सोलो या मैनुअल पठन',tr:'Yapay zeka ile solo veya manuel okuma',ru:'Соло с ИИ или ручное чтение'},
   homePartnerTitle:{es:'Ensayar con un compañero',it:'Prova con un partner',zh:'与搭档排练',ko:'파트너와 연습',ja:'パートナーとリハーサル',ar:'تدرّب مع شريك',de:'Mit Partner proben',pt:'Ensaiar com um parceiro',hi:'पार्टनर के साथ रिहर्सल',tr:'Partnerle prova yap',ru:'Репетировать с партнёром'},
   homePartnerDesc:{es:'Invita a alguien a actuar la escena de verdad',it:'Invita qualcuno a recitare la scena dal vivo',zh:'邀请搭档真实演绎场景',ko:'누군가를 초대해 실제로 장면을 연기하세요',ja:'誰かを招待して本番さながらのシーンを',ar:'ادعُ شخصًا لتمثيل المشهد فعليًا',de:'Lade jemanden ein, die Szene wirklich zu spielen',pt:'Convide alguém para encenar de verdade',hi:'किसी को असली सीन करने के लिए आमंत्रित करें',tr:'Sahneyi gerçekten oynaması için birini davet et',ru:'Пригласите кого-нибудь сыграть сцену по-настоящему'},
-  partnerReadsLabel:{es:'La IA lee las líneas de:',it:'L'IA legge le battute di:',zh:'AI 朗读以下角色台词：',ko:'AI가 읽을 상대 역할:',ja:'AI が読む相手役:',ar:'الذكاء الاصطناعي يقرأ دور:',de:'KI liest die Zeilen von:',pt:'A IA lê as falas de:',hi:'AI इन किरदारों की लाइनें पढ़े:'},
+  partnerReadsLabel:{es:'La IA lee las líneas de:',it:'L’IA legge le battute di:',zh:'AI 朗读以下角色台词：',ko:'AI가 읽을 상대 역할:',ja:'AI が読む相手役:',ar:'الذكاء الاصطناعي يقرأ دور:',de:'KI liest die Zeilen von:',pt:'A IA lê as falas de:',hi:'AI इन किरदारों की लाइनें पढ़े:'},
   partnerAllOthersBtn:{es:'Todos los demás personajes',it:'Tutti gli altri personaggi',zh:'所有其他角色',ko:'다른 모든 캐릭터',ja:'他のすべてのキャラクター',ar:'جميع الشخصيات الأخرى',de:'Alle anderen Figuren',pt:'Todos os outros personagens',hi:'बाकी सभी किरदार'},
-  partnerHintAll:{es:'La IA interpreta todos los personajes excepto el tuyo.',it:'L'IA interpreta tutti i ruoli tranne il tuo.',zh:'AI 扮演除你以外的所有角色。',ko:'AI가 당신 역할을 제외한 모든 배역을 읽습니다.',ja:'AI はあなた以外の全役を読みます。',ar:'الذكاء الاصطناعي يلعب كل الأدوار ما عدا دورك.',de:'Die KI spricht alle Rollen außer deiner.',pt:'A IA faz todas as falas, exceto as suas.',hi:'AI आपके किरदार को छोड़कर बाकी सभी भूमिकाएँ पढ़ेगा।'},
+  partnerHintAll:{es:'La IA interpreta todos los personajes excepto el tuyo.',it:'L’IA interpreta tutti i ruoli tranne il tuo.',zh:'AI 扮演除你以外的所有角色。',ko:'AI가 당신 역할을 제외한 모든 배역을 읽습니다.',ja:'AI はあなた以外の全役を読みます。',ar:'الذكاء الاصطناعي يلعب كل الأدوار ما عدا دورك.',de:'Die KI spricht alle Rollen außer deiner.',pt:'A IA faz todas as falas, exceto as suas.',hi:'AI आपके किरदार को छोड़कर बाकी सभी भूमिकाएँ पढ़ेगा।'},
   partnerHintDuo:{es:'Modo dúo: solo líneas entre tú y este personaje.',it:'Modalità duo: solo battute tra te e questo personaggio.',zh:'双人模式：仅保留你与该角色的对话。',ko:'듀오 모드: 나와 이 캐릭터의 대사만 유지합니다.',ja:'デュオモード：あなたとこの役の台詞のみ。',ar:'وضع ثنائي: فقط الحوارات بينك وبين هذه الشخصية.',de:'Duo-Modus: nur Dialoge zwischen dir und dieser Figur.',pt:'Modo duo: apenas falas entre você e este personagem.',hi:'डुओ मोड: केवल आप और इस किरदार के बीच की लाइनें।'},
   pickCharacterFirst:{es:'Elige primero tu personaje',it:'Scegli prima il tuo personaggio',zh:'请先选择你的角色',ko:'먼저 내 캐릭터를 선택하세요',ja:'先に自分の役を選んでください',ar:'اختر شخصيتك أولًا',de:'Wähle zuerst deine Figur',pt:'Escolha primeiro seu personagem',hi:'पहले अपना किरदार चुनें'},
   pdfReading:{fr:'Lecture du script…',en:'Reading script…',es:'Leyendo guion…',it:'Lettura copione…',zh:'读取剧本中…',ko:'대본 읽는 중…',ja:'台本を読み込み中…',ar:'جارٍ قراءة النص…',de:'Skript wird gelesen…',pt:'Lendo roteiro…',hi:'स्क्रिप्ट पढ़ी जा रही है…',tr:'Senaryo okunuyor…',ru:'Чтение сценария…'},
@@ -1948,7 +1946,7 @@ const UI_FALLBACK_TRANSLATIONS={
   modeHintManual:{ko:'버튼으로 수동 진행합니다.',hi:'बटन से मैन्युअल आगे बढ़ें।'},
   authMiniBtn:{fr:'Se connecter',en:'Login / Sign up',es:'Entrar / Registro',it:'Accedi / Iscriviti',zh:'登录 / 注册',ko:'로그인 / 가입',ja:'ログイン / 登録',ar:'تسجيل الدخول / إنشاء حساب',de:'Login / Registrieren',pt:'Entrar / Cadastro',hi:'लॉगिन / साइन अप'},
   authTitle:{fr:'Connexion / Inscription',en:'Login / Sign up',es:'Iniciar sesión / Registro',it:'Accesso / Registrazione',zh:'登录 / 注册',ko:'로그인 / 가입',ja:'ログイン / 登録',ar:'تسجيل الدخول / إنشاء حساب',de:'Login / Registrieren',pt:'Entrar / Cadastro',hi:'लॉगिन / साइन अप'},
-  authSubtitle:{fr:'Connecte-toi pour accéder à toutes les fonctionnalités.',en:'Sign in to access all features.',es:'Verifica tu email con un código para asegurar el acceso.',it:'Verifica la tua email con un codice per proteggere l'accesso.',zh:'使用邮箱验证码保护访问。',ko:'이메일 코드로 접근을 보호하세요.',ja:'メールコードでアクセスを保護します。',ar:'تحقق من بريدك برمز لتأمين الدخول.',de:'Bestätige deine E-Mail per Code für sicheren Zugriff.',pt:'Verifique seu e-mail com código para proteger o acesso.',hi:'एक्सेस सुरक्षित करने के लिए ईमेल कोड से सत्यापित करें।'},
+  authSubtitle:{fr:'Connecte-toi pour accéder à toutes les fonctionnalités.',en:'Sign in to access all features.',es:'Verifica tu email con un código para asegurar el acceso.',it:'Verifica la tua email con un codice per proteggere l’accesso.',zh:'使用邮箱验证码保护访问。',ko:'이메일 코드로 접근을 보호하세요.',ja:'メールコードでアクセスを保護します。',ar:'تحقق من بريدك برمز لتأمين الدخول.',de:'Bestätige deine E-Mail per Code für sicheren Zugriff.',pt:'Verifique seu e-mail com código para proteger o acesso.',hi:'एक्सेस सुरक्षित करने के लिए ईमेल कोड से सत्यापित करें।'},
   authSendCodeBtn:{fr:'Continuer avec email',en:'Continue',es:'Continuar',it:'Continua',zh:'继续',ko:'계속',ja:'続ける',ar:'متابعة',de:'Weiter',pt:'Continuar',hi:'जारी रखें'},
   authVerifyCodeBtn:{fr:'Vérifier',en:'Verify',es:'Verificar',it:'Verifica',zh:'验证',ko:'확인',ja:'確認',ar:'تحقق',de:'Prüfen',pt:'Verificar',hi:'सत्यापित करें'},
   authGoogleBtn:{fr:'Continuer avec Google',en:'Continue with Google',es:'Continuar con Google',it:'Continua con Google',zh:'使用 Google 继续',ko:'Google로 계속하기',ja:'Google で続行',ar:'المتابعة عبر Google',de:'Mit Google fortfahren',pt:'Continuar com Google',hi:'Google से जारी रखें'},
@@ -1959,11 +1957,11 @@ const UI_FALLBACK_TRANSLATIONS={
   payAppleBtn:{fr:'Payer 1$ (Apple Pay)',en:'Pay $1 (Apple Pay)',es:'Pagar 1$ (Apple Pay)',it:'Paga 1$ (Apple Pay)',zh:'支付1美元（Apple Pay）',ko:'1달러 결제 (Apple Pay)',ja:'1ドル支払い (Apple Pay)',ar:'ادفع 1$ (Apple Pay)',de:'1$ zahlen (Apple Pay)',pt:'Pagar 1$ (Apple Pay)',hi:'1$ भुगतान (Apple Pay)'},
   payGoogleBtn:{fr:'Payer 1$ (Google Pay)',en:'Pay $1 (Google Pay)',es:'Pagar 1$ (Google Pay)',it:'Paga 1$ (Google Pay)',zh:'支付1美元（Google Pay）',ko:'1달러 결제 (Google Pay)',ja:'1ドル支払い (Google Pay)',ar:'ادفع 1$ (Google Pay)',de:'1$ zahlen (Google Pay)',pt:'Pagar 1$ (Google Pay)',hi:'1$ भुगतान (Google Pay)'},
   payCardBtn:{fr:'Payer 1$ (Carte)',en:'Pay $1 (Card)',es:'Pagar 1$ (Tarjeta)',it:'Paga 1$ (Carta)',zh:'支付1美元（银行卡）',ko:'1달러 결제 (카드)',ja:'1ドル支払い (カード)',ar:'ادفع 1$ (بطاقة)',de:'1$ zahlen (Karte)',pt:'Pagar 1$ (Cartão)',hi:'1$ भुगतान (कार्ड)'},
-  paidConfirmBtn:{fr:'J'ai payé — débloquer',en:'I paid — unlock',es:'Ya pagué — desbloquear',it:'Ho pagato — sblocca',zh:'我已支付 — 解锁',ko:'결제 완료 — 해제',ja:'支払い済み — 解除',ar:'دفعت — فتح',de:'Bezahlt — entsperren',pt:'Já paguei — desbloquear',hi:'मैंने भुगतान किया — अनलॉक'},
+  paidConfirmBtn:{fr:'J’ai payé — débloquer',en:'I paid — unlock',es:'Ya pagué — desbloquear',it:'Ho pagato — sblocca',zh:'我已支付 — 解锁',ko:'결제 완료 — 해제',ja:'支払い済み — 解除',ar:'دفعت — فتح',de:'Bezahlt — entsperren',pt:'Já paguei — desbloquear',hi:'मैंने भुगतान किया — अनलॉक'},
   waitOneHourBtn:{fr:'Attendre 1 heure',en:'Wait 1 hour',es:'Esperar 1 hora',it:'Attendi 1 ora',zh:'等待1小时',ko:'1시간 기다리기',ja:'1時間待つ',ar:'انتظر ساعة',de:'1 Stunde warten',pt:'Esperar 1 hora',hi:'1 घंटा प्रतीक्षा करें'},
   authCodeSent:{fr:'Code envoyé. Vérifie ta boîte mail.',en:'Code sent. Check your inbox.',es:'Código enviado. Revisa tu email.',it:'Codice inviato. Controlla la tua email.',zh:'验证码已发送，请查收邮箱。',ko:'코드를 보냈습니다. 메일함을 확인하세요.',ja:'コードを送信しました。メールを確認してください。',ar:'تم إرسال الرمز. تحقق من بريدك.',de:'Code gesendet. Bitte E-Mail prüfen.',pt:'Código enviado. Verifique seu e-mail.',hi:'कोड भेज दिया गया है। अपना ईमेल देखें।'},
   authVerified:{fr:'Email vérifié ✅',en:'Email verified ✅',es:'Email verificado ✅',it:'Email verificata ✅',zh:'邮箱验证成功 ✅',ko:'이메일 인증 완료 ✅',ja:'メール認証完了 ✅',ar:'تم التحقق من البريد ✅',de:'E-Mail bestätigt ✅',pt:'E-mail verificado ✅',hi:'ईमेल सत्यापित ✅'},
-  authWelcomeNew:{fr:'Bienvenue sur Castwing. 2 h d'IA débloquées.',en:'Welcome to Castwing. 2h of AI unlocked.',es:'Bienvenido a Castwing. 2 h de IA desbloqueadas.',it:'Benvenuto su Castwing. 2 h di IA sbloccate.',zh:'欢迎使用 Castwing，已解锁 2 小时 AI。',ko:'Castwing에 오신 걸 환영합니다. AI 2시간이 열렸습니다.',ja:'Castwingへようこそ。AIが2時間利用できます。',ar:'مرحبًا بك في Castwing. تم تفعيل ساعتين من الذكاء الاصطناعي.',de:'Willkommen bei Castwing. 2 h KI freigeschaltet.',pt:'Bem-vindo ao Castwing. 2 h de IA liberadas.',hi:'Castwing में आपका स्वागत है। 2 घंटे AI अनलॉक।'},
+  authWelcomeNew:{fr:'Bienvenue sur Castwing. 2 h d’IA débloquées.',en:'Welcome to Castwing. 2h of AI unlocked.',es:'Bienvenido a Castwing. 2 h de IA desbloqueadas.',it:'Benvenuto su Castwing. 2 h di IA sbloccate.',zh:'欢迎使用 Castwing，已解锁 2 小时 AI。',ko:'Castwing에 오신 걸 환영합니다. AI 2시간이 열렸습니다.',ja:'Castwingへようこそ。AIが2時間利用できます。',ar:'مرحبًا بك في Castwing. تم تفعيل ساعتين من الذكاء الاصطناعي.',de:'Willkommen bei Castwing. 2 h KI freigeschaltet.',pt:'Bem-vindo ao Castwing. 2 h de IA liberadas.',hi:'Castwing में आपका स्वागत है। 2 घंटे AI अनलॉक।'},
   authWelcomeBack:{fr:'Content de te revoir.',en:'Good to see you again.',es:'Me alegra verte de nuevo.',it:'Che bello rivederti.',zh:'欢迎回来。',ko:'다시 만나서 반가워요.',ja:'おかえりなさい。',ar:'سعداء برؤيتك مجددًا.',de:'Schön, dass du wieder da bist.',pt:'Bom te ver de novo.',hi:'फिर से स्वागत है।'},
   authInvalidCode:{fr:'Code invalide',en:'Invalid code',es:'Código inválido',it:'Codice non valido',zh:'验证码无效',ko:'코드가 올바르지 않습니다',ja:'コードが無効です',ar:'رمز غير صالح',de:'Ungültiger Code',pt:'Código inválido',hi:'कोड अमान्य है'},
   usageBlocked:{fr:'Limite atteinte. Attends 1h ou débloque à 1$.',en:'Limit reached. Wait 1h or unlock for $1.',es:'Límite alcanzado. Espera 1h o desbloquea por 1$.',it:'Limite raggiunto. Attendi 1h o sblocca con 1$.',zh:'已达上限。等待1小时或支付1美元解锁。',ko:'사용 한도 도달. 1시간 대기 또는 1달러 결제로 해제.',ja:'上限に達しました。1時間待つか1ドルで解除。',ar:'تم بلوغ الحد. انتظر ساعة أو افتح مقابل 1$.',de:'Limit erreicht. 1h warten oder für 1$ entsperren.',pt:'Limite atingido. Aguarde 1h ou desbloqueie por 1$.',hi:'सीमा पूरी। 1 घंटा प्रतीक्षा करें या 1$ देकर अनलॉक करें।'},
@@ -3309,7 +3307,7 @@ function looksLikeWatermarkLine(line){
   const letters=(l.match(/[A-Za-zÀ-ÖØ-öø-ÿ]/g)||[]).length;
   const specials=(l.match(/[_\-]/g)||[]).length;
   if(letters<3)return false;
-  if(!/^[A-Za-zÀ-ÖØ-öø-ÿ\s''._-]+$/.test(l))return false;
+  if(!/^[A-Za-zÀ-ÖØ-öø-ÿ\s'’._-]+$/.test(l))return false;
   const compact=l.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g,'');
   if(!compact)return false;
   const upperRatio=(compact.match(/[A-ZÀ-ÖØ-Þ]/g)||[]).length/compact.length;
@@ -3327,7 +3325,7 @@ function guessWatermarkNameKeysFromFileName(fileName){
     const k=normalizeScriptLine(chunk);
     if(k.split(/\s+/).length>=2)keys.add(k);
   });
-  const tail=base.match(/[_\s-]+([A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ\s.''-]{2,})$/u);
+  const tail=base.match(/[_\s-]+([A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ\s.'’-]{2,})$/u);
   if(tail){
     const k=normalizeScriptLine(tail[1]);
     if(k)keys.add(k);
@@ -3338,7 +3336,7 @@ function guessWatermarkNameKeysFromFileName(fileName){
 function cleanCharacterName(raw){
   if(!raw)return'';
   let name=String(raw||'').replace(/\u00A0/g,' ').trim();
-  name=name.replace(/\s*\(\s*CONT['''\/]?\s*D\s*[\)\*xX]?\s*[\*xX]*\s*$/i,'').trim();
+  name=name.replace(/\s*\(\s*CONT['’'\/]?\s*D\s*[\)\*xX]?\s*[\*xX]*\s*$/i,'').trim();
   name=name.replace(/\s*\(\s*SUITE\s*[\)\*xX]?\s*[\*xX]*\s*$/i,'').trim();
   name=name.replace(/\s*\(\s*[O0]\s*[\.\-\/]?\s*S\s*[\.\-]?\s*[\)\*xX]?\s*[\*xX]*\s*$/i,'').trim();
   name=name.replace(/\s*\(\s*[VY]\s*[\.\-]?\s*[O0]\s*[\.\-]?\s*[\)\*xX]?\s*[\*xX]*\s*$/i,'').trim();
@@ -3800,7 +3798,7 @@ function detectTextLanguage(text){
 
 function buildSpeakerRegexes(){
   try{
-    const name='([\\p{L}][\\p{L}\\s\\-\\.\\\'']{0,40})';
+    const name='([\\p{L}][\\p{L}\\s\\-\\.\\\'’]{0,40})';
     return{
       charInlineRx:new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*[:–—]\\s*(.+)$','u'),
       charDashOnlyRx:new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*[:–—]\\s*$','u'),
@@ -3808,7 +3806,7 @@ function buildSpeakerRegexes(){
     };
   }catch(_err){
     const UP='A-Za-zÀ-ÖØ-öø-ÿ';
-    const name='(['+UP+']['+UP+'\\s\\-\\.\\\'']{0,40})';
+    const name='(['+UP+']['+UP+'\\s\\-\\.\\\'’]{0,40})';
     return{
       charInlineRx:new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*[:–—]\\s*(.+)$'),
       charDashOnlyRx:new RegExp('^'+name+'\\s*(?:\\([^)]*\\)\\s*)*[:–—]\\s*$'),
@@ -3938,7 +3936,7 @@ function parsePDFScript(text){
         const alt=[];
         let curAlt='';
         const dominantNorm=normalizeScriptLine(dominantChar);
-        const speakerInlineRx=new RegExp('^([A-ZÀÂÄÆÇÉÈÊËÎÏÔÖŒÙÛÜŸÑ][A-ZÀÂÄÆÇÉÈÊËÎÏÔÖŒÙÛÜŸÑ\\s\\-\\.\\\'']{1,40})\\s*[:–—\\.]\\s*(.+)$');
+        const speakerInlineRx=new RegExp('^([A-ZÀÂÄÆÇÉÈÊËÎÏÔÖŒÙÛÜŸÑ][A-ZÀÂÄÆÇÉÈÊËÎÏÔÖŒÙÛÜŸÑ\\s\\-\\.\\\'’]{1,40})\\s*[:–—\\.]\\s*(.+)$');
         for(const raw of lines){
           const l=raw.trim().replace(/\s{2,}/g,' ');
           if(!l)continue;
@@ -4253,7 +4251,7 @@ function cwEnqueueSessionBoot(fn){
   return p;
 }
 /**
- * Solo AI session entry: import, IDB restore, manual "Lancer", or auto-rehearse after paste/PDF.
+ * Solo AI session entry: import, IDB restore, manual “Lancer”, or auto-rehearse after paste/PDF.
  * All paths share the same serialized queue + active gate (partner/join use cwEnqueueSessionBoot separately).
  * @param {{source?:string,importScreenN?:number,pdfScriptSnapshot?:Array,selectedCharacter?:string}} opts
  */
@@ -4370,7 +4368,7 @@ function isScreenplayCoverMetaLine(line){
 function normalizeContParenDisplay(stored){
   const raw=String(stored||'').trim();
   const inner=raw.replace(/^\(([^)]*)\)$/,'$1').trim();
-  if(/^CONT['''\/]?D$/i.test(inner))return "CONT'D";
+  if(/^CONT['’'\/]?D$/i.test(inner))return "CONT'D";
   return inner;
 }
 const SCRIPT_INPUT_LINES_PER_FRAME=28;
@@ -4631,7 +4629,7 @@ async function processTextImport(n){
 }
 
 function getChars(){const c={};for(const row of pdfScript){if(!row||row.kind!==LINE_TYPE.DIALOGUE||!row.char)continue;c[row.char]=(c[row.char]||0)+1}return Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([char,count])=>({char,count}))}
-/** Personnage le plus fréquent (tri getChars) ; en cas d'égalité, premier détecté */
+/** Personnage le plus fréquent (tri getChars) ; en cas d’égalité, premier détecté */
 function pickDefaultRehearsalCharacter(){
   const chars=getChars();
   return chars&&chars.length?chars[0].char:null;
