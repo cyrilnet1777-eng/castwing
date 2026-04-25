@@ -3731,6 +3731,30 @@ function stripPdfWatermarkNoise(text,pageCount,fileName){
   return cleaned.join('\n').replace(/\n{3,}/g,'\n\n').trim();
 }
 
+async function loadPdfJsFallback(){
+  if(typeof pdfjsLib!=='undefined')return;
+  await new Promise(function(resolve,reject){
+    var s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload=resolve;s.onerror=reject;document.head.appendChild(s);
+  });
+  try{pdfjsLib.GlobalWorkerOptions.workerSrc='';}catch(e){}
+}
+async function extractPdfTextFallback(file){
+  await loadPdfJsFallback();
+  var buf=await file.arrayBuffer();
+  var pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
+  var parts=[];
+  for(var i=1;i<=pdf.numPages;i++){
+    if(_pdfParseCancelled)break;
+    var page=await pdf.getPage(i);
+    var tc=await page.getTextContent();
+    var line=(tc.items||[]).map(function(it){return String(it.str||'')}).join(' ').replace(/\s+/g,' ').trim();
+    parts.push(line);
+  }
+  try{if(pdf&&typeof pdf.destroy==='function')pdf.destroy();}catch(e){}
+  return parts.join('\n\n').replace(/\u00A0/g,' ');
+}
 async function processPDF(n,file){
   currentScriptName=file.name||'PDF';
   takeNumber=0;
@@ -3741,7 +3765,19 @@ async function processPDF(n,file){
   try{
     scriptValidatedCharKeys=null;
     if(_pdfParseCancelled)return;
-    const parsed=await fetchParseScreenplayFile(file);
+    var parsed;
+    try{
+      parsed=await fetchParseScreenplayFile(file);
+    }catch(e){
+      if(e&&e.message&&/100 PDF pages/i.test(e.message)){
+        console.log('PDF >100 pages, falling back to text extraction');
+        var pdfText=await extractPdfTextFallback(file);
+        if(!pdfText||pdfText.trim().length<24)throw new Error('Could not extract text from PDF');
+        parsed=await fetchClaudeParseScript(pdfText);
+      }else{
+        throw e;
+      }
+    }
     scriptRawText=(parsed.lines||[]).map(l=>String(l.text||'').trim()).filter(Boolean).join('\n');
     pdfScript=mapClaudeScriptToPdfScript(parsed);
     applyValidatedCharactersFromParsed(parsed);
