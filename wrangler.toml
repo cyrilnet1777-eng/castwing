@@ -10,7 +10,7 @@ not_found_handling = "single-page-application"
 [[d1_databases]]
 binding = "DB"
 database_name = "castwing-db"
-database_id = "fb8c4e61-e82c-4d75-aadd-f509e5612735"
+database_id = "3be77186-c40e-43ae-840c-cf0403cfcce0"
 
 [[kv_namespaces]]
 binding = "AUTH_KV"
