@@ -3757,15 +3757,24 @@ async function splitPdfIntoChunks(file,maxPages){
 }
 async function fetchParseScreenplayChunked(file,onProgress){
   var chunks=await splitPdfIntoChunks(file,15);
+  var results=new Array(chunks.length);
+  var completed=0;
+  var PARALLEL=5;
+  if(onProgress)onProgress(0,chunks.length);
+  for(var batchStart=0;batchStart<chunks.length;batchStart+=PARALLEL){
+    if(_pdfParseCancelled)break;
+    var batchEnd=Math.min(batchStart+PARALLEL,chunks.length);
+    var batch=[];
+    for(var j=batchStart;j<batchEnd;j++){batch.push(fetchParseScreenplayFile(chunks[j]).then(function(idx){return function(r){results[idx]=r;completed++;if(onProgress)onProgress(completed,chunks.length)}}(j)))}
+    await Promise.all(batch);
+  }
   var allCharacters=[];
   var allLines=[];
-  for(var i=0;i<chunks.length;i++){
-    if(_pdfParseCancelled)break;
-    if(onProgress)onProgress(i,chunks.length);
-    var parsed=await fetchParseScreenplayFile(chunks[i]);
-    var chars=Array.isArray(parsed.characters)?parsed.characters:[];
+  for(var i=0;i<results.length;i++){
+    if(!results[i])continue;
+    var chars=Array.isArray(results[i].characters)?results[i].characters:[];
     chars.forEach(function(c){if(allCharacters.indexOf(c)===-1)allCharacters.push(c)});
-    allLines=allLines.concat(Array.isArray(parsed.lines)?parsed.lines:[]);
+    allLines=allLines.concat(Array.isArray(results[i].lines)?results[i].lines:[]);
   }
   if(onProgress)onProgress(chunks.length,chunks.length);
   if(!allLines.length)throw new Error('Reponse serveur vide');
