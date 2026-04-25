@@ -1939,6 +1939,10 @@ const UI_FALLBACK_TRANSLATIONS={
   pdfLinesDetected:{en:'lines detected',es:'líneas detectadas',it:'battute rilevate',zh:'条台词已识别',ko:'개 대사 감지됨',ja:'行を検出',ar:'سطرًا تم اكتشافه',de:'Zeilen erkannt',pt:'falas detectadas',hi:'पंक्तियाँ मिलीं'},
   pdfImportedRaw:{en:'Text imported (raw)',es:'Texto importado (sin procesar)',it:'Testo importato (grezzo)',zh:'已导入文本（原始）',ko:'텍스트 가져옴(원문)',ja:'テキストを読み込み（生データ）',ar:'تم استيراد النص (خام)',de:'Text importiert (roh)',pt:'Texto importado (bruto)',hi:'टेक्स्ट आयात किया गया (रॉ)'},
   pdfReadError:{en:'PDF reading error',es:'Error al leer el PDF',it:'Errore lettura PDF',zh:'PDF 读取错误',ko:'PDF 읽기 오류',ja:'PDF 読み込みエラー',ar:'خطأ في قراءة PDF',de:'Fehler beim Lesen der PDF',pt:'Erro ao ler PDF',hi:'PDF पढ़ने में त्रुटि'},
+  analyzingScript:{fr:'Analyse du scénario (Claude)…',en:'Analyzing script (Claude)…',es:'Analizando guión (Claude)…',it:'Analisi copione (Claude)…',zh:'分析剧本中 (Claude)…',ko:'대본 분석 중 (Claude)…',ja:'台本を分析中 (Claude)…',de:'Skript wird analysiert (Claude)…',pt:'Analisando roteiro (Claude)…'},
+  analysisCancelled:{fr:'Analyse annulée',en:'Analysis cancelled',es:'Análisis cancelado',it:'Analisi annullata',zh:'分析已取消',ko:'분석 취소됨',ja:'分析がキャンセルされました',de:'Analyse abgebrochen',pt:'Análise cancelada'},
+  analysisEmpty:{fr:'Analyse vide — réessaie ou colle le texte.',en:'Analysis empty — try again or paste the text.',es:'Análisis vacío — inténtalo de nuevo.',it:'Analisi vuota — riprova o incolla il testo.',zh:'分析结果为空 — 请重试或粘贴文本。',ko:'분석 결과 없음 — 다시 시도하거나 텍스트를 붙여넣으세요.',ja:'分析結果が空です — 再試行するかテキストを貼り付けてください。',de:'Analyse leer — versuche es erneut oder füge den Text ein.',pt:'Análise vazia — tente novamente ou cole o texto.'},
+  analysisFailed:{fr:'Échec analyse',en:'Analysis failed',es:'Análisis fallido',it:'Analisi fallita',zh:'分析失败',ko:'분석 실패',ja:'分析失敗',de:'Analyse fehlgeschlagen',pt:'Análise falhou'},
   uploadLabel:{ko:'PDF를 여기에 놓거나 클릭',hi:'अपना PDF यहां डालें या क्लिक करें'},
   uploadSub:{ko:'표준 대본 형식',hi:'मानक स्क्रीनप्ले फॉर्मेट'},
   pasteScriptLabel:{ko:'또는 텍스트 붙여넣기',hi:'या टेक्स्ट पेस्ट करें'},
@@ -3073,7 +3077,7 @@ function cancelPdfParse(){
   _pdfParseCancelled=true;
   if(_pdfParseAbort){_pdfParseAbort.abort();_pdfParseAbort=null}
   setLoading(false);
-  showToast('Analyse annulée',2000);
+  showToast(t('analysisCancelled'),2000);
 }
 function startFakeProgress(){
   stopFakeProgress();
@@ -3732,7 +3736,7 @@ async function processPDF(n,file){
   takeNumber=0;
   _pdfParseCancelled=false;
   try{if(typeof window!=='undefined')window.__parserDebugLogs=[];}catch(_e){}
-  setLoading(true,'Analyse du scénario (Claude)…');
+  setLoading(true,t('analyzingScript'));
   showLoadingCancel();
   try{
     scriptValidatedCharKeys=null;
@@ -3745,7 +3749,7 @@ async function processPDF(n,file){
     if(!pdfScript||!pdfScript.length){
       pdfScript=[];
       syncPdfScriptDebugMirror();
-      showToast('Analyse vide — réessaie ou colle le texte.',5000);
+      showToast(t('analysisEmpty'),5000);
       finishPdfSetupUi(n,scriptRawText,typeof window!=='undefined'&&window.__lastValidatedChars?window.__lastValidatedChars:[],detectedLang);
       void fillScriptInputProgressive(n,scriptRawText);
       return;
@@ -3761,7 +3765,7 @@ async function processPDF(n,file){
     void fillScriptInputProgressive(n,scriptRawText);
   }catch(e){
     console.error('PDF parse error:',e);
-    showToast('Échec analyse : '+(e&&e.message?e.message:'vérifie ANTHROPIC_API_KEY'),6500);
+    showToast(t('analysisFailed')+': '+(e&&e.message?e.message:'check ANTHROPIC_API_KEY'),6500);
     pdfScript=[];
     syncPdfScriptDebugMirror();
   }
@@ -4580,13 +4584,13 @@ async function runImportedScriptPipeline(n,normText,displayName){
   scriptValidatedCharKeys=null;
   const workingNorm=String(normText||'');
   scriptRawText=workingNorm;
-  setLoading(true,'Analyse du scénario (Claude)…');
+  setLoading(true,t('analyzingScript'));
   let parsed;
   try{
     parsed=await fetchClaudeParseScript(workingNorm);
   }catch(e){
     console.error(e);
-    showToast(String(e.message||e||'Échec analyse Claude'),5000);
+    showToast(String(e.message||e||t('analysisFailed')),5000);
     pdfScript=[];
     syncPdfScriptDebugMirror();
     setLoading(false);
