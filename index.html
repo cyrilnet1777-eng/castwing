@@ -1939,7 +1939,7 @@ const UI_FALLBACK_TRANSLATIONS={
   pdfLinesDetected:{en:'lines detected',es:'líneas detectadas',it:'battute rilevate',zh:'条台词已识别',ko:'개 대사 감지됨',ja:'行を検出',ar:'سطرًا تم اكتشافه',de:'Zeilen erkannt',pt:'falas detectadas',hi:'पंक्तियाँ मिलीं'},
   pdfImportedRaw:{en:'Text imported (raw)',es:'Texto importado (sin procesar)',it:'Testo importato (grezzo)',zh:'已导入文本（原始）',ko:'텍스트 가져옴(원문)',ja:'テキストを読み込み（生データ）',ar:'تم استيراد النص (خام)',de:'Text importiert (roh)',pt:'Texto importado (bruto)',hi:'टेक्स्ट आयात किया गया (रॉ)'},
   pdfReadError:{en:'PDF reading error',es:'Error al leer el PDF',it:'Errore lettura PDF',zh:'PDF 读取错误',ko:'PDF 읽기 오류',ja:'PDF 読み込みエラー',ar:'خطأ في قراءة PDF',de:'Fehler beim Lesen der PDF',pt:'Erro ao ler PDF',hi:'PDF पढ़ने में त्रुटि'},
-  analyzingScript:{fr:'Analyse du scénario (Claude)…',en:'Analyzing script (Claude)…',es:'Analizando guión (Claude)…',it:'Analisi copione (Claude)…',zh:'分析剧本中 (Claude)…',ko:'대본 분석 중 (Claude)…',ja:'台本を分析中 (Claude)…',de:'Skript wird analysiert (Claude)…',pt:'Analisando roteiro (Claude)…'},
+  analyzingScript:{fr:'Analyse du scénario…',en:'Analyzing script…',es:'Analizando guión…',it:'Analisi copione…',zh:'分析剧本中…',ko:'대본 분석 중…',ja:'台本を分析中…',de:'Skript wird analysiert…',pt:'Analisando roteiro…'},
   analysisCancelled:{fr:'Analyse annulée',en:'Analysis cancelled',es:'Análisis cancelado',it:'Analisi annullata',zh:'分析已取消',ko:'분석 취소됨',ja:'分析がキャンセルされました',de:'Analyse abgebrochen',pt:'Análise cancelada'},
   analysisEmpty:{fr:'Analyse vide — réessaie ou colle le texte.',en:'Analysis empty — try again or paste the text.',es:'Análisis vacío — inténtalo de nuevo.',it:'Analisi vuota — riprova o incolla il testo.',zh:'分析结果为空 — 请重试或粘贴文本。',ko:'분석 결과 없음 — 다시 시도하거나 텍스트를 붙여넣으세요.',ja:'分析結果が空です — 再試行するかテキストを貼り付けてください。',de:'Analyse leer — versuche es erneut oder füge den Text ein.',pt:'Análise vazia — tente novamente ou cole o texto.'},
   analysisFailed:{fr:'Échec analyse',en:'Analysis failed',es:'Análisis fallido',it:'Analisi fallita',zh:'分析失败',ko:'분석 실패',ja:'分析失敗',de:'Analyse fehlgeschlagen',pt:'Análise falhou'},
@@ -3755,19 +3755,31 @@ async function splitPdfIntoChunks(file,maxPages){
   }
   return chunks;
 }
-async function fetchParseScreenplayChunked(file){
-  var chunks=await splitPdfIntoChunks(file,99);
+async function fetchParseScreenplayChunked(file,onProgress){
+  var chunks=await splitPdfIntoChunks(file,30);
   var allCharacters=[];
   var allLines=[];
   for(var i=0;i<chunks.length;i++){
     if(_pdfParseCancelled)break;
+    if(onProgress)onProgress(i,chunks.length);
     var parsed=await fetchParseScreenplayFile(chunks[i]);
     var chars=Array.isArray(parsed.characters)?parsed.characters:[];
     chars.forEach(function(c){if(allCharacters.indexOf(c)===-1)allCharacters.push(c)});
     allLines=allLines.concat(Array.isArray(parsed.lines)?parsed.lines:[]);
   }
+  if(onProgress)onProgress(chunks.length,chunks.length);
   if(!allLines.length)throw new Error('Reponse serveur vide');
   return{characters:allCharacters,lines:allLines};
+}
+function setRealProgress(current,total){
+  var pct=Math.round((current/total)*100);
+  var spinner=document.getElementById('loadingSpinner');
+  var ring=document.getElementById('loadingRing');
+  if(spinner)spinner.style.display='none';
+  if(ring)ring.style.display='';
+  _updateRing(pct);
+  var msg=document.getElementById('loadingMsg');
+  if(msg)msg.textContent=t('analyzingScript')+' ('+current+'/'+total+')';
 }
 async function processPDF(n,file){
   currentScriptName=file.name||'PDF';
@@ -3776,6 +3788,7 @@ async function processPDF(n,file){
   try{if(typeof window!=='undefined')window.__parserDebugLogs=[];}catch(_e){}
   setLoading(true,t('analyzingScript'));
   showLoadingCancel();
+  startFakeProgress();
   try{
     scriptValidatedCharKeys=null;
     if(_pdfParseCancelled)return;
@@ -3783,9 +3796,10 @@ async function processPDF(n,file){
     try{
       parsed=await fetchParseScreenplayFile(file);
     }catch(e){
-      if(e&&e.message&&/100 PDF pages/i.test(e.message)){
-        console.log('PDF >100 pages, splitting into chunks');
-        parsed=await fetchParseScreenplayChunked(file);
+      if(e&&e.message&&(/100 PDF pages/i.test(e.message)||/prompt is too long/i.test(e.message))){
+        console.log('PDF too large for single request, splitting into chunks');
+        stopFakeProgress();
+        parsed=await fetchParseScreenplayChunked(file,setRealProgress);
       }else{
         throw e;
       }
