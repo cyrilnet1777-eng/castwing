@@ -14,7 +14,7 @@ database_id = "fb8c4e61-e82c-4d75-aadd-f509e5612735"
 
 [[kv_namespaces]]
 binding = "AUTH_KV"
-id = "ed41ae7cfc704ef1bd36aba310c83c40"
+id = "5b1939098b2b471eaa8e8155d4cae205"
 
 [vars]
 ADMIN_EMAILS = "sersoub.w@gmail.com"
