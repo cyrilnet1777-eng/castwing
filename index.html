@@ -19,7 +19,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -704,13 +703,6 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-try{
-  if(typeof pdfjsLib!=='undefined'){
-    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  }
-}catch(e){
-  try{if(typeof pdfjsLib!=='undefined')pdfjsLib.GlobalWorkerOptions.workerSrc='';}catch(_e){}
-}
 let role='actor',sessionMode='ai',mode='ai';
 let peer=null,conn=null,call=null,localStream=null,mediaRecorder=null,recordedChunks=[];
 let isRecording=false,isMicOn=true,isCamOn=true,currentFacingMode='user',prompterLines=[],prompterIndex=0,connectionTimeout=null;
@@ -731,9 +723,6 @@ let _scriptReviewCtx=null;
 let _bgRefinementToken=0;
 /** Annule le parse « fin de script » lancé après un parse tête (gros PDF) */
 let _fastFullParseToken=0;
-/** Annulation OCR différé + doc PDF.js gardé pour post-traitement */
-let _pdfOcrDeferredToken=0;
-let _cwPdfDoc=null;
 const LINE_TYPE={SLUG:'slug',ACTION:'action',DIALOGUE:'dialogue'};
 /** Aligné sur LINE_TYPE.DIALOGUE — tolère vieux caches / chaînes dérivées */
 function isPdfDialogueRow(s){
@@ -1615,56 +1604,53 @@ function yieldToBrowser(){
     }
   });
 }
-function getClaudeParseScriptEndpoint(){
-  return '/api/claude-parse-script';
-}
-/** Extraction texte brut PDF (côté client) pour /api/claude-parse-script */
-async function extractPdfPlainTextForParse(arrayBuffer){
-  if(typeof pdfjsLib==='undefined')throw new Error('PDF.js non chargé');
-  let pdf=null;
-  try{
-    pdf=await pdfjsLib.getDocument({data:new Uint8Array(arrayBuffer)}).promise;
-  }catch(e){
-    try{
-      pdfjsLib.GlobalWorkerOptions.workerSrc='';
-      pdf=await pdfjsLib.getDocument({data:new Uint8Array(arrayBuffer)}).promise;
-    }catch(e2){
-      throw new Error(e2&&e2.message?e2.message:'PDF illisible');
-    }
-  }
-  const parts=[];
-  for(let i=1;i<=pdf.numPages;i++){
-    if(_pdfParseCancelled)break;
-    await yieldToBrowser();
-    const page=await pdf.getPage(i);
-    const tc=await page.getTextContent();
-    const line=(tc.items||[]).map(it=>String(it.str||'')).join(' ').replace(/\s+/g,' ').trim();
-    parts.push(line);
-  }
-  try{if(pdf&&typeof pdf.destroy==='function')pdf.destroy();}catch(_e){}
-  return parts.join('\n\n').replace(/\u00A0/g,' ');
-}
-async function fetchClaudeParseScript(pdfText){
-  const text=String(pdfText||'');
-  if(text.trim().length<8)throw new Error('Texte trop court pour l’analyse');
+/** Send raw PDF file to /api/parse-screenplay — Claude reads it natively */
+async function fetchParseScreenplayFile(file){
   const ac=new AbortController();
   _pdfParseAbort=ac;
   try{
-    const res=await fetch(getClaudeParseScriptEndpoint(),{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
+    const form=new FormData();
+    form.append(‘file’,file);
+    const res=await fetch(‘/api/parse-screenplay’,{
+      method:’POST’,
+      body:form,
+      signal:ac.signal
+    });
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok){
+      const msg=data.error||data.message||(‘HTTP ‘+res.status);
+      throw new Error(typeof msg===’string’?msg:JSON.stringify(msg));
+    }
+    const characters=Array.isArray(data.characters)?data.characters:[];
+    const lines=Array.isArray(data.lines)?data.lines:[];
+    if(!lines.length)throw new Error(‘Réponse serveur vide’);
+    return{characters,lines};
+  }finally{
+    if(_pdfParseAbort===ac)_pdfParseAbort=null;
+  }
+}
+/** Send plain text to /api/claude-parse-script for pasted text imports */
+async function fetchClaudeParseScript(pdfText){
+  const text=String(pdfText||’’);
+  if(text.trim().length<8)throw new Error(‘Texte trop court pour l\u2019analyse’);
+  const ac=new AbortController();
+  _pdfParseAbort=ac;
+  try{
+    const res=await fetch(‘/api/claude-parse-script’,{
+      method:’POST’,
+      headers:{‘Content-Type’:’application/json’},
       body:JSON.stringify({pdfText:text}),
       signal:ac.signal
     });
     const data=await res.json().catch(()=>({}));
     if(!res.ok){
-      const msg=data.error||data.message||('HTTP '+res.status);
-      throw new Error(typeof msg==='string'?msg:JSON.stringify(msg));
+      const msg=data.error||data.message||(‘HTTP ‘+res.status);
+      throw new Error(typeof msg===’string’?msg:JSON.stringify(msg));
     }
-    if(data.success===false)throw new Error(String(data.error||'Échec parse'));
+    if(data.success===false)throw new Error(String(data.error||’Échec parse’));
     const characters=Array.isArray(data.characters)?data.characters:[];
     const lines=Array.isArray(data.lines)?data.lines:[];
-    if(!lines.length)throw new Error('Réponse serveur vide');
+    if(!lines.length)throw new Error(‘Réponse serveur vide’);
     return{characters,lines};
   }finally{
     if(_pdfParseAbort===ac)_pdfParseAbort=null;
@@ -3135,7 +3121,6 @@ function setLoading(on,m){
 function showLoadingCancel(){const cb=document.getElementById('loadingCancelBtn');if(cb){cb.textContent=t('cancelBtn');cb.classList.add('active')}}
 function cancelPdfParse(){
   _pdfParseCancelled=true;
-  _pdfOcrDeferredToken++;
   if(_pdfParseAbort){_pdfParseAbort.abort();_pdfParseAbort=null}
   setLoading(false);
   showToast('Analyse annulée',2000);
@@ -3801,17 +3786,8 @@ async function processPDF(n,file){
   showLoadingCancel();
   try{
     scriptValidatedCharKeys=null;
-    let buf;
-    if(typeof file.arrayBuffer==='function')buf=await file.arrayBuffer();
-    else buf=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsArrayBuffer(file)});
     if(_pdfParseCancelled)return;
-    const pdfText=await extractPdfPlainTextForParse(buf);
-    if(!pdfText||pdfText.trim().length<24){
-      showToast('PDF vide ou texte non extrait — colle le texte du scénario',6000);
-      document.getElementById('scriptInput'+n).focus();
-      return;
-    }
-    const parsed=await fetchClaudeParseScript(pdfText);
+    const parsed=await fetchParseScreenplayFile(file);
     scriptRawText=(parsed.lines||[]).map(l=>String(l.text||'').trim()).filter(Boolean).join('\n');
     pdfScript=mapClaudeScriptToPdfScript(parsed);
     applyValidatedCharactersFromParsed(parsed);
@@ -3835,7 +3811,7 @@ async function processPDF(n,file){
     void fillScriptInputProgressive(n,scriptRawText);
   }catch(e){
     console.error('PDF parse error:',e);
-    showToast('Échec analyse : '+(e&&e.message?e.message:'vérifie ANTHROPIC_API_KEY (Worker) et /api/claude-parse-script'),6500);
+    showToast('Échec analyse : '+(e&&e.message?e.message:'vérifie ANTHROPIC_API_KEY'),6500);
     pdfScript=[];
     syncPdfScriptDebugMirror();
   }
@@ -4738,13 +4714,7 @@ function renderChars(n,chars){
   chars.forEach(({char,count})=>{const el=document.createElement('div');el.className='char-item';el.innerHTML=`${char}<span class="cc">(${count})</span>`;el.onclick=()=>{selectedChar=char;soloPartnerMode='all';soloPartnerChar=null;g.querySelectorAll('.char-item').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');showToast('Tu joues '+char);if(n===1)renderPartnerAssignment(1)};g.appendChild(el)});
   if(n===1)renderPartnerAssignment(1);
 }
-function disposeCwPdfDoc(){
-  try{
-    if(_cwPdfDoc&&typeof _cwPdfDoc.destroy==='function'){_cwPdfDoc.destroy()}
-  }catch(_e){}
-  _cwPdfDoc=null;
-}
-function clearPDF(n){__cwSessionActive=false;cwSessionStateClear('clearPDF');pdfScript=[];scriptRawText='';_bgRefinementToken++;_fastFullParseToken++;_pdfOcrDeferredToken++;disposeCwPdfDoc();syncPdfScriptDebugMirror();clearPersistedScriptMemory().catch(()=>{});selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;lockedVoiceLocale='';initVoiceCountrySelect();document.getElementById('uploadZone'+n).style.display='block';document.getElementById('uploadOk'+n).style.display='none';document.getElementById('charSection'+n).style.display='none';if(n===1){const w=document.getElementById('partnerAssignWrap1');if(w)w.style.display='none'}document.getElementById('setupStatus'+n).textContent='';document.getElementById('pdfInput'+n).value='';const orb=document.getElementById('optionalReviewBtn'+n);if(orb)orb.style.display='none'}
+function clearPDF(n){__cwSessionActive=false;cwSessionStateClear('clearPDF');pdfScript=[];scriptRawText='';_bgRefinementToken++;_fastFullParseToken++;syncPdfScriptDebugMirror();clearPersistedScriptMemory().catch(()=>{});selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;lockedVoiceLocale='';initVoiceCountrySelect();document.getElementById('uploadZone'+n).style.display='block';document.getElementById('uploadOk'+n).style.display='none';document.getElementById('charSection'+n).style.display='none';if(n===1){const w=document.getElementById('partnerAssignWrap1');if(w)w.style.display='none'}document.getElementById('setupStatus'+n).textContent='';document.getElementById('pdfInput'+n).value='';const orb=document.getElementById('optionalReviewBtn'+n);if(orb)orb.style.display='none'}
 
 // ── Prompter ──
 function buildLines(n){
@@ -5584,7 +5554,7 @@ function endSession(){
   hideTimerBadge();
   lockedVoiceLocale='';userScrolledUp=false;
   const _pa=document.getElementById('prompterArea');if(_pa)_pa.classList.remove('rear-cam');
-  hideOverlay();isMicOn=true;isCamOn=true;currentFacingMode='user';prompterLines=[];prompterIndex=0;pdfScript=[];scriptRawText='';_bgRefinementToken++;_fastFullParseToken++;_pdfOcrDeferredToken++;disposeCwPdfDoc();syncPdfScriptDebugMirror();selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;currentScriptName='';showScreen('home');
+  hideOverlay();isMicOn=true;isCamOn=true;currentFacingMode='user';prompterLines=[];prompterIndex=0;pdfScript=[];scriptRawText='';_bgRefinementToken++;_fastFullParseToken++;syncPdfScriptDebugMirror();selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;currentScriptName='';showScreen('home');
 }
 function cancelConnection(){hideOverlay();if(!conn||!conn.open)endSession()}
 

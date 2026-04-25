@@ -1,7 +1,7 @@
 /* =========================================================
    CASTWING WORKER — Backend
    Routes: /api/tts, /api/claude-parse-script (pdfText → Claude JSON),
-           /api/parse-screenplay (JSON PDF/text → Claude),
+           /api/parse-screenplay (multipart PDF or JSON text → Claude native PDF reading),
            /api/parse-script (multipart legacy), /api/auth, /api/auth/google,
            /api/geo, /api/session, /api/credits/consume,
            /api/invite/redeem,
@@ -888,30 +888,52 @@ async function handleParseScreenplay(request, env) {
     return json({ error: "Missing ANTHROPIC_API_KEY" }, 500, PARSE_SCREENPLAY_CORS);
   }
 
-  const body = await request.json().catch(() => null);
-  if (!body || typeof body !== "object") {
-    return json({ error: "Invalid JSON body" }, 400, PARSE_SCREENPLAY_CORS);
+  const contentType = (request.headers.get("content-type") || "").toLowerCase();
+
+  let pdfBase64 = "";
+  let screenplayText = "";
+  let fileName = "";
+
+  if (contentType.includes("multipart/form-data")) {
+    // PDF file uploaded directly — Claude reads it natively
+    const form = await request.formData().catch(() => null);
+    if (!form) {
+      return json({ error: "Invalid form data" }, 400, PARSE_SCREENPLAY_CORS);
+    }
+    const file = form.get("file");
+    if (!file || typeof file.arrayBuffer !== "function") {
+      return json({ error: "No file provided" }, 400, PARSE_SCREENPLAY_CORS);
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      return json({ error: "File too large (max 10MB)" }, 413, PARSE_SCREENPLAY_CORS);
+    }
+    fileName = String(file.name || "script.pdf");
+    const buffer = await file.arrayBuffer();
+    pdfBase64 = arrayBufferToBase64(buffer);
+  } else {
+    // JSON body (legacy or text-based)
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return json({ error: "Invalid JSON body" }, 400, PARSE_SCREENPLAY_CORS);
+    }
+    pdfBase64 =
+      typeof body.pdfBase64 === "string"
+        ? body.pdfBase64.replace(/^data:application\/pdf[^,]*,/i, "").trim()
+        : "";
+    screenplayText = typeof body.screenplayText === "string" ? body.screenplayText : "";
+    fileName = typeof body.fileName === "string" ? body.fileName : "";
   }
 
-  const pdfBase64 =
-    typeof body.pdfBase64 === "string"
-      ? body.pdfBase64.replace(/^data:application\/pdf[^,]*,/i, "").trim()
-      : "";
-  const screenplayText = typeof body.screenplayText === "string" ? body.screenplayText : "";
-  const fileName = typeof body.fileName === "string" ? body.fileName : "";
-
   if (!pdfBase64 && !screenplayText.trim()) {
-    return json({ error: "Provide pdfBase64 or screenplayText" }, 400, PARSE_SCREENPLAY_CORS);
+    return json({ error: "Provide a PDF file or screenplayText" }, 400, PARSE_SCREENPLAY_CORS);
   }
 
   if (pdfBase64.length > 45 * 1024 * 1024) {
     return json({ error: "PDF trop volumineux pour l’API" }, 413, PARSE_SCREENPLAY_CORS);
   }
 
-  const model = env.ANTHROPIC_MODEL || "claude-sonnet-4-20250514";
-  const maxTokensRaw = Number(env.ANTHROPIC_MAX_TOKENS);
-  const max_tokens =
-    Number.isFinite(maxTokensRaw) && maxTokensRaw > 0 ? Math.min(32768, maxTokensRaw) : 16384;
+  const model = "claude-haiku-4-5";
+  const max_tokens = 16384;
 
   const userContent = [];
   if (pdfBase64) {
@@ -1313,7 +1335,7 @@ async function handleParseScript(request, env) {
     const splitPos = splitAt > mid * 0.3 ? splitAt : mid;
     const half1 = extractedText.slice(0, splitPos);
     const half2 = extractedText.slice(splitPos);
-    const model = "claude-haiku-4-5-20251001";
+    const model = "claude-haiku-4-5";
     const [r1, r2] = await Promise.all([
       callAnthropicParseText({ env, parseId, model, scriptText: half1, fileName, attempt: 1, partLabel: "part 1/2" }),
       callAnthropicParseText({ env, parseId, model, scriptText: half2, fileName, attempt: 2, partLabel: "part 2/2" }),
@@ -1346,8 +1368,8 @@ async function handleParseScript(request, env) {
   const buffer = await file.arrayBuffer();
   const pdfBase64 = arrayBufferToBase64(buffer);
   const attempts = [
-    { model: "claude-haiku-4-5-20251001", attempt: 1 },
-    { model: "claude-haiku-4-5-20251001", attempt: 2 },
+    { model: "claude-haiku-4-5", attempt: 1 },
+    { model: "claude-haiku-4-5", attempt: 2 },
     { model: "claude-sonnet-4-6", attempt: 3 },
   ];
   let lastError = "unknown";
@@ -1423,7 +1445,7 @@ async function handleValidateCharacters(request, env) {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
+        model: "claude-haiku-4-5",
         max_tokens: 1024,
         temperature: 0,
         messages: [{ role: "user", content: prompt }],
@@ -1491,7 +1513,7 @@ ${numberedLines}`;
 
   const apiKey = String(env.ANTHROPIC_API_KEY).trim().replace(/^['"]|['"]$/g, "").replace(/^Bearer\s+/i, "");
   const payloadBase = {
-    model: "claude-haiku-4-5-20251001",
+    model: "claude-haiku-4-5",
     max_tokens: 8192,
     temperature: 0,
     messages: [{ role: "user", content: prompt }],
