@@ -933,7 +933,7 @@ async function handleParseScreenplay(request, env) {
   }
 
   const model = "claude-haiku-4-5";
-  const max_tokens = 16384;
+  const max_tokens = 65536;
 
   const userContent = [];
   if (pdfBase64) {
@@ -1144,7 +1144,7 @@ async function callAnthropicParse({ env, parseId, model, pdfBase64, fileName, at
       },
       body: JSON.stringify({
         model,
-        max_tokens: 8192,
+        max_tokens: 32768,
         temperature: 0,
         system: systemPrompt,
         messages: [
@@ -1254,7 +1254,7 @@ async function callAnthropicParseText({ env, parseId, model, scriptText, fileNam
       },
       body: JSON.stringify({
         model,
-        max_tokens: 8192,
+        max_tokens: 32768,
         temperature: 0,
         system: systemPrompt,
         messages: [{
@@ -1514,7 +1514,7 @@ ${numberedLines}`;
   const apiKey = String(env.ANTHROPIC_API_KEY).trim().replace(/^['"]|['"]$/g, "").replace(/^Bearer\s+/i, "");
   const payloadBase = {
     model: "claude-haiku-4-5",
-    max_tokens: 8192,
+    max_tokens: 32768,
     temperature: 0,
     messages: [{ role: "user", content: prompt }],
   };
@@ -1650,7 +1650,7 @@ ${slice}`;
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5",
-        max_tokens: 8192,
+        max_tokens: 32768,
         messages: [{ role: "user", content: prompt }],
       }),
     });
