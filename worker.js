@@ -933,7 +933,7 @@ async function handleParseScreenplay(request, env) {
   }
 
   const model = "claude-haiku-4-5";
-  const max_tokens = 65536;
+  const max_tokens = 32768;
 
   const userContent = [];
   if (pdfBase64) {
