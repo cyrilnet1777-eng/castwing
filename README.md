@@ -16,12 +16,14 @@ A browser-based audition/rehearsal studio for actors. Load a screenplay (PDF or 
   - **Auto** — AI reads partner lines, then a **Voice Activity Detector (VAD)** listens for 1.5 s of silence after the user speaks, then auto-advances.
 - Built-in teleprompter highlights the current line and scrolls automatically.
 - Camera + mic preview with toggle controls.
-- Record the session to a `.webm` file (downloaded locally).
+- Record the session and download as **MP4** (converted from WebM via **ffmpeg.wasm**, loaded on demand). Falls back to WebM if conversion fails.
 
 ### Partner mode (WebRTC)
 - The actor creates a session and gets an 8-character code.
-- The partner joins using the code (or a direct link with `?code=XXXX`).
-- Peer-to-peer connection via **PeerJS** (uses Google STUN servers).
+- The partner joins using the code (or a direct link with `?join=XXXX`).
+- Peer-to-peer connection via **PeerJS** with **STUN + TURN** servers for reliable NAT traversal.
+- Automatic **retry logic** (3 attempts with 2-second delays) if initial connection fails.
+- **Keepalive heartbeat** every 25 seconds prevents the signaling server from dropping idle connections.
 - Script is synced between peers; both see the teleprompter.
 - Audio is streamed both ways.
 - Share the code/link via clipboard, WhatsApp, Telegram, WeChat, or native share.
@@ -34,13 +36,20 @@ A browser-based audition/rehearsal studio for actors. Load a screenplay (PDF or 
 - 3 **speed presets**: Slow (0.7x), Normal (1x), Fast (1.6x) — adjusts both ElevenLabs voice settings and `audio.playbackRate`.
 - Fallback voice IDs: if a primary ElevenLabs voice returns 404, the system tries configured fallback voices automatically.
 
-### PDF parsing
-- Uses **PDF.js** (CDN) to extract text from uploaded PDFs.
-- Heuristic parser detects `CHARACTER: dialogue` patterns in standard screenplay format.
+### PDF / script parsing
+- **Extract-then-label** architecture for fast, accurate parsing:
+  1. **PDF.js** (loaded on demand) extracts text client-side, grouping by Y-position to reconstruct actual lines.
+  2. Lines are numbered and sent to `/api/label-script` where **Claude Haiku 4.5** labels each line as `dialogue`, `action`, `slug`, or `character_cue` — without reproducing the text. This keeps output tokens minimal (~10x fewer than full-text parsing).
+  3. The client merges original text with labels to build the structured script.
+- For large scripts (>800 lines), text is split into chunks and labeled **in parallel**.
+- Parenthetical stage directions (e.g. `(criant)`) are automatically stripped from dialogue so the AI doesn't read them aloud.
+- Narrative/descriptive lines between dialogue are labeled as `action` and excluded from AI speech.
 - Extracted characters populate a selection grid; the user picks their role.
+- Also supports pasted plain text via `/api/claude-parse-script`.
 
 ### Internationalization (i18n)
-- Full UI translation in **11 languages**: French, English, Spanish, Italian, Chinese, Arabic, Hebrew, German, Portuguese, Japanese, Russian.
+- Full UI translation in **13 languages**: French, English, Spanish, Italian, Chinese, Arabic, Hebrew, German, Portuguese, Japanese, Russian.
+- Default language is **English**; auto-detects browser/geo language (switches to French for French users, etc.).
 - UI language selector on the home screen; persisted in localStorage.
 - RTL support for Arabic and Hebrew.
 - Voice preview text adapts to the selected locale language.
@@ -64,7 +73,8 @@ A browser-based audition/rehearsal studio for actors. Load a screenplay (PDF or 
 
 ```
 index.html                   Single-page app (HTML + inline CSS + JS)
-worker.js                    Cloudflare Worker entry point (routes /api/tts, serves assets)
+worker.js                    Cloudflare Worker (routes: /api/tts, /api/parse-screenplay,
+                             /api/label-script, /api/claude-parse-script, /api/auth, etc.)
 wrangler.toml                Cloudflare Workers configuration
 functions/api/tts.js         Cloudflare Pages Function (same TTS logic, Pages-compatible)
 netlify/functions/tts.js     Netlify Function (same TTS logic, Netlify-compatible)
@@ -78,7 +88,9 @@ AGENTS.md                    Cursor Cloud / AI assistant instructions
 There is no `package.json`, no bundler, no transpiler. The app is a single `index.html` with inline `<style>` and `<script>` tags. All external libraries are loaded via CDN:
 
 - **PeerJS 1.5.4** — WebRTC abstraction
-- **PDF.js 3.11.174** — PDF text extraction
+- **PDF.js 3.11.174** — PDF text extraction (loaded on demand)
+- **pdf-lib 1.17.1** — PDF splitting for large documents (loaded on demand)
+- **ffmpeg.wasm 0.12.10** — WebM to MP4 video conversion (loaded on demand)
 - **DM Sans** (Google Fonts) — typography
 
 ### TTS proxy (`/api/tts`)
@@ -122,16 +134,20 @@ The app is deployed as a Worker with static assets.
 - `main = "worker.js"` — Worker entry point handling `/api/tts` and asset serving.
 - `[assets] directory = "."` — serves `index.html` and other static files.
 
-**Environment secret (required):**
-- `ELEVENLABS_API_KEY` — set in Worker Settings -> Variables and Secrets.
+**Environment secrets (required):**
+- `ELEVENLABS_API_KEY` — ElevenLabs API key for TTS.
+- `ANTHROPIC_API_KEY` — Anthropic API key for script parsing (Claude Haiku 4.5).
+
+Set both in Cloudflare Worker Settings -> Variables and Secrets.
 
 **Deploy via CLI**:
 ```sh
 npx wrangler deploy
 ```
 
-**Deploy via Git** (if connected):
-Push to the configured branch and Cloudflare auto-deploys.
+**Deploy via GitHub Actions** (current setup):
+Push to `main` triggers `.github/workflows/deploy-cloudflare.yml` which runs `wrangler deploy`.
+Requires `CLOUDFLARE_API_TOKEN` secret in GitHub repo settings.
 
 ### Cloudflare Pages (alternative)
 
@@ -177,11 +193,12 @@ ELEVENLABS_API_KEY=your_key_here
 ## Key technical details
 
 ### WebRTC flow
-1. Actor creates a PeerJS peer with ID `castwing-{CODE}`.
-2. Partner creates a peer with ID `castwing-p-{CODE}-{random}` and connects to the actor's peer.
-3. On connection, the actor sends the script; the partner sends a `ready` signal.
-4. The actor then initiates a media call; audio streams both ways.
-5. Prompter navigation is synced via the data channel.
+1. Actor creates a PeerJS peer with ID `castwing-{CODE}` and starts a keepalive heartbeat.
+2. Partner creates a peer with ID `castwing-p-{CODE}-{random}` and connects to the actor's peer. Retries up to 3 times on failure.
+3. ICE uses STUN (Google) + TURN (openrelay.metered.ca) for NAT traversal.
+4. On connection, the actor sends the script; the partner sends a `ready` signal.
+5. The actor then initiates a media call; audio streams both ways.
+6. Prompter navigation is synced via the data channel.
 
 ### Voice Activity Detection (Auto mode)
 - Uses `AudioContext` + `AnalyserNode` to compute RMS amplitude in real-time.
