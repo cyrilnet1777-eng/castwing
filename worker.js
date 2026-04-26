@@ -1686,6 +1686,99 @@ ${slice}`;
   }
 }
 
+
+/* =========================================================
+   LABEL SCRIPT LINES (text extracted client-side, Claude labels only)
+========================================================= */
+
+async function handleLabelScript(request, env) {
+  const cors = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: cors });
+  }
+  if (request.method !== "POST") {
+    return Response.json({ success: false, error: "Method not allowed" }, { status: 405, headers: cors });
+  }
+
+  const apiKey = String(env.ANTHROPIC_API_KEY || "").trim();
+  if (!apiKey) {
+    return Response.json({ success: false, error: "Missing ANTHROPIC_API_KEY" }, { status: 500, headers: cors });
+  }
+
+  try {
+    const body = await request.json().catch(() => null);
+    const numberedText = body && typeof body.numberedText === "string" ? body.numberedText : "";
+    if (!numberedText.trim()) {
+      return Response.json({ success: false, error: "Missing numberedText" }, { status: 400, headers: cors });
+    }
+
+    const prompt = `You are a screenplay parser. Below are numbered lines extracted from a screenplay PDF.
+
+For each line, return its label as a JSON array entry: [line_number, type, character_name_or_null]
+- type is one of: "dialogue", "action", "slug"
+- "slug" = scene headings (INT./EXT./SCENE/etc)
+- "dialogue" = a character speaking, with the character name
+- "action" = stage directions, descriptions, transitions
+- Lines that are JUST a character name (e.g. "42: JUVE") should be labeled as the speaker for the next dialogue line, with type "character_cue" 
+
+Return ONLY a JSON object, no markdown, no prose:
+{"characters":["NAME1","NAME2"],"labels":[[1,"slug",null],[2,"action",null],[3,"dialogue","JUVE"],...]}
+
+IMPORTANT: Do NOT reproduce the line text. Only return line numbers and labels. Be concise.
+
+NUMBERED LINES:
+${numberedText}`;
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5",
+        max_tokens: 16384,
+        system: "Return only compact JSON. No prose, no markdown fences. Minimize output tokens.",
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const msg = (data && data.error && data.error.message) || `anthropic_http_${response.status}`;
+      return Response.json({ success: false, error: msg }, { status: response.status >= 400 && response.status < 600 ? response.status : 502, headers: cors });
+    }
+
+    const blocks = data && Array.isArray(data.content) ? data.content : [];
+    const firstText = blocks.find((b) => b && b.type === "text" && b.text);
+    const jsonText = firstText ? String(firstText.text).trim() : "";
+    if (!jsonText) {
+      return Response.json({ success: false, error: "Empty model response" }, { status: 502, headers: cors });
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonText);
+    } catch (_) {
+      const start = jsonText.indexOf("{");
+      const end = jsonText.lastIndexOf("}");
+      if (start < 0 || end <= start) {
+        return Response.json({ success: false, error: "Invalid JSON from model", rawPreview: jsonText.slice(0, 400) }, { status: 502, headers: cors });
+      }
+      parsed = JSON.parse(jsonText.slice(start, end + 1));
+    }
+
+    return Response.json({ success: true, ...parsed }, { headers: cors });
+  } catch (e) {
+    return Response.json({ success: false, error: toText(e && e.message ? e.message : e) }, { status: 500, headers: cors });
+  }
+}
+
 /* =========================================================
    MAIN FETCH HANDLER
 ========================================================= */
@@ -1713,6 +1806,7 @@ export default {
     }
 
     if (url.pathname === "/api/tts" && request.method === "POST") return handleTTS(request, env);
+    if (url.pathname === "/api/label-script") return handleLabelScript(request, env);
     if (url.pathname === "/api/claude-parse-script") return handleClaudeParseScript(request, env);
     if (url.pathname === "/api/parse-screenplay") {
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: PARSE_SCREENPLAY_CORS });
@@ -1734,7 +1828,7 @@ export default {
     if (url.pathname === "/api/admin/list-invites" && request.method === "GET") return handleListInvites(request, env);
     if (url.pathname === "/api/admin/revoke-invite" && request.method === "POST") return handleRevokeInvite(request, env);
 
-    const apiPaths = ["/api/tts", "/api/claude-parse-script", "/api/parse-screenplay", "/api/parse-script", "/api/validate-characters", "/api/classify-lines", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/consume", "/api/invite/redeem", "/api/admin/"];
+    const apiPaths = ["/api/tts", "/api/claude-parse-script", "/api/label-script", "/api/parse-screenplay", "/api/parse-script", "/api/validate-characters", "/api/classify-lines", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/consume", "/api/invite/redeem", "/api/admin/"];
     if (apiPaths.some(p => url.pathname.startsWith(p))) {
       return json({ error: "Method not allowed" }, 405);
     }

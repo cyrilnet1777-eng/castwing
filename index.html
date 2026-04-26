@@ -3732,64 +3732,104 @@ function stripPdfWatermarkNoise(text,pageCount,fileName){
   return cleaned.join('\n').replace(/\n{3,}/g,'\n\n').trim();
 }
 
-async function loadPdfLib(){
-  if(typeof PDFLib!=='undefined')return;
+async function loadPdfJs(){
+  if(typeof pdfjsLib!=='undefined')return;
   await new Promise(function(resolve,reject){
     var s=document.createElement('script');
-    s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
     s.onload=resolve;s.onerror=reject;document.head.appendChild(s);
   });
+  try{pdfjsLib.GlobalWorkerOptions.workerSrc='';}catch(e){}
 }
-async function splitPdfIntoChunks(file,maxPages){
-  await loadPdfLib();
+async function extractPdfLines(file){
+  await loadPdfJs();
   var buf=await file.arrayBuffer();
-  var src=await PDFLib.PDFDocument.load(buf);
-  var total=src.getPageCount();
-  var chunks=[];
-  for(var start=0;start<total;start+=maxPages){
-    var end=Math.min(start+maxPages,total);
-    var doc=await PDFLib.PDFDocument.create();
-    var pages=await doc.copyPages(src,Array.from({length:end-start},function(_,i){return start+i}));
-    pages.forEach(function(p){doc.addPage(p)});
-    var bytes=await doc.save();
-    chunks.push(new File([bytes],file.name||'chunk.pdf',{type:'application/pdf'}));
-  }
-  return chunks;
-}
-async function fetchParseScreenplayChunked(file,onProgress){
-  var chunks=await splitPdfIntoChunks(file,50);
-  var results=new Array(chunks.length);
-  var completed=0;
-  var PARALLEL=5;
-  if(onProgress)onProgress(0,chunks.length);
-  for(var batchStart=0;batchStart<chunks.length;batchStart+=PARALLEL){
-    if(_pdfParseCancelled)break;
-    var batchEnd=Math.min(batchStart+PARALLEL,chunks.length);
-    var batch=[];
-    for(var j=batchStart;j<batchEnd;j++){batch.push(fetchParseScreenplayFile(chunks[j]).then(function(idx){return function(r){results[idx]=r;completed++;if(onProgress)onProgress(completed,chunks.length)}}(j)))}
-    await Promise.all(batch);
-  }
-  var allCharacters=[];
+  var pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
   var allLines=[];
-  for(var i=0;i<results.length;i++){
-    if(!results[i])continue;
-    var chars=Array.isArray(results[i].characters)?results[i].characters:[];
-    chars.forEach(function(c){if(allCharacters.indexOf(c)===-1)allCharacters.push(c)});
-    allLines=allLines.concat(Array.isArray(results[i].lines)?results[i].lines:[]);
+  for(var i=1;i<=pdf.numPages;i++){
+    if(_pdfParseCancelled)break;
+    var page=await pdf.getPage(i);
+    var tc=await page.getTextContent();
+    var pageText=(tc.items||[]).map(function(it){return String(it.str||'')}).join(' ');
+    var lines=pageText.split(/\n/).map(function(l){return l.replace(/\s+/g,' ').trim()}).filter(function(l){return l.length>0});
+    allLines=allLines.concat(lines);
   }
-  if(onProgress)onProgress(chunks.length,chunks.length);
-  if(!allLines.length)throw new Error('Reponse serveur vide');
-  return{characters:allCharacters,lines:allLines};
+  try{if(pdf&&typeof pdf.destroy==='function')pdf.destroy();}catch(e){}
+  return allLines;
 }
-function setRealProgress(current,total){
-  var pct=Math.round((current/total)*100);
-  var spinner=document.getElementById('loadingSpinner');
-  var ring=document.getElementById('loadingRing');
-  if(spinner)spinner.style.display='none';
-  if(ring)ring.style.display='';
-  _updateRing(pct);
-  var msg=document.getElementById('loadingMsg');
-  if(msg)msg.textContent=t('analyzingScript')+' ('+current+'/'+total+')';
+function buildNumberedText(lines){
+  return lines.map(function(l,i){return(i+1)+': '+l}).join('\n');
+}
+async function fetchLabelScript(numberedText){
+  var ac=new AbortController();
+  _pdfParseAbort=ac;
+  try{
+    var res=await fetch('/api/label-script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({numberedText:numberedText}),signal:ac.signal});
+    var data=await res.json().catch(function(){return{}});
+    if(!res.ok){var msg=data.error||data.message||('HTTP '+res.status);throw new Error(typeof msg==='string'?msg:JSON.stringify(msg))}
+    if(data.success===false)throw new Error(String(data.error||'Labeling failed'));
+    return data;
+  }finally{
+    if(_pdfParseAbort===ac)_pdfParseAbort=null;
+  }
+}
+function mergeLabelsWithText(lines,labelData){
+  var labels=Array.isArray(labelData.labels)?labelData.labels:[];
+  var characters=Array.isArray(labelData.characters)?labelData.characters:[];
+  var labelMap={};
+  for(var i=0;i<labels.length;i++){
+    var entry=labels[i];
+    if(Array.isArray(entry)&&entry.length>=2){labelMap[entry[0]]=entry}
+  }
+  var merged=[];
+  var pendingCue=null;
+  for(var idx=0;idx<lines.length;idx++){
+    var lineNum=idx+1;
+    var text=lines[idx];
+    var label=labelMap[lineNum];
+    var type=label?String(label[1]||'action'):'action';
+    var character=label&&label[2]?String(label[2]):null;
+    if(type==='character_cue'){pendingCue=character||text.trim();continue}
+    if(type==='dialogue'){
+      var speaker=character||pendingCue||null;
+      merged.push({character:speaker,text:text,type:'dialogue'});
+      pendingCue=null;
+    }else if(type==='slug'){
+      merged.push({character:null,text:text,type:'slug'});
+      pendingCue=null;
+    }else{
+      merged.push({character:null,text:text,type:'action'});
+      pendingCue=null;
+    }
+  }
+  return{characters:characters,lines:merged};
+}
+async function parseViaExtractAndLabel(file){
+  console.log('Extracting text from PDF...');
+  var lines=await extractPdfLines(file);
+  console.log('Extracted '+lines.length+' lines, sending for labeling...');
+  if(!lines.length)throw new Error('Could not extract text from PDF');
+  var numbered=buildNumberedText(lines);
+  var MAX_CHARS=60000;
+  if(numbered.length<=MAX_CHARS){
+    var labelData=await fetchLabelScript(numbered);
+    return mergeLabelsWithText(lines,labelData);
+  }
+  var chunkSize=Math.ceil(lines.length*(MAX_CHARS/numbered.length));
+  var allLabels=[];
+  var allChars=[];
+  for(var start=0;start<lines.length;start+=chunkSize){
+    if(_pdfParseCancelled)break;
+    var end=Math.min(start+chunkSize,lines.length);
+    var chunkLines=lines.slice(start,end);
+    var chunkNumbered=chunkLines.map(function(l,i){return(start+i+1)+': '+l}).join('\n');
+    var result=await fetchLabelScript(chunkNumbered);
+    var labs=Array.isArray(result.labels)?result.labels:[];
+    allLabels=allLabels.concat(labs);
+    var chars=Array.isArray(result.characters)?result.characters:[];
+    chars.forEach(function(c){if(allChars.indexOf(c)===-1)allChars.push(c)});
+  }
+  return mergeLabelsWithText(lines,{characters:allChars,labels:allLabels});
 }
 async function processPDF(n,file){
   currentScriptName=file.name||'PDF';
@@ -3798,26 +3838,11 @@ async function processPDF(n,file){
   try{if(typeof window!=='undefined')window.__parserDebugLogs=[];}catch(_e){}
   setLoading(true,t('analyzingScript'));
   showLoadingCancel();
+  startFakeProgress();
   try{
     scriptValidatedCharKeys=null;
     if(_pdfParseCancelled)return;
-    var parsed;
-    var needsChunking=false;
-    try{
-      await loadPdfLib();
-      var buf=await file.arrayBuffer();
-      var probe=await PDFLib.PDFDocument.load(buf);
-      var pageCount=probe.getPageCount();
-      console.log('PDF has '+pageCount+' pages');
-      if(pageCount>100)needsChunking=true;
-    }catch(e){console.log('Could not probe PDF pages, trying direct upload')}
-    if(needsChunking){
-      stopFakeProgress();
-      parsed=await fetchParseScreenplayChunked(file,setRealProgress);
-    }else{
-      startFakeProgress();
-      parsed=await fetchParseScreenplayFile(file);
-    }
+    var parsed=await parseViaExtractAndLabel(file);
     scriptRawText=(parsed.lines||[]).map(l=>String(l.text||'').trim()).filter(Boolean).join('\n');
     pdfScript=mapClaudeScriptToPdfScript(parsed);
     applyValidatedCharactersFromParsed(parsed);
