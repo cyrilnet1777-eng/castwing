@@ -1726,7 +1726,10 @@ function setElevenLabsBackoff(ms,reason){
   },delay);
 }
 
-const ICE_SERVERS=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:'stun:stun2.l.google.com:19302'}];
+const ICE_SERVERS=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:'stun:stun2.l.google.com:19302'},{urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},{urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},{urls:'turn:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}];
+var _peerKeepalive=null;
+function startPeerKeepalive(){stopPeerKeepalive();_peerKeepalive=setInterval(function(){if(peer&&!peer.disconnected&&!peer.destroyed){try{peer.socket.send({type:'heartbeat'})}catch(e){}}},25000)}
+function stopPeerKeepalive(){if(_peerKeepalive){clearInterval(_peerKeepalive);_peerKeepalive=null}}
 
 const ELEVEN_VOICE_IDS={
   // ElevenLabs account voices (user-provided mapping):
@@ -5376,7 +5379,7 @@ function startRecording(){
   if(!localStream){showToast('Pas de flux vidéo');return}recordedChunks=[];
   try{mediaRecorder=new MediaRecorder(localStream,{mimeType:MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm'});
   mediaRecorder.ondataavailable=e=>{if(e.data.size>0)recordedChunks.push(e.data)};
-  mediaRecorder.onstop=()=>{const b=new Blob(recordedChunks,{type:'video/webm'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`castwing-${Date.now()}.webm`;a.click();URL.revokeObjectURL(u);showToast('Audition téléchargée !')};
+  mediaRecorder.onstop=async function(){const webmBlob=new Blob(recordedChunks,{type:'video/webm'});showToast('Converting to MP4...',3000);try{if(typeof FFmpeg==='undefined'){await new Promise(function(resolve,reject){var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.min.js';s.onload=resolve;s.onerror=reject;document.head.appendChild(s)})}var ffmpeg=new FFmpeg.FFmpeg();await ffmpeg.load({coreURL:'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js'});var webmData=new Uint8Array(await webmBlob.arrayBuffer());await ffmpeg.writeFile('input.webm',webmData);await ffmpeg.exec(['-i','input.webm','-c:v','libx264','-c:a','aac','-movflags','+faststart','output.mp4']);var mp4Data=await ffmpeg.readFile('output.mp4');var mp4Blob=new Blob([mp4Data],{type:'video/mp4'});var u=URL.createObjectURL(mp4Blob);var a=document.createElement('a');a.href=u;a.download='castwing-'+Date.now()+'.mp4';a.click();URL.revokeObjectURL(u);showToast('Audition MP4 downloaded!')}catch(e){console.error('MP4 conversion failed, downloading WebM:',e);var u=URL.createObjectURL(webmBlob);var a=document.createElement('a');a.href=u;a.download='castwing-'+Date.now()+'.webm';a.click();URL.revokeObjectURL(u);showToast('Downloaded as WebM (MP4 conversion failed)')}};
   mediaRecorder.start(1000);isRecording=true;document.getElementById('btnRec').classList.add('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='block';showToast('Enregistrement…')}
   catch(e){showToast('Erreur enregistrement')}
 }
@@ -5557,7 +5560,7 @@ async function startPartnerSession(){
     await ensureSessionStream();
     if(canRecord()&&localStream&&!isRecording)startRecording();
     const pid='castwing-'+code;peer=createPeer(pid);
-    peer.on('open',()=>{});
+    peer.on('open',function(){startPeerKeepalive();});
     peer.on('connection',c=>setupDataConnection(c));
     peer.on('call',ic=>{if(localStream)ic.answer(localStream);else ic.answer();setupCallHandlers(ic)});
     peer.on('error',e=>{hideOverlay();showToast('Erreur : '+e.message,5000)});
@@ -5577,11 +5580,30 @@ async function joinAsPartner(){
     cwCommitSessionLive();
     document.getElementById('noVideoMsg').textContent='Caméra · activation ou désactivée';
     await ensureSessionStream();
-    const mid='castwing-p-'+code+'-'+Math.random().toString(36).substr(2,4);peer=createPeer(mid);
-    peer.on('open',()=>{const c=peer.connect('castwing-'+code,{reliable:true});setupDataConnection(c)});
-    peer.on('call',ic=>{if(localStream)ic.answer(localStream);else ic.answer();setupCallHandlers(ic)});
-    peer.on('error',e=>{hideOverlay();showToast('Session introuvable.',5000);setStatus('disconnected','Introuvable')});
-    connectionTimeout=setTimeout(()=>{if(!conn||!conn.open){hideOverlay();showToast('Connexion lente',5000)}},12000);
+    var attempts=0;var maxAttempts=3;var connected=false;
+    function tryConnect(){
+      if(connected||_pdfParseCancelled)return;
+      attempts++;
+      if(peer&&!peer.destroyed){try{peer.destroy()}catch(e){}}
+      var mid='castwing-p-'+code+'-'+Math.random().toString(36).substr(2,4);
+      peer=createPeer(mid);
+      peer.on('open',function(){
+        var c=peer.connect('castwing-'+code,{reliable:true});
+        c.on('open',function(){connected=true;startPeerKeepalive()});
+        setupDataConnection(c);
+      });
+      peer.on('call',function(ic){if(localStream)ic.answer(localStream);else ic.answer();setupCallHandlers(ic)});
+      peer.on('error',function(e){
+        if(!connected&&attempts<maxAttempts){
+          showOverlay('Connexion…','Tentative '+(attempts+1)+'/'+maxAttempts+'…');
+          setTimeout(tryConnect,2000);
+        }else if(!connected){
+          hideOverlay();showToast('Session introuvable.',5000);setStatus('disconnected','Introuvable');
+        }
+      });
+    }
+    tryConnect();
+    connectionTimeout=setTimeout(function(){if(!conn||!conn.open){hideOverlay();showToast('Connexion lente',5000)}},20000);
     return true;
   });
 }
@@ -5614,7 +5636,7 @@ function endSession(){
   hideTimerBadge();
   lockedVoiceLocale='';userScrolledUp=false;
   const _pa=document.getElementById('prompterArea');if(_pa)_pa.classList.remove('rear-cam');
-  hideOverlay();isMicOn=true;isCamOn=true;currentFacingMode='user';prompterLines=[];prompterIndex=0;pdfScript=[];scriptRawText='';_bgRefinementToken++;_fastFullParseToken++;syncPdfScriptDebugMirror();selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;currentScriptName='';showScreen('home');
+  stopPeerKeepalive();hideOverlay();isMicOn=true;isCamOn=true;currentFacingMode='user';prompterLines=[];prompterIndex=0;pdfScript=[];scriptRawText='';_bgRefinementToken++;_fastFullParseToken++;syncPdfScriptDebugMirror();selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;currentScriptName='';showScreen('home');
 }
 function cancelConnection(){hideOverlay();if(!conn||!conn.open)endSession()}
 
