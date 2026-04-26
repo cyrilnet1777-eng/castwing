@@ -3810,23 +3810,26 @@ async function parseViaExtractAndLabel(file){
   console.log('Extracted '+lines.length+' lines, sending for labeling...');
   if(!lines.length)throw new Error('Could not extract text from PDF');
   var numbered=buildNumberedText(lines);
-  var MAX_CHARS=60000;
-  if(numbered.length<=MAX_CHARS){
+  var MAX_LINES=800;
+  if(lines.length<=MAX_LINES){
     var labelData=await fetchLabelScript(numbered);
     return mergeLabelsWithText(lines,labelData);
   }
-  var chunkSize=Math.ceil(lines.length*(MAX_CHARS/numbered.length));
-  var allLabels=[];
-  var allChars=[];
-  for(var start=0;start<lines.length;start+=chunkSize){
-    if(_pdfParseCancelled)break;
-    var end=Math.min(start+chunkSize,lines.length);
+  var chunks=[];
+  for(var start=0;start<lines.length;start+=MAX_LINES){
+    var end=Math.min(start+MAX_LINES,lines.length);
     var chunkLines=lines.slice(start,end);
     var chunkNumbered=chunkLines.map(function(l,i){return(start+i+1)+': '+l}).join('\n');
-    var result=await fetchLabelScript(chunkNumbered);
-    var labs=Array.isArray(result.labels)?result.labels:[];
+    chunks.push(chunkNumbered);
+  }
+  console.log('Labeling '+chunks.length+' chunks in parallel...');
+  var results=await Promise.all(chunks.map(function(c){return fetchLabelScript(c)}));
+  var allLabels=[];
+  var allChars=[];
+  for(var i=0;i<results.length;i++){
+    var labs=Array.isArray(results[i].labels)?results[i].labels:[];
     allLabels=allLabels.concat(labs);
-    var chars=Array.isArray(result.characters)?result.characters:[];
+    var chars=Array.isArray(results[i].characters)?results[i].characters:[];
     chars.forEach(function(c){if(allChars.indexOf(c)===-1)allChars.push(c)});
   }
   return mergeLabelsWithText(lines,{characters:allChars,labels:allLabels});
