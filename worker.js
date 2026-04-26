@@ -1719,11 +1719,16 @@ async function handleLabelScript(request, env) {
     const prompt = `You are a screenplay parser. Below are numbered lines extracted from a screenplay PDF.
 
 For each line, return its label as a JSON array entry: [line_number, type, character_name_or_null]
-- type is one of: "dialogue", "action", "slug"
+- type is one of: "dialogue", "action", "slug", "character_cue"
 - "slug" = scene headings (INT./EXT./SCENE/etc)
-- "dialogue" = a character speaking, with the character name
-- "action" = stage directions, descriptions, transitions
-- Lines that are JUST a character name (e.g. "42: JUVE") should be labeled as the speaker for the next dialogue line, with type "character_cue" 
+- "dialogue" = spoken words by a character. The character name comes from the preceding character_cue line.
+- "action" = stage directions, descriptions, narrative, transitions, camera directions. These are NEVER spoken.
+- "character_cue" = a line that is JUST a character name in caps (e.g. "JUVE"), indicating the next line(s) are their dialogue
+
+CRITICAL RULES:
+- Descriptive/narrative lines between dialogue (e.g. "L'homme entre dans la piece." or "Georges se retourne :") are ALWAYS "action", even if they appear between two dialogue lines.
+- Parenthetical directions like "(criant)" or "(se raidissant soudain)" at the start of a dialogue line do NOT make it action — it is still "dialogue".
+- Only lines that contain actual spoken words are "dialogue". If a line describes what happens or what someone does, it is "action".
 
 Return ONLY a JSON object, no markdown, no prose:
 {"characters":["NAME1","NAME2"],"labels":[[1,"slug",null],[2,"action",null],[3,"dialogue","JUVE"],...]}

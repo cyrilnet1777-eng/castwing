@@ -3792,7 +3792,9 @@ function mergeLabelsWithText(lines,labelData){
     if(type==='character_cue'){pendingCue=character||text.trim();continue}
     if(type==='dialogue'){
       var speaker=character||pendingCue||null;
-      merged.push({character:speaker,text:text,type:'dialogue'});
+      var cleanText=text.replace(/^\s*\([^)]*\)\s*/,'').trim();
+      if(!cleanText){pendingCue=null;continue}
+      merged.push({character:speaker,text:cleanText,type:'dialogue'});
       pendingCue=null;
     }else if(type==='slug'){
       merged.push({character:null,text:text,type:'slug'});
