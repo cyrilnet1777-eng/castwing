@@ -572,23 +572,6 @@ input[type="file"]{display:none}
   </div>
 </div>
 
-<div id="paywallModal" class="paywall-modal">
-  <div class="paywall-card">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem">
-      <h3 id="paywallTitle">Accès limité</h3>
-      <button class="back-btn" onclick="closePaywallModal()" aria-label="Close">✕</button>
-    </div>
-    <p class="paywall-sub" id="paywallSub">20 minutes gratuites utilisées. Attends 1h ou débloque maintenant pour 1$.</p>
-    <div class="pay-options">
-      <button class="mode-opt" id="payAppleBtn" onclick="startPayment('apple')">Payer 1$ (Apple Pay)</button>
-      <button class="mode-opt" id="payGoogleBtn" onclick="startPayment('google')">Payer 1$ (Google Pay)</button>
-      <button class="mode-opt" id="payCardBtn" onclick="startPayment('card')">Payer 1$ (Carte)</button>
-      <button class="mode-opt" id="paidConfirmBtn" onclick="confirmPaidUnlock()">J’ai payé — débloquer</button>
-      <button class="mode-opt" id="waitOneHourBtn" onclick="activateCooldown()">Attendre 1 heure</button>
-    </div>
-    <p class="pay-lock" id="paywallStatusText"></p>
-  </div>
-</div>
 
 <!-- ═══ PARTNER CHOICE ═══ -->
 <div id="partnerChoice" class="screen">
@@ -873,14 +856,6 @@ const ACCESS_KEY='castwing_user_access_v1';
 const PLAN_KEY='castwing_plan_v2';
 const USER_DATA_V2_KEY='castwing_user_v2';
 const REFERRAL_KEY='castwing_referral_v1';
-const FREE_SESSION_MS=20*60*1000;
-const FREE_COOLDOWN_MS=6*60*60*1000;
-const AUDITION_WINDOW_MS=3*60*60*1000;
-const PAYG_BLOCK_MS=10*60*1000;
-const PAYG_PRICE='$1';
-const PRO_PRICE='12.99€';
-const PRO_MONTHLY_MS=400*60*1000;
-const PAYMENT_LINK_URL='https://buy.stripe.com/test_00g8wQfNw5Yk6jS5kk';
 let sessionTimerInterval=null;
 let sessionTimerFrozen=false;
 let sessionPaused=false;
@@ -1375,12 +1350,26 @@ async function refreshCreditBalance(){
     }
   }catch(e){}
 }
-function toggleAutoTopup(){
+async function toggleAutoTopup(){
   var tog=document.getElementById('autoTopupToggle');
   var row=document.getElementById('autoTopupAmountRow');
   var isOn=tog&&tog.classList.contains('on');
-  if(isOn){tog.classList.remove('on');if(row)row.style.display='none';localStorage.removeItem('cw_autoTopup')}
-  else{tog.classList.add('on');if(row)row.style.display='';var saved=JSON.parse(localStorage.getItem('cw_autoTopup')||'null');localStorage.setItem('cw_autoTopup',JSON.stringify({amount:saved&&saved.amount||2500}));updateAutoTopupBtns()}
+  if(isOn){
+    tog.classList.remove('on');if(row)row.style.display='none';localStorage.removeItem('cw_autoTopup');
+    showToast('Auto top-up disabled',2000);
+  }else{
+    // Save card via Stripe Checkout (setup mode)
+    showToast('Redirecting to save your card...',3000);
+    var amt=2500;
+    try{
+      var rsp=await fetch('/api/credits/setup-card',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({autoTopupAmount:amt})});
+      var data=await rsp.json().catch(function(){return null});
+      if(data&&data.ok&&data.checkoutUrl){
+        localStorage.setItem('cw_autoTopup',JSON.stringify({amount:amt}));
+        window.location.href=data.checkoutUrl;
+      }else{showToast((data&&data.error)||'Failed to set up card',3000)}
+    }catch(e){showToast('Error setting up card',3000)}
+  }
 }
 function setAutoTopupAmount(cents){
   localStorage.setItem('cw_autoTopup',JSON.stringify({amount:cents}));
@@ -1402,12 +1391,29 @@ function initAutoTopupUI(){
   if(saved){if(tog)tog.classList.add('on');if(row)row.style.display='';updateAutoTopupBtns()}
   else{if(tog)tog.classList.remove('on');if(row)row.style.display='none'}
 }
-function checkAutoTopup(){
+var _autoCharging=false;
+async function checkAutoTopup(){
+  if(_autoCharging)return;
   var saved=JSON.parse(localStorage.getItem('cw_autoTopup')||'null');
   if(!saved||!cwServerSession.email)return;
   if((cwServerSession.creditBalance||0)<200){
-    var packId=saved.amount<=500?'pack_5':saved.amount<=1000?'pack_10':'pack_25';
-    openTopupModal(packId);
+    _autoCharging=true;
+    showToast('Auto top-up: charging $'+(saved.amount/100).toFixed(2)+'...',3000);
+    try{
+      var rsp=await fetch('/api/credits/auto-charge',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:saved.amount})});
+      var data=await rsp.json().catch(function(){return null});
+      if(data&&data.ok){
+        cwServerSession.creditBalance=data.balance_cents||0;
+        updateCreditBadge();
+        showToast('Auto top-up: $'+(saved.amount/100).toFixed(2)+' charged!',3000);
+      }else if(data&&data.error==='NO_SAVED_CARD'){
+        showToast('No saved card. Set up auto top-up in your profile.',4000);
+        localStorage.removeItem('cw_autoTopup');
+      }else{
+        showToast('Auto top-up failed: '+(data&&data.detail||data&&data.error||'Unknown error'),4000);
+      }
+    }catch(e){showToast('Auto top-up error',3000)}
+    _autoCharging=false;
   }
 }
 async function loadUsageHistory(){
@@ -2556,13 +2562,8 @@ function startChangeEmail(){
   const emailInput=document.getElementById('authEmailInput');
   if(emailInput){emailInput.value='';emailInput.focus();}
 }
-function openPaywallModal(msg){
-  if(isServerAdmin())return;
-  const el=document.getElementById('paywallStatusText');
-  if(el)el.textContent=msg||'';
-  document.getElementById('paywallModal').classList.add('active');
-}
-function closePaywallModal(){document.getElementById('paywallModal').classList.remove('active')}
+function openPaywallModal(){}
+function closePaywallModal(){}
 function authEmailLangFromUI(){
   const id=selectedUILanguage||'fr';
   const allowed=new Set(['fr','en','es','it','de','pt','ja','zh','ko','ar','he','ru']);
@@ -2671,63 +2672,14 @@ async function handleGoogleCredential(response){
     closeAuthModal();
   }catch(e){showToast('Auth offline');}
 }
-function hasPaidAccess(){return Boolean(userAccess.paid);}
-function isUsageBlocked(){
-  if(hasPaidAccess())return false;
-  const now=Date.now();
-  if(userAccess.cooldownUntil&&now<Number(userAccess.cooldownUntil||0))return true;
-  return Number(userAccess.usageMs||0)>=FREE_SESSION_MS;
-}
-function activateCooldown(){
-  userAccess.cooldownUntil=Date.now()+FREE_COOLDOWN_MS;
-  persistAccess();
-  openPaywallModal(t('usageBlocked'));
-}
-function startPayment(method){
-  const mode=method||'card';
-  playSfx('swoosh',0.5);
-  if(PAYMENT_LINK_URL)window.open(PAYMENT_LINK_URL+(PAYMENT_LINK_URL.includes('?')?'&':'?')+'method='+encodeURIComponent(mode),'_blank','noopener');
-  showToast('Paiement ouvert');
-}
-function confirmPaidUnlock(){
-  userAccess.paid=true;
-  userAccess.cooldownUntil=0;
-  persistAccess();
-  updateEmotionLock();
-  closePaywallModal();
-  showToast('Paiement validé ✅');
-}
-function tickUsage(){
-  if(hasPaidAccess())return;
-  const now=Date.now();
-  if(!userAccess.lastTick)userAccess.lastTick=now;
-  const delta=Math.max(0,Math.min(5000,now-userAccess.lastTick));
-  userAccess.lastTick=now;
-  if(document.visibilityState==='visible')userAccess.usageMs=Number(userAccess.usageMs||0)+delta;
-  if(Number(userAccess.usageMs||0)>=FREE_SESSION_MS&&!userAccess.cooldownUntil){
-    userAccess.cooldownUntil=Date.now()+FREE_COOLDOWN_MS;
-    openPaywallModal(t('usageBlocked'));
-  }
-  persistAccess();
-}
-function startUsageTracking(){
-  if(usageTimer)clearInterval(usageTimer);
-  userAccess.lastTick=Date.now();
-  usageTimer=setInterval(tickUsage,5000);
-}
-document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='hidden'){
-    tickUsage();
-  }else{
-    userAccess.lastTick=Date.now();
-  }
-});
-window.addEventListener('beforeunload',()=>{tickUsage();persistAccess();});
-function requireAccessOrPaywall(){
-  if(!userAccess.verified){openAuthModal();showToast(t('authSubtitle'));return false}
-  if(isUsageBlocked()){openPaywallModal(t('usageBlocked'));return false}
-  return true;
-}
+function hasPaidAccess(){return true}
+function isUsageBlocked(){return false}
+function activateCooldown(){}
+function startPayment(){}
+function confirmPaidUnlock(){}
+function tickUsage(){}
+function startUsageTracking(){}
+function requireAccessOrPaywall(){return true}
 function updateEmotionLock(){
   const emotionSelect=document.getElementById('emotionSelect');
   if(!emotionSelect)return;
@@ -5978,11 +5930,21 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   await fetchServerSession();
   if(isServerAdmin()){dismissPaywall();closePaywallModal();}
   // Handle Stripe payment return
-  var paymentParam=new URLSearchParams(window.location.search).get('payment');
+  var urlParams=new URLSearchParams(window.location.search);
+  var paymentParam=urlParams.get('payment');
+  var cardSaved=urlParams.get('card_saved');
   if(paymentParam==='success'){
     setTimeout(async function(){await refreshCreditBalance();showToast(tt('paymentSuccess','Payment confirmed! Credits added.'),5000);history.replaceState({},'','/');},1500);
   }else if(paymentParam==='cancel'){
     showToast(tt('paymentCancelled','Payment cancelled.'),3000);history.replaceState({},'','/');
+  }else if(cardSaved==='success'){
+    showToast('Card saved! Auto top-up is active.',5000);
+    initAutoTopupUI();
+    history.replaceState({},'','/');
+  }else if(cardSaved==='cancel'){
+    localStorage.removeItem('cw_autoTopup');
+    showToast('Card setup cancelled.',3000);
+    history.replaceState({},'','/');
   }
   startUsageTracking();
   redeemInviteFromURL();
