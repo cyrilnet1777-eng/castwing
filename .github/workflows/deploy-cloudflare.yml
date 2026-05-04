@@ -30,10 +30,11 @@ jobs:
 
       - name: Bust asset cache
         run: |
-          # Inject a deploy-time timestamp into index.html so wrangler
-          # always detects it as changed and re-uploads it.
-          sed -i "s/<!-- build:[0-9]* -->/<!-- build:$(date +%s) -->/" index.html
-          echo "index.html hash: $(md5sum index.html | cut -d' ' -f1)"
+          # Append a deploy-time comment to index.html so its hash
+          # always differs, forcing wrangler to re-upload it.
+          echo "<!-- deploy:$(date +%s) -->" >> index.html
+          echo "index.html size: $(wc -c < index.html) bytes"
+          echo "index.html md5:  $(md5sum index.html | cut -d' ' -f1)"
 
       - name: Install and deploy
         run: |
