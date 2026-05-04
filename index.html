@@ -269,7 +269,7 @@ input[type="file"]{display:none}
 .ai-panel.active{display:flex}
 .ai-panel select{padding:.3rem .5rem;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.4);color:#fff;font-size:.75rem;font-family:'DM Sans',sans-serif;flex:1}
 .ai-panel .ai-label{color:rgba(57,231,208,.85);font-weight:700;white-space:nowrap}
-.session-bottom{display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.5rem .8rem;padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px));background:#1a1a1a;border-top:1px solid rgba(255,255,255,.06);flex-shrink:0;flex-wrap:wrap;position:relative;z-index:60}
+.session-bottom{display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.5rem .8rem;padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px));background:#1a1a1a;border-top:1px solid rgba(255,255,255,.06);flex-shrink:0;flex-wrap:wrap;position:fixed;bottom:0;left:0;right:0;z-index:60}
 .session-inline-controls{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;justify-content:center}
 .session-inline-controls .mode-opt{min-width:80px;padding:.4rem .5rem;font-size:.78rem}
 .session-speed{display:flex;align-items:center;gap:.35rem}
@@ -336,7 +336,7 @@ input[type="file"]{display:none}
 .session-top .back-btn{left:16px!important;right:auto!important}
 .setup-header{padding-left:52px!important}
 }
-@media(min-width:768px){#home{padding:3rem}.home-inner{max-width:520px}.logo h1{font-size:3.2rem}.session-body{flex-direction:row}.video-area{position:fixed;top:0;left:0;width:60%;height:100vh;z-index:50}.prompter-area{margin-top:0;margin-left:60%;flex:1;max-height:none;border-top:none;border-left:1px solid rgba(255,255,255,.06)}}
+@media(min-width:768px){#home{padding:3rem}.home-inner{max-width:520px}.logo h1{font-size:3.2rem}.session-body{flex-direction:row}.video-area{position:fixed;top:0;left:0;width:60%;height:100vh;z-index:50}.prompter-area{margin-top:0;margin-left:60%;flex:1;max-height:none;border-top:none;border-left:1px solid rgba(255,255,255,.06);padding-bottom:5rem}.session-bottom{left:60%}}
 .clap-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;z-index:10001;animation:clapIn .3s ease}
 .clap-card{background:linear-gradient(180deg,#2a2a2a,#161616);border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:0;width:280px;max-width:90%;font-family:'DM Sans',sans-serif;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06);position:relative}
 .clap-card::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 40%);border-radius:12px}
@@ -543,6 +543,23 @@ input[type="file"]{display:none}
           <button class="mode-opt" onclick="openTopupModal('pack_25')" style="flex:1">$25</button>
         </div>
       </div>
+      <div id="profileAutoTopup" style="background:#f8f9fa;border-radius:10px;padding:12px;margin:8px 0;font-size:.82rem">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-weight:600;color:#2D6A4F">Auto top-up</div>
+            <div style="font-size:.72rem;color:#6B7280">Add credits when balance drops below $2</div>
+          </div>
+          <button class="ps-toggle" id="autoTopupToggle" onclick="toggleAutoTopup()" style="flex-shrink:0"></button>
+        </div>
+        <div id="autoTopupAmountRow" style="display:none;margin-top:8px">
+          <label style="font-size:.72rem;color:#6B7280">Amount to add</label>
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <button class="mode-opt" onclick="setAutoTopupAmount(500)" id="atAmt5" style="flex:1;padding:.3rem">$5</button>
+            <button class="mode-opt" onclick="setAutoTopupAmount(1000)" id="atAmt10" style="flex:1;padding:.3rem">$10</button>
+            <button class="mode-opt active" onclick="setAutoTopupAmount(2500)" id="atAmt25" style="flex:1;padding:.3rem">$25</button>
+          </div>
+        </div>
+      </div>
       <div id="profileUsageHistory" style="max-height:180px;overflow-y:auto;margin:8px 0">
         <div style="font-size:0.8rem;color:#6B7280;margin-bottom:4px" id="profileUsageLabel">Recent activity</div>
         <div id="profileUsageList" style="font-size:0.82rem"></div>
@@ -697,7 +714,7 @@ input[type="file"]{display:none}
   <div class="session-body">
     <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><video id="remoteVideo" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:contain;background:#000"></video><div class="no-video" id="noVideoMsg">Caméra · activation ou désactivée</div><div class="video-controls"><button class="vctrl" id="btnMic" onclick="toggleMic()"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/></svg></button><button class="vctrl" id="btnRec" onclick="toggleRecording()"><span class="rec-dot"></span></button><button class="vctrl vctrl-pause" id="btnPause" onclick="togglePause()"><svg id="pauseIcon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button><div class="speed-btns speed-btns-overlay" id="speedBtnsOverlay"></div><button class="vctrl vctrl-flip" id="btnCam" onclick="toggleCam()"><svg viewBox="0 0 24 24"><path d="M20 5h-3.17L15 3H9L7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-8 13a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/><path d="M12 17l-2.5-2h1.5v-2h2v2h1.5L12 17zm0-10l2.5 2h-1.5v2h-2V9H9.5L12 7z"/></svg></button></div></div><div class="rec-indicator" id="recIndicator"></div><div class="mob-controls-row" id="mobControlsRow"><button class="mob-nav-btn" onclick="prompterPrev()">◀</button><button class="mob-main-btn" id="mobMainBtn" onclick="togglePause()"><svg class="pause-bars" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></svg><span class="play-tri"></span></button><button class="mob-nav-btn" onclick="prompterNext()">▶</button></div></div>
     <div class="prompter-area" id="prompterArea"><div class="prompter-empty" id="prompterEmptyText">Aucun texte chargé</div></div>
-    <div id="pauseOverlay" class="pause-overlay"><div class="take-info" id="takeInfo"></div><div class="pause-controls" id="pauseControls"><button class="ps-resume-btn" onclick="togglePause(false)">▶ Reprendre</button><label id="psSpeedLabel">AI Speed</label><div class="ps-hint" style="font-size:.68rem;color:#9CA3AF;margin:-.2rem 0 .3rem">0 = very slow, 5 = very fast</div><div class="speed-btns" id="speedBtnsPause"></div><div class="ps-row"><span class="ps-label" id="psVadLabel">Pause after my line</span><input type="range" id="vadSilenceSlider" min="0.5" max="5" step="0.25" value="1.25" oninput="onVadSliderChange(this.value)"><span class="ps-label" id="vadSilenceLabel">1.25s</span></div><div class="ps-hint" style="font-size:.68rem;color:#9CA3AF;margin:-.3rem 0 .4rem">How long the AI waits after you finish speaking</div><label>View</label><div id="viewModePause"></div><button class="ps-quit-btn" onclick="showEndTakeModal()">✕ Quitter la prise</button></div></div>
+    <div id="pauseOverlay" class="pause-overlay"><div class="take-info" id="takeInfo"></div><div class="pause-controls" id="pauseControls"><button class="ps-resume-btn" onclick="togglePause(false)">▶ Resume</button><label id="psSpeedLabel">AI Speed</label><div class="ps-hint" style="font-size:.68rem;color:#9CA3AF;margin:-.2rem 0 .3rem">0 = very slow, 5 = very fast</div><div class="speed-btns" id="speedBtnsPause"></div><div class="ps-row"><span class="ps-label" id="psVadLabel">Pause after my line</span><input type="range" id="vadSilenceSlider" min="0.5" max="5" step="0.25" value="1.25" oninput="onVadSliderChange(this.value)"><span class="ps-label" id="vadSilenceLabel">1.25s</span></div><div class="ps-hint" style="font-size:.68rem;color:#9CA3AF;margin:-.3rem 0 .4rem">How long the AI waits after you finish speaking</div><label>View</label><div id="viewModePause"></div><button class="ps-quit-btn" onclick="showEndTakeModal()">✕ End take</button></div></div>
     <div class="italienne-badge" id="italienneBadge">ITALIENNE</div>
   </div>
   <div class="ai-panel" id="aiPanel"><span class="ai-label" id="sessionVoiceLabel">🦾 Voix :</span><select id="sessionVoiceSelect" onchange="changeSessionVoice()"></select></div>
@@ -710,13 +727,13 @@ input[type="file"]{display:none}
     </div>
     <button class="nav-arrow" onclick="prompterPrev()" id="prevBtn"><svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg></button>
     <button class="nav-arrow" onclick="prompterNext()" id="nextBtn"><svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></button>
-    <button class="btn btn-danger" onclick="endSession()" style="padding:.4rem .7rem;font-size:.7rem;border-radius:8px" id="quitBtn">Quitter</button>
+    <button class="btn btn-danger" onclick="endSession()" style="padding:.4rem .7rem;font-size:.7rem;border-radius:8px" id="quitBtn">Quit</button>
   </div>
 </div>
 
 <div id="scriptReviewOverlay" class="script-review-overlay" aria-hidden="true"><div class="script-review-inner"><h3 id="scriptReviewTitle">Vérifier le script</h3><p class="sr-sub" id="scriptReviewHint">Corrige au besoin les répliques, puis valide ou utilise tel quel pour revenir au setup.</p><p class="sr-meta" id="scriptReviewMeta"></p><div id="scriptReviewList" class="script-review-list"></div><div class="script-review-actions"><button type="button" class="sr-btn-skip" onclick="closeScriptReview(false)">Utiliser tel quel</button><button type="button" class="sr-btn-ok" id="scriptReviewValidateBtn" onclick="closeScriptReview(true)">Valider et continuer</button></div></div></div>
 
-<div class="end-take-modal" id="endTakeModal"><div class="end-take-card"><h3>Terminer la prise ?</h3><div class="etm-btns"><button class="etm-btn etm-end" onclick="confirmEndTake()">Terminer</button><button class="etm-btn etm-resume" onclick="hideEndTakeModal()">Reprendre</button></div></div></div>
+<div class="end-take-modal" id="endTakeModal"><div class="end-take-card"><h3>End the take?</h3><div class="etm-btns"><button class="etm-btn etm-end" onclick="confirmEndTake()">End</button><button class="etm-btn etm-resume" onclick="hideEndTakeModal()">Resume</button></div></div></div>
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ttsAudioEl" playsinline></audio>
 
@@ -724,7 +741,7 @@ input[type="file"]{display:none}
 let role='actor',sessionMode='ai',mode='ai';
 let peer=null,conn=null,call=null,localStream=null,mediaRecorder=null,recordedChunks=[];
 let isRecording=false,isMicOn=true,isCamOn=true,currentFacingMode='user',prompterLines=[],prompterIndex=0,connectionTimeout=null;
-let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',selectedLocale='french',selectedUILanguage='en',voiceSpeed=1.2,availableVoices=[],presetVoiceMap={};
+let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',selectedLocale='french',selectedUILanguage='en',voiceSpeed=1.5,availableVoices=[],presetVoiceMap={};
 let soloPartnerMode='all',soloPartnerChar=null;
 let lockedVoiceLocale='';
 let _preItalienneVoice=null;
@@ -1358,6 +1375,41 @@ async function refreshCreditBalance(){
     }
   }catch(e){}
 }
+function toggleAutoTopup(){
+  var tog=document.getElementById('autoTopupToggle');
+  var row=document.getElementById('autoTopupAmountRow');
+  var isOn=tog&&tog.classList.contains('on');
+  if(isOn){tog.classList.remove('on');if(row)row.style.display='none';localStorage.removeItem('cw_autoTopup')}
+  else{tog.classList.add('on');if(row)row.style.display='';var saved=JSON.parse(localStorage.getItem('cw_autoTopup')||'null');localStorage.setItem('cw_autoTopup',JSON.stringify({amount:saved&&saved.amount||2500}));updateAutoTopupBtns()}
+}
+function setAutoTopupAmount(cents){
+  localStorage.setItem('cw_autoTopup',JSON.stringify({amount:cents}));
+  updateAutoTopupBtns();
+}
+function updateAutoTopupBtns(){
+  var saved=JSON.parse(localStorage.getItem('cw_autoTopup')||'null');
+  var amt=saved&&saved.amount||2500;
+  ['atAmt5','atAmt10','atAmt25'].forEach(function(id){
+    var el=document.getElementById(id);if(!el)return;
+    var v=id==='atAmt5'?500:id==='atAmt10'?1000:2500;
+    el.classList.toggle('active',v===amt);
+  });
+}
+function initAutoTopupUI(){
+  var saved=JSON.parse(localStorage.getItem('cw_autoTopup')||'null');
+  var tog=document.getElementById('autoTopupToggle');
+  var row=document.getElementById('autoTopupAmountRow');
+  if(saved){if(tog)tog.classList.add('on');if(row)row.style.display='';updateAutoTopupBtns()}
+  else{if(tog)tog.classList.remove('on');if(row)row.style.display='none'}
+}
+function checkAutoTopup(){
+  var saved=JSON.parse(localStorage.getItem('cw_autoTopup')||'null');
+  if(!saved||!cwServerSession.email)return;
+  if((cwServerSession.creditBalance||0)<200){
+    var packId=saved.amount<=500?'pack_5':saved.amount<=1000?'pack_10':'pack_25';
+    openTopupModal(packId);
+  }
+}
 async function loadUsageHistory(){
   try{
     var rsp=await fetch('/api/credits/balance',{credentials:'same-origin'});
@@ -1942,7 +1994,7 @@ const EMOTION_PRESETS={
 };
 const SPEED_MIN=0;
 const SPEED_MAX=5;
-const SPEED_DEFAULT=1.2;
+const SPEED_DEFAULT=1.5;
 function sliderToElevenLabs(v){return 0.5+(Math.min(5,Math.max(0,v))/5)*1.5;}
 const PREVIEW_TEXT_BY_LANG={
   fr:'Bonjour, je suis {name}.',
@@ -2475,6 +2527,7 @@ function openAuthModal(){
     if(usageLabel)usageLabel.textContent=tt('recentActivity','Recent activity');
     loadUsageHistory();
     refreshCreditBalance();
+    initAutoTopupUI();
   }else{
     if(loginView)loginView.style.display='block';
     if(accountView)accountView.style.display='none';
@@ -2493,7 +2546,7 @@ async function logoutUser(){
   applyServerSessionUI();
   updateAuthMiniButton();
   closeAuthModal();
-  showToast('Déconnecté',2000);
+  showToast('Logged out',2000);
 }
 function startChangeEmail(){
   const loginView=document.getElementById('authLoginView');
@@ -3086,6 +3139,7 @@ async function speakWithElevenLabs(text,preset,token,cb){
           updateCreditBadge();
           if(cwServerSession.creditBalance>0&&cwServerSession.creditBalance<=100){
             showToast(t('lowCredits')+': $'+(cwServerSession.creditBalance/100).toFixed(2),3000);
+            checkAutoTopup();
           }
         }
         // Track free lines for visitors
@@ -3158,7 +3212,7 @@ async function speakWithElevenLabs(text,preset,token,cb){
     const emo=getEmotionSettings();
     const emoRate=Number(emo&&emo.playbackRate)||1;
     audio.playbackRate=Math.max(0.58,Math.min(1.9,(speed||1)*emoRate));
-    audio.volume=selectedEmotion==='whisper'?0.55:selectedEmotion==='sad'?0.9:1;
+    if(!audio._recMuted)audio.volume=selectedEmotion==='whisper'?0.55:selectedEmotion==='sad'?0.9:1;
     ttsAudio=audio;
     const done=()=>{URL.revokeObjectURL(url);if(audio._revokeUrl===url)audio._revokeUrl=null;if(token===activeSpeechToken&&cb)cb();lastTTSEndTs=Date.now();};
     audio.onended=done;
@@ -5546,27 +5600,27 @@ function setPauseSpeed(v){setVoiceSpeed(v,false)}
 function toggleRecording(){if(isRecording)stopRecording();else startRecording()}
 var _recAudioCtx=null,_recDest=null;
 function _buildRecordingStream(){
-  // Mix localStream (mic+cam) with AI audio (ttsAudioEl) into one stream
   var combined=new MediaStream();
   if(localStream)localStream.getVideoTracks().forEach(function(t){combined.addTrack(t)});
   try{
     _recAudioCtx=new (window.AudioContext||window.webkitAudioContext)();
     _recDest=_recAudioCtx.createMediaStreamDestination();
-    // Mic audio
     if(localStream&&localStream.getAudioTracks().length>0){
       var micSource=_recAudioCtx.createMediaStreamSource(localStream);
       micSource.connect(_recDest);
     }
-    // AI audio via captureStream — works even when src changes
+    // AI audio: use captureStream + route to both recording AND speakers
     var ttsEl=document.getElementById('ttsAudioEl');
-    if(ttsEl&&ttsEl.captureStream){
-      var ttsStream=ttsEl.captureStream();
+    var ttsStream=null;
+    if(ttsEl&&ttsEl.captureStream)ttsStream=ttsEl.captureStream();
+    else if(ttsEl&&ttsEl.mozCaptureStream)ttsStream=ttsEl.mozCaptureStream();
+    if(ttsStream&&ttsStream.getAudioTracks().length>0){
       var ttsSource=_recAudioCtx.createMediaStreamSource(ttsStream);
       ttsSource.connect(_recDest);
-    }else if(ttsEl&&ttsEl.mozCaptureStream){
-      var ttsStream=ttsEl.mozCaptureStream();
-      var ttsSource=_recAudioCtx.createMediaStreamSource(ttsStream);
-      ttsSource.connect(_recDest);
+      ttsSource.connect(_recAudioCtx.destination); // keep playing through speakers
+      // Mute the original element to avoid double audio
+      ttsEl.volume=0;
+      ttsEl._recMuted=true;
     }
     _recDest.stream.getAudioTracks().forEach(function(t){combined.addTrack(t)});
   }catch(e){
@@ -5577,7 +5631,7 @@ function _buildRecordingStream(){
 }
 function startRecording(){
   if(!canRecord()){showToast(t('partnerGateTitle'));openAuthModal();return}
-  if(!localStream){showToast('Pas de flux vidéo');return}recordedChunks=[];
+  if(!localStream){showToast('No video stream');return}recordedChunks=[];
   var recStream=_buildRecordingStream();
   var recMime='video/webm;codecs=vp9';
   if(MediaRecorder.isTypeSupported('video/mp4;codecs=avc1.42E01E,mp4a.40.2'))recMime='video/mp4;codecs=avc1.42E01E,mp4a.40.2';
@@ -5587,10 +5641,10 @@ function startRecording(){
   var isMP4=recMime.startsWith('video/mp4');
   mediaRecorder.ondataavailable=e=>{if(e.data.size>0)recordedChunks.push(e.data)};
   mediaRecorder.onstop=async function(){var ext=isMP4?'mp4':'webm';var mime=isMP4?'video/mp4':'video/webm';var blob=new Blob(recordedChunks,{type:mime});var fname='castwing-'+Date.now()+'.'+ext;var isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);if(isMobile&&navigator.canShare&&navigator.canShare({files:[new File([blob],fname,{type:mime})]})){try{await navigator.share({title:'Castwing Audition',files:[new File([blob],fname,{type:mime})]});showToast(t('recSaved')||'Recording shared!')}catch(e){if(e.name!=='AbortError'){var u=URL.createObjectURL(blob);var a=document.createElement('a');a.href=u;a.download=fname;a.click();URL.revokeObjectURL(u)}}}else{var u=URL.createObjectURL(blob);var a=document.createElement('a');a.href=u;a.download=fname;a.click();URL.revokeObjectURL(u);showToast(t('recSaved')||'Recording saved!')}};
-  mediaRecorder.start(1000);isRecording=true;document.getElementById('btnRec').classList.add('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='block';showToast('Enregistrement…')}
-  catch(e){showToast('Erreur enregistrement')}
+  mediaRecorder.start(1000);isRecording=true;document.getElementById('btnRec').classList.add('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='block';showToast('Recording…')}
+  catch(e){showToast('Recording error')}
 }
-function stopRecording(){if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();if(_recAudioCtx){try{_recAudioCtx.close()}catch(e){}_recAudioCtx=null}_recDest=null;isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='none'}
+function stopRecording(){if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();var ttsEl=document.getElementById('ttsAudioEl');if(ttsEl&&ttsEl._recMuted){ttsEl.volume=1;ttsEl._recMuted=false}if(_recAudioCtx){try{_recAudioCtx.close()}catch(e){}_recAudioCtx=null}_recDest=null;isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='none'}
 
 // ── WebRTC ──
 function createPeer(id){return new Peer(id,{config:{iceServers:ICE_SERVERS}})}
@@ -5617,7 +5671,7 @@ function setupDataConnection(c){
   conn=c;conn.on('open',()=>{setStatus('','Connecté');hideOverlay();showToast('Partenaire connecté !');playSfx('swoosh',0.45);if(role==='actor'&&prompterLines.length>0)conn.send({type:'script',lines:prompterLines,index:prompterIndex});if(role==='partner')conn.send({type:'ready'})});
   conn.on('data',handleDataMessage);
   conn.on('close',()=>{
-    setStatus('disconnected','Déconnecté');showToast(tt('partnerDisconnected','Partenaire déconnecté'),4000);
+    setStatus('disconnected','Disconnected');showToast(tt('partnerDisconnected','Partner disconnected'),4000);
     const rv=document.getElementById('remoteVideo');
     if(rv){rv.srcObject=null;rv.style.display='none'}
     document.getElementById('localVideo').style.display='';
