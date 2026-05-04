@@ -532,11 +532,23 @@ input[type="file"]{display:none}
       <div class="auth-logged-in">
         <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#52B788,#2D6A4F);display:inline-flex;align-items:center;justify-content:center;font-size:1.4rem;color:#fff;font-weight:700;margin-bottom:.3rem" id="authAvatar">U</div>
         <div class="auth-logged-email" id="authLoggedEmail">user@email.com</div>
-        <div class="auth-logged-plan" id="authLoggedPlan">Compte gratuit</div>
+      </div>
+      <div id="profileCreditCard" style="background:#f0faf4;border-radius:12px;padding:16px;margin:12px 0;text-align:center">
+        <div style="font-size:0.8rem;color:#6B7280;margin-bottom:4px" id="profileBalanceLabel">Credit Balance</div>
+        <div style="font-size:1.8rem;font-weight:700;color:#2D6A4F" id="profileBalanceAmount">$0.00</div>
+        <div style="display:flex;gap:8px;margin-top:12px;justify-content:center">
+          <button class="mode-opt" onclick="openTopupModal('pack_5')" style="flex:1">$5</button>
+          <button class="mode-opt" onclick="openTopupModal('pack_10')" style="flex:1">$10</button>
+          <button class="mode-opt" onclick="openTopupModal('pack_25')" style="flex:1">$25</button>
+        </div>
+      </div>
+      <div id="profileUsageHistory" style="max-height:180px;overflow-y:auto;margin:8px 0">
+        <div style="font-size:0.8rem;color:#6B7280;margin-bottom:4px" id="profileUsageLabel">Recent activity</div>
+        <div id="profileUsageList" style="font-size:0.82rem"></div>
       </div>
       <div class="auth-actions-grid">
-        <button onclick="startChangeEmail()">Changer d’email</button>
-        <button class="auth-logout-btn" onclick="logoutUser()">Se déconnecter</button>
+        <button onclick="startChangeEmail()">Change email</button>
+        <button class="auth-logout-btn" onclick="logoutUser()">Log out</button>
       </div>
     </div>
   </div>
@@ -674,7 +686,7 @@ input[type="file"]{display:none}
 
 <!-- ═══ SESSION ═══ -->
 <div id="session" class="screen">
-  <div id="creditBadge" style="position:fixed;top:12px;right:56px;background:rgba(0,0,0,.6);color:#fff;padding:4px 10px;border-radius:12px;font-size:13px;font-family:'DM Sans',sans-serif;z-index:1000;display:none;pointer-events:none">⏱ <span id="creditCount">60:00</span></div>
+  <div id="creditBadge" style="position:fixed;top:12px;right:56px;background:rgba(0,0,0,.6);color:#fff;padding:4px 10px;border-radius:12px;font-size:13px;font-family:'DM Sans',sans-serif;z-index:1000;display:none;cursor:pointer"><span id="creditCount">$0.00</span></div>
   <div id="sessionTimeRail" class="session-time-rail" aria-hidden="true"><span id="sessionTimeRailFill" class="session-time-rail-fill"></span></div>
   <div class="session-top"><div class="status"><div class="status-dot waiting" id="statusDot"></div><span id="statusText">Préparation du flux…</span></div><button class="back-btn" onclick="showEndTakeModal()" style="color:#fff;font-size:1rem;position:fixed;top:16px;left:16px;z-index:10001">✕</button></div>
   <div class="session-body">
@@ -828,7 +840,7 @@ function playSfx(key,vol=0.5){
 let authFlowToken='',authPendingEmail='';
 let userAccess={email:'',verified:false,provider:'',paid:false,usageMs:0,cooldownUntil:0,lastTick:0};
 let usageTimer=null;
-let cwServerSession={email:null,isAdmin:false,plan:'visitor',creditsRemaining:null};
+let cwServerSession={email:null,isAdmin:false,plan:'visitor',creditsRemaining:null,creditBalance:0};
 
 const useElevenLabs=true;
 function getPauseBetweenLines(){return voiceSpeed>=2.0?80:180;}
@@ -1010,13 +1022,15 @@ function savePlan(p){saveUserData(legacyPlanToUserData(p,getUserData()))}
 function getUserTier(){return getPlan().tier||'visitor'}
 function isSignedUp(){return getUserTier()!=='visitor'}
 function canUseElevenLabs(){
-  if(isServerAdmin()||isServerTester())return true;
-  const st=getSpecTier();
-  if(st==='figurant')return(getUserData().aiMinutes.remainingSeconds||0)>0;
-  return st==='audition'||st==='payg'||st==='oscar'||st==='palme';
+  if(isServerAdmin())return true;
+  // Signed up users: need credits
+  if(cwServerSession.email)return(cwServerSession.creditBalance||0)>0;
+  // Visitors: 2 free lines
+  var used=parseInt(localStorage.getItem('cw_free_lines')||'0');
+  return used<2;
 }
-function canUsePartner(){return isSignedUp()}
-function canRecord(){return isSignedUp()}
+function canUsePartner(){return true}
+function canRecord(){return true}
 function canUseEmotions(){return getSpecTier()==='palme'}
 function getMaxVideoRes(){
   const st=getSpecTier();
@@ -1289,12 +1303,108 @@ function showClapperboard(onComplete){
     },1000);
   },1000);
 }
-function buyPaygBlock(){
+function updateCreditBadge(){
+  var badge=document.getElementById('creditBadge');
+  var el=document.getElementById('creditCount');
+  if(!badge||!el)return;
+  if(!cwServerSession.email){badge.style.display='none';return}
+  var cents=cwServerSession.creditBalance||0;
+  el.textContent='$'+(cents/100).toFixed(2);
+  badge.style.display='';
+  badge.style.pointerEvents='auto';
+  badge.style.cursor='pointer';
+  badge.onclick=function(){openAuthModal()};
+  if(cents<=50)badge.style.background='rgba(200,50,50,.85)';
+  else if(cents<=200)badge.style.background='rgba(200,150,50,.85)';
+  else badge.style.background='rgba(0,0,0,.6)';
+}
+function showCreditDepletedModal(){
+  if(isServerAdmin())return;
+  cancelSpeechFlow();
   dismissPaywall();
-  addPaygMinutes(PAYG_BLOCK_MS);
-  unfreezeTimer();
-  updateTimerBadge();
-  showToast('+10 min',2000);
+  var overlay=document.createElement('div');
+  overlay.id='paywallOverlay';
+  overlay.className='paywall-overlay';
+  overlay.addEventListener('click',function(e){if(e.target===overlay)dismissPaywall()});
+  var card=document.createElement('div');
+  card.className='paywall-mini';
+  card.innerHTML='<div class="paywall-badge"><span class="paywall-badge-dot"></span>'+tt('creditsPause','Credits depleted')+'</div>'
+    +'<div class="paywall-clap">\uD83C\uDFAC</div>'
+    +'<h2 class="paywall-title">'+tt('creditsDepletedTitle','Top up to continue')+'</h2>'
+    +'<p class="paywall-copy">'+tt('creditsDepletedSub','Your credit balance is empty. Add credits to keep using premium AI voices.')+'</p>'
+    +'<div class="paywall-actions">'
+    +'<button class="paywall-primary" onclick="openTopupModal(\'pack_5\')">$5</button>'
+    +'<button class="paywall-primary" onclick="openTopupModal(\'pack_10\')">$10</button>'
+    +'<button class="paywall-primary" onclick="openTopupModal(\'pack_25\')">$25</button>'
+    +'<button class="paywall-secondary" onclick="dismissPaywall()">'+tt('paywallQuitBtn','Later')+'</button>'
+    +'</div>';
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+}
+function showVisitorSignupPrompt(){
+  cancelSpeechFlow();
+  dismissPaywall();
+  var overlay=document.createElement('div');
+  overlay.id='paywallOverlay';
+  overlay.className='paywall-overlay';
+  overlay.addEventListener('click',function(e){if(e.target===overlay)dismissPaywall()});
+  var card=document.createElement('div');
+  card.className='paywall-mini';
+  card.innerHTML='<div class="paywall-badge"><span class="paywall-badge-dot"></span>'+tt('freeTrialOver','Free preview ended')+'</div>'
+    +'<div class="paywall-clap">\uD83C\uDFAC</div>'
+    +'<h2 class="paywall-title">'+tt('signupForCreditsTitle','Sign up free')+'</h2>'
+    +'<p class="paywall-copy">'+tt('signupForCreditsSub','Create a free account and get $1.50 credit to rehearse with premium AI voices.')+'</p>'
+    +'<div class="paywall-actions">'
+    +'<button class="paywall-primary" onclick="dismissPaywall();openAuthModal()">'+tt('signupBtn','Sign up free')+'</button>'
+    +'<button class="paywall-secondary" onclick="dismissPaywall()">'+tt('paywallQuitBtn','Later')+'</button>'
+    +'</div>';
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+}
+async function openTopupModal(packId){
+  dismissPaywall();
+  showToast(t('redirectingToPayment'),3000);
+  try{
+    var rsp=await fetch('/api/credits/topup',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({pack:packId})});
+    var data=await rsp.json().catch(function(){return null});
+    if(data&&data.ok&&data.checkoutUrl){
+      window.location.href=data.checkoutUrl;
+    }else{
+      showToast((data&&data.error)||'Payment error',3000);
+    }
+  }catch(e){showToast('Payment error',3000)}
+}
+async function refreshCreditBalance(){
+  try{
+    var rsp=await fetch('/api/credits/balance',{credentials:'same-origin'});
+    var data=await rsp.json().catch(function(){return null});
+    if(data&&data.ok){
+      cwServerSession.creditBalance=data.balance_cents||0;
+      updateCreditBadge();
+      var balEl=document.getElementById('profileBalanceAmount');
+      if(balEl)balEl.textContent='$'+((cwServerSession.creditBalance||0)/100).toFixed(2);
+    }
+  }catch(e){}
+}
+async function loadUsageHistory(){
+  try{
+    var rsp=await fetch('/api/credits/balance',{credentials:'same-origin'});
+    var data=await rsp.json().catch(function(){return null});
+    if(!data||!data.ok)return;
+    var list=document.getElementById('profileUsageList');
+    if(!list)return;
+    var txs=data.transactions||[];
+    if(!txs.length){list.innerHTML='<div style="color:#9CA3AF;padding:8px 0">No activity yet</div>';return}
+    list.innerHTML=txs.map(function(tx){
+      var sign=tx.amount_cents>=0?'+':'';
+      var color=tx.amount_cents>=0?'#2D6A4F':'#D96F6F';
+      var date=new Date(tx.created_at+'Z').toLocaleDateString();
+      return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #eee">'
+        +'<span style="color:#4B5563">'+(tx.description||tx.type)+'</span>'
+        +'<span style="color:'+color+';font-weight:600">'+sign+'$'+(Math.abs(tx.amount_cents)/100).toFixed(2)+'</span>'
+        +'</div>';
+    }).join('');
+  }catch(e){}
 }
 function showPartnerGate(){
   const overlay=document.createElement('div');
@@ -1367,7 +1477,7 @@ async function fetchServerSession(){
     const data=await rsp.json().catch(()=>null);
     console.info('[session]',JSON.stringify(data));
     if(!data||!data.ok)return;
-    cwServerSession={email:data.email||null,isAdmin:!!data.isAdmin,plan:data.plan||'visitor',creditsRemaining:data.creditsRemaining};
+    cwServerSession={email:data.email||null,isAdmin:!!data.isAdmin,plan:data.plan||'visitor',creditsRemaining:data.creditsRemaining,creditBalance:data.creditBalance||0};
     applyServerSessionUI();
   }catch(e){console.warn('[session] fetch failed',e);}
 }
@@ -1387,16 +1497,6 @@ function applyServerSessionUI(){
     if(admPlan)admPlan.style.display='block';
     if(admLink)admLink.style.display='block';
     syncAdminPlanSelect();
-  }else if(cwServerSession.plan==='tester'){
-    badge.className='cw-session-badge cw-badge-tester';
-    badge.textContent='TESTER · '+cwServerSession.creditsRemaining;
-    badge.style.display='';
-    badge.style.cursor='default';
-    badge.onclick=null;
-    if(burger)burger.style.display='none';
-    if(admPlan)admPlan.style.display='none';
-    if(admLink)admLink.style.display='none';
-    closeBurgerDrawer();
   }else{
     badge.style.display='none';
     if(burger)burger.style.display='none';
@@ -1404,6 +1504,7 @@ function applyServerSessionUI(){
     if(admLink)admLink.style.display='none';
     closeBurgerDrawer();
   }
+  updateCreditBadge();
 }
 function syncAdminPlanSelect(){
   const sel=document.getElementById('cwAdminPlanSelect');
@@ -1981,6 +2082,19 @@ const UI_FALLBACK_TRANSLATIONS={
   paywallAlreadyPaid:{fr:'J\'ai déjà payé',en:'I already paid',es:'Ya pagué',it:'Ho già pagato',zh:'我已经付款',ko:'이미 결제했습니다',ja:'すでに支払い済み',ar:'لقد دفعت بالفعل',de:'Ich habe bereits bezahlt',pt:'Já paguei',hi:'मैंने पहले ही भुगतान किया',tr:'Zaten ödedim',ru:'Я уже оплатил'},
   clapPastedText:{fr:'Texte collé',en:'Pasted text',es:'Texto pegado',it:'Testo incollato',zh:'粘贴文本',ko:'붙여넣은 텍스트',ja:'貼り付けテキスト',ar:'نص ملصق',de:'Eingefügter Text',pt:'Texto colado',hi:'चिपकाया गया टेक्स्ट',tr:'Yapıştırılan metin',ru:'Вставленный текст'},
   paywallQuitBtn:{fr:'Plus tard',en:'Later',es:'Más tarde',it:'Più tardi',zh:'稍后',ko:'나중에',ja:'後で',ar:'لاحقًا',de:'Später',pt:'Mais tarde',hi:'बाद में',tr:'Daha sonra',ru:'Позже'},
+  creditBalance:{fr:'Solde crédits',en:'Credit Balance',es:'Saldo de créditos',it:'Saldo crediti',zh:'积分余额',ko:'크레딧 잔액',ja:'クレジット残高',ar:'رصيد الاعتمادات',de:'Guthaben',pt:'Saldo de créditos',hi:'क्रेडिट बैलेंस',tr:'Kredi bakiyesi',ru:'Баланс кредитов'},
+  recentActivity:{fr:'Activité récente',en:'Recent activity',es:'Actividad reciente',it:'Attività recente',zh:'最近活动',ko:'최근 활동',ja:'最近のアクティビティ',ar:'النشاط الأخير',de:'Letzte Aktivität',pt:'Atividade recente',hi:'हाल की गतिविधि',tr:'Son aktivite',ru:'Последние действия'},
+  creditsPause:{fr:'Crédits épuisés',en:'Credits depleted',es:'Créditos agotados',it:'Crediti esauriti',zh:'积分已用完',ko:'크레딧 소진',ja:'クレジット不足',ar:'الاعتمادات نفدت',de:'Guthaben aufgebraucht',pt:'Créditos esgotados',hi:'क्रेडिट समाप्त',tr:'Krediler tükendi',ru:'Кредиты исчерпаны'},
+  creditsDepletedTitle:{fr:'Recharge pour continuer',en:'Top up to continue',es:'Recarga para continuar',it:'Ricarica per continuare',zh:'充值以继续',ko:'충전하여 계속',ja:'続けるにはチャージ',ar:'أعد الشحن للمتابعة',de:'Aufladen um fortzufahren',pt:'Recarregue para continuar',hi:'जारी रखने के लिए टॉप-अप करें',tr:'Devam etmek için yükleyin',ru:'Пополните для продолжения'},
+  creditsDepletedSub:{fr:'Ton solde est vide. Ajoute des crédits pour les voix IA premium.',en:'Your credit balance is empty. Add credits to keep using premium AI voices.',es:'Tu saldo está vacío. Agrega créditos para seguir usando voces IA premium.',it:'Il tuo saldo è vuoto. Aggiungi crediti per continuare con le voci IA premium.',zh:'余额为空。充值以继续使用高级AI语音。',ko:'잔액이 비었습니다. 프리미엄 AI 음성을 계속 사용하려면 충전하세요.',ja:'残高がありません。プレミアムAI音声を使い続けるにはチャージしてください。',ar:'رصيدك فارغ. أضف رصيدًا لمواصلة استخدام الأصوات المميزة.',de:'Dein Guthaben ist leer. Lade auf, um Premium-KI-Stimmen weiter zu nutzen.',pt:'Seu saldo está vazio. Adicione créditos para continuar usando vozes IA premium.',hi:'आपका बैलेंस खाली है। प्रीमियम AI आवाज़ जारी रखने के लिए टॉप-अप करें।',tr:'Bakiyeniz boş. Premium AI sesleri kullanmaya devam etmek için yükleyin.',ru:'Ваш баланс пуст. Пополните для продолжения использования голосов ИИ.'},
+  freeTrialOver:{fr:'Aperçu terminé',en:'Free preview ended',es:'Vista previa terminada',it:'Anteprima terminata',zh:'免费预览结束',ko:'무료 미리보기 종료',ja:'無料プレビュー終了',ar:'انتهت المعاينة المجانية',de:'Vorschau beendet',pt:'Prévia gratuita encerrada',hi:'मुफ़्त प्रीव्यू समाप्त',tr:'Ücretsiz önizleme bitti',ru:'Бесплатный просмотр окончен'},
+  signupForCreditsTitle:{fr:'Inscris-toi gratuitement',en:'Sign up free',es:'Regístrate gratis',it:'Registrati gratis',zh:'免费注册',ko:'무료 가입',ja:'無料登録',ar:'سجّل مجانًا',de:'Kostenlos registrieren',pt:'Cadastre-se grátis',hi:'मुफ़्त साइन अप करें',tr:'Ücretsiz kaydol',ru:'Зарегистрируйтесь бесплатно'},
+  signupForCreditsSub:{fr:'Crée un compte gratuit et reçois $1.50 de crédit pour les voix IA premium.',en:'Create a free account and get $1.50 credit to rehearse with premium AI voices.',es:'Crea una cuenta gratis y obtén $1.50 de crédito para voces IA premium.',it:'Crea un account gratuito e ottieni $1.50 di credito per le voci IA premium.',zh:'创建免费账户，获得$1.50积分用于高级AI语音。',ko:'무료 계정을 만들고 프리미엄 AI 음성용 $1.50 크레딧을 받으세요.',ja:'無料アカウントを作成して、プレミアムAI音声用$1.50クレジットを取得。',ar:'أنشئ حسابًا مجانيًا واحصل على رصيد $1.50 للأصوات المميزة.',de:'Erstelle ein kostenloses Konto und erhalte $1.50 Guthaben für Premium-KI-Stimmen.',pt:'Crie uma conta grátis e ganhe $1.50 de crédito para vozes IA premium.',hi:'मुफ़्त अकाउंट बनाएं और प्रीमियम AI आवाज़ के लिए $1.50 क्रेडिट पाएं।',tr:'Ücretsiz hesap oluşturun ve premium AI sesleri için $1.50 kredi kazanın.',ru:'Создайте бесплатный аккаунт и получите кредит $1.50 для голосов ИИ.'},
+  signupBtn:{fr:'S\'inscrire gratuitement',en:'Sign up free',es:'Registrarse gratis',it:'Registrati gratis',zh:'免费注册',ko:'무료 가입',ja:'無料登録',ar:'تسجيل مجاني',de:'Kostenlos registrieren',pt:'Cadastrar grátis',hi:'मुफ़्त साइन अप',tr:'Ücretsiz kaydol',ru:'Зарегистрироваться бесплатно'},
+  redirectingToPayment:{fr:'Redirection vers le paiement…',en:'Redirecting to payment…',es:'Redirigiendo al pago…',it:'Reindirizzamento al pagamento…',zh:'正在跳转到支付…',ko:'결제로 리디렉션 중…',ja:'決済ページへリダイレクト中…',ar:'جارٍ التوجيه إلى الدفع…',de:'Weiterleitung zur Zahlung…',pt:'Redirecionando para pagamento…',hi:'भुगतान पर रीडायरेक्ट हो रहा है…',tr:'Ödemeye yönlendiriliyor…',ru:'Перенаправление на оплату…'},
+  paymentSuccess:{fr:'Paiement confirmé ! Crédits ajoutés.',en:'Payment confirmed! Credits added.',es:'¡Pago confirmado! Créditos añadidos.',it:'Pagamento confermato! Crediti aggiunti.',zh:'付款确认！积分已添加。',ko:'결제 확인! 크레딧 추가됨.',ja:'お支払い確認！クレジットが追加されました。',ar:'تم تأكيد الدفع! تمت إضافة الرصيد.',de:'Zahlung bestätigt! Guthaben aufgeladen.',pt:'Pagamento confirmado! Créditos adicionados.',hi:'भुगतान पुष्टि! क्रेडिट जोड़े गए।',tr:'Ödeme onaylandı! Krediler eklendi.',ru:'Оплата подтверждена! Кредиты добавлены.'},
+  paymentCancelled:{fr:'Paiement annulé.',en:'Payment cancelled.',es:'Pago cancelado.',it:'Pagamento annullato.',zh:'付款已取消。',ko:'결제 취소됨.',ja:'お支払いキャンセル。',ar:'تم إلغاء الدفع.',de:'Zahlung abgebrochen.',pt:'Pagamento cancelado.',hi:'भुगतान रद्द।',tr:'Ödeme iptal edildi.',ru:'Оплата отменена.'},
+  lowCredits:{fr:'Crédits bas',en:'Low credits',es:'Créditos bajos',it:'Crediti bassi',zh:'积分不足',ko:'크레딧 부족',ja:'クレジット残少',ar:'رصيد منخفض',de:'Niedriges Guthaben',pt:'Créditos baixos',hi:'कम क्रेडिट',tr:'Düşük kredi',ru:'Мало кредитов'},
   cameraDenied:{fr:'Caméra refusée — vérifie les permissions',en:'Camera denied — check permissions',es:'Cámara denegada',it:'Fotocamera negata',zh:'摄像头被拒绝',ko:'카메라 거부됨',ja:'カメラ拒否',ar:'الكاميرا مرفوضة',de:'Kamera verweigert',pt:'Câmera negada',hi:'कैमरा अस्वीकृत',tr:'Kamera reddedildi',ru:'Камера отклонена'},
   cameraUnavailable:{fr:'Caméra indisponible',en:'Camera unavailable',es:'Cámara no disponible',it:'Fotocamera non disponibile',zh:'摄像头不可用',ko:'카메라 사용 불가',ja:'カメラ利用不可',ar:'الكاميرا غير متاحة',de:'Kamera nicht verfügbar',pt:'Câmera indisponível',hi:'कैमरा अनुपलब्ध',tr:'Kamera kullanılamıyor',ru:'Камера недоступна'},
   micDenied:{fr:'Micro refusé — vérifie les permissions',en:'Mic denied — check permissions',es:'Micrófono denegado',it:'Microfono negato',zh:'麦克风被拒绝',ko:'마이크 거부됨',ja:'マイク拒否',ar:'الميكروفون مرفوض',de:'Mikro verweigert',pt:'Microfone negado',hi:'माइक अस्वीकृत',tr:'Mikrofon reddedildi',ru:'Микрофон отклонён'},
@@ -2381,17 +2495,17 @@ function openAuthModal(){
     if(titleEl)titleEl.textContent='Mon compte';
     const avatar=document.getElementById('authAvatar');
     const emailEl=document.getElementById('authLoggedEmail');
-    const planEl=document.getElementById('authLoggedPlan');
     if(avatar){avatar.textContent=emailInitials(userAccess.email);}
     if(emailEl)emailEl.textContent=userAccess.email;
-    if(planEl){
-      const tier=getUserTier();
-      const planLabels={visitor:'Visiteur',free:'Compte gratuit',payg:'Pay-as-you-go',pro:'Pro'};
-      let label=planLabels[tier]||tier;
-      if(cwServerSession.isAdmin)label='Admin';
-      if(cwServerSession.plan==='tester')label='Testeur ('+cwServerSession.creditsRemaining+' crédits)';
-      planEl.textContent=label;
-    }
+    // Populate credit balance and usage history
+    var balEl=document.getElementById('profileBalanceAmount');
+    if(balEl)balEl.textContent='$'+((cwServerSession.creditBalance||0)/100).toFixed(2);
+    var balLabel=document.getElementById('profileBalanceLabel');
+    if(balLabel)balLabel.textContent=tt('creditBalance','Credit Balance');
+    var usageLabel=document.getElementById('profileUsageLabel');
+    if(usageLabel)usageLabel.textContent=tt('recentActivity','Recent activity');
+    loadUsageHistory();
+    refreshCreditBalance();
   }else{
     if(loginView)loginView.style.display='block';
     if(accountView)accountView.style.display='none';
@@ -2405,7 +2519,7 @@ async function logoutUser(){
   userAccess={email:'',verified:false,provider:'',paid:false,usageMs:0,cooldownUntil:0,lastTick:0};
   persistAccess();
   saveUserData(createFreshUserData('figurant'));
-  cwServerSession={email:null,isAdmin:false,plan:'visitor',creditsRemaining:null};
+  cwServerSession={email:null,isAdmin:false,plan:'visitor',creditsRemaining:null,creditBalance:0};
   try{await fetch('/api/logout',{method:'POST',credentials:'same-origin'});}catch(e){}
   applyServerSessionUI();
   updateAuthMiniButton();
@@ -2918,14 +3032,16 @@ async function warmAudioForMobile(){
 async function speakWithElevenLabs(text,preset,token,cb){
   try{
     if(!preset||!preset.voiceId)throw new Error('Missing ElevenLabs voiceId');
-    if(!isServerAdmin()&&(!canUseElevenLabs()||getRemainingSessionMs()<=0)){
-      if(getRemainingSessionMs()<=0)showPaywallModal();
-      return false;
-    }
-    if(isServerTester()){
-      const cr=await serverConsumeCredit('tts_line',preset.voiceId);
-      if(!cr.ok&&cr.error==='NO_CREDITS'){
-        showToast('Credits épuisés',3000);
+    if(!isServerAdmin()){
+      if(!cwServerSession.email){
+        // Visitor: check free lines
+        var usedLines=parseInt(localStorage.getItem('cw_free_lines')||'0');
+        if(usedLines>=2){
+          showVisitorSignupPrompt();
+          return false;
+        }
+      }else if((cwServerSession.creditBalance||0)<=0){
+        showCreditDepletedModal();
         return false;
       }
     }
@@ -2951,6 +3067,20 @@ async function speakWithElevenLabs(text,preset,token,cb){
       if(rsp.ok){
         blob=await rsp.blob();
         usedFallback=i>0;
+        // Update credit balance from response header
+        var newBal=rsp.headers.get('X-Credits-Balance');
+        if(newBal!==null){
+          cwServerSession.creditBalance=parseInt(newBal)||0;
+          updateCreditBadge();
+          if(cwServerSession.creditBalance>0&&cwServerSession.creditBalance<=100){
+            showToast(t('lowCredits')+': $'+(cwServerSession.creditBalance/100).toFixed(2),3000);
+          }
+        }
+        // Track free lines for visitors
+        if(!cwServerSession.email){
+          var fl=parseInt(localStorage.getItem('cw_free_lines')||'0');
+          localStorage.setItem('cw_free_lines',String(fl+1));
+        }
         if(rsp.headers.get('X-Used-Fallback')==='true'){
           console.info('[TTS] Fallback voice used:',rsp.headers.get('X-Fallback-Voice'));
         }
@@ -2965,8 +3095,10 @@ async function speakWithElevenLabs(text,preset,token,cb){
         err=[headline,detail].filter(Boolean).join(' · ');
       }catch(e){}
       lastErr='HTTP '+rsp.status+(err?' · '+err:'');
-      if(errorPayload&&errorPayload.error==='NO_CREDITS'){
-        showToast('Credits épuisés',3000);
+      if(errorPayload&&(errorPayload.error==='NO_CREDITS'||errorPayload.error==='INSUFFICIENT_CREDITS')){
+        if(errorPayload.balance_cents!==undefined)cwServerSession.creditBalance=errorPayload.balance_cents;
+        updateCreditBadge();
+        showCreditDepletedModal();
         return false;
       }
       if(errorPayload&&errorPayload.error==='VOICE_UNAVAILABLE'){
@@ -5741,6 +5873,13 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   initCardTilt();
   await fetchServerSession();
   if(isServerAdmin()){dismissPaywall();closePaywallModal();}
+  // Handle Stripe payment return
+  var paymentParam=new URLSearchParams(window.location.search).get('payment');
+  if(paymentParam==='success'){
+    setTimeout(async function(){await refreshCreditBalance();showToast(tt('paymentSuccess','Payment confirmed! Credits added.'),5000);history.replaceState({},'','/');},1500);
+  }else if(paymentParam==='cancel'){
+    showToast(tt('paymentCancelled','Payment cancelled.'),3000);history.replaceState({},'','/');
+  }
   startUsageTracking();
   redeemInviteFromURL();
   const joinedFromURL=applyJoinCodeFromURL();

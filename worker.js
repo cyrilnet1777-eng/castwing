@@ -118,6 +118,158 @@ async function resolveCurrentUser(request, env) {
 }
 
 /* =========================================================
+   CREDIT SYSTEM — Pricing & Helpers
+========================================================= */
+
+const CREDIT_PRICING = {
+  TTS_COST_PER_1K_CHARS_CENTS: 30,   // $0.30/1K chars (3x ElevenLabs cost)
+  FREE_SIGNUP_GRANT_CENTS: 150,       // $1.50 free credit on signup
+};
+
+const STRIPE_PACKS = {
+  pack_5:  { amount_cents: 500,  label: "$5 credit pack" },
+  pack_10: { amount_cents: 1000, label: "$10 credit pack" },
+  pack_25: { amount_cents: 2500, label: "$25 credit pack" },
+};
+
+async function getCreditBalance(db, email) {
+  if (!db || !email) return { balance_cents: 0 };
+  try {
+    const result = await db.prepare(
+      "SELECT COALESCE(SUM(amount_cents), 0) as balance FROM credit_transactions WHERE lower(email) = ?"
+    ).bind(email.toLowerCase()).first();
+    return { balance_cents: result ? result.balance : 0 };
+  } catch (e) { return { balance_cents: 0 }; }
+}
+
+async function handleCreditsBalance(request, env) {
+  const email = await resolveCurrentUser(request, env);
+  if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
+  const { balance_cents } = await getCreditBalance(env.DB, email);
+  let transactions = [];
+  if (env.DB) {
+    try {
+      const recent = await env.DB.prepare(
+        `SELECT id, amount_cents, type, description, char_count, created_at
+         FROM credit_transactions WHERE lower(email) = ?
+         ORDER BY created_at DESC LIMIT 20`
+      ).bind(email.toLowerCase()).all();
+      transactions = recent.results || [];
+    } catch (e) { /* table may not exist yet */ }
+  }
+  return json({
+    ok: true,
+    balance_cents,
+    balance_display: "$" + (balance_cents / 100).toFixed(2),
+    transactions,
+  });
+}
+
+/* =========================================================
+   STRIPE INTEGRATION
+========================================================= */
+
+async function verifyStripeSignature(payload, sigHeader, secret) {
+  try {
+    const parts = {};
+    for (const item of sigHeader.split(",")) {
+      const eq = item.indexOf("=");
+      if (eq > 0) parts[item.slice(0, eq).trim()] = item.slice(eq + 1);
+    }
+    const timestamp = parts.t;
+    const sig = parts.v1;
+    if (!timestamp || !sig) return false;
+    if (Math.abs(Date.now() / 1000 - parseInt(timestamp)) > 300) return false;
+    const signedPayload = timestamp + "." + payload;
+    const key = await crypto.subtle.importKey(
+      "raw", new TextEncoder().encode(secret),
+      { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    );
+    const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(signedPayload));
+    const expected = Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, "0")).join("");
+    return expected === sig;
+  } catch (e) { return false; }
+}
+
+async function handleCreditsTopup(request, env) {
+  const email = await resolveCurrentUser(request, env);
+  if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
+  const stripeKey = String(env.STRIPE_SECRET_KEY || "").trim();
+  if (!stripeKey) return json({ ok: false, error: "STRIPE_NOT_CONFIGURED" }, 500);
+  const payload = await request.json().catch(() => ({}));
+  const packId = String(payload.pack || "").trim();
+  const pack = STRIPE_PACKS[packId];
+  if (!pack) return json({ ok: false, error: "INVALID_PACK", valid: Object.keys(STRIPE_PACKS) }, 400);
+
+  const origin = new URL(request.url).origin;
+  const params = new URLSearchParams();
+  params.append("mode", "payment");
+  params.append("customer_email", email);
+  params.append("line_items[0][price_data][currency]", "usd");
+  params.append("line_items[0][price_data][product_data][name]", pack.label);
+  params.append("line_items[0][price_data][unit_amount]", String(pack.amount_cents));
+  params.append("line_items[0][quantity]", "1");
+  params.append("success_url", origin + "/?payment=success");
+  params.append("cancel_url", origin + "/?payment=cancel");
+  params.append("metadata[email]", email);
+  params.append("metadata[pack]", packId);
+  params.append("metadata[amount_cents]", String(pack.amount_cents));
+
+  const rsp = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + stripeKey,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: params.toString(),
+  });
+  const session = await rsp.json().catch(() => ({}));
+  if (!rsp.ok) return json({ ok: false, error: "STRIPE_ERROR", detail: (session.error && session.error.message) || "" }, 502);
+  return json({ ok: true, checkoutUrl: session.url, sessionId: session.id });
+}
+
+async function handleStripeWebhook(request, env) {
+  const webhookSecret = String(env.STRIPE_WEBHOOK_SECRET || "").trim();
+  if (!webhookSecret) return json({ error: "Not configured" }, 500);
+  const body = await request.text();
+  const sig = request.headers.get("stripe-signature") || "";
+  const verified = await verifyStripeSignature(body, sig, webhookSecret);
+  if (!verified) return json({ error: "Invalid signature" }, 400);
+
+  const event = JSON.parse(body);
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+    const email = ((session.metadata && session.metadata.email) || session.customer_email || "").toLowerCase();
+    const packId = (session.metadata && session.metadata.pack) || "";
+    const amountCents = parseInt((session.metadata && session.metadata.amount_cents) || "0") || 0;
+    if (!email || !amountCents || !env.DB) return json({ ok: true, skipped: "missing_data" });
+
+    // Idempotency check
+    try {
+      const existing = await env.DB.prepare(
+        "SELECT id FROM credit_transactions WHERE stripe_session_id = ?"
+      ).bind(session.id).first();
+      if (existing) return json({ ok: true, skipped: "already_processed" });
+    } catch (e) { /* table might not exist yet */ }
+
+    const pack = STRIPE_PACKS[packId];
+    try {
+      await env.DB.prepare(
+        `INSERT INTO credit_transactions (id, email, amount_cents, type, description, stripe_session_id, created_at)
+         VALUES (?, ?, ?, 'topup', ?, ?, datetime('now'))`
+      ).bind(
+        generateId("ctx"), email, amountCents,
+        pack ? pack.label : "$" + (amountCents / 100).toFixed(2) + " credit pack",
+        session.id
+      ).run();
+    } catch (e) { console.error("stripe webhook insert:", e); }
+
+    await logUsageEvent(env.DB, { email, eventType: "credit_topup", meta: { packId, amountCents, sessionId: session.id } });
+  }
+  return json({ ok: true });
+}
+
+/* =========================================================
    SESSION STATE
 ========================================================= */
 
@@ -139,12 +291,20 @@ async function getSessionState(request, env) {
         const expired = redemption.expires_at && new Date(redemption.expires_at) < new Date();
         if (!expired) {
           const remaining = Math.max(0, (redemption.credits_granted || 0) - (redemption.credits_used || 0));
-          return { email, isAdmin: false, plan: "tester", creditsRemaining: remaining, inviteLabel: redemption.label, expiresAt: redemption.expires_at };
+          let creditBalance = 0;
+          try { creditBalance = (await getCreditBalance(env.DB, email)).balance_cents; } catch (e) {}
+          return { email, isAdmin: false, plan: "tester", creditsRemaining: remaining, inviteLabel: redemption.label, expiresAt: redemption.expires_at, creditBalance };
         }
       }
     } catch (e) { /* DB not ready yet */ }
   }
-  return { email, isAdmin: false, plan: "free", creditsRemaining: null };
+  // Get credit balance for authenticated users
+  let creditBalance = 0;
+  try {
+    const { balance_cents } = await getCreditBalance(env.DB, email);
+    creditBalance = balance_cents;
+  } catch (e) { /* ignore */ }
+  return { email, isAdmin: false, plan: "free", creditsRemaining: null, creditBalance };
 }
 
 async function logUsageEvent(db, event) {
@@ -193,6 +353,23 @@ async function handleTTS(request, env) {
 
     if (!text || !voiceId) return json({ ok: false, error: "INVALID_REQUEST", message: "Missing text or voiceId" }, 400);
 
+    // Credit metering
+    const email = await resolveCurrentUser(request, env);
+    const isAdmin = email && isAdminEmail(email, env);
+    const charCount = text.length;
+    const costCents = Math.max(1, Math.ceil((charCount / 1000) * CREDIT_PRICING.TTS_COST_PER_1K_CHARS_CENTS));
+
+    // Authenticated users must have credits (visitors get 2 free lines client-side)
+    if (!isAdmin && email && env.DB) {
+      const { balance_cents } = await getCreditBalance(env.DB, email);
+      if (balance_cents < costCents) {
+        return json({
+          ok: false, error: "INSUFFICIENT_CREDITS",
+          balance_cents, cost_cents: costCents, char_count: charCount,
+        }, 402);
+      }
+    }
+
     const emotionMap = {
       neutral: { stability: 0.58, similarity_boost: 0.74, style: 0.28, use_speaker_boost: true },
       excited: { stability: 0.18, similarity_boost: 0.82, style: 0.95, use_speaker_boost: true },
@@ -238,6 +415,17 @@ async function handleTTS(request, env) {
           );
 
           if (response.ok) {
+            // Deduct credits after successful TTS
+            let newBalance = null;
+            if (!isAdmin && email && env.DB) {
+              try {
+                await env.DB.prepare(
+                  `INSERT INTO credit_transactions (id, email, amount_cents, type, description, char_count, created_at)
+                   VALUES (?, ?, ?, 'tts_debit', ?, ?, datetime('now'))`
+                ).bind(generateId("ctx"), email.toLowerCase(), -costCents, "TTS " + charCount + " chars", charCount).run();
+                newBalance = (await getCreditBalance(env.DB, email)).balance_cents;
+              } catch (e) { console.error("credit deduct:", e); }
+            }
             const headers = {
               "Content-Type": "audio/mpeg",
               "Cache-Control": "no-store",
@@ -245,6 +433,7 @@ async function handleTTS(request, env) {
               "X-Elevenlabs-Language": candidateLang || "default",
               "X-Elevenlabs-Voice": candidateVoice,
             };
+            if (newBalance !== null) headers["X-Credits-Balance"] = String(newBalance);
             if (candidateVoice !== voiceId) {
               headers["X-Used-Fallback"] = "true";
               headers["X-Fallback-Voice"] = candidateVoice;
@@ -559,6 +748,13 @@ async function upsertAuthUserRecord(env, email) {
     console.error("upsertAuthUser insert:", e);
     return { isNewUser: null, userId: null, tier: null };
   }
+  // Grant free signup credits
+  try {
+    await env.DB.prepare(
+      `INSERT INTO credit_transactions (id, email, amount_cents, type, description, created_at)
+       VALUES (?, ?, ?, 'free_grant', 'Welcome bonus', datetime('now'))`
+    ).bind(generateId("ctx"), email, CREDIT_PRICING.FREE_SIGNUP_GRANT_CENTS).run();
+  } catch (e) { /* best effort */ }
   return { isNewUser: true, userId, tier: "audition" };
 }
 
@@ -1590,6 +1786,7 @@ async function ensureD1Tables(db) {
       `CREATE TABLE IF NOT EXISTS invites (id TEXT PRIMARY KEY, token_hash TEXT NOT NULL UNIQUE, label TEXT, email_restriction TEXT, credits_granted INTEGER NOT NULL DEFAULT 0, expires_at TEXT, revoked INTEGER DEFAULT 0, created_by TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)`,
       `CREATE TABLE IF NOT EXISTS invite_redemptions (id TEXT PRIMARY KEY, invite_id TEXT NOT NULL, email TEXT, credits_used INTEGER DEFAULT 0, redeemed_at TEXT DEFAULT CURRENT_TIMESTAMP, last_used_at TEXT, FOREIGN KEY (invite_id) REFERENCES invites(id))`,
       `CREATE TABLE IF NOT EXISTS usage_events (id TEXT PRIMARY KEY, email TEXT, invite_id TEXT, event_type TEXT NOT NULL, meta_json TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)`,
+      `CREATE TABLE IF NOT EXISTS credit_transactions (id TEXT PRIMARY KEY, email TEXT NOT NULL, amount_cents INTEGER NOT NULL, type TEXT NOT NULL, description TEXT, stripe_session_id TEXT, char_count INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP)`,
     ];
     for (const sql of statements) {
       try { await db.prepare(sql).run(); } catch (ee) { /* ignore */ }
@@ -1828,12 +2025,15 @@ export default {
       return json({ ok: true }, 200, { "Set-Cookie": `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0` });
     }
     if (url.pathname === "/api/credits/consume" && request.method === "POST") return handleCreditsConsume(request, env);
+    if (url.pathname === "/api/credits/balance" && request.method === "GET") return handleCreditsBalance(request, env);
+    if (url.pathname === "/api/credits/topup" && request.method === "POST") return handleCreditsTopup(request, env);
+    if (url.pathname === "/api/stripe-webhook" && request.method === "POST") return handleStripeWebhook(request, env);
     if (url.pathname === "/api/invite/redeem" && request.method === "POST") return handleRedeemInvite(request, env);
     if (url.pathname === "/api/admin/create-invite" && request.method === "POST") return handleCreateInvite(request, env);
     if (url.pathname === "/api/admin/list-invites" && request.method === "GET") return handleListInvites(request, env);
     if (url.pathname === "/api/admin/revoke-invite" && request.method === "POST") return handleRevokeInvite(request, env);
 
-    const apiPaths = ["/api/tts", "/api/claude-parse-script", "/api/label-script", "/api/parse-screenplay", "/api/parse-script", "/api/validate-characters", "/api/classify-lines", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/consume", "/api/invite/redeem", "/api/admin/"];
+    const apiPaths = ["/api/tts", "/api/claude-parse-script", "/api/label-script", "/api/parse-screenplay", "/api/parse-script", "/api/validate-characters", "/api/classify-lines", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/", "/api/stripe-webhook", "/api/invite/redeem", "/api/admin/"];
     if (apiPaths.some(p => url.pathname.startsWith(p))) {
       return json({ error: "Method not allowed" }, 405);
     }
