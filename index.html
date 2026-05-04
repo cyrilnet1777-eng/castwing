@@ -168,7 +168,11 @@ input[type="file"]{display:none}
 
 /* SESSION */
 #session{padding:0;position:relative;background:#111;color:#fff}
-.session-top{display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem;background:#1a1a1a;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;position:relative;z-index:60}
+.session-top{display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem;background:#1a1a1a;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;position:fixed;top:0;left:0;right:0;z-index:60}
+.ps-toggle{position:relative;width:42px;height:24px;background:rgba(200,200,200,.3);border-radius:12px;border:none;cursor:pointer;transition:background .2s;flex-shrink:0}
+.ps-toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .2s}
+.ps-toggle.on{background:#52B788}
+.ps-toggle.on::after{transform:translateX(18px)}
 .session-top .status{display:flex;align-items:center;gap:.4rem;font-size:.75rem;font-weight:700}
 .status-dot{width:8px;height:8px;border-radius:50%;background:var(--success);animation:blink 2s ease infinite}
 .status-dot.waiting{background:var(--warning)}.status-dot.disconnected{background:var(--danger);animation:none}
@@ -336,7 +340,7 @@ input[type="file"]{display:none}
 .session-top .back-btn{left:16px!important;right:auto!important}
 .setup-header{padding-left:52px!important}
 }
-@media(min-width:768px){#home{padding:3rem}.home-inner{max-width:520px}.logo h1{font-size:3.2rem}.session-body{flex-direction:row}.video-area{position:fixed;top:0;left:0;width:60%;height:100vh;z-index:50}.prompter-area{margin-top:0;margin-left:60%;flex:1;max-height:none;border-top:none;border-left:1px solid rgba(255,255,255,.06);padding-bottom:5rem}.session-bottom{left:60%}}
+@media(min-width:768px){#home{padding:3rem}.home-inner{max-width:520px}.logo h1{font-size:3.2rem}.session-body{flex-direction:row}.video-area{position:fixed;top:0;left:0;width:60%;height:100vh;z-index:50}.prompter-area{margin-top:2.5rem;margin-left:60%;flex:1;max-height:none;border-top:none;border-left:1px solid rgba(255,255,255,.06);padding-bottom:5rem}.session-top{left:60%}.session-bottom{left:60%}}
 .clap-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;z-index:10001;animation:clapIn .3s ease}
 .clap-card{background:linear-gradient(180deg,#2a2a2a,#161616);border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:0;width:280px;max-width:90%;font-family:'DM Sans',sans-serif;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06);position:relative}
 .clap-card::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 40%);border-radius:12px}
@@ -2453,7 +2457,7 @@ function persistSettings(){
     voiceLocale:selectedLocale,
     voiceId:realVoice?realVoice.id:'',
     emotion:selectedEmotion,
-    speedValue:Math.min(voiceSpeed,1.5),
+    speedValue:voiceSpeed,
     mode,
   };
   try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(payload));}catch(e){}
@@ -3154,6 +3158,23 @@ async function speakWithElevenLabs(text,preset,token,cb){
       else showToast(t('toastVoiceFallback'),2500);
     }
     if(token!==activeSpeechToken){return}
+    // If recording, decode and play via AudioContext (captures into recording)
+    if(isRecording&&_recAudioCtx&&_recDest){
+      try{
+        var arrayBuf=await blob.arrayBuffer();
+        var audioBuffer=await _recAudioCtx.decodeAudioData(arrayBuf);
+        var recDone=function(){if(token===activeSpeechToken&&cb)cb();lastTTSEndTs=Date.now()};
+        var src=_recAudioCtx.createBufferSource();
+        src.buffer=audioBuffer;
+        src.connect(_recDest);
+        src.connect(_recAudioCtx.destination);
+        src.onended=recDone;
+        src.start(0);
+        ttsAudio={stop:function(){try{src.stop()}catch(e){}}};
+        return true;
+      }catch(e){console.warn('[TTS] AudioContext decode failed, falling back to element:',e.message)}
+    }
+    // Normal playback via audio element
     const url=URL.createObjectURL(blob);
     const audio=document.getElementById('ttsAudioEl');
     if(!audio){URL.revokeObjectURL(url);return false}
@@ -3164,7 +3185,7 @@ async function speakWithElevenLabs(text,preset,token,cb){
     const emo=getEmotionSettings();
     const emoRate=Number(emo&&emo.playbackRate)||1;
     audio.playbackRate=Math.max(0.58,Math.min(1.9,(speed||1)*emoRate));
-    if(!audio._recMuted)audio.volume=selectedEmotion==='whisper'?0.55:selectedEmotion==='sad'?0.9:1;
+    audio.volume=selectedEmotion==='whisper'?0.55:selectedEmotion==='sad'?0.9:1;
     ttsAudio=audio;
     const done=()=>{URL.revokeObjectURL(url);if(audio._revokeUrl===url)audio._revokeUrl=null;if(token===activeSpeechToken&&cb)cb();lastTTSEndTs=Date.now();};
     audio.onended=done;
@@ -5550,36 +5571,38 @@ function setPauseSpeed(v){setVoiceSpeed(v,false)}
 
 // ── Recording ──
 function toggleRecording(){if(isRecording)stopRecording();else startRecording()}
-var _recAudioCtx=null,_recDest=null;
+var _recAudioCtx=null,_recDest=null,_recMicSource=null;
 function _buildRecordingStream(){
   var combined=new MediaStream();
   if(localStream)localStream.getVideoTracks().forEach(function(t){combined.addTrack(t)});
   try{
     _recAudioCtx=new (window.AudioContext||window.webkitAudioContext)();
     _recDest=_recAudioCtx.createMediaStreamDestination();
+    // Mic audio
     if(localStream&&localStream.getAudioTracks().length>0){
-      var micSource=_recAudioCtx.createMediaStreamSource(localStream);
-      micSource.connect(_recDest);
+      _recMicSource=_recAudioCtx.createMediaStreamSource(localStream);
+      _recMicSource.connect(_recDest);
     }
-    // AI audio: use captureStream + route to both recording AND speakers
-    var ttsEl=document.getElementById('ttsAudioEl');
-    var ttsStream=null;
-    if(ttsEl&&ttsEl.captureStream)ttsStream=ttsEl.captureStream();
-    else if(ttsEl&&ttsEl.mozCaptureStream)ttsStream=ttsEl.mozCaptureStream();
-    if(ttsStream&&ttsStream.getAudioTracks().length>0){
-      var ttsSource=_recAudioCtx.createMediaStreamSource(ttsStream);
-      ttsSource.connect(_recDest);
-      ttsSource.connect(_recAudioCtx.destination); // keep playing through speakers
-      // Mute the original element to avoid double audio
-      ttsEl.volume=0;
-      ttsEl._recMuted=true;
-    }
+    // AI audio will be fed via playTtsIntoRecording() each time TTS plays
     _recDest.stream.getAudioTracks().forEach(function(t){combined.addTrack(t)});
   }catch(e){
     console.warn('[rec] audio mix failed, mic only:',e.message);
     if(localStream)localStream.getAudioTracks().forEach(function(t){combined.addTrack(t)});
   }
   return combined;
+}
+function playTtsIntoRecording(audioBuffer){
+  // Play decoded audio into the recording mix via AudioContext
+  if(!_recAudioCtx||!_recDest)return;
+  try{
+    var src=_recAudioCtx.createBufferSource();
+    src.buffer=audioBuffer;
+    src.connect(_recDest);
+    src.connect(_recAudioCtx.destination); // also play through speakers
+    src.start(0);
+    return src;
+  }catch(e){console.warn('[rec] playTtsIntoRecording error:',e.message)}
+  return null;
 }
 function startRecording(){
   if(!canRecord()){showToast(t('partnerGateTitle'));openAuthModal();return}
@@ -5596,7 +5619,7 @@ function startRecording(){
   mediaRecorder.start(1000);isRecording=true;document.getElementById('btnRec').classList.add('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='block';showToast('Recording…')}
   catch(e){showToast('Recording error')}
 }
-function stopRecording(){if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();var ttsEl=document.getElementById('ttsAudioEl');if(ttsEl&&ttsEl._recMuted){ttsEl.volume=1;ttsEl._recMuted=false}if(_recAudioCtx){try{_recAudioCtx.close()}catch(e){}_recAudioCtx=null}_recDest=null;isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='none'}
+function stopRecording(){if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();if(_recAudioCtx){try{_recAudioCtx.close()}catch(e){}_recAudioCtx=null}_recDest=null;_recMicSource=null;isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='none'}
 
 // ── WebRTC ──
 function createPeer(id){return new Peer(id,{config:{iceServers:ICE_SERVERS}})}
@@ -5894,7 +5917,11 @@ document.addEventListener('DOMContentLoaded',async ()=>{
     if(saved.voiceLocale&&VOICE_LOCALES.some(l=>l.id===saved.voiceLocale))selectedLocale=saved.voiceLocale;
     if(saved.emotion&&EMOTION_PRESETS[saved.emotion])selectedEmotion=saved.emotion;
     if(Number.isFinite(Number(saved.speedValue))){
-      voiceSpeed=Math.max(SPEED_MIN,Math.min(SPEED_MAX,Number(saved.speedValue)));
+      var sv=Number(saved.speedValue);
+      // Migrate old ElevenLabs speed (0.5-2.0) to new slider scale (0-5)
+      if(sv>=0.5&&sv<=2.0&&sv!==Math.round(sv*2)/2)sv=((sv-0.5)/1.5)*5;
+      else if(sv<0.5||sv>5)sv=SPEED_DEFAULT;
+      voiceSpeed=Math.max(SPEED_MIN,Math.min(SPEED_MAX,sv));
     }else voiceSpeed=SPEED_DEFAULT;
     if(saved.mode&&['ai','manual','auto'].includes(saved.mode))mode=saved.mode;
   }
