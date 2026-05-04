@@ -3752,9 +3752,30 @@ async function extractPdfLines(file){
     if(_pdfParseCancelled)break;
     var page=await pdf.getPage(i);
     var tc=await page.getTextContent();
-    var pageText=(tc.items||[]).map(function(it){return String(it.str||'')}).join(' ');
-    var lines=pageText.split(/\n/).map(function(l){return l.replace(/\s+/g,' ').trim()}).filter(function(l){return l.length>0});
-    allLines=allLines.concat(lines);
+    var items=(tc.items||[]).filter(function(it){return it.str&&it.str.trim()});
+    if(!items.length)continue;
+    // Group text items by Y position (transform[5]) to reconstruct lines
+    var yThreshold=3;
+    var rows=[];
+    var curRow=[items[0]];
+    var curY=items[0].transform?items[0].transform[5]:0;
+    for(var j=1;j<items.length;j++){
+      var itemY=items[j].transform?items[j].transform[5]:0;
+      if(Math.abs(itemY-curY)<=yThreshold){
+        curRow.push(items[j]);
+      }else{
+        rows.push(curRow);
+        curRow=[items[j]];
+        curY=itemY;
+      }
+    }
+    rows.push(curRow);
+    for(var r=0;r<rows.length;r++){
+      // Sort items in row by X position (transform[4]) for correct reading order
+      rows[r].sort(function(a,b){return(a.transform?a.transform[4]:0)-(b.transform?b.transform[4]:0)});
+      var lineText=rows[r].map(function(it){return it.str}).join(' ').replace(/\s+/g,' ').trim();
+      if(lineText)allLines.push(lineText);
+    }
   }
   try{if(pdf&&typeof pdf.destroy==='function')pdf.destroy();}catch(e){}
   return allLines;
