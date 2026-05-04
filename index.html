@@ -5572,21 +5572,53 @@ function setPauseSpeed(v){setVoiceSpeed(v,false)}
 
 // ── Recording ──
 function toggleRecording(){if(isRecording)stopRecording();else startRecording()}
+var _recAudioCtx=null,_recDest=null,_recTtsSource=null;
+function _buildRecordingStream(){
+  // Mix localStream (mic+cam) with AI audio (ttsAudioEl) into one stream
+  var combined=new MediaStream();
+  if(localStream)localStream.getVideoTracks().forEach(function(t){combined.addTrack(t)});
+  try{
+    // Reuse AudioContext if it exists (createMediaElementSource can only be called once per element)
+    if(!_recAudioCtx||_recAudioCtx.state==='closed'){
+      _recAudioCtx=new (window.AudioContext||window.webkitAudioContext)();
+      _recTtsSource=null;
+    }
+    _recDest=_recAudioCtx.createMediaStreamDestination();
+    if(localStream&&localStream.getAudioTracks().length>0){
+      var micSource=_recAudioCtx.createMediaStreamSource(localStream);
+      micSource.connect(_recDest);
+    }
+    var ttsEl=document.getElementById('ttsAudioEl');
+    if(ttsEl){
+      if(!_recTtsSource){
+        _recTtsSource=_recAudioCtx.createMediaElementSource(ttsEl);
+      }
+      _recTtsSource.connect(_recDest);
+      _recTtsSource.connect(_recAudioCtx.destination);
+    }
+    _recDest.stream.getAudioTracks().forEach(function(t){combined.addTrack(t)});
+  }catch(e){
+    console.warn('[rec] audio mix failed, mic only:',e.message);
+    if(localStream)localStream.getAudioTracks().forEach(function(t){combined.addTrack(t)});
+  }
+  return combined;
+}
 function startRecording(){
   if(!canRecord()){showToast(t('partnerGateTitle'));openAuthModal();return}
   if(!localStream){showToast('Pas de flux vidéo');return}recordedChunks=[];
+  var recStream=_buildRecordingStream();
   var recMime='video/webm;codecs=vp9';
   if(MediaRecorder.isTypeSupported('video/mp4;codecs=avc1.42E01E,mp4a.40.2'))recMime='video/mp4;codecs=avc1.42E01E,mp4a.40.2';
   else if(MediaRecorder.isTypeSupported('video/mp4'))recMime='video/mp4';
   else if(!MediaRecorder.isTypeSupported(recMime))recMime='video/webm';
-  try{mediaRecorder=new MediaRecorder(localStream,{mimeType:recMime});
+  try{mediaRecorder=new MediaRecorder(recStream,{mimeType:recMime});
   var isMP4=recMime.startsWith('video/mp4');
   mediaRecorder.ondataavailable=e=>{if(e.data.size>0)recordedChunks.push(e.data)};
   mediaRecorder.onstop=async function(){var ext=isMP4?'mp4':'webm';var mime=isMP4?'video/mp4':'video/webm';var blob=new Blob(recordedChunks,{type:mime});var fname='castwing-'+Date.now()+'.'+ext;var isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);if(isMobile&&navigator.canShare&&navigator.canShare({files:[new File([blob],fname,{type:mime})]})){try{await navigator.share({title:'Castwing Audition',files:[new File([blob],fname,{type:mime})]});showToast(t('recSaved')||'Recording shared!')}catch(e){if(e.name!=='AbortError'){var u=URL.createObjectURL(blob);var a=document.createElement('a');a.href=u;a.download=fname;a.click();URL.revokeObjectURL(u)}}}else{var u=URL.createObjectURL(blob);var a=document.createElement('a');a.href=u;a.download=fname;a.click();URL.revokeObjectURL(u);showToast(t('recSaved')||'Recording saved!')}};
   mediaRecorder.start(1000);isRecording=true;document.getElementById('btnRec').classList.add('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='block';showToast('Enregistrement…')}
   catch(e){showToast('Erreur enregistrement')}
 }
-function stopRecording(){if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='none'}
+function stopRecording(){if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();if(_recTtsSource&&_recDest){try{_recTtsSource.disconnect(_recDest)}catch(e){}}_recDest=null;isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='none'}
 
 // ── WebRTC ──
 function createPeer(id){return new Peer(id,{config:{iceServers:ICE_SERVERS}})}
