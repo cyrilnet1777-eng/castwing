@@ -724,7 +724,7 @@ input[type="file"]{display:none}
 let role='actor',sessionMode='ai',mode='ai';
 let peer=null,conn=null,call=null,localStream=null,mediaRecorder=null,recordedChunks=[];
 let isRecording=false,isMicOn=true,isCamOn=true,currentFacingMode='user',prompterLines=[],prompterIndex=0,connectionTimeout=null;
-let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',selectedLocale='french',selectedUILanguage='en',voiceSpeed=1,availableVoices=[],presetVoiceMap={};
+let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',selectedLocale='french',selectedUILanguage='en',voiceSpeed=1.2,availableVoices=[],presetVoiceMap={};
 let soloPartnerMode='all',soloPartnerChar=null;
 let lockedVoiceLocale='';
 let _preItalienneVoice=null;
@@ -1030,9 +1030,8 @@ function getUserTier(){return getPlan().tier||'visitor'}
 function isSignedUp(){return getUserTier()!=='visitor'}
 function canUseElevenLabs(){
   if(isServerAdmin())return true;
-  // Signed up users: need credits
-  if(cwServerSession.email)return(cwServerSession.creditBalance||0)>0;
-  // Visitors: 2 free lines
+  var isLoggedIn=!!(cwServerSession.email||(userAccess.verified&&userAccess.email));
+  if(isLoggedIn)return(cwServerSession.creditBalance||0)>0;
   var used=parseInt(localStorage.getItem('cw_free_lines')||'0');
   return used<2;
 }
@@ -1376,6 +1375,9 @@ async function openTopupModal(packId){
     var data=await rsp.json().catch(function(){return null});
     if(data&&data.ok&&data.checkoutUrl){
       window.location.href=data.checkoutUrl;
+    }else if(rsp.status===401||((data&&data.error)==='AUTH_REQUIRED')){
+      showToast('Please log in first',2000);
+      setTimeout(function(){openAuthModal()},500);
     }else{
       showToast((data&&data.error)||'Payment error',3000);
     }
@@ -1977,7 +1979,7 @@ const EMOTION_PRESETS={
 };
 const SPEED_MIN=0;
 const SPEED_MAX=5;
-const SPEED_DEFAULT=2.5;
+const SPEED_DEFAULT=1.2;
 function sliderToElevenLabs(v){return 0.5+(Math.min(5,Math.max(0,v))/5)*1.5;}
 const PREVIEW_TEXT_BY_LANG={
   fr:'Bonjour, je suis {name}.',
@@ -3077,16 +3079,19 @@ async function speakWithElevenLabs(text,preset,token,cb){
   try{
     if(!preset||!preset.voiceId)throw new Error('Missing ElevenLabs voiceId');
     if(!isServerAdmin()){
-      if(!cwServerSession.email){
+      var isLoggedIn=!!(cwServerSession.email||(userAccess.verified&&userAccess.email));
+      if(isLoggedIn){
+        if((cwServerSession.creditBalance||0)<=0){
+          showCreditDepletedModal();
+          return false;
+        }
+      }else{
         // Visitor: check free lines
         var usedLines=parseInt(localStorage.getItem('cw_free_lines')||'0');
         if(usedLines>=2){
           showVisitorSignupPrompt();
           return false;
         }
-      }else if((cwServerSession.creditBalance||0)<=0){
-        showCreditDepletedModal();
-        return false;
       }
     }
     const speed=getCurrentVoiceSpeed();

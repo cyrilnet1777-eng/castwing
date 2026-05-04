@@ -1,6 +1,6 @@
-# Castwing — Audition Studio
+# Castwing -- Audition Studio
 
-A browser-based audition/rehearsal studio for actors. Load a screenplay (PDF or pasted text), pick your character, and rehearse with an AI partner that reads the other lines aloud — or invite a real partner over WebRTC.
+A browser-based audition/rehearsal studio for actors. Load a screenplay (PDF or pasted text), pick your character, and rehearse with an AI partner that reads the other lines aloud -- or invite a real partner over WebRTC.
 
 **Live:** https://cast-wing.com
 
@@ -9,12 +9,13 @@ A browser-based audition/rehearsal studio for actors. Load a screenplay (PDF or 
 ### Solo + AI mode
 - Upload a PDF screenplay or paste dialogue text.
 - Select your character from the parsed script.
-- The AI reads the partner lines aloud using **ElevenLabs TTS** (cloud) or the **browser Speech Synthesis API** (offline fallback).
+- The AI reads the partner lines aloud using **ElevenLabs TTS** (cloud). Browser Speech Synthesis is kept as a silent fallback if ElevenLabs is unavailable.
 - Three reply modes:
-  - **AI vocal** — AI auto-reads partner lines, user advances manually.
-  - **Manual** — navigate lines with Prev/Next buttons, no auto-speech.
-  - **Auto** — AI reads partner lines, then a **Voice Activity Detector (VAD)** listens for 1.5 s of silence after the user speaks, then auto-advances.
+  - **AI vocal** -- AI auto-reads partner lines, user advances manually.
+  - **Manual** -- navigate lines with Prev/Next buttons, no auto-speech.
+  - **Auto** -- AI reads partner lines, then a **Voice Activity Detector (VAD)** listens for silence after the user speaks, then auto-advances.
 - Built-in teleprompter highlights the current line and scrolls automatically.
+- **View modes** during session: Prompt only / Video only / 50-50 (switchable live or from pause menu).
 - Camera + mic preview with toggle controls.
 - Record the session and download as **MP4** (converted from WebM via **ffmpeg.wasm**, loaded on demand). Falls back to WebM if conversion fails.
 
@@ -30,16 +31,18 @@ A browser-based audition/rehearsal studio for actors. Load a screenplay (PDF or 
 
 ### Voice system
 - **13 ElevenLabs voices** mapped by name (serena, daniel, rachel, etc.).
-- **10+ locale/accent packs**: Arabic, Chinese, English, French, German, Hindi Belt, Italian, Japanese, Portuguese, Spanish — each with regional accents (e.g., French France / Belgium / Switzerland / Québec).
+- **10+ locale/accent packs**: Arabic, Chinese, English, French, German, Hindi Belt, Italian, Japanese, Portuguese, Spanish -- each with regional accents.
 - Voices are grouped per locale; selecting a locale swaps the available voice grid.
-- 5 **emotion presets**: Neutral, Excited, Sad, Angry, Whisper — each adjusts ElevenLabs `stability`, `similarity_boost`, and `style` parameters.
-- 3 **speed presets**: Slow (0.7x), Normal (1x), Fast (1.6x) — adjusts both ElevenLabs voice settings and `audio.playbackRate`.
+- 5 **emotion presets**: Neutral, Excited, Sad, Angry, Whisper -- each adjusts ElevenLabs `stability`, `similarity_boost`, and `style` parameters.
+- **Speed slider** (0-5 range, 0.5 increments, default 1.2): maps to ElevenLabs speed 0.5x-2.0x. Slider >= 4.5 auto-activates **Italienne mode** (fast run-through with special voice and minimal pauses).
+- Configurable **pause between lines** (default 1000ms, 200ms in Italienne).
+- Configurable **"Pause after my line"** slider (0.5s-5s) controls how long the AI waits after the user finishes speaking.
 - Fallback voice IDs: if a primary ElevenLabs voice returns 404, the system tries configured fallback voices automatically.
 
 ### PDF / script parsing
 - **Extract-then-label** architecture for fast, accurate parsing:
   1. **PDF.js** (loaded on demand) extracts text client-side, grouping by Y-position to reconstruct actual lines.
-  2. Lines are numbered and sent to `/api/label-script` where **Claude Haiku 4.5** labels each line as `dialogue`, `action`, `slug`, or `character_cue` — without reproducing the text. This keeps output tokens minimal (~10x fewer than full-text parsing).
+  2. Lines are numbered and sent to `/api/label-script` where **Claude Haiku 4.5** labels each line as `dialogue`, `action`, `slug`, or `character_cue` -- without reproducing the text. This keeps output tokens minimal (~10x fewer than full-text parsing).
   3. The client merges original text with labels to build the structured script.
 - For large scripts (>800 lines), text is split into chunks and labeled **in parallel**.
 - Parenthetical stage directions (e.g. `(criant)`) are automatically stripped from dialogue so the AI doesn't read them aloud.
@@ -47,34 +50,41 @@ A browser-based audition/rehearsal studio for actors. Load a screenplay (PDF or 
 - Extracted characters populate a selection grid; the user picks their role.
 - Also supports pasted plain text via `/api/claude-parse-script`.
 
+### Credit system (pay-as-you-go)
+- **Visitors** (no signup): 2 free ElevenLabs TTS lines to experience the quality.
+- **Signed-up users**: $1.50 free credit on signup (~50 lines).
+- **Top-up**: $5 / $10 / $25 credit packs via **Stripe Checkout**.
+- **Pricing**: $0.30 per 1K characters (3x markup on ElevenLabs cost).
+- Credits deducted **after** successful TTS (not charged if ElevenLabs fails).
+- **Append-only ledger** (`credit_transactions` table) -- balance = SUM of all transactions.
+- User profile shows credit balance, top-up buttons, and transaction history.
+- PDF parsing is **free** (not gated behind credits).
+- Recording and partner mode are **free** (no signup required).
+
 ### Internationalization (i18n)
-- Full UI translation in **13 languages**: French, English, Spanish, Italian, Chinese, Arabic, Hebrew, German, Portuguese, Japanese, Russian.
-- Default language is **English**; auto-detects browser/geo language (switches to French for French users, etc.).
-- UI language selector on the home screen; persisted in localStorage.
+- Full UI translation in **13 languages**: French, English, Spanish, Italian, Chinese, Arabic, Hebrew, German, Portuguese, Japanese, Korean, Hindi, Turkish, Russian.
+- Default language is **English**; auto-detects browser/geo language.
+- UI language selector on the home screen (top-right); persisted in localStorage.
 - RTL support for Arabic and Hebrew.
-- Voice preview text adapts to the selected locale language.
 
 ### Settings persistence
-- All user preferences (UI language, voice locale, selected voice, emotion, speed, mode) are saved in `localStorage` under key `castwing_user_settings_v3`.
+- All user preferences (UI language, voice locale, selected voice, emotion, speed, mode, view mode) are saved in `localStorage`.
 
 ## Architecture
 
 ### Repo workflow (important)
 
-- `main` is the deployment branch and the only branch that should be used for production changes.
-- Cloudflare deploys from `main`; pushing to feature branches will not update production unless you open/merge a PR into `main`.
-- The production runtime needs all of these files present on `main`:
-  - `index.html`
-  - `worker.js`
-  - `wrangler.toml`
-  - `functions/api/tts.js` (if using Pages Functions path)
+- `main` is the deployment branch.
+- Push to `main` triggers GitHub Actions deploy via `wrangler deploy`.
 
 ### File structure
 
 ```
 index.html                   Single-page app (HTML + inline CSS + JS)
 worker.js                    Cloudflare Worker (routes: /api/tts, /api/parse-screenplay,
-                             /api/label-script, /api/claude-parse-script, /api/auth, etc.)
+                             /api/label-script, /api/claude-parse-script, /api/auth,
+                             /api/credits/balance, /api/credits/topup,
+                             /api/stripe-webhook, etc.)
 wrangler.toml                Cloudflare Workers configuration
 functions/api/tts.js         Cloudflare Pages Function (same TTS logic, Pages-compatible)
 netlify/functions/tts.js     Netlify Function (same TTS logic, Netlify-compatible)
@@ -87,108 +97,58 @@ AGENTS.md                    Cursor Cloud / AI assistant instructions
 
 There is no `package.json`, no bundler, no transpiler. The app is a single `index.html` with inline `<style>` and `<script>` tags. All external libraries are loaded via CDN:
 
-- **PeerJS 1.5.4** — WebRTC abstraction
-- **PDF.js 3.11.174** — PDF text extraction (loaded on demand)
-- **pdf-lib 1.17.1** — PDF splitting for large documents (loaded on demand)
-- **ffmpeg.wasm 0.12.10** — WebM to MP4 video conversion (loaded on demand)
-- **DM Sans** (Google Fonts) — typography
+- **PeerJS 1.5.4** -- WebRTC abstraction
+- **PDF.js 3.11.174** -- PDF text extraction (loaded on demand)
+- **pdf-lib 1.17.1** -- PDF splitting for large documents (loaded on demand)
+- **ffmpeg.wasm 0.12.10** -- WebM to MP4 video conversion (loaded on demand)
+- **DM Sans** (Google Fonts) -- typography
 
 ### TTS proxy (`/api/tts`)
 
-The frontend calls `POST /api/tts` which proxies to the ElevenLabs API. This is needed because the ElevenLabs API key must stay server-side.
-
-The TTS proxy:
-1. Reads `ELEVENLABS_API_KEY` from environment variables.
-2. Accepts `{ text, voiceId, modelId, emotion, speed, languageCode }`.
-3. Computes `voice_settings` (stability, similarity_boost, style) based on emotion + speed.
-4. Tries the requested model, then falls back to `eleven_multilingual_v2`, then `eleven_flash_v2_5`.
-5. For each model, tries with the requested `language_code`, then without.
-6. Returns `audio/mpeg` on success, or a JSON error with diagnostic details.
-
-Three implementations exist for different hosting platforms:
-- `worker.js` — Cloudflare Workers (current production)
-- `functions/api/tts.js` — Cloudflare Pages Functions
-- `netlify/functions/tts.js` — Netlify Functions
-
-The frontend (`fetchTTSFromBestEndpoint`) auto-detects the correct endpoint:
-- On `*.netlify.app`: tries `/.netlify/functions/tts` first, then `/api/tts`
-- Elsewhere: tries `/api/tts` first, then `/.netlify/functions/tts`
-- Caches the working endpoint to avoid redundant 404 probes.
+The frontend calls `POST /api/tts` which proxies to the ElevenLabs API. This is needed because the ElevenLabs API key must stay server-side. The proxy also handles **credit metering**: checks the user's balance before proxying, deducts after a successful response, and returns the new balance in the `X-Credits-Balance` header.
 
 ## Deployment
-
-### Choose one Cloudflare mode
-
-You can deploy this repo in two Cloudflare-compatible ways. Use one as primary and keep config consistent.
-
-1. **Cloudflare Workers** (recommended for this repo shape)
-2. **Cloudflare Pages + Functions**
-
-In both modes, `ELEVENLABS_API_KEY` must be configured in Cloudflare settings.
 
 ### Cloudflare Workers (recommended)
 
 The app is deployed as a Worker with static assets.
 
 **Config** (`wrangler.toml`):
-- `main = "worker.js"` — Worker entry point handling `/api/tts` and asset serving.
-- `[assets] directory = "."` — serves `index.html` and other static files.
+- `main = "worker.js"` -- Worker entry point.
+- `[assets] directory = "."` -- serves `index.html` and other static files.
 
 **Environment secrets (required):**
-- `ELEVENLABS_API_KEY` — ElevenLabs API key for TTS.
-- `ANTHROPIC_API_KEY` — Anthropic API key for script parsing (Claude Haiku 4.5).
+- `ELEVENLABS_API_KEY` -- ElevenLabs API key for TTS.
+- `ANTHROPIC_API_KEY` -- Anthropic API key for script parsing (Claude Haiku 4.5).
+- `STRIPE_SECRET_KEY` -- Stripe secret key for credit top-ups.
+- `STRIPE_WEBHOOK_SECRET` -- Stripe webhook signing secret.
 
-Set both in Cloudflare Worker Settings -> Variables and Secrets.
-
-**Deploy via CLI**:
-```sh
-npx wrangler deploy
-```
+Set all in Cloudflare Worker Settings -> Variables and Secrets.
 
 **Deploy via GitHub Actions** (current setup):
-Push to `main` triggers `.github/workflows/deploy-cloudflare.yml` which runs `wrangler deploy`.
+Push to `main` triggers `.github/workflows/deploy-cloudflare.yml` which runs `wrangler deploy --keep-vars`.
 Requires `CLOUDFLARE_API_TOKEN` secret in GitHub repo settings.
 
-### Cloudflare Pages (alternative)
+### Stripe webhook setup
 
-If deployed as a Cloudflare Pages project instead of a Worker:
-- Build command: *(empty)*
-- Build output directory: `.`
-- The `functions/api/tts.js` file is auto-detected as a Pages Function at `/api/tts`.
-- Set `ELEVENLABS_API_KEY` in Pages project Settings -> Environment Variables.
-
-### Netlify (legacy)
-
-- `netlify.toml` points to `netlify/functions/` as the functions directory.
-- The Netlify Function `tts.js` handles `POST /.netlify/functions/tts`.
-- Set `ELEVENLABS_API_KEY` in Netlify environment variables.
+1. Stripe Dashboard -> Developers -> Webhooks -> Add endpoint
+2. URL: `https://cast-wing.com/api/stripe-webhook`
+3. Event: `checkout.session.completed`
+4. Copy signing secret -> set as `STRIPE_WEBHOOK_SECRET` in Cloudflare
 
 ### Local development
 
-Any static HTTP server works:
 ```sh
-# Python
-python3 -m http.server 8080
-
-# Node
-npx serve .
-
-# Cloudflare local dev (includes /api/tts function)
 npx wrangler dev
 ```
 
-For local TTS testing with `wrangler dev`, create a `.dev.vars` file:
+Create a `.dev.vars` file:
 ```
 ELEVENLABS_API_KEY=your_key_here
+ANTHROPIC_API_KEY=your_key_here
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
 ```
-
-### Production troubleshooting
-
-- `POST /api/tts` returns `404`:
-  - On Workers mode, verify `worker.js` and `wrangler.toml` are present on `main` and deployment is from latest `main`.
-  - On Pages mode, verify `functions/api/tts.js` exists and Pages Functions are enabled.
-- `POST /api/tts` returns `{"error":"Missing ELEVENLABS_API_KEY"}`:
-  - Add `ELEVENLABS_API_KEY` in Cloudflare (Worker or Pages, matching your deployment mode), then redeploy.
 
 ## Key technical details
 
@@ -202,7 +162,7 @@ ELEVENLABS_API_KEY=your_key_here
 
 ### Voice Activity Detection (Auto mode)
 - Uses `AudioContext` + `AnalyserNode` to compute RMS amplitude in real-time.
-- State machine: `WAITING` → `SPEAKING` (RMS >= threshold) → `TRAILING` (RMS drops) → fires `onSpeechEnd` after 1.5 s of silence.
+- State machine: `WAITING` -> `SPEAKING` (RMS >= threshold) -> `TRAILING` (RMS drops) -> fires `onSpeechEnd` after configurable silence duration.
 - On speech end, the prompter auto-advances and the AI speaks the next partner line.
 
 ### Camera handling
@@ -210,3 +170,10 @@ ELEVENLABS_API_KEY=your_key_here
 - Falls back to audio-only if camera is denied.
 - Ensures live audio tracks are attached (re-requests mic if needed).
 - Graceful degradation: session works without any media permissions.
+
+### D1 Database tables
+- `users` -- email, tier, admin flag, login timestamps
+- `invites` -- admin-created invite tokens with credit grants
+- `invite_redemptions` -- tracks who redeemed invites
+- `credit_transactions` -- append-only ledger (topups, TTS debits, free grants)
+- `usage_events` -- audit log for TTS usage
