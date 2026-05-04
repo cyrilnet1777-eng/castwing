@@ -1429,14 +1429,43 @@ async function loadUsageHistory(){
     if(!list)return;
     var txs=data.transactions||[];
     if(!txs.length){list.innerHTML='<div style="color:#9CA3AF;padding:8px 0">No activity yet</div>';return}
-    list.innerHTML=txs.map(function(tx){
-      var sign=tx.amount_cents>=0?'+':'';
-      var color=tx.amount_cents>=0?'#2D6A4F':'#D96F6F';
-      var date=new Date(tx.created_at+'Z').toLocaleDateString();
-      return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #eee">'
-        +'<span style="color:#4B5563">'+(tx.description||tx.type)+'</span>'
-        +'<span style="color:'+color+';font-weight:600">'+sign+'$'+(Math.abs(tx.amount_cents)/100).toFixed(2)+'</span>'
-        +'</div>';
+    // Group TTS debits by date, show topups/grants individually
+    var groups=[];
+    var currentDateDebits=null;
+    for(var i=0;i<txs.length;i++){
+      var tx=txs[i];
+      var dt=new Date(tx.created_at+'Z');
+      var dateStr=dt.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+      var timeStr=dt.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+      if(tx.type==='tts_debit'){
+        if(currentDateDebits&&currentDateDebits.date===dateStr){
+          currentDateDebits.total+=Math.abs(tx.amount_cents);
+          currentDateDebits.count++;
+          currentDateDebits.chars+=(tx.char_count||0);
+        }else{
+          if(currentDateDebits)groups.push(currentDateDebits);
+          currentDateDebits={type:'debit_group',date:dateStr,total:Math.abs(tx.amount_cents),count:1,chars:tx.char_count||0};
+        }
+      }else{
+        if(currentDateDebits){groups.push(currentDateDebits);currentDateDebits=null}
+        groups.push({type:'single',description:tx.description||tx.type,amount:tx.amount_cents,date:dateStr,time:timeStr});
+      }
+    }
+    if(currentDateDebits)groups.push(currentDateDebits);
+    list.innerHTML=groups.map(function(g){
+      if(g.type==='debit_group'){
+        return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee">'
+          +'<span style="color:#4B5563">'+g.date+' — '+g.count+' AI lines</span>'
+          +'<span style="color:#D96F6F;font-weight:600">-$'+(g.total/100).toFixed(2)+'</span>'
+          +'</div>';
+      }else{
+        var sign=g.amount>=0?'+':'';
+        var color=g.amount>=0?'#2D6A4F':'#D96F6F';
+        return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee">'
+          +'<span style="color:#4B5563">'+g.date+' '+g.time+' — '+g.description+'</span>'
+          +'<span style="color:'+color+';font-weight:600">'+sign+'$'+(Math.abs(g.amount)/100).toFixed(2)+'</span>'
+          +'</div>';
+      }
     }).join('');
   }catch(e){}
 }

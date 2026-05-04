@@ -57,7 +57,8 @@ A browser-based audition/rehearsal studio for actors. Load a screenplay (PDF or 
 - **Pricing**: $0.30 per 1K characters (3x markup on ElevenLabs cost).
 - Credits deducted **after** successful TTS (not charged if ElevenLabs fails).
 - **Append-only ledger** (`credit_transactions` table) -- balance = SUM of all transactions.
-- User profile shows credit balance, top-up buttons, and transaction history.
+- User profile shows credit balance, top-up buttons ($5/$10/$25), and transaction history (TTS debits grouped by date, top-ups shown individually with timestamp).
+- **Auto top-up**: save a card via Stripe Checkout (setup mode), then the system auto-charges the saved card when balance drops below $2 during a session -- no interruption, no redirect.
 - PDF parsing is **free** (not gated behind credits).
 - Recording and partner mode are **free** (no signup required).
 
