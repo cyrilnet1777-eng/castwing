@@ -697,7 +697,7 @@ input[type="file"]{display:none}
   <div class="session-body">
     <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><video id="remoteVideo" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:contain;background:#000"></video><div class="no-video" id="noVideoMsg">Caméra · activation ou désactivée</div><div class="video-controls"><button class="vctrl" id="btnMic" onclick="toggleMic()"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/></svg></button><button class="vctrl" id="btnRec" onclick="toggleRecording()"><span class="rec-dot"></span></button><button class="vctrl vctrl-pause" id="btnPause" onclick="togglePause()"><svg id="pauseIcon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button><div class="speed-btns speed-btns-overlay" id="speedBtnsOverlay"></div><button class="vctrl vctrl-flip" id="btnCam" onclick="toggleCam()"><svg viewBox="0 0 24 24"><path d="M20 5h-3.17L15 3H9L7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-8 13a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/><path d="M12 17l-2.5-2h1.5v-2h2v2h1.5L12 17zm0-10l2.5 2h-1.5v2h-2V9H9.5L12 7z"/></svg></button></div></div><div class="rec-indicator" id="recIndicator"></div><div class="mob-controls-row" id="mobControlsRow"><button class="mob-nav-btn" onclick="prompterPrev()">◀</button><button class="mob-main-btn" id="mobMainBtn" onclick="togglePause()"><svg class="pause-bars" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></svg><span class="play-tri"></span></button><button class="mob-nav-btn" onclick="prompterNext()">▶</button></div></div>
     <div class="prompter-area" id="prompterArea"><div class="prompter-empty" id="prompterEmptyText">Aucun texte chargé</div></div>
-    <div id="pauseOverlay" class="pause-overlay"><div class="take-info" id="takeInfo"></div><div class="pause-controls" id="pauseControls"><button class="ps-resume-btn" onclick="togglePause(false)">▶ Reprendre</button><label>Vitesse</label><div class="speed-btns" id="speedBtnsPause"></div><div class="ps-row"><span class="ps-label">Italienne</span><button class="ps-toggle" id="psItalienneToggle" onclick="toggleItalienne()"></button></div><div class="ps-row"><span class="ps-label">Attente silence</span><input type="range" id="vadSilenceSlider" min="0.5" max="5" step="0.25" value="1.25" oninput="onVadSliderChange(this.value)"><span class="ps-label" id="vadSilenceLabel">1.25s</span></div><button class="ps-quit-btn" onclick="showEndTakeModal()">✕ Quitter la prise</button></div></div>
+    <div id="pauseOverlay" class="pause-overlay"><div class="take-info" id="takeInfo"></div><div class="pause-controls" id="pauseControls"><button class="ps-resume-btn" onclick="togglePause(false)">▶ Reprendre</button><label id="psSpeedLabel">AI Speed</label><div class="ps-hint" style="font-size:.68rem;color:#9CA3AF;margin:-.2rem 0 .3rem">0 = very slow, 5 = very fast</div><div class="speed-btns" id="speedBtnsPause"></div><div class="ps-row"><span class="ps-label" id="psVadLabel">Pause after my line</span><input type="range" id="vadSilenceSlider" min="0.5" max="5" step="0.25" value="1.25" oninput="onVadSliderChange(this.value)"><span class="ps-label" id="vadSilenceLabel">1.25s</span></div><div class="ps-hint" style="font-size:.68rem;color:#9CA3AF;margin:-.3rem 0 .4rem">How long the AI waits after you finish speaking</div><label>View</label><div id="viewModePause"></div><button class="ps-quit-btn" onclick="showEndTakeModal()">✕ Quitter la prise</button></div></div>
     <div class="italienne-badge" id="italienneBadge">ITALIENNE</div>
   </div>
   <div class="ai-panel" id="aiPanel"><span class="ai-label" id="sessionVoiceLabel">🦾 Voix :</span><select id="sessionVoiceSelect" onchange="changeSessionVoice()"></select></div>
@@ -706,6 +706,7 @@ input[type="file"]{display:none}
       <div class="mode-opt" id="sessionModeManualBtn" onclick="switchSessionMode('manual')">✋ Manuel</div>
       <div class="mode-opt" id="sessionModeAutoBtn" onclick="switchSessionMode('auto')">🎤 Auto</div>
       <div class="speed-btns" id="speedBtnsSession" style="flex:1"></div>
+      <div id="viewModeSession" style="flex:1"></div>
     </div>
     <button class="nav-arrow" onclick="prompterPrev()" id="prevBtn"><svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg></button>
     <button class="nav-arrow" onclick="prompterNext()" id="nextBtn"><svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></button>
@@ -728,6 +729,7 @@ let soloPartnerMode='all',soloPartnerChar=null;
 let lockedVoiceLocale='';
 let _preItalienneVoice=null;
 let _preItalienneEmotion='neutral';
+let sessionViewMode=localStorage.getItem('cw_viewMode')||'50-50';
 let autoAdvanceTimer=null,lastAutoSpokenIndex=-1,activeSpeechToken=0;
 let ttsAudio=null,vad=null,lastTTSEndTs=0;
 let userScrolledUp=false,_lastPrompterScrollTop=0,_scrollResumeTimer=null;
@@ -848,7 +850,7 @@ let usageTimer=null;
 let cwServerSession={email:null,isAdmin:false,plan:'visitor',creditsRemaining:null,creditBalance:0};
 
 const useElevenLabs=true;
-function getPauseBetweenLines(){return voiceSpeed>=2.0?80:180;}
+function getPauseBetweenLines(){return voiceSpeed>=4.5?200:1000;}
 const SETTINGS_KEY='castwing_user_settings_v3';
 const ACCESS_KEY='castwing_user_access_v1';
 const PLAN_KEY='castwing_plan_v2';
@@ -1973,15 +1975,10 @@ const EMOTION_PRESETS={
   angry:{label:'En colère',pitch:0.94,rate:1.12,playbackRate:1.08},
   whisper:{label:'Chuchoté',pitch:1.28,rate:0.72,playbackRate:0.72},
 };
-const SPEED_MIN=0.5;
-const SPEED_MAX=2;
-const SPEED_DEFAULT=1;
-const SPEED_LEVELS=[
-  {value:0.65,num:'1',tip:'Lent'},
-  {value:1.0,num:'2',tip:'Normal'},
-  {value:1.5,num:'3',tip:'Rapide'},
-  {value:2.0,num:'4',tip:'Italienne'}
-];
+const SPEED_MIN=0;
+const SPEED_MAX=5;
+const SPEED_DEFAULT=2.5;
+function sliderToElevenLabs(v){return 0.5+(Math.min(5,Math.max(0,v))/5)*1.5;}
 const PREVIEW_TEXT_BY_LANG={
   fr:'Bonjour, je suis {name}.',
   en:'Hello, I am {name}.',
@@ -2100,6 +2097,8 @@ const UI_FALLBACK_TRANSLATIONS={
   paymentSuccess:{fr:'Paiement confirmé ! Crédits ajoutés.',en:'Payment confirmed! Credits added.',es:'¡Pago confirmado! Créditos añadidos.',it:'Pagamento confermato! Crediti aggiunti.',zh:'付款确认！积分已添加。',ko:'결제 확인! 크레딧 추가됨.',ja:'お支払い確認！クレジットが追加されました。',ar:'تم تأكيد الدفع! تمت إضافة الرصيد.',de:'Zahlung bestätigt! Guthaben aufgeladen.',pt:'Pagamento confirmado! Créditos adicionados.',hi:'भुगतान पुष्टि! क्रेडिट जोड़े गए।',tr:'Ödeme onaylandı! Krediler eklendi.',ru:'Оплата подтверждена! Кредиты добавлены.'},
   paymentCancelled:{fr:'Paiement annulé.',en:'Payment cancelled.',es:'Pago cancelado.',it:'Pagamento annullato.',zh:'付款已取消。',ko:'결제 취소됨.',ja:'お支払いキャンセル。',ar:'تم إلغاء الدفع.',de:'Zahlung abgebrochen.',pt:'Pagamento cancelado.',hi:'भुगतान रद्द।',tr:'Ödeme iptal edildi.',ru:'Оплата отменена.'},
   lowCredits:{fr:'Crédits bas',en:'Low credits',es:'Créditos bajos',it:'Crediti bassi',zh:'积分不足',ko:'크레딧 부족',ja:'クレジット残少',ar:'رصيد منخفض',de:'Niedriges Guthaben',pt:'Créditos baixos',hi:'कम क्रेडिट',tr:'Düşük kredi',ru:'Мало кредитов'},
+  psSpeedLabel:{fr:'Vitesse IA',en:'AI Speed',es:'Velocidad IA',it:'Velocità IA',zh:'AI速度',ko:'AI 속도',ja:'AI速度',ar:'سرعة الذكاء',de:'KI-Geschwindigkeit',pt:'Velocidade IA',hi:'AI गति',tr:'AI Hızı',ru:'Скорость ИИ'},
+  psVadLabel:{fr:'Pause après ma réplique',en:'Pause after my line',es:'Pausa después de mi línea',it:'Pausa dopo la mia battuta',zh:'我台词后的停顿',ko:'내 대사 후 멈춤',ja:'私のセリフ後の間',ar:'توقف بعد جملتي',de:'Pause nach meiner Zeile',pt:'Pausa após minha fala',hi:'मेरी लाइन के बाद विराम',tr:'Repliğimden sonra duraklama',ru:'Пауза после моей реплики'},
   cameraDenied:{fr:'Caméra refusée — vérifie les permissions',en:'Camera denied — check permissions',es:'Cámara denegada',it:'Fotocamera negata',zh:'摄像头被拒绝',ko:'카메라 거부됨',ja:'カメラ拒否',ar:'الكاميرا مرفوضة',de:'Kamera verweigert',pt:'Câmera negada',hi:'कैमरा अस्वीकृत',tr:'Kamera reddedildi',ru:'Камера отклонена'},
   cameraUnavailable:{fr:'Caméra indisponible',en:'Camera unavailable',es:'Cámara no disponible',it:'Fotocamera non disponibile',zh:'摄像头不可用',ko:'카메라 사용 불가',ja:'カメラ利用不可',ar:'الكاميرا غير متاحة',de:'Kamera nicht verfügbar',pt:'Câmera indisponível',hi:'कैमरा अनुपलब्ध',tr:'Kamera kullanılamıyor',ru:'Камера недоступна'},
   micDenied:{fr:'Micro refusé — vérifie les permissions',en:'Mic denied — check permissions',es:'Micrófono denegado',it:'Microfono negato',zh:'麦克风被拒绝',ko:'마이크 거부됨',ja:'マイク拒否',ar:'الميكروفون مرفوض',de:'Mikro verweigert',pt:'Microfone negado',hi:'माइक अस्वीकृत',tr:'Mikrofon reddedildi',ru:'Микрофон отклонён'},
@@ -2877,9 +2876,9 @@ function getBestVoice(p){
 }
 function getEmotionSettings(){return EMOTION_PRESETS[selectedEmotion]||EMOTION_PRESETS.neutral;}
 function getCurrentVoiceSpeed(){
-  const safe=Math.max(SPEED_MIN,Math.min(SPEED_MAX,Number(voiceSpeed)||SPEED_DEFAULT));
+  var safe=Math.max(SPEED_MIN,Math.min(SPEED_MAX,Number(voiceSpeed)||SPEED_DEFAULT));
   voiceSpeed=safe;
-  return voiceSpeed;
+  return sliderToElevenLabs(voiceSpeed);
 }
 function getSpeechStyle(v){
   const base=v||VOICE_PRESETS[0];
@@ -2949,40 +2948,80 @@ function setEmotion(key,silent){
 }
 const ITALIENNE_VOICE_ID='tZssYepgGaQmegsMEXjK';
 function setVoiceSpeed(value,silent){
-  const parsed=Number(value);
-  const prev=voiceSpeed;
+  var parsed=Number(value);
+  var prev=voiceSpeed;
   voiceSpeed=Math.max(SPEED_MIN,Math.min(SPEED_MAX,Number.isFinite(parsed)?parsed:SPEED_DEFAULT));
-  if(voiceSpeed>=2.0&&prev<2.0){
+  if(voiceSpeed>=4.5&&prev<4.5){
     _preItalienneVoice=selectedVoice;
     selectedVoice={id:'_italienne',label:'Italienne',tag:'Neutre',voiceId:ITALIENNE_VOICE_ID,fallbackVoiceIds:[],modelId:'eleven_multilingual_v2',languageCode:selectedVoice?.languageCode||'fr',gender:'female',pitch:1,rate:1};
     populateSessionVoiceSelect();
-  }else if(voiceSpeed<2.0&&prev>=2.0&&_preItalienneVoice){
+  }else if(voiceSpeed<4.5&&prev>=4.5&&_preItalienneVoice){
     selectedVoice=_preItalienneVoice;
     _preItalienneVoice=null;
     populateSessionVoiceSelect();
   }
   persistSettings();
-  renderAllSpeedBtns();
+  renderAllSpeedSliders();
 }
-function renderSpeedBtns(containerId){
-  const g=document.getElementById(containerId);
+function renderSpeedSlider(containerId,compact){
+  var g=document.getElementById(containerId);
   if(!g)return;
   g.innerHTML='';
-  SPEED_LEVELS.filter(lvl=>lvl.value<2.0).forEach(lvl=>{
-    const el=document.createElement('div');
-    el.className='speed-btn'+(voiceSpeed===lvl.value?' active':'');
-    el.textContent=lvl.num;
-    el.title=lvl.tip;
-    el.onclick=()=>{setVoiceSpeed(lvl.value,false)};
-    g.appendChild(el);
-  });
+  var wrap=document.createElement('div');
+  wrap.style.cssText='display:flex;align-items:center;gap:.5rem;width:100%';
+  var val=document.createElement('span');
+  val.className='speed-slider-val';
+  val.textContent=voiceSpeed.toFixed(1);
+  val.style.cssText='font-size:'+(compact?'.65rem':'.72rem')+';font-weight:700;color:#C8CED0;min-width:1.8em;text-align:center';
+  var slider=document.createElement('input');
+  slider.type='range';slider.min='0';slider.max='5';slider.step='0.5';
+  slider.value=String(voiceSpeed);
+  slider.className='speed-slider';
+  slider.style.cssText='flex:1;height:'+(compact?'4px':'6px')+';accent-color:#52B788;cursor:pointer';
+  slider.oninput=function(){var v=parseFloat(this.value);val.textContent=v.toFixed(1);setVoiceSpeed(v,true)};
+  wrap.appendChild(val);
+  wrap.appendChild(slider);
+  if(voiceSpeed>=4.5){var badge=document.createElement('span');badge.textContent='IT';badge.style.cssText='font-size:.6rem;font-weight:800;color:#0C0F0E;background:#52B788;border-radius:4px;padding:1px 4px';wrap.appendChild(badge)}
+  g.appendChild(wrap);
 }
-function renderAllSpeedBtns(){
-  renderSpeedBtns('speedBtnsSession');
-  renderSpeedBtns('speedBtnsPause');
-  renderSpeedBtns('speedBtnsOverlay');
+function renderAllSpeedSliders(){
+  renderSpeedSlider('speedBtnsSession',true);
+  renderSpeedSlider('speedBtnsPause',false);
+  renderSpeedSlider('speedBtnsOverlay',true);
 }
 
+function setViewMode(m){
+  sessionViewMode=m;
+  localStorage.setItem('cw_viewMode',m);
+  var va=document.querySelector('.video-area');
+  var pa=document.querySelector('.prompter-area');
+  if(!va||!pa)return;
+  va.style.display='';pa.style.display='';va.style.height='';pa.style.height='';pa.style.marginTop='';pa.style.position='';pa.style.bottom='';pa.style.left='';pa.style.right='';
+  if(m==='prompt'){va.style.display='none';pa.style.marginTop='0';pa.style.height='100vh';pa.style.position='fixed';pa.style.bottom='0';pa.style.left='0';pa.style.right='0'}
+  else if(m==='video'){pa.style.display='none';va.style.height='100vh'}
+  renderPrompter();
+  updateViewModeButtons();
+}
+function updateViewModeButtons(){
+  document.querySelectorAll('.view-mode-toggle .mode-opt').forEach(function(el){
+    el.classList.toggle('active',el.getAttribute('data-view')===sessionViewMode);
+  });
+}
+function renderViewModeToggle(containerId){
+  var g=document.getElementById(containerId);if(!g)return;
+  g.innerHTML='';
+  var wrap=document.createElement('div');wrap.className='view-mode-toggle';wrap.style.cssText='display:flex;gap:.4rem';
+  ['prompt','50-50','video'].forEach(function(m){
+    var lbl=m==='prompt'?'Prompt':m==='video'?'Video':'50/50';
+    var el=document.createElement('div');
+    el.className='mode-opt'+(sessionViewMode===m?' active':'');
+    el.setAttribute('data-view',m);
+    el.textContent=lbl;
+    el.onclick=function(){setViewMode(m)};
+    wrap.appendChild(el);
+  });
+  g.appendChild(wrap);
+}
 function initVoiceGrid(){
   const g=document.getElementById('voiceGrid');g.innerHTML='';
   if(!selectedVoice)selectedVoice=VOICE_PRESETS[0]||null;
@@ -3065,7 +3104,7 @@ async function speakWithElevenLabs(text,preset,token,cb){
         text,
         voiceId,
         modelId:preset.modelId||'eleven_multilingual_v2',
-        emotion:voiceSpeed>=2.0?'neutral':selectedEmotion,
+        emotion:voiceSpeed>=4.5?'neutral':selectedEmotion,
         speed,
         languageCode:effectiveLang
       });
@@ -3367,7 +3406,7 @@ function setMode(m){
   document.getElementById('voiceSection').classList.toggle('active',m==='ai'||m==='auto');
   document.getElementById('modeHint').textContent=modeHintText(m);
   syncSessionModeButtons();
-  renderAllSpeedBtns();
+  renderAllSpeedSliders();
   persistSettings();
 }
 
@@ -5406,9 +5445,8 @@ function togglePause(forceState){
     clearAutoTimer();
     freezeTimer();
     updateTakeInfo();
-    renderSpeedBtns('speedBtnsPause');
-    const itog=document.getElementById('psItalienneToggle');
-    if(itog)itog.classList.toggle('on',voiceSpeed>=2.0);
+    renderSpeedSlider('speedBtnsPause',false);
+    renderViewModeToggle('viewModePause');
     const slider=document.getElementById('vadSilenceSlider');
     const slbl=document.getElementById('vadSilenceLabel');
     if(slider){slider.value=vadSilenceSeconds}
@@ -5477,9 +5515,7 @@ function togglePauseSettings(){
   if(panel.classList.contains('active')){closePauseSettings();return}
   populatePauseCharGrid();
   populatePauseVoiceSelect();
-  renderSpeedBtns('speedBtnsPause');
-  const itog=document.getElementById('psItalienneToggle');
-  if(itog){itog.classList.toggle('on',voiceSpeed>=2.0)}
+  renderSpeedSlider('speedBtnsPause',false);
   const mtog=document.getElementById('psModeToggle');
   const mlabel=document.getElementById('psModeLabel');
   if(mtog){mtog.classList.toggle('on',mode==='auto'||mode==='ai')}
@@ -5656,9 +5692,12 @@ async function bootstrapAiSessionFromCurrentScript(importScreenN){
   setStatus('',sessionMode==='ai'?t('sessionReadyLabel'):'');
   await ensureSessionStream();
   if(canRecord()&&localStream&&!isRecording)startRecording();
+  renderViewModeToggle('viewModeSession');
+  renderAllSpeedSliders();
   showClapperboard(()=>{
     if(tier!=='visitor'||getSpecTier()==='figurant')startSessionTimer();
     else hideTimerBadge();
+    setViewMode(sessionViewMode);
     handleCurrentLineAutomation();
   });
   return true;
@@ -5840,11 +5879,8 @@ document.addEventListener('DOMContentLoaded',async ()=>{
     if(saved.voiceLocale&&VOICE_LOCALES.some(l=>l.id===saved.voiceLocale))selectedLocale=saved.voiceLocale;
     if(saved.emotion&&EMOTION_PRESETS[saved.emotion])selectedEmotion=saved.emotion;
     if(Number.isFinite(Number(saved.speedValue))){
-      const sv=Math.min(Number(saved.speedValue),1.5);
-      voiceSpeed=SPEED_LEVELS.reduce((best,lvl)=>Math.abs(lvl.value-sv)<Math.abs(best-sv)?lvl.value:best,SPEED_LEVELS[1].value);
-    }else if(saved.speedPreset==='slow')voiceSpeed=0.65;
-    else if(saved.speedPreset==='fast')voiceSpeed=1.5;
-    else voiceSpeed=SPEED_DEFAULT;
+      voiceSpeed=Math.max(SPEED_MIN,Math.min(SPEED_MAX,Number(saved.speedValue)));
+    }else voiceSpeed=SPEED_DEFAULT;
     if(saved.mode&&['ai','manual','auto'].includes(saved.mode))mode=saved.mode;
   }
   if(!(saved&&saved.uiLang&&UI_LANGUAGES.some(l=>l.id===saved.uiLang))){
@@ -5874,7 +5910,7 @@ document.addEventListener('DOMContentLoaded',async ()=>{
     }
   })();
   updateSetupCameraButton();
-  renderAllSpeedBtns();
+  renderAllSpeedSliders();
   initCardTilt();
   await fetchServerSession();
   if(isServerAdmin()){dismissPaywall();closePaywallModal();}
