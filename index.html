@@ -44,6 +44,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;background:ra
 body::after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.04;mix-blend-mode:soft-light;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:4px 4px,4px 4px;z-index:0}
 .screen{position:relative;z-index:1}
 .screen{display:none;flex-direction:column;min-height:100vh;min-height:100dvh}.screen.active{display:flex}
+.screen-content{width:100%;max-width:560px;margin:0 auto;padding:1rem 1rem 2rem;box-sizing:border-box}
 
 /* HOME */
 #home{justify-content:center;align-items:center;padding:2rem 1.5rem 3.5rem;background:transparent}
@@ -574,25 +575,26 @@ input[type="file"]{display:none}
 
 <!-- ═══ PARTNER CHOICE ═══ -->
 <div id="partnerChoice" class="screen">
-  <div class="setup-header" style="padding:1.5rem"><button class="back-btn" onclick="goHome()">←</button><h2 id="partnerChoiceTitle">Session partenaire</h2></div>
-  <div style="padding:1.5rem">
-    <div class="setup-card">
-      <div class="home-cards">
-        <div class="hcard" onclick="goSetupPartner()">
-          <div class="hcard-icon blue">🎬</div>
-          <div class="hcard-text"><h3 id="partnerCreateTitle">Je crée la session (acteur)</h3><p id="partnerCreateDesc">Générer un code et inviter un partenaire</p></div>
-        </div>
-        <div class="hcard" onclick="goJoin()">
-          <div class="hcard-icon navy">🎬</div>
-          <div class="hcard-text"><h3 id="partnerJoinTitle">Je rejoins une session (partenaire)</h3><p id="partnerJoinDesc">Entrer le code de l'acteur</p></div>
-        </div>
+  <div class="screen-content">
+  <div class="setup-header"><button class="back-btn" onclick="goHome()">←</button><h2 id="partnerChoiceTitle">Session partenaire</h2></div>
+  <div class="setup-card">
+    <div class="home-cards">
+      <div class="hcard" onclick="goSetupPartner()">
+        <div class="hcard-icon blue">🎬</div>
+        <div class="hcard-text"><h3 id="partnerCreateTitle">Je crée la session (acteur)</h3><p id="partnerCreateDesc">Générer un code et inviter un partenaire</p></div>
+      </div>
+      <div class="hcard" onclick="goJoin()">
+        <div class="hcard-icon navy">🎬</div>
+        <div class="hcard-text"><h3 id="partnerJoinTitle">Je rejoins une session (partenaire)</h3><p id="partnerJoinDesc">Entrer le code de l'acteur</p></div>
       </div>
     </div>
+  </div>
   </div>
 </div>
 
 <!-- ═══ SETUP: SOLO + IA ═══ -->
 <div id="setupAi" class="screen">
+  <div class="screen-content">
   <div class="setup-header"><button class="back-btn" onclick="goHome()">←</button><h2 id="setupAiTitle">Solo + IA</h2></div>
   <div class="setup-card">
     <label id="scriptLabel1">Script (PDF ou texte)</label>
@@ -637,10 +639,12 @@ input[type="file"]{display:none}
     </div>
   </div>
   <button class="btn btn-primary btn-full" onclick="startAiSession()" id="launchAiBtn">Lancer la session 🦾</button>
+  </div>
 </div>
 
 <!-- ═══ SETUP: AVEC PARTENAIRE ═══ -->
 <div id="setupPartner" class="screen">
+  <div class="screen-content">
   <div class="setup-header"><button class="back-btn" onclick="goPartnerChoice()">←</button><h2 id="setupPartnerTitle">Avec un partenaire</h2></div>
   <div class="setup-card">
     <div class="field-group">
@@ -673,14 +677,15 @@ input[type="file"]{display:none}
     <div style="margin-top:1rem"><label id="pasteScriptLabel2">Ou colle le texte</label><textarea id="scriptInput2" placeholder="MOI: Ma réplique&#10;PARTENAIRE: Sa réplique"></textarea><button type="button" class="btn btn-secondary btn-full" style="margin-top:.5rem;padding:.55rem" onclick="processTextImport(2)" id="importPastedBtn2">Importer le texte collé</button></div>
   </div>
   <button class="btn btn-primary btn-full" onclick="startPartnerSession()" id="launchPartnerBtn">Lancer la session 🎬</button>
+  </div>
 </div>
 
 <!-- ═══ JOIN (PARTENAIRE) ═══ -->
 <div id="joinScreen" class="screen">
-  <div class="setup-header" style="padding:1.5rem 1.5rem 0"><button class="back-btn" onclick="goPartnerChoice()">←</button><h2 id="joinScreenTitle">Rejoindre une session</h2></div>
-  <div style="padding:1.5rem">
-    <div class="setup-card"><div class="field-group"><label id="joinCodeLabel">Code de session</label><input type="text" id="joinCodeInput" placeholder="Entre le code de l'acteur" maxlength="10" autocapitalize="characters" spellcheck="false"></div></div>
-    <button class="btn btn-primary btn-full" onclick="joinAsPartner()" id="joinSessionBtn">Rejoindre 🎙️</button>
+  <div class="screen-content">
+  <div class="setup-header"><button class="back-btn" onclick="goPartnerChoice()">←</button><h2 id="joinScreenTitle">Rejoindre une session</h2></div>
+  <div class="setup-card"><div class="field-group"><label id="joinCodeLabel">Code de session</label><input type="text" id="joinCodeInput" placeholder="Entre le code de l'acteur" maxlength="10" autocapitalize="characters" spellcheck="false"></div></div>
+  <button class="btn btn-primary btn-full" onclick="joinAsPartner()" id="joinSessionBtn">Rejoindre 🎙️</button>
   </div>
 </div>
 
