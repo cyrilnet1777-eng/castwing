@@ -28,10 +28,16 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Bust asset cache
+        run: |
+          # Inject a deploy-time timestamp into index.html so wrangler
+          # always detects it as changed and re-uploads it.
+          sed -i "s/<!-- build:[0-9]* -->/<!-- build:$(date +%s) -->/" index.html
+          echo "index.html hash: $(md5sum index.html | cut -d' ' -f1)"
+
       - name: Install and deploy
         run: |
           npm install -g wrangler@3
-          echo "Token length: ${#CLOUDFLARE_API_TOKEN}"
           wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
