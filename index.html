@@ -4793,7 +4793,7 @@ function openScriptReviewOverlay(n,normText,validChars,detectedLang,confidence){
   list.appendChild(pdfScriptToReviewHtml(pdfScript));
   if(meta){
     const d=(pdfScript||[]).filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length;
-    meta.textContent=(typeof confidence==='number'&&confidence>0?'Indicateur ~'+confidence+'% · ':'')+d+' répliques · '+(pdfScript||[]).length+' blocs';
+    meta.textContent=(typeof confidence==='number'&&confidence>0?'~'+confidence+'% · ':'')+d+' dialogues · '+(pdfScript||[]).length+' lines';
   }
   ov.classList.add('active');
   ov.setAttribute('aria-hidden','false');
@@ -4843,11 +4843,11 @@ function finishPdfSetupUi(n,rawText,validChars,detectedLang){
   if(pdfScript.length>0&&chars.length>0){
     renderChars(n,chars);
     document.getElementById('charSection'+n).style.display='block';
-    document.getElementById('setupStatus'+n).textContent=pdfScript.length+' lignes · Claude · '+(pdfScript.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length)+' répliques';
+    document.getElementById('setupStatus'+n).textContent=pdfScript.length+' lines · '+(pdfScript.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length)+' dialogues';
     const orb=document.getElementById('optionalReviewBtn'+n);
     if(orb)orb.style.display='block';
     if(detectedLang&&VOICE_LOCALES.some(l=>l.id===detectedLang)){lockedVoiceLocale=detectedLang;applyLocaleVoices(detectedLang,false);initVoiceCountrySelect();initVoiceGrid()}
-    if(n===1)showToast(chars.length+' rôles repérés — '+t('myCharacterLabel'),4200);
+    if(n===1)showToast(chars.length+' roles found — '+t('myCharacterLabel'),4200);
   }else{
     pdfScript=[];
     syncPdfScriptDebugMirror();
