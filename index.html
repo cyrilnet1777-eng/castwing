@@ -691,7 +691,7 @@ input[type="file"]{display:none}
 
 <!-- ═══ SESSION ═══ -->
 <div id="session" class="screen">
-  <div id="creditBadge" style="position:fixed;top:12px;right:56px;background:rgba(0,0,0,.6);color:#fff;padding:.2rem .6rem;border-radius:10px;font-size:.72rem;font-family:'DM Sans',sans-serif;z-index:1000;display:none;cursor:pointer"><span id="creditCount">$0.00</span></div>
+  <div id="creditBadge" style="position:fixed;top:12px;right:200px;background:rgba(0,0,0,.6);color:#fff;padding:.2rem .6rem;border-radius:10px;font-size:.72rem;font-family:'DM Sans',sans-serif;z-index:1000;display:none;cursor:pointer"><span id="creditCount">$0.00</span></div>
   <div id="sessionTimeRail" class="session-time-rail" aria-hidden="true"><span id="sessionTimeRailFill" class="session-time-rail-fill"></span></div>
   <div class="session-top"><div class="status"><div class="status-dot waiting" id="statusDot"></div><span id="statusText">Préparation du flux…</span></div><button class="back-btn" onclick="showEndTakeModal()" style="color:#fff;font-size:1rem;position:fixed;top:16px;left:16px;z-index:10001">✕</button></div>
   <div class="session-body">
@@ -1162,45 +1162,8 @@ function maybePlayLowTimeSound(ms){
   if(sec>45)chronoLowSoundArmed=true;
 }
 function startSessionTimer(){
-  stopSessionTimer();
-  sessionTimerFrozen=false;
-  chronoLowSoundArmed=true;
-  chronoHadPositiveBalance=false;
-  chronoPaywallShown=false;
-  chronoWarn5minShown=false;
-  updateTimerBadge();
-  chronoRunning=true;
-  chronoLastTs=performance.now();
-  function tick(ts){
-    if(!chronoRunning)return;
-    if(sessionTimerFrozen){
-      chronoLastTs=ts;
-      chronoRafId=requestAnimationFrame(tick);
-      return;
-    }
-    const dt=Math.min(5000,Math.max(0,ts-chronoLastTs));
-    chronoLastTs=ts;
-    const tier=getUserTier();
-    if(!isServerAdmin()&&(tier!=='visitor'||getSpecTier()==='figurant')){
-      consumeMs(dt);
-      updateTimerBadge();
-      const ms=getRemainingSessionMs();
-      if(ms>0)chronoHadPositiveBalance=true;
-      maybePlayLowTimeSound(ms);
-      if(ms>0&&ms<=300000&&!chronoWarn5minShown&&!isServerAdmin()){
-        chronoWarn5minShown=true;
-        showToast('Il te reste environ 5 minutes de session IA.',6500);
-      }
-      if(ms<=0&&!chronoPaywallShown&&(chronoHadPositiveBalance||getSpecTier()!=='figurant')){
-        chronoPaywallShown=true;
-        stopSessionTimer();
-        showPaywallModal();
-        return;
-      }
-    }
-    chronoRafId=requestAnimationFrame(tick);
-  }
-  chronoRafId=requestAnimationFrame(tick);
+  // Credits are now handled per-TTS-call, not by time. No countdown needed.
+  return;
 }
 function stopSessionTimer(){
   chronoRunning=false;
@@ -3234,12 +3197,21 @@ async function aiSpeak(text,cb){
     const ok=await speakWithElevenLabs(spokenText,preset,token,cb);
     if(ok||token!==activeSpeechToken)return;
   }
+  // If disabled due to credits, show pay popup instead of browser TTS
+  if(useElevenLabs&&elevenLabsTemporarilyDisabled&&(elevenLabsDisableReason==='quota'||elevenLabsDisableReason==='visitor')){
+    var isLoggedIn=!!(cwServerSession.email||(userAccess.verified&&userAccess.email));
+    if(isLoggedIn)showCreditDepletedModal();
+    else showVisitorSignupPrompt();
+    if(cb)cb();
+    return;
+  }
+  // Only fall back to browser TTS for technical errors (API down, etc.)
   if(useElevenLabs&&elevenLabsTemporarilyDisabled&&!elevenLabsFallbackNotified){
     elevenLabsFallbackNotified=true;
     showToast(getElevenLabsFallbackMessage(),5000);
   }
   const style=getSpeechStyle(preset);
-  console.info('[TTS] falling back to browser TTS');
+  console.info('[TTS] falling back to browser TTS (ElevenLabs unavailable)');
   speakWithBrowser(spokenText,preset,style,token,cb);
 }
 
@@ -5572,29 +5544,29 @@ function setPauseSpeed(v){setVoiceSpeed(v,false)}
 
 // ── Recording ──
 function toggleRecording(){if(isRecording)stopRecording();else startRecording()}
-var _recAudioCtx=null,_recDest=null,_recTtsSource=null;
+var _recAudioCtx=null,_recDest=null;
 function _buildRecordingStream(){
   // Mix localStream (mic+cam) with AI audio (ttsAudioEl) into one stream
   var combined=new MediaStream();
   if(localStream)localStream.getVideoTracks().forEach(function(t){combined.addTrack(t)});
   try{
-    // Reuse AudioContext if it exists (createMediaElementSource can only be called once per element)
-    if(!_recAudioCtx||_recAudioCtx.state==='closed'){
-      _recAudioCtx=new (window.AudioContext||window.webkitAudioContext)();
-      _recTtsSource=null;
-    }
+    _recAudioCtx=new (window.AudioContext||window.webkitAudioContext)();
     _recDest=_recAudioCtx.createMediaStreamDestination();
+    // Mic audio
     if(localStream&&localStream.getAudioTracks().length>0){
       var micSource=_recAudioCtx.createMediaStreamSource(localStream);
       micSource.connect(_recDest);
     }
+    // AI audio via captureStream — works even when src changes
     var ttsEl=document.getElementById('ttsAudioEl');
-    if(ttsEl){
-      if(!_recTtsSource){
-        _recTtsSource=_recAudioCtx.createMediaElementSource(ttsEl);
-      }
-      _recTtsSource.connect(_recDest);
-      _recTtsSource.connect(_recAudioCtx.destination);
+    if(ttsEl&&ttsEl.captureStream){
+      var ttsStream=ttsEl.captureStream();
+      var ttsSource=_recAudioCtx.createMediaStreamSource(ttsStream);
+      ttsSource.connect(_recDest);
+    }else if(ttsEl&&ttsEl.mozCaptureStream){
+      var ttsStream=ttsEl.mozCaptureStream();
+      var ttsSource=_recAudioCtx.createMediaStreamSource(ttsStream);
+      ttsSource.connect(_recDest);
     }
     _recDest.stream.getAudioTracks().forEach(function(t){combined.addTrack(t)});
   }catch(e){
@@ -5618,7 +5590,7 @@ function startRecording(){
   mediaRecorder.start(1000);isRecording=true;document.getElementById('btnRec').classList.add('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='block';showToast('Enregistrement…')}
   catch(e){showToast('Erreur enregistrement')}
 }
-function stopRecording(){if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();if(_recTtsSource&&_recDest){try{_recTtsSource.disconnect(_recDest)}catch(e){}}_recDest=null;isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='none'}
+function stopRecording(){if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();if(_recAudioCtx){try{_recAudioCtx.close()}catch(e){}_recAudioCtx=null}_recDest=null;isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='none'}
 
 // ── WebRTC ──
 function createPeer(id){return new Peer(id,{config:{iceServers:ICE_SERVERS}})}
