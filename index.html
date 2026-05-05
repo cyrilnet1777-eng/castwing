@@ -3350,6 +3350,15 @@ function goPartnerChoice(){showScreen('partnerChoice')}
 function handlePartnerClick(){
   goPartnerChoice();
 }
+function hideAiOnlyControls(){
+  // Hide AI-specific controls in partner mode (speed, mode buttons, view toggle)
+  var ids=['sessionModeManualBtn','sessionModeAutoBtn','speedBtnsSession','viewModeSession','aiPanel'];
+  ids.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none'});
+}
+function showAiControls(){
+  var ids=['sessionModeManualBtn','sessionModeAutoBtn','speedBtnsSession','viewModeSession','aiPanel'];
+  ids.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display=''});
+}
 function goJoin(){showScreen('joinScreen')}
 function goSetupAi(){
   showScreen('setupAi');
@@ -5671,7 +5680,7 @@ function handleDataMessage(d){
   }
 }
 function setupDataConnection(c){
-  conn=c;conn.on('open',()=>{setStatus('','Connecté');hideOverlay();showToast('Partenaire connecté !');playSfx('swoosh',0.45);if(role==='actor'&&prompterLines.length>0)conn.send({type:'script',lines:prompterLines,index:prompterIndex});if(role==='partner')conn.send({type:'ready'})});
+  conn=c;conn.on('open',()=>{setStatus('','Connected');hideOverlay();showToast('Partner connected!');playSfx('swoosh',0.45);if(role==='actor'&&prompterLines.length>0)conn.send({type:'script',lines:prompterLines,index:prompterIndex});if(role==='partner')conn.send({type:'ready'})});
   conn.on('data',handleDataMessage);
   conn.on('close',()=>{
     setStatus('disconnected','Disconnected');showToast(tt('partnerDisconnected','Partner disconnected'),4000);
@@ -5680,7 +5689,7 @@ function setupDataConnection(c){
     document.getElementById('localVideo').style.display='';
     if(localStream)document.getElementById('localVideo').srcObject=localStream;
   });
-  conn.on('error',e=>showToast(tt('error','Erreur')+': '+e.message));
+  conn.on('error',e=>showToast(tt('error','Error')+': '+e.message));
 }
 function setupCallHandlers(c){
   call=c;
@@ -5701,7 +5710,7 @@ function setupCallHandlers(c){
     document.getElementById('localVideo').style.display='';
     if(localStream)document.getElementById('localVideo').srcObject=localStream;
   });
-  call.on('error',e=>{console.error('Call error:',e);showToast(tt('error','Erreur')+': '+e.message,3000)});
+  call.on('error',e=>{console.error('Call error:',e);showToast(tt('error','Error')+': '+e.message,3000)});
 }
 
 // ── Gender-based voice auto-assignment ──
@@ -5819,18 +5828,19 @@ async function startPartnerSession(){
     setPrompterLinesForSession(2,'startPartnerSession');
     prompterIndex=0;
     __cwPendingSessionTag='partner';
-    showScreen('session');renderPrompter();setStatus('waiting','En attente du partenaire…');hideOverlay();
+    showScreen('session');renderPrompter();setStatus('waiting','Waiting for partner…');hideOverlay();
+    hideAiOnlyControls();
     cwCommitSessionLive();
     showClapperboard();
-    showToast('Partage le code '+code,4500);
+    showToast('Share code: '+code,4500);
     await ensureSessionStream();
     if(canRecord()&&localStream&&!isRecording)startRecording();
     const pid='castwing-'+code;peer=createPeer(pid);
     peer.on('open',function(){startPeerKeepalive();});
     peer.on('connection',c=>setupDataConnection(c));
     peer.on('call',ic=>{if(localStream)ic.answer(localStream);else ic.answer();setupCallHandlers(ic)});
-    peer.on('error',e=>{hideOverlay();showToast('Erreur : '+e.message,5000)});
-    connectionTimeout=setTimeout(()=>{if(!conn||!conn.open){hideOverlay();setStatus('waiting','En attente… (tu peux commencer seul)')}},15000);
+    peer.on('error',e=>{hideOverlay();showToast('Error: '+e.message,5000)});
+    connectionTimeout=setTimeout(()=>{if(!conn||!conn.open){hideOverlay();setStatus('waiting','Waiting… (you can start solo)')}},15000);
     return true;
   });
 }
@@ -5840,11 +5850,14 @@ async function joinAsPartner(){
     if(__cwSessionActive)return false;
     role='partner';sessionMode='partner';
     cancelSpeechFlow();
-    const code=document.getElementById('joinCodeInput').value.trim().toUpperCase();if(!code){showToast('Entre un code');return false}
+    const code=document.getElementById('joinCodeInput').value.trim().toUpperCase();if(!code){showToast('Enter a code');return false}
     __cwPendingSessionTag='partner_join';
-    showScreen('session');setStatus('waiting','Connexion…');showOverlay('Connexion…','Recherche de '+code+'…');
+    showScreen('session');setStatus('waiting','Connecting…');showOverlay('Connecting…','Looking for '+code+'…');
+    hideAiOnlyControls();
+    var pe=document.getElementById('prompterEmptyText');
+    if(pe)pe.textContent='Waiting for actor to start the session…';
     cwCommitSessionLive();
-    document.getElementById('noVideoMsg').textContent='Caméra · activation ou désactivée';
+    document.getElementById('noVideoMsg').textContent='Camera · on or off';
     await ensureSessionStream();
     var attempts=0;var maxAttempts=3;var connected=false;
     function tryConnect(){
@@ -5896,7 +5909,7 @@ function endSession(){
   const lv=document.getElementById('localVideo');lv.srcObject=null;lv.style.display='';lv.classList.remove('mirror');
   document.getElementById('remoteVideo').srcObject=null;document.getElementById('remoteVideo').style.display='none';
   document.getElementById('remoteAudio').srcObject=null;
-  document.getElementById('noVideoMsg').style.display='flex';document.getElementById('noVideoMsg').textContent='Caméra · activation ou désactivée';
+  document.getElementById('noVideoMsg').style.display='flex';document.getElementById('noVideoMsg').textContent='Camera · on or off';
   document.getElementById('aiPanel').classList.remove('active');
   const _riEnd=document.getElementById('recIndicator');if(_riEnd)_riEnd.style.display='none';
   hideTimerBadge();
