@@ -697,7 +697,7 @@ input[type="file"]{display:none}
 <div id="session" class="screen">
   <div id="creditBadge" style="position:fixed;top:12px;right:200px;background:rgba(0,0,0,.6);color:#fff;padding:.2rem .6rem;border-radius:10px;font-size:.72rem;font-family:'DM Sans',sans-serif;z-index:1000;display:none;cursor:pointer"><span id="creditCount">$0.00</span></div>
   <div id="sessionTimeRail" class="session-time-rail" aria-hidden="true"><span id="sessionTimeRailFill" class="session-time-rail-fill"></span></div>
-  <div class="session-top"><div class="status"><div class="status-dot waiting" id="statusDot"></div><span id="statusText">Préparation du flux…</span></div><button class="back-btn" onclick="showEndTakeModal()" style="color:#fff;font-size:1rem;position:fixed;top:16px;left:16px;z-index:10001">✕</button></div>
+  <div class="session-top"><div class="status"><div class="status-dot waiting" id="statusDot"></div><span id="statusText">Preparing…</span></div><div id="sessionBalanceBadge" style="display:none;font-size:.72rem;color:#C8CED0;font-weight:600"><span id="sessionBalanceLabel">Balance</span> <span id="sessionBalanceAmount" style="color:#52B788">$0.00</span></div><button class="back-btn" onclick="showEndTakeModal()" style="color:#fff;font-size:1rem;position:fixed;top:16px;left:16px;z-index:10001">✕</button></div>
   <div class="session-body">
     <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><video id="remoteVideo" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:contain;background:#000"></video><div class="no-video" id="noVideoMsg">Camera · on or off</div><div class="video-controls"><button class="vctrl" id="btnMic" onclick="toggleMic()"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/></svg></button><button class="vctrl" id="btnRec" onclick="toggleRecording()"><span class="rec-dot"></span></button><button class="vctrl vctrl-pause" id="btnPause" onclick="togglePause()"><svg id="pauseIcon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button><div class="speed-btns speed-btns-overlay" id="speedBtnsOverlay"></div><button class="vctrl vctrl-flip" id="btnCam" onclick="toggleCam()"><svg viewBox="0 0 24 24"><path d="M20 5h-3.17L15 3H9L7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-8 13a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/><path d="M12 17l-2.5-2h1.5v-2h2v2h1.5L12 17zm0-10l2.5 2h-1.5v2h-2V9H9.5L12 7z"/></svg></button></div></div><div class="rec-indicator" id="recIndicator"></div><div class="mob-controls-row" id="mobControlsRow"><button class="mob-nav-btn" onclick="prompterPrev()">◀</button><button class="mob-main-btn" id="mobMainBtn" onclick="togglePause()"><svg class="pause-bars" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></svg><span class="play-tri"></span></button><button class="mob-nav-btn" onclick="prompterNext()">▶</button></div></div>
     <div class="prompter-area" id="prompterArea"><div class="prompter-empty" id="prompterEmptyText">No script loaded</div></div>
@@ -1274,7 +1274,8 @@ function updateCreditBadge(){
   if(!badge||!el)return;
   if(!cwServerSession.email){badge.style.display='none';return}
   var cents=cwServerSession.creditBalance||0;
-  el.textContent='$'+(cents/100).toFixed(2);
+  var dollarStr='$'+(cents/100).toFixed(2);
+  el.textContent=dollarStr;
   badge.style.display='';
   badge.style.pointerEvents='auto';
   badge.style.cursor='pointer';
@@ -1282,6 +1283,13 @@ function updateCreditBadge(){
   if(cents<=50)badge.style.background='rgba(200,50,50,.85)';
   else if(cents<=200)badge.style.background='rgba(200,150,50,.85)';
   else badge.style.background='rgba(0,0,0,.6)';
+  // Also update session top bar balance
+  var sb=document.getElementById('sessionBalanceBadge');
+  var sa=document.getElementById('sessionBalanceAmount');
+  var sl=document.getElementById('sessionBalanceLabel');
+  if(sb){sb.style.display=cwServerSession.email?'':'none'}
+  if(sa)sa.textContent=dollarStr;
+  if(sl)sl.textContent=tt('balanceLabel','Balance');
 }
 function showCreditDepletedModal(){
   if(isServerAdmin())return;
@@ -2152,6 +2160,7 @@ const UI_FALLBACK_TRANSLATIONS={
   redirectingToPayment:{fr:'Redirection vers le paiement…',en:'Redirecting to payment…',es:'Redirigiendo al pago…',it:'Reindirizzamento al pagamento…',zh:'正在跳转到支付…',ko:'결제로 리디렉션 중…',ja:'決済ページへリダイレクト中…',ar:'جارٍ التوجيه إلى الدفع…',de:'Weiterleitung zur Zahlung…',pt:'Redirecionando para pagamento…',hi:'भुगतान पर रीडायरेक्ट हो रहा है…',tr:'Ödemeye yönlendiriliyor…',ru:'Перенаправление на оплату…'},
   paymentSuccess:{fr:'Paiement confirmé ! Crédits ajoutés.',en:'Payment confirmed! Credits added.',es:'¡Pago confirmado! Créditos añadidos.',it:'Pagamento confermato! Crediti aggiunti.',zh:'付款确认！积分已添加。',ko:'결제 확인! 크레딧 추가됨.',ja:'お支払い確認！クレジットが追加されました。',ar:'تم تأكيد الدفع! تمت إضافة الرصيد.',de:'Zahlung bestätigt! Guthaben aufgeladen.',pt:'Pagamento confirmado! Créditos adicionados.',hi:'भुगतान पुष्टि! क्रेडिट जोड़े गए।',tr:'Ödeme onaylandı! Krediler eklendi.',ru:'Оплата подтверждена! Кредиты добавлены.'},
   paymentCancelled:{fr:'Paiement annulé.',en:'Payment cancelled.',es:'Pago cancelado.',it:'Pagamento annullato.',zh:'付款已取消。',ko:'결제 취소됨.',ja:'お支払いキャンセル。',ar:'تم إلغاء الدفع.',de:'Zahlung abgebrochen.',pt:'Pagamento cancelado.',hi:'भुगतान रद्द।',tr:'Ödeme iptal edildi.',ru:'Оплата отменена.'},
+  balanceLabel:{fr:'Solde',en:'Balance',es:'Saldo',it:'Saldo',zh:'余额',ko:'잔액',ja:'残高',ar:'الرصيد',de:'Guthaben',pt:'Saldo',hi:'बैलेंस',tr:'Bakiye',ru:'Баланс'},
   lowCredits:{fr:'Crédits bas',en:'Low credits',es:'Créditos bajos',it:'Crediti bassi',zh:'积分不足',ko:'크레딧 부족',ja:'クレジット残少',ar:'رصيد منخفض',de:'Niedriges Guthaben',pt:'Créditos baixos',hi:'कम क्रेडिट',tr:'Düşük kredi',ru:'Мало кредитов'},
   psSpeedLabel:{fr:'Vitesse IA',en:'AI Speed',es:'Velocidad IA',it:'Velocità IA',zh:'AI速度',ko:'AI 속도',ja:'AI速度',ar:'سرعة الذكاء',de:'KI-Geschwindigkeit',pt:'Velocidade IA',hi:'AI गति',tr:'AI Hızı',ru:'Скорость ИИ'},
   psVadLabel:{fr:'Pause après ma réplique',en:'Pause after my line',es:'Pausa después de mi línea',it:'Pausa dopo la mia battuta',zh:'我台词后的停顿',ko:'내 대사 후 멈춤',ja:'私のセリフ後の間',ar:'توقف بعد جملتي',de:'Pause nach meiner Zeile',pt:'Pausa após minha fala',hi:'मेरी लाइन के बाद विराम',tr:'Repliğimden sonra duraklama',ru:'Пауза после моей реплики'},
@@ -3351,8 +3360,7 @@ function handlePartnerClick(){
   goPartnerChoice();
 }
 function hideAiOnlyControls(){
-  // Hide AI-specific controls in partner mode (speed, mode buttons, view toggle)
-  var ids=['sessionModeManualBtn','sessionModeAutoBtn','speedBtnsSession','viewModeSession','aiPanel'];
+  var ids=['sessionModeManualBtn','sessionModeAutoBtn','speedBtnsSession','viewModeSession','aiPanel','speedBtnsOverlay'];
   ids.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none'});
 }
 function showAiControls(){
@@ -5857,8 +5865,13 @@ async function joinAsPartner(){
     var pe=document.getElementById('prompterEmptyText');
     if(pe)pe.textContent='Waiting for actor to start the session…';
     cwCommitSessionLive();
-    document.getElementById('noVideoMsg').textContent='Camera · on or off';
-    await ensureSessionStream();
+    document.getElementById('noVideoMsg').textContent='Audio only';
+    // Partner only needs audio, not video
+    try{
+      localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+      var lv=document.getElementById('localVideo');
+      if(lv){lv.style.display='none'}
+    }catch(e){console.warn('[partner] mic denied:',e.message)}
     var attempts=0;var maxAttempts=30;var connected=false;
     function tryConnect(){
       if(connected||_pdfParseCancelled)return;
