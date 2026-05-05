@@ -1477,8 +1477,8 @@ function showPartnerGate(){
   card.className='paywall-mini';
   card.innerHTML=`
     <div class="paywall-badge"><span class="paywall-badge-dot"></span>🎭</div>
-    <h2 class="paywall-title" style="font-size:1.2rem">${tt('partnerGateTitle','Crée un compte pour inviter un partenaire.')}</h2>
-    <p class="paywall-copy">${tt('partnerGateDesc','Inscris-toi gratuitement pour débloquer le mode partenaire.')}</p>
+    <h2 class="paywall-title" style="font-size:1.2rem">${tt('partnerGateTitle','Create an account to invite a partner.')}</h2>
+    <p class="paywall-copy">${tt('partnerGateDesc','Sign up for free to unlock partner mode.')}</p>
     <div class="paywall-actions">
       <button class="paywall-primary" onclick="openAuthModal();document.getElementById('partnerGateOverlay').remove()">${tt('partnerGateSignup','Créer un compte')}</button>
       <button class="paywall-secondary" onclick="document.getElementById('partnerGateOverlay').remove();goSetupAi()">${tt('partnerGateSolo','Continuer seul')}</button>
@@ -1864,13 +1864,13 @@ function getElevenLabsFallbackMessage(){
       : 'ElevenLabs is not configured (missing ELEVENLABS_API_KEY). Using browser voice.';
   }
   return selectedUILanguage==='fr'
-    ? 'ElevenLabs indisponible, voix navigateur activée'
+    ? 'ElevenLabs unavailable, browser voice active'
     : 'ElevenLabs unavailable, using browser voice';
 }
 function getUnavailableVoiceMessage(label){
   const name=label||'Voice';
   return selectedUILanguage==='fr'
-    ? `Voix indisponible: ${name}. Voix de secours utilisée`
+    ? `Voice unavailable: ${name}. Backup voice used`
     : `Voice unavailable: ${name}. Using backup voice`;
 }
 function setElevenLabsBackoff(ms,reason){
@@ -2155,12 +2155,12 @@ const UI_FALLBACK_TRANSLATIONS={
   lowCredits:{fr:'Crédits bas',en:'Low credits',es:'Créditos bajos',it:'Crediti bassi',zh:'积分不足',ko:'크레딧 부족',ja:'クレジット残少',ar:'رصيد منخفض',de:'Niedriges Guthaben',pt:'Créditos baixos',hi:'कम क्रेडिट',tr:'Düşük kredi',ru:'Мало кредитов'},
   psSpeedLabel:{fr:'Vitesse IA',en:'AI Speed',es:'Velocidad IA',it:'Velocità IA',zh:'AI速度',ko:'AI 속도',ja:'AI速度',ar:'سرعة الذكاء',de:'KI-Geschwindigkeit',pt:'Velocidade IA',hi:'AI गति',tr:'AI Hızı',ru:'Скорость ИИ'},
   psVadLabel:{fr:'Pause après ma réplique',en:'Pause after my line',es:'Pausa después de mi línea',it:'Pausa dopo la mia battuta',zh:'我台词后的停顿',ko:'내 대사 후 멈춤',ja:'私のセリフ後の間',ar:'توقف بعد جملتي',de:'Pause nach meiner Zeile',pt:'Pausa após minha fala',hi:'मेरी लाइन के बाद विराम',tr:'Repliğimden sonra duraklama',ru:'Пауза после моей реплики'},
-  cameraDenied:{fr:'Caméra refusée — vérifie les permissions',en:'Camera denied — check permissions',es:'Cámara denegada',it:'Fotocamera negata',zh:'摄像头被拒绝',ko:'카메라 거부됨',ja:'カメラ拒否',ar:'الكاميرا مرفوضة',de:'Kamera verweigert',pt:'Câmera negada',hi:'कैमरा अस्वीकृत',tr:'Kamera reddedildi',ru:'Камера отклонена'},
-  cameraUnavailable:{fr:'Caméra indisponible',en:'Camera unavailable',es:'Cámara no disponible',it:'Fotocamera non disponibile',zh:'摄像头不可用',ko:'카메라 사용 불가',ja:'カメラ利用不可',ar:'الكاميرا غير متاحة',de:'Kamera nicht verfügbar',pt:'Câmera indisponível',hi:'कैमरा अनुपलब्ध',tr:'Kamera kullanılamıyor',ru:'Камера недоступна'},
+  cameraDenied:{fr:'Camera denied — check permissions',en:'Camera denied — check permissions',es:'Cámara denegada',it:'Fotocamera negata',zh:'摄像头被拒绝',ko:'카메라 거부됨',ja:'カメラ拒否',ar:'الكاميرا مرفوضة',de:'Kamera verweigert',pt:'Câmera negada',hi:'कैमरा अस्वीकृत',tr:'Kamera reddedildi',ru:'Камера отклонена'},
+  cameraUnavailable:{fr:'Camera unavailable',en:'Camera unavailable',es:'Cámara no disponible',it:'Fotocamera non disponibile',zh:'摄像头不可用',ko:'카메라 사용 불가',ja:'カメラ利用不可',ar:'الكاميرا غير متاحة',de:'Kamera nicht verfügbar',pt:'Câmera indisponível',hi:'कैमरा अनुपलब्ध',tr:'Kamera kullanılamıyor',ru:'Камера недоступна'},
   micDenied:{fr:'Micro refusé — vérifie les permissions',en:'Mic denied — check permissions',es:'Micrófono denegado',it:'Microfono negato',zh:'麦克风被拒绝',ko:'마이크 거부됨',ja:'マイク拒否',ar:'الميكروفون مرفوض',de:'Mikro verweigert',pt:'Microfone negado',hi:'माइक अस्वीकृत',tr:'Mikrofon reddedildi',ru:'Микрофон отклонён'},
   pdfWatermarkOnly:{fr:'Ce PDF ne contient que le filigrane NDA. Colle le texte du script manuellement.',en:'This PDF only contains the NDA watermark. Paste the script text manually.',es:'Este PDF solo contiene la marca de agua NDA. Pega el texto manualmente.',it:'Questo PDF contiene solo la filigrana NDA. Incolla il testo manualmente.',zh:'此PDF仅包含NDA水印。请手动粘贴脚本文本。',ko:'이 PDF에는 NDA 워터마크만 포함되어 있습니다. 텍스트를 수동으로 붙여넣으세요.',ja:'このPDFにはNDA透かしのみ含まれています。テキストを手動で貼り付けてください。',ar:'يحتوي هذا الملف على العلامة المائية فقط. الصق النص يدويًا.',de:'Diese PDF enthält nur das NDA-Wasserzeichen. Füge den Text manuell ein.',pt:'Este PDF contém apenas a marca d\'água NDA. Cole o texto manualmente.',hi:'इस PDF में केवल NDA वॉटरमार्क है। टेक्स्ट मैन्युअली पेस्ट करें।',tr:'Bu PDF yalnızca NDA filigranı içeriyor. Metni manuel olarak yapıştırın.',ru:'Этот PDF содержит только водяной знак NDA. Вставьте текст вручную.'},
-  partnerGateTitle:{fr:'Crée un compte pour inviter un partenaire.',en:'Create an account to invite a partner.',es:'Crea una cuenta para invitar a un compañero.',it:'Crea un account per invitare un partner.',zh:'创建帐户以邀请搭档。',ko:'파트너를 초대하려면 계정을 만드세요.',ja:'パートナーを招待するにはアカウントを作成してください。',ar:'أنشئ حسابًا لدعوة شريك.',de:'Erstelle ein Konto, um einen Partner einzuladen.',pt:'Crie uma conta para convidar um parceiro.',hi:'पार्टनर को आमंत्रित करने के लिए अकाउंट बनाएं।',tr:'Partner davet etmek için hesap oluşturun.',ru:'Создайте аккаунт, чтобы пригласить партнёра.'},
-  partnerGateDesc:{fr:'Inscris-toi gratuitement pour débloquer le mode partenaire.',en:'Sign up for free to unlock partner mode.',es:'Regístrate gratis para desbloquear el modo compañero.',it:'Iscriviti gratis per sbloccare la modalità partner.',zh:'免费注册以解锁搭档模式。',ko:'무료로 가입하여 파트너 모드를 잠금 해제하세요.',ja:'無料登録でパートナーモードを解除。',ar:'سجّل مجانًا لفتح وضع الشريك.',de:'Melde dich kostenlos an, um den Partnermodus freizuschalten.',pt:'Cadastre-se grátis para desbloquear o modo parceiro.',hi:'पार्टनर मोड अनलॉक करने के लिए मुफ़्त में साइन अप करें।',tr:'Partner modunu açmak için ücretsiz kaydolun.',ru:'Зарегистрируйтесь бесплатно, чтобы разблокировать режим партнёра.'},
+  partnerGateTitle:{fr:'Create an account to invite a partner.',en:'Create an account to invite a partner.',es:'Crea una cuenta para invitar a un compañero.',it:'Crea un account per invitare un partner.',zh:'创建帐户以邀请搭档。',ko:'파트너를 초대하려면 계정을 만드세요.',ja:'パートナーを招待するにはアカウントを作成してください。',ar:'أنشئ حسابًا لدعوة شريك.',de:'Erstelle ein Konto, um einen Partner einzuladen.',pt:'Crie uma conta para convidar um parceiro.',hi:'पार्टनर को आमंत्रित करने के लिए अकाउंट बनाएं।',tr:'Partner davet etmek için hesap oluşturun.',ru:'Создайте аккаунт, чтобы пригласить партнёра.'},
+  partnerGateDesc:{fr:'Sign up for free to unlock partner mode.',en:'Sign up for free to unlock partner mode.',es:'Regístrate gratis para desbloquear el modo compañero.',it:'Iscriviti gratis per sbloccare la modalità partner.',zh:'免费注册以解锁搭档模式。',ko:'무료로 가입하여 파트너 모드를 잠금 해제하세요.',ja:'無料登録でパートナーモードを解除。',ar:'سجّل مجانًا لفتح وضع الشريك.',de:'Melde dich kostenlos an, um den Partnermodus freizuschalten.',pt:'Cadastre-se grátis para desbloquear o modo parceiro.',hi:'पार्टनर मोड अनलॉक करने के लिए मुफ़्त में साइन अप करें।',tr:'Partner modunu açmak için ücretsiz kaydolun.',ru:'Зарегистрируйтесь бесплатно, чтобы разблокировать режим партнёра.'},
   partnerGateSignup:{fr:'Créer un compte',en:'Create account',es:'Crear cuenta',it:'Crea account',zh:'创建帐户',ko:'계정 만들기',ja:'アカウント作成',ar:'إنشاء حساب',de:'Konto erstellen',pt:'Criar conta',hi:'अकाउंट बनाएं',tr:'Hesap oluştur',ru:'Создать аккаунт'},
   partnerGateSolo:{fr:'Continuer solo',en:'Continue solo',es:'Continuar solo',it:'Continua da solo',zh:'独自继续',ko:'혼자 계속',ja:'ソロで続ける',ar:'متابعة منفردًا',de:'Alleine fortfahren',pt:'Continuar sozinho',hi:'अकेले जारी रखें',tr:'Yalnız devam et',ru:'Продолжить одному'},
   homeHook:{fr:'Ton partenaire de jeu, toujours disponible.',en:'Your acting partner, always available.',es:'Tu compañero de actuación, siempre disponible.',it:'Il tuo partner di scena, sempre disponibile.',zh:'你的表演搭档，随时待命。',ko:'당신의 연기 파트너, 언제나 준비.',ja:'あなたの演技パートナー、いつでも。',ar:'شريكك في التمثيل، متاح دائمًا.',de:'Dein Schauspielpartner, immer verfügbar.',pt:'Seu parceiro de cena, sempre disponível.',hi:'आपका एक्टिंग पार्टनर, हमेशा उपलब्ध।',tr:'Oyunculuk partnerin, her zaman hazır.',ru:'Ваш партнёр по сцене, всегда доступен.'},
@@ -2183,32 +2183,32 @@ function t(key){
 function ts(text){
   if(!text)return text;
   const mapFr={
-    'Connecté':'connected',
+    'Connected':'connected',
     'Partenaire connecté !':'partnerConnected',
-    'Déconnecté':'disconnected',
+    'Disconnected':'disconnected',
     'Partenaire déconnecté':'partnerDisconnected',
-    'Erreur':'error',
-    'En attente du partenaire…':'waitingForPartner',
-    'En attente…':'waitingOverlayTitle',
-    'Partage le code ':'waitingOverlayMessage',
+    'Error':'error',
+    'Waiting for partner…':'waitingForPartner',
+    'Waiting…':'waitingOverlayTitle',
+    'Share code: ':'waitingOverlayMessage',
     'Entre un code':'joinCodeMissing',
-    'Connexion…':'connection',
-    'Recherche de ':'searching',
+    'Connecting…':'connection',
+    'Looking for ':'searching',
     'Session introuvable.':'sessionNotFound',
-    'Connexion lente':'connectionSlow',
-    'Code indisponible':'codeUnavailable',
+    'Slow connection':'connectionSlow',
+    'Code unavailable':'codeUnavailable',
     'Code copié ✅':'codeCopied',
-    'Lien indisponible':'linkUnavailable',
+    'Link unavailable':'linkUnavailable',
     'Lien copié ✅':'linkCopied',
     'Copie impossible':'copyFailed',
     'Texte copié, colle-le dans WeChat':'shareTextCopied',
     'Texte copié ✅':'shareTextCopied',
-    'Partage indisponible':'shareUnavailable',
+    'Share unavailable':'shareUnavailable',
     'Code prérempli : ':'joinCodePrefilled',
   };
   const key=mapFr[text];
   if(key)return t(key);
-  if(text.startsWith('Erreur :'))return t('error')+text.slice('Erreur'.length);
+  if(text.startsWith('Error:'))return t('error')+text.slice('Error'.length);
   if(text.startsWith('Code prérempli : '))return t('joinCodePrefilled')+': '+text.slice('Code prérempli : '.length);
   return text;
 }
@@ -2618,7 +2618,7 @@ async function requestEmailCode(){
     const resendLink=document.getElementById('authResendLink');
     if(resendLink)resendLink.style.display='block';
     document.getElementById('authStatusText').textContent=t('authCodeSent');
-  }catch(e){showToast('Connexion impossible');}
+  }catch(e){showToast('Connection failed');}
 }
 async function verifyEmailCode(){
   const code=(document.getElementById('authCodeInput').value||'').trim();
@@ -2669,11 +2669,11 @@ function startGoogleSignIn(){
   });
 }
 async function handleGoogleCredential(response){
-  if(!response||!response.credential){showToast('Erreur Google');return}
+  if(!response||!response.credential){showToast('Google error');return}
   try{
     const rsp=await fetch('/api/auth/google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:response.credential}),credentials:'same-origin'});
     const out=await rsp.json().catch(()=>null);
-    if(!rsp.ok||!(out&&out.ok)){showToast(out&&out.error?out.error:'Erreur Google');return}
+    if(!rsp.ok||!(out&&out.ok)){showToast(out&&out.error?out.error:'Google error');return}
     const wasVisitor=getPlan().tier==='visitor';
     const serverSignup=out.isNewUser===true;
     const serverLogin=out.isNewUser===false;
@@ -3375,7 +3375,7 @@ function goSetupAi(){
 function toggleSetupCamera(){
   isCamOn=!isCamOn;
   updateSetupCameraButton();
-  showToast(isCamOn?'Caméra activée':'Caméra coupée');
+  showToast(isCamOn?'Camera on':'Camera off');
   if(localStream){
     localStream.getVideoTracks().forEach(t=>t.enabled=isCamOn);
   }
@@ -3423,7 +3423,7 @@ function updateSetupCameraButton(){
   const btn=document.getElementById('setupCamBtn');
   if(!btn)return;
   const svgIcon='<svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;vertical-align:middle;margin-right:4px"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>';
-  btn.innerHTML=svgIcon+(isCamOn?'Caméra ON':'Caméra OFF');
+  btn.innerHTML=svgIcon+(isCamOn?'Camera ON':'Camera OFF');
 }
 function setSessionSpeed(v){setVoiceSpeed(v,false);}
 function switchSessionMode(nextMode){
@@ -4876,7 +4876,7 @@ function closeScriptReview(applyEdits){
       collected=collectPdfScriptFromReviewDom();
     }catch(err){
       console.warn('[review] collect failed',err);
-      showToast('Erreur lecture du formulaire — réessaie',3800);
+      showToast('Form read error — try again',3800);
       return;
     }
     const merged=collected&&collected.length
@@ -4974,7 +4974,7 @@ async function processTextImport(n){
     void fillScriptInputProgressive(n,scriptRawText||norm);
   }catch(e){
     console.error(e);
-    showToast('Erreur import texte',4000);
+    showToast('Text import error',4000);
   }
 }
 
@@ -5380,11 +5380,11 @@ async function startCamera(){
   }
   const noVideoEl=document.getElementById('noVideoMsg');
   if(lastErr&&(lastErr.name==='NotAllowedError'||lastErr.name==='PermissionDeniedError')){
-    noVideoEl.style.display='flex';noVideoEl.textContent='📷 '+tt('cameraDenied','Caméra refusée — vérifie les permissions');
-    showToast(tt('cameraDenied','Caméra refusée — vérifie les permissions'),5000);
+    noVideoEl.style.display='flex';noVideoEl.textContent='📷 '+tt('cameraDenied','Camera denied — check permissions');
+    showToast(tt('cameraDenied','Camera denied — check permissions'),5000);
   }else{
-    noVideoEl.style.display='flex';noVideoEl.textContent='📷 '+tt('cameraUnavailable','Caméra indisponible');
-    showToast(tt('cameraUnavailable','Caméra indisponible')+': '+(lastErr&&lastErr.message||''),5000);
+    noVideoEl.style.display='flex';noVideoEl.textContent='📷 '+tt('cameraUnavailable','Camera unavailable');
+    showToast(tt('cameraUnavailable','Camera unavailable')+': '+(lastErr&&lastErr.message||''),5000);
   }
   return null;
 }
@@ -5419,10 +5419,10 @@ async function ensureSessionStream(){
       localStream=new MediaStream(audioStream.getAudioTracks());
       document.getElementById('localVideo').srcObject=null;
       document.getElementById('noVideoMsg').style.display='flex';
-      document.getElementById('noVideoMsg').textContent='Caméra désactivée';
+      document.getElementById('noVideoMsg').textContent='Camera off';
       return localStream;
     }catch(e){
-      showToast('Micro indisponible',4000);
+      showToast('Mic unavailable',4000);
       return null;
     }
   }
@@ -5433,8 +5433,8 @@ async function ensureSessionStream(){
     localStream=new MediaStream(audioStream.getAudioTracks());
     document.getElementById('localVideo').srcObject=null;
     document.getElementById('noVideoMsg').style.display='flex';
-    document.getElementById('noVideoMsg').textContent='Caméra indisponible, audio uniquement';
-    showToast('Caméra indisponible, audio uniquement',4000);
+    document.getElementById('noVideoMsg').textContent='Camera unavailable, audio only';
+    showToast('Camera unavailable, audio only',4000);
     return localStream;
   }
   return cam||null;
@@ -5463,10 +5463,10 @@ async function toggleCam(){
       if(sender)await sender.replaceTrack(newTrack);
     }
     document.getElementById('noVideoMsg').style.display='none';
-    showToast(currentFacingMode==='user'?'Caméra avant':'Caméra arrière');
+    showToast(currentFacingMode==='user'?'Front camera':'Rear camera');
   }catch(e){
     currentFacingMode=currentFacingMode==='user'?'environment':'user';
-    showToast('Switch caméra indisponible',3500);
+    showToast('Camera switch unavailable',3500);
   }
 }
 
@@ -5859,7 +5859,7 @@ async function joinAsPartner(){
     cwCommitSessionLive();
     document.getElementById('noVideoMsg').textContent='Camera · on or off';
     await ensureSessionStream();
-    var attempts=0;var maxAttempts=3;var connected=false;
+    var attempts=0;var maxAttempts=30;var connected=false;
     function tryConnect(){
       if(connected||_pdfParseCancelled)return;
       attempts++;
@@ -5874,15 +5874,14 @@ async function joinAsPartner(){
       peer.on('call',function(ic){if(localStream)ic.answer(localStream);else ic.answer();setupCallHandlers(ic)});
       peer.on('error',function(e){
         if(!connected&&attempts<maxAttempts){
-          showOverlay('Connexion…','Tentative '+(attempts+1)+'/'+maxAttempts+'…');
-          setTimeout(tryConnect,2000);
+          showOverlay('Waiting for actor…','The actor hasn\'t started yet. Retrying… ('+attempts+'/'+maxAttempts+')');
+          setTimeout(tryConnect,3000);
         }else if(!connected){
-          hideOverlay();showToast('Session introuvable.',5000);setStatus('disconnected','Introuvable');
+          hideOverlay();showToast('Could not connect. Ask the actor to start the session first.',6000);setStatus('disconnected','Not found');
         }
       });
     }
     tryConnect();
-    connectionTimeout=setTimeout(function(){if(!conn||!conn.open){hideOverlay();showToast('Connexion lente',5000)}},20000);
     return true;
   });
 }
