@@ -5813,7 +5813,6 @@ async function startPartnerSession(){
     if(__cwSessionActive)return false;
     unlockAudio();
     if(pdfScript.length>0&&!selectedChar){showToast(t('pickCharacterFirst'));return false}
-    if(!isSignedUp()){showPartnerGate();return false}
     role='actor';sessionMode='partner';mode='manual';
     cancelSpeechFlow();
     const code=document.getElementById('mySessionCode').textContent;if(!code||code==='—')return false;
