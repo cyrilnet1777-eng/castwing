@@ -3348,7 +3348,6 @@ function trStatusLabel(key){
 function goHome(){endSession();showScreen('home')}
 function goPartnerChoice(){showScreen('partnerChoice')}
 function handlePartnerClick(){
-  if(!isSignedUp()){showPartnerGate();return}
   goPartnerChoice();
 }
 function goJoin(){showScreen('joinScreen')}
