@@ -5741,6 +5741,7 @@ async function bootstrapAiSessionFromCurrentScript(importScreenN){
   if(!_pCounts.partner)console.error('[session] ⚠ ZERO partner lines — AI has nothing to speak!');
   if(!_pCounts.actor)console.warn('[session] ⚠ ZERO actor lines — VAD will never arm');
   showScreen('session');
+  showAiControls();
   cwCommitSessionLive();
   renderPrompter();
   if(mode==='ai'||mode==='auto'){document.getElementById('aiPanel').classList.add('active');populateSessionVoiceSelect();}
