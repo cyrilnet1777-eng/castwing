@@ -484,11 +484,11 @@ input[type="file"]{display:none}
     <div class="logo"><h1>Cast<span class="logo-rec-dot">REC</span><span>wing</span></h1></div>
     <p id="homeHook" style="text-align:center;font-size:.85rem;color:#8FBCA8;font-weight:500;margin:-.2rem 0 .4rem">Your scene partner, always available.</p>
     <div class="home-cards">
-      <div class="hcard" onclick="goSetupAi()">
+      <div class="hcard" onclick="goSetupAi()" title="Solo rehearsal with AI reading partner lines">
         <div class="hcard-icon navy">🦾</div>
         <div class="hcard-text"><h3 id="homeSoloTitle">Start a scene</h3><p id="homeSoloDesc">Solo with AI or manual reading</p></div>
       </div>
-      <div class="hcard" onclick="handlePartnerClick()">
+      <div class="hcard" onclick="handlePartnerClick()" title="Invite a real person to read with you">
         <div class="hcard-icon blue">🎭</div>
         <div class="hcard-text"><h3 id="homePartnerTitle">Rehearse with a partner</h3><p id="homePartnerDesc">Invite someone to play the scene for real</p></div>
       </div>
@@ -502,7 +502,7 @@ input[type="file"]{display:none}
       <span class="lang-globe" aria-hidden="true">🌐</span>
       <select id="siteLanguageSelect" onchange="changeUILanguage(this.value)" aria-label="Site language"></select>
     </div>
-    <button class="auth-mini-btn" id="authMiniBtn" onclick="openAuthModal()">Login / Sign up</button>
+    <button class="auth-mini-btn" id="authMiniBtn" title="Login or manage your account" onclick="openAuthModal()">Login / Sign up</button>
   </div>
 </div>
 
@@ -615,9 +615,9 @@ input[type="file"]{display:none}
   <div class="setup-card">
     <label id="replyModeLabel">Reply mode</label>
     <div class="mode-toggle">
-      <div class="mode-opt active" id="modeAiBtn" onclick="setMode('ai')">🦾 Voice AI</div>
-      <div class="mode-opt" id="modeManBtn" onclick="setMode('manual')">✋ Manual</div>
-      <div class="mode-opt" id="modeAutoBtn" onclick="setMode('auto')">🎤 Auto</div>
+      <div class="mode-opt active" id="modeAiBtn" title="AI reads partner lines aloud" onclick="setMode('ai')">🦾 Voice AI</div>
+      <div class="mode-opt" id="modeManBtn" title="Navigate lines manually" onclick="setMode('manual')">✋ Manual</div>
+      <div class="mode-opt" id="modeAutoBtn" title="AI reads then listens for your silence to advance" onclick="setMode('auto')">🎤 Auto</div>
     </div>
     <div class="mode-toggle">
       <div class="mode-opt" id="setupCamBtn" onclick="toggleSetupCamera()"><svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;vertical-align:middle;margin-right:4px"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>Camera ON</div>
@@ -642,7 +642,7 @@ input[type="file"]{display:none}
       </div>
     </div>
   </div>
-  <button class="btn btn-primary btn-full" onclick="startAiSession()" id="launchAiBtn">Start session 🦾</button>
+  <button class="btn btn-primary btn-full" onclick="startAiSession()" id="launchAiBtn" title="Begin rehearsal with AI partner">Start session 🦾</button>
   </div>
 </div>
 
@@ -656,11 +656,11 @@ input[type="file"]{display:none}
       <div class="session-code-display" id="mySessionCode">—</div>
       <div class="code-hint" id="sessionCodeHint">Share this code with your partner</div>
       <div class="mode-toggle" style="margin-top:.6rem">
-        <div class="mode-opt" onclick="copyPartnerCode()" id="copyCodeBtn">📋 Copy code</div>
-        <div class="mode-opt" onclick="copyPartnerLink()" id="copyLinkBtn">🔗 Copy link</div>
+        <div class="mode-opt" onclick="copyPartnerCode()" id="copyCodeBtn" title="Copy session code to clipboard">📋 Copy code</div>
+        <div class="mode-opt" onclick="copyPartnerLink()" id="copyLinkBtn" title="Copy join link to clipboard">🔗 Copy link</div>
       </div>
       <div class="mode-toggle" style="margin-top:.5rem">
-        <div class="mode-opt" onclick="shareVia('native')" id="shareBtn">📤 Share</div>
+        <div class="mode-opt" onclick="shareVia('native')" id="shareBtn" title="Share via native share menu">📤 Share</div>
         <div class="mode-opt" onclick="shareVia('whatsapp')">💬 WhatsApp</div>
       </div>
       <div class="mode-toggle" style="margin-top:.5rem">
@@ -680,7 +680,7 @@ input[type="file"]{display:none}
     <div id="charSection2" style="display:none;margin-top:1rem"><label id="myCharacterLabel2">My character</label><div class="char-grid" id="charGrid2"></div></div>
     <div style="margin-top:1rem"><label id="pasteScriptLabel2">Or paste text</label><textarea id="scriptInput2" placeholder="ME: My line&#10;PARTNER: Their line"></textarea><button type="button" class="btn btn-secondary btn-full" style="margin-top:.5rem;padding:.55rem" onclick="processTextImport(2)" id="importPastedBtn2">Import pasted text</button></div>
   </div>
-  <button class="btn btn-primary btn-full" onclick="startPartnerSession()" id="launchPartnerBtn">Start session 🎬</button>
+  <button class="btn btn-primary btn-full" onclick="startPartnerSession()" id="launchPartnerBtn" title="Start session and wait for partner to connect">Start session 🎬</button>
   </div>
 </div>
 
@@ -689,7 +689,7 @@ input[type="file"]{display:none}
   <div class="screen-content">
   <div class="setup-header"><button class="back-btn" onclick="goPartnerChoice()">←</button><h2 id="joinScreenTitle">Join a session</h2></div>
   <div class="setup-card"><div class="field-group"><label id="joinCodeLabel">Session code</label><input type="text" id="joinCodeInput" placeholder="Enter actor code" maxlength="10" autocapitalize="characters" spellcheck="false"></div></div>
-  <button class="btn btn-primary btn-full" onclick="joinAsPartner()" id="joinSessionBtn">Join 🎙️</button>
+  <button class="btn btn-primary btn-full" onclick="joinAsPartner()" id="joinSessionBtn" title="Connect to actor's session">Join 🎙️</button>
   </div>
 </div>
 
@@ -698,7 +698,7 @@ input[type="file"]{display:none}
   <div id="sessionTimeRail" class="session-time-rail" aria-hidden="true"><span id="sessionTimeRailFill" class="session-time-rail-fill"></span></div>
   <div class="session-top"><div class="status"><div class="status-dot waiting" id="statusDot"></div><span id="statusText">Preparing…</span></div><div id="sessionBalanceBadge" style="display:none;font-size:.72rem;color:#C8CED0;font-weight:600"><span id="sessionBalanceLabel">Balance</span> <span id="sessionBalanceAmount" style="color:#52B788">$0.00</span></div><button class="back-btn" onclick="showEndTakeModal()" style="color:#fff;font-size:1rem;position:fixed;top:16px;left:16px;z-index:10001">✕</button></div>
   <div class="session-body">
-    <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><video id="remoteVideo" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:contain;background:#000"></video><div class="no-video" id="noVideoMsg">Camera · on or off</div><div class="video-controls"><button class="vctrl" id="btnMic" onclick="toggleMic()"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/></svg></button><button class="vctrl" id="btnRec" onclick="toggleRecording()"><span class="rec-dot"></span></button><button class="vctrl vctrl-pause" id="btnPause" onclick="togglePause()"><svg id="pauseIcon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button><div class="speed-btns speed-btns-overlay" id="speedBtnsOverlay"></div><button class="vctrl vctrl-flip" id="btnCam" onclick="toggleCam()"><svg viewBox="0 0 24 24"><path d="M20 5h-3.17L15 3H9L7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-8 13a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/><path d="M12 17l-2.5-2h1.5v-2h2v2h1.5L12 17zm0-10l2.5 2h-1.5v2h-2V9H9.5L12 7z"/></svg></button></div></div><div class="rec-indicator" id="recIndicator"></div><div class="mob-controls-row" id="mobControlsRow"><button class="mob-nav-btn" onclick="prompterPrev()">◀</button><button class="mob-main-btn" id="mobMainBtn" onclick="togglePause()"><svg class="pause-bars" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></svg><span class="play-tri"></span></button><button class="mob-nav-btn" onclick="prompterNext()">▶</button></div></div>
+    <div class="video-area"><div class="video-container"><video id="localVideo" autoplay playsinline muted></video><video id="remoteVideo" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:contain;background:#000"></video><div class="no-video" id="noVideoMsg">Camera · on or off</div><div class="video-controls"><button class="vctrl" id="btnMic" title="Toggle microphone" onclick="toggleMic()"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/></svg></button><button class="vctrl" id="btnRec" title="Start/stop recording" onclick="toggleRecording()"><span class="rec-dot"></span></button><button class="vctrl vctrl-pause" id="btnPause" title="Pause session" onclick="togglePause()"><svg id="pauseIcon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button><div class="speed-btns speed-btns-overlay" id="speedBtnsOverlay"></div><button class="vctrl vctrl-flip" id="btnCam" title="Switch camera" onclick="toggleCam()"><svg viewBox="0 0 24 24"><path d="M20 5h-3.17L15 3H9L7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-8 13a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/><path d="M12 17l-2.5-2h1.5v-2h2v2h1.5L12 17zm0-10l2.5 2h-1.5v2h-2V9H9.5L12 7z"/></svg></button></div></div><div class="rec-indicator" id="recIndicator"></div><div class="mob-controls-row" id="mobControlsRow"><button class="mob-nav-btn" onclick="prompterPrev()">◀</button><button class="mob-main-btn" id="mobMainBtn" onclick="togglePause()"><svg class="pause-bars" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></svg><span class="play-tri"></span></button><button class="mob-nav-btn" onclick="prompterNext()">▶</button></div></div>
     <div class="prompter-area" id="prompterArea"><div class="prompter-empty" id="prompterEmptyText">No script loaded</div></div>
     <div id="pauseOverlay" class="pause-overlay"><div class="take-info" id="takeInfo"></div><div class="pause-controls" id="pauseControls"><button class="ps-resume-btn" onclick="togglePause(false)">▶ Resume</button><label id="psSpeedLabel">AI Speed</label><div class="ps-hint" style="font-size:.68rem;color:#9CA3AF;margin:-.2rem 0 .3rem">0 = very slow, 5 = very fast</div><div class="speed-btns" id="speedBtnsPause"></div><div class="ps-row"><span class="ps-label" id="psVadLabel">Pause after my line</span><input type="range" id="vadSilenceSlider" min="0.5" max="5" step="0.25" value="1.25" oninput="onVadSliderChange(this.value)"><span class="ps-label" id="vadSilenceLabel">1.25s</span></div><div class="ps-hint" style="font-size:.68rem;color:#9CA3AF;margin:-.3rem 0 .4rem">How long the AI waits after you finish speaking</div><label>View</label><div id="viewModePause"></div><button class="ps-quit-btn" onclick="showEndTakeModal()">✕ End take</button></div></div>
     <div class="italienne-badge" id="italienneBadge">ITALIENNE</div>
@@ -706,14 +706,14 @@ input[type="file"]{display:none}
   <div class="ai-panel" id="aiPanel"><span class="ai-label" id="sessionVoiceLabel">🦾 Voice:</span><select id="sessionVoiceSelect" onchange="changeSessionVoice()"></select></div>
   <div class="session-bottom">
     <div class="session-inline-controls">
-      <div class="mode-opt" id="sessionModeManualBtn" onclick="switchSessionMode('manual')">✋ Manual</div>
-      <div class="mode-opt" id="sessionModeAutoBtn" onclick="switchSessionMode('auto')">🎤 Auto</div>
+      <div class="mode-opt" id="sessionModeManualBtn" title="Switch to manual mode" onclick="switchSessionMode('manual')">✋ Manual</div>
+      <div class="mode-opt" id="sessionModeAutoBtn" title="Switch to auto mode (voice detection)" onclick="switchSessionMode('auto')">🎤 Auto</div>
       <div class="speed-btns" id="speedBtnsSession" style="flex:1"></div>
       <div id="viewModeSession" style="flex:1"></div>
     </div>
-    <button class="nav-arrow" onclick="prompterPrev()" id="prevBtn"><svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg></button>
-    <button class="nav-arrow" onclick="prompterNext()" id="nextBtn"><svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></button>
-    <button class="btn btn-danger" onclick="endSession()" style="padding:.4rem .7rem;font-size:.7rem;border-radius:8px" id="quitBtn">Quit</button>
+    <button class="nav-arrow" onclick="prompterPrev()" id="prevBtn" title="Previous line"><svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg></button>
+    <button class="nav-arrow" onclick="prompterNext()" id="nextBtn" title="Next line"><svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></button>
+    <button class="btn btn-danger" onclick="endSession()" style="padding:.4rem .7rem;font-size:.7rem;border-radius:8px" id="quitBtn" title="End session">Quit</button>
   </div>
 </div>
 
@@ -5944,8 +5944,8 @@ document.addEventListener('DOMContentLoaded',async ()=>{
     if(Number.isFinite(Number(saved.speedValue))){
       var sv=Number(saved.speedValue);
       // Migrate old ElevenLabs speed (0.5-2.0) to new slider scale (0-5)
-      if(sv>=0.5&&sv<=2.0&&sv!==Math.round(sv*2)/2)sv=((sv-0.5)/1.5)*5;
-      else if(sv<0.5||sv>5)sv=SPEED_DEFAULT;
+      if(sv<=2.0)sv=((sv-0.5)/1.5)*5;
+      if(sv<0||sv>5||!Number.isFinite(sv))sv=SPEED_DEFAULT;
       voiceSpeed=Math.max(SPEED_MIN,Math.min(SPEED_MAX,sv));
     }else voiceSpeed=SPEED_DEFAULT;
     if(saved.mode&&['ai','manual','auto'].includes(saved.mode))mode=saved.mode;
