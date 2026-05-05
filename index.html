@@ -695,7 +695,6 @@ input[type="file"]{display:none}
 
 <!-- ═══ SESSION ═══ -->
 <div id="session" class="screen">
-  <div id="creditBadge" style="position:fixed;top:12px;right:200px;background:rgba(0,0,0,.6);color:#fff;padding:.2rem .6rem;border-radius:10px;font-size:.72rem;font-family:'DM Sans',sans-serif;z-index:1000;display:none;cursor:pointer"><span id="creditCount">$0.00</span></div>
   <div id="sessionTimeRail" class="session-time-rail" aria-hidden="true"><span id="sessionTimeRailFill" class="session-time-rail-fill"></span></div>
   <div class="session-top"><div class="status"><div class="status-dot waiting" id="statusDot"></div><span id="statusText">Preparing…</span></div><div id="sessionBalanceBadge" style="display:none;font-size:.72rem;color:#C8CED0;font-weight:600"><span id="sessionBalanceLabel">Balance</span> <span id="sessionBalanceAmount" style="color:#52B788">$0.00</span></div><button class="back-btn" onclick="showEndTakeModal()" style="color:#fff;font-size:1rem;position:fixed;top:16px;left:16px;z-index:10001">✕</button></div>
   <div class="session-body">
@@ -1131,22 +1130,8 @@ function updateSessionTimeRail(ms){
   rail.style.display='block';
 }
 function updateTimerBadge(){
-  const badge=document.getElementById('creditBadge');
-  const el=document.getElementById('creditCount');
-  if(!badge||!el)return;
-  const ms=getRemainingSessionMs();
-  el.textContent=fmtTimer(ms);
-  badge.style.display='block';
-  if(ms<=60000)badge.style.background='rgba(220,53,69,.85)';
-  else if(ms<=180000)badge.style.background='rgba(255,165,0,.85)';
-  else badge.style.background='rgba(0,0,0,.6)';
-  const sec=Math.max(0,Math.floor(ms/1000));
-  updateChronoDisplay(sec);
-  updateSessionTimeRail(ms);
 }
 function hideTimerBadge(){
-  const b=document.getElementById('creditBadge');
-  if(b)b.style.display='none';
   const z=document.getElementById('zelda-chrono');
   if(z)z.style.display='none';
   const r=document.getElementById('sessionTimeRail');
@@ -1269,26 +1254,13 @@ function showClapperboard(onComplete){
   },1000);
 }
 function updateCreditBadge(){
-  var badge=document.getElementById('creditBadge');
-  var el=document.getElementById('creditCount');
-  if(!badge||!el)return;
-  if(!cwServerSession.email){badge.style.display='none';return}
-  var cents=cwServerSession.creditBalance||0;
+  var cents=(cwServerSession.creditBalance||0);
   var dollarStr='$'+(cents/100).toFixed(2);
-  el.textContent=dollarStr;
-  badge.style.display='';
-  badge.style.pointerEvents='auto';
-  badge.style.cursor='pointer';
-  badge.onclick=function(){openAuthModal()};
-  if(cents<=50)badge.style.background='rgba(200,50,50,.85)';
-  else if(cents<=200)badge.style.background='rgba(200,150,50,.85)';
-  else badge.style.background='rgba(0,0,0,.6)';
-  // Also update session top bar balance
   var sb=document.getElementById('sessionBalanceBadge');
   var sa=document.getElementById('sessionBalanceAmount');
   var sl=document.getElementById('sessionBalanceLabel');
-  if(sb){sb.style.display=cwServerSession.email?'':'none'}
-  if(sa)sa.textContent=dollarStr;
+  if(sb)sb.style.display=cwServerSession.email?'':'none';
+  if(sa){sa.textContent=dollarStr;sa.style.color=cents<=50?'#e05555':cents<=200?'#e0a040':'#52B788'}
   if(sl)sl.textContent=tt('balanceLabel','Balance');
 }
 function showCreditDepletedModal(){
