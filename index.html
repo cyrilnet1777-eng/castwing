@@ -2979,10 +2979,18 @@ function setViewMode(m){
   localStorage.setItem('cw_viewMode',m);
   var va=document.querySelector('.video-area');
   var pa=document.querySelector('.prompter-area');
+  var vc=document.querySelector('.video-container');
   if(!va||!pa)return;
-  va.style.display='';pa.style.display='';va.style.height='';pa.style.height='';pa.style.marginTop='';pa.style.position='';pa.style.bottom='';pa.style.left='';pa.style.right='';
-  if(m==='prompt'){va.style.display='none';pa.style.marginTop='0';pa.style.height='100vh';pa.style.position='fixed';pa.style.bottom='0';pa.style.left='0';pa.style.right='0'}
-  else if(m==='video'){pa.style.display='none';va.style.height='100vh'}
+  va.style.display='';va.style.height='';pa.style.display='';pa.style.height='';pa.style.marginTop='';pa.style.position='';pa.style.bottom='';pa.style.left='';pa.style.right='';
+  if(vc)vc.style.display='';
+  if(m==='prompt'){
+    // Hide video but keep video-area visible (for pause/mic/rec controls)
+    if(vc)vc.style.display='none';
+    va.style.height='auto';
+    pa.style.marginTop='0';pa.style.height='100vh';pa.style.position='fixed';pa.style.bottom='0';pa.style.left='0';pa.style.right='0';
+  }else if(m==='video'){
+    pa.style.display='none';va.style.height='100vh';
+  }
   renderPrompter();
   updateViewModeButtons();
 }
@@ -3970,7 +3978,20 @@ async function extractPdfLines(file){
     for(var r=0;r<rows.length;r++){
       // Sort items in row by X position (transform[4]) for correct reading order
       rows[r].sort(function(a,b){return(a.transform?a.transform[4]:0)-(b.transform?b.transform[4]:0)});
-      var lineText=rows[r].map(function(it){return it.str}).join(' ').replace(/\s+/g,' ').trim();
+      // Join items: add space only when there's a real gap between items (not individual chars)
+      var parts=rows[r];
+      var lineText='';
+      for(var p=0;p<parts.length;p++){
+        if(p===0){lineText=parts[p].str;continue}
+        var prevEnd=(parts[p-1].transform?parts[p-1].transform[4]:0)+(parts[p-1].width||0);
+        var curStart=parts[p].transform?parts[p].transform[4]:0;
+        var fontSize=parts[p].transform?Math.abs(parts[p].transform[0]):12;
+        var gap=curStart-prevEnd;
+        // If gap > 30% of font size, insert space; otherwise concatenate directly
+        if(gap>fontSize*0.3)lineText+=' '+parts[p].str;
+        else lineText+=parts[p].str;
+      }
+      lineText=lineText.replace(/\s+/g,' ').trim();
       if(lineText)allLines.push(lineText);
     }
   }
