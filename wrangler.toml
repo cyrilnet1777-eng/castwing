@@ -18,3 +18,18 @@ id = "5b1939098b2b471eaa8e8155d4cae205"
 
 [vars]
 ADMIN_EMAILS = "sersoub.w@gmail.com"
+
+[env.staging]
+name = "castwing-staging"
+
+[env.staging.vars]
+ADMIN_EMAILS = "sersoub.w@gmail.com"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "castwing-db"
+database_id = "3be77186-c40e-43ae-840c-cf0403cfcce0"
+
+[[env.staging.kv_namespaces]]
+binding = "AUTH_KV"
+id = "5b1939098b2b471eaa8e8155d4cae205"

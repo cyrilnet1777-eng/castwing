@@ -70,6 +70,11 @@ A browser-based audition/rehearsal studio for actors. Load a screenplay (PDF or 
 - UI language selector on the home screen (top-right); persisted in localStorage.
 - RTL support for Arabic and Hebrew.
 
+### URL routing
+- Hash-based routing: each screen has a shareable URL (`#solo`, `#partner`, `#create`, `#join`, `#session`).
+- Browser back button navigates between screens.
+- Direct links work: `cast-wing.com/#solo` opens the Solo + AI page directly.
+
 ### Settings persistence
 - All user preferences (UI language, voice locale, selected voice, emotion, speed, mode, view mode) are saved in `localStorage`.
 

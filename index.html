@@ -1911,9 +1911,16 @@ const ELEVEN_VOICE_IDS={
   omar:'xvhpbk8otnNHtT3fjCpr',
   salma:'B5xxC4eQoOFJnY4R5XkI',
   sadie:'bD9maNcCuQQS75DGuteM',
+  // Library voices (staging test)
+  nova_f:'kdmDKE6EkgrWrrykO9Qt',
+  nova_m:'mZ8K1MPRiT5wDQaasg3i',
+  giulia_v2:'Dzlw1nIlAqiOOW6J7qo1',
 };
 const VOICE_ALIAS_GENDER={
   serena:'female',
+  nova_f:'female',
+  nova_m:'male',
+  giulia_v2:'female',
   rachel:'female',
   bella:'female',
   lily:'female',
@@ -1946,8 +1953,8 @@ const VOICE_ALIAS_GENDER={
 };
 const VOICE_LOCALES=[
   {id:'french',label:'Français 🇫🇷',languageCode:'fr',profiles:[
-    {id:'fr-f',voice:'charlotte',fallback:['francesca','eliza','elen','isa'],label:'Camille',tag:'Standard',gender:'female',languageCode:'fr-fr'},
-    {id:'fr-m',voice:'james',fallback:['camille_m','john_doe','austin','edward'],label:'Lucas',tag:'Standard',gender:'male',languageCode:'fr-fr'},
+    {id:'fr-f',voice:'nova_f',fallback:['charlotte','francesca','eliza','elen'],label:'Camille',tag:'Standard',gender:'female',languageCode:'fr-fr'},
+    {id:'fr-m',voice:'nova_m',fallback:['james','camille_m','john_doe','austin'],label:'Lucas',tag:'Standard',gender:'male',languageCode:'fr-fr'},
     {id:'fr-sadie',voice:'sadie',fallback:['charlotte','francesca','eliza'],label:'Sadie',tag:'Calm & Gritty',gender:'female',languageCode:'fr-fr'},
   ]},
   {id:'english',label:'English 🇺🇸',languageCode:'en',profiles:[
@@ -1966,8 +1973,8 @@ const VOICE_LOCALES=[
     {id:'de-m',voice:'edward',fallback:['austin','daniel'],label:'Emil',tag:'Standard',gender:'male',languageCode:'de-de'},
   ]},
   {id:'italian',label:'Italiano 🇮🇹',languageCode:'it',profiles:[
-    {id:'it-f',voice:'elen',fallback:['eliza','charlotte'],label:'Giulia',tag:'Standard',gender:'female',languageCode:'it-it'},
-    {id:'it-m',voice:'antoni',fallback:['antonio','james'],label:'Leonardo',tag:'Standard',gender:'male',languageCode:'it-it'},
+    {id:'it-f',voice:'giulia_v2',fallback:['nova_f','elen','eliza','charlotte'],label:'Giulia',tag:'Standard',gender:'female',languageCode:'it-it'},
+    {id:'it-m',voice:'nova_m',fallback:['antoni','antonio','james'],label:'Leonardo',tag:'Standard',gender:'male',languageCode:'it-it'},
   ]},
   {id:'portuguese',label:'Português 🇵🇹',languageCode:'pt',profiles:[
     {id:'pt-f',voice:'eda',fallback:['charlotte','eliza'],label:'Beatriz',tag:'Standard',gender:'female',languageCode:'pt-pt'},
@@ -2014,7 +2021,7 @@ const EMOTION_PRESETS={
 const SPEED_MIN=0;
 const SPEED_MAX=5;
 const SPEED_DEFAULT=1.5;
-function sliderToElevenLabs(v){return 0.5+(Math.min(5,Math.max(0,v))/5)*1.5;}
+function sliderToElevenLabs(v){return 0.7+(Math.min(5,Math.max(0,v))/5)*0.5;}
 const PREVIEW_TEXT_BY_LANG={
   fr:'Bonjour, je suis {name}.',
   en:'Hello, I am {name}.',
@@ -3234,7 +3241,7 @@ function speakWithBrowser(text,preset,style,token,cb){
 async function aiSpeak(text,cb){
   if(!text){if(cb)cb();return}
   const preset=selectedVoice||VOICE_PRESETS[0];
-  console.info('[TTS] aiSpeak voiceId:',preset.voiceId,'label:',preset.label,'id:',preset.id,'speed:',voiceSpeed,'emotion:',selectedEmotion);
+  console.info('[TTS] aiSpeak voiceId:',preset.voiceId,'label:',preset.label,'id:',preset.id,'slider:',voiceSpeed,'elevenSpeed:',getCurrentVoiceSpeed(),'emotion:',selectedEmotion);
   const spokenText=normalizeTextForTTS(text,preset);
   const token=++activeSpeechToken;
   cancelTTSPlayback();
@@ -3316,7 +3323,22 @@ function setScriptReviewInteractive(enabled){
   const ok=document.getElementById('scriptReviewValidateBtn');
   if(ok)ok.disabled=!enabled;
 }
-function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');const bb=document.getElementById('homeBottomBar');if(bb)bb.style.display=id==='home'?'flex':'none'}
+const SCREEN_ROUTES={home:'',setupAi:'solo',partnerChoice:'partner',setupPartner:'create',joinScreen:'join',session:'session'};
+const ROUTE_TO_SCREEN=Object.fromEntries(Object.entries(SCREEN_ROUTES).map(([k,v])=>[v,k]));
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const bb=document.getElementById('homeBottomBar');if(bb)bb.style.display=id==='home'?'flex':'none';
+  var hash=SCREEN_ROUTES[id];
+  if(hash!==undefined){var target=hash?'#'+hash:'';if(location.hash!==target&&('#'+location.hash.slice(1))!==target)history.pushState(null,'',target||location.pathname+location.search)}
+}
+window.addEventListener('popstate',function(){
+  var h=location.hash.slice(1);
+  var screen=ROUTE_TO_SCREEN[h]||'home';
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(screen).classList.add('active');
+  var bb=document.getElementById('homeBottomBar');if(bb)bb.style.display=screen==='home'?'flex':'none';
+});
 function trModeReadyLabel(m){
   if(m==='auto')return selectedUILanguage==='fr'?'🎤 Auto prêt':'🎤 Auto ready';
   if(m==='ai')return selectedUILanguage==='fr'?'🦾 IA prête':'🦾 AI ready';
@@ -5964,8 +5986,6 @@ document.addEventListener('DOMContentLoaded',async ()=>{
     if(saved.emotion&&EMOTION_PRESETS[saved.emotion])selectedEmotion=saved.emotion;
     if(Number.isFinite(Number(saved.speedValue))){
       var sv=Number(saved.speedValue);
-      // Migrate old ElevenLabs speed (0.5-2.0) to new slider scale (0-5)
-      if(sv<=2.0)sv=((sv-0.5)/1.5)*5;
       if(sv<0||sv>5||!Number.isFinite(sv))sv=SPEED_DEFAULT;
       voiceSpeed=Math.max(SPEED_MIN,Math.min(SPEED_MAX,sv));
     }else voiceSpeed=SPEED_DEFAULT;
@@ -6025,7 +6045,12 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   if(!joinedFromURL){
     const restoredFromIdb=await tryRestorePersistedScriptFromIdb();
     if(!restoredFromIdb){
-      showScreen('home');
+      // Route from URL hash (e.g. #solo, #partner, #join)
+      var initHash=location.hash.slice(1);
+      var initScreen=ROUTE_TO_SCREEN[initHash]||'home';
+      if(initScreen==='setupPartner')goSetupPartner();
+      else if(initScreen==='setupAi')goSetupAi();
+      else showScreen(initScreen);
       if(isUsageBlocked())openPaywallModal(t('usageBlocked'));
     }
   }
