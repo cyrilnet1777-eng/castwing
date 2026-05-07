@@ -526,13 +526,12 @@ async function handleTTS(request, env) {
       whisper: { stability: 0.94, similarity_boost: 0.28, style: 0.0,  use_speaker_boost: false },
     };
     const base = emotionMap[emotion] || emotionMap.neutral;
-    const speedBoost = speed > 1 ? Math.min(0.22, (speed - 1) * 0.3) : 0;
-    const speedSlow  = speed < 1 ? Math.min(0.22, (1 - speed) * 0.3) : 0;
     const voiceSettings = {
-      stability:        Math.max(0.1, Math.min(1, base.stability + speedBoost - speedSlow)),
-      similarity_boost: Math.max(0.1, Math.min(1, base.similarity_boost + speedSlow * 0.5)),
-      style:            Math.max(0,   Math.min(1, base.style + speedBoost)),
+      stability:        base.stability,
+      similarity_boost: base.similarity_boost,
+      style:            base.style,
       use_speaker_boost: Boolean(base.use_speaker_boost),
+      speed:            Math.max(0.5, Math.min(2.0, speed)),
     };
 
     const modelCandidates = [];
