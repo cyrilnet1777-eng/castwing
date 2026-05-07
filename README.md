@@ -3,6 +3,7 @@
 A browser-based audition/rehearsal studio for actors. Load a screenplay (PDF or pasted text), pick your character, and rehearse with an AI partner that reads the other lines aloud -- or invite a real partner over WebRTC.
 
 **Live:** https://cast-wing.com
+**Staging:** https://v2.cast-wing.com (testing new voices/features before production)
 
 ## Features
 
@@ -30,24 +31,25 @@ A browser-based audition/rehearsal studio for actors. Load a screenplay (PDF or 
 - Share the code/link via clipboard, WhatsApp, Telegram, WeChat, or native share.
 
 ### Voice system
-- **13 ElevenLabs voices** mapped by name (serena, daniel, rachel, etc.).
+- **13+ ElevenLabs voices** mapped by alias (serena, daniel, rachel, nova_f, giulia_v2, etc.). Supports both pre-built voices and Voice Library voices by full ID.
 - **10+ locale/accent packs**: Arabic, Chinese, English, French, German, Hindi Belt, Italian, Japanese, Portuguese, Spanish -- each with regional accents.
 - Voices are grouped per locale; selecting a locale swaps the available voice grid.
-- 5 **emotion presets**: Neutral, Excited, Sad, Angry, Whisper -- each adjusts ElevenLabs `stability`, `similarity_boost`, and `style` parameters.
-- **Speed slider** (0-5 range, 0.5 increments, default 1.2): maps to ElevenLabs speed 0.5x-2.0x. Slider >= 4.5 auto-activates **Italienne mode** (fast run-through with special voice and minimal pauses).
+- 5 **emotion presets**: Neutral, Excited, Sad, Angry, Whisper -- each adjusts ElevenLabs `stability`, `similarity_boost`, and `style` parameters. Speed is controlled separately via the native ElevenLabs `speed` voice setting.
+- **Speed slider** (0-5 range, 0.5 increments, default 1.5): maps to ElevenLabs native `speed` parameter (0.7x-1.2x). Slider >= 4.5 auto-activates **Italienne mode** (fast run-through with special voice and minimal pauses).
 - Configurable **pause between lines** (default 1000ms, 200ms in Italienne).
 - Configurable **"Pause after my line"** slider (0.5s-5s) controls how long the AI waits after the user finishes speaking.
 - Fallback voice IDs: if a primary ElevenLabs voice returns 404, the system tries configured fallback voices automatically.
 
 ### PDF / script parsing
 - **Extract-then-label** architecture for fast, accurate parsing:
-  1. **PDF.js** (loaded on demand) extracts text client-side, grouping by Y-position to reconstruct actual lines.
+  1. **PDF.js** (loaded on demand) extracts text client-side, grouping by Y-position to reconstruct actual lines. Smart gap detection prevents letter-by-letter extraction on PDFs with individual character positioning.
   2. Lines are numbered and sent to `/api/label-script` where **Claude Haiku 4.5** labels each line as `dialogue`, `action`, `slug`, or `character_cue` -- without reproducing the text. This keeps output tokens minimal (~10x fewer than full-text parsing).
   3. The client merges original text with labels to build the structured script.
 - For large scripts (>800 lines), text is split into chunks and labeled **in parallel**.
 - Parenthetical stage directions (e.g. `(criant)`) are automatically stripped from dialogue so the AI doesn't read them aloud.
 - Narrative/descriptive lines between dialogue are labeled as `action` and excluded from AI speech.
 - Extracted characters populate a selection grid; the user picks their role.
+- **Language auto-detection**: analyzes the script text to detect the language (French, Italian, English, etc.) and auto-switches the voice locale to match.
 - Also supports pasted plain text via `/api/claude-parse-script`.
 
 ### Credit system (pay-as-you-go)
@@ -123,6 +125,8 @@ The app is deployed as a Worker with static assets.
 - `ANTHROPIC_API_KEY` -- Anthropic API key for script parsing (Claude Haiku 4.5).
 - `STRIPE_SECRET_KEY` -- Stripe secret key for credit top-ups.
 - `STRIPE_WEBHOOK_SECRET` -- Stripe webhook signing secret.
+- `RESEND_API_KEY` -- Resend API key for email verification codes.
+- `AUTH_FROM_EMAIL` -- sender email for auth codes (e.g. `hello@cast-wing.com`).
 
 Set all in Cloudflare Worker Settings -> Variables and Secrets.
 
@@ -136,6 +140,16 @@ Requires `CLOUDFLARE_API_TOKEN` secret in GitHub repo settings.
 2. URL: `https://cast-wing.com/api/stripe-webhook`
 3. Event: `checkout.session.completed`
 4. Copy signing secret -> set as `STRIPE_WEBHOOK_SECRET` in Cloudflare
+
+### Staging environment
+
+A separate worker (`castwing-staging`) is configured in `wrangler.toml` under `[env.staging]`. It shares the same D1 database and KV namespace as production but runs independently.
+
+- **URL:** https://v2.cast-wing.com (custom domain) or `castwing-staging.cyrilnet1777.workers.dev`
+- **Deploy:** `npx wrangler deploy --env staging` (manual, not auto-deployed from git)
+- **Secrets:** must be set once per env with `wrangler secret put <NAME> --env staging`
+- **Use case:** test new ElevenLabs voices, speed changes, or UI features before promoting to production
+- **Promote to prod:** apply same changes to `main`, push, then optionally `wrangler delete --env staging`
 
 ### Local development
 
