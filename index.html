@@ -3397,9 +3397,19 @@ function getPartnerShareText(){const code=getPartnerCode();if(!code)return '';re
 async function copyToClipboard(text){if(!text)return false;try{if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(text);return true}}catch(e){}const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand('copy')}catch(e){}document.body.removeChild(ta);return ok}
 async function copyPartnerCode(){const code=getPartnerCode();if(!code){showToast(t('codeUnavailable'));return}const ok=await copyToClipboard(code);showToast(ok?t('codeCopied')+' ✅':t('copyFailed'))}
 async function copyPartnerLink(){const link=getJoinLink();if(!link){showToast(t('linkUnavailable'));return}const ok=await copyToClipboard(link);showToast(ok?t('linkCopied')+' ✅':t('copyFailed'))}
+function isMobileDevice(){
+  try{if(navigator.userAgentData&&typeof navigator.userAgentData.mobile==='boolean')return navigator.userAgentData.mobile}catch(_e){}
+  return /Android|iPhone|iPad|iPod|Mobile|Opera Mini|IEMobile/i.test(navigator.userAgent||'');
+}
 async function shareVia(channel){
   const text=getPartnerShareText();const link=getJoinLink();if(!text||!link){showToast(t('codeUnavailable'));return}
-  if(channel==='native'&&navigator.share){try{await navigator.share({title:'Castwing — Rejoins ma session',text:'🎬 Rejoins-moi sur Castwing',url:link});return}catch(e){}}
+  if(channel==='native'){
+    if(isMobileDevice()&&navigator.share){
+      try{await navigator.share({title:'Castwing — Rejoins ma session',text:'🎬 Rejoins-moi sur Castwing',url:link});return}
+      catch(e){if(e&&e.name==='AbortError')return}
+    }
+    const ok=await copyToClipboard(link);showToast(ok?t('linkCopied')+' ✅':t('copyFailed'));return;
+  }
   if(channel==='whatsapp'){window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');return}
   if(channel==='telegram'){window.open('https://t.me/share/url?url='+encodeURIComponent(link)+'&text='+encodeURIComponent('🎬 Rejoins-moi sur Castwing'),'_blank');return}
   if(channel==='wechat'){await copyToClipboard(text);window.open('https://web.wechat.com/','_blank');showToast(t('shareTextCopied'));return}
