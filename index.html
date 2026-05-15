@@ -356,24 +356,24 @@ input[type="file"]{display:none}
 .progress-ring{position:relative;width:64px;height:64px}.progress-ring svg{transform:rotate(-90deg)}.progress-ring circle{fill:none;stroke-width:4}.progress-ring .ring-bg{stroke:rgba(255,255,255,.15)}.progress-ring .ring-fg{stroke:var(--white);stroke-linecap:round;transition:stroke-dashoffset .3s ease}.progress-ring .ring-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;color:var(--white)}
 .auth-modal,.paywall-modal{display:none;position:fixed;inset:0;z-index:180;background:rgba(0,0,0,.70);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:1rem}
 .auth-modal.active,.paywall-modal.active{display:flex}
-.auth-card{width:min(520px,95vw);background:#f4f4f5;border:1px solid rgba(255,255,255,.1);border-radius:var(--radius-lg);padding:1.35rem 1.2rem;box-shadow:var(--shadow-lg)}
+.auth-card{width:min(520px,95vw);background:var(--bg-1);border:1px solid var(--border);border-radius:0;padding:1.35rem 1.2rem;box-shadow:var(--shadow-lg)}
 .paywall-card{width:min(620px,95vw);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02)),rgba(16,22,20,.84);border:1px solid rgba(217,32,39,.28);border-radius:16px;padding:1.35rem;box-shadow:0 22px 60px rgba(0,0,0,.34),0 0 34px rgba(64,145,108,.16)}
-.auth-card h3{font-size:2rem;color:#1c2430;margin-bottom:.15rem;text-align:center}
+.auth-card h3{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:400;color:var(--white);margin-bottom:.15rem;text-align:center}
 .paywall-card h3{font-size:1rem;color:#E8E8E8;margin-bottom:.55rem}
-.auth-sub{font-size:.95rem;color:#5e6775;margin-bottom:1rem;text-align:center}
+.auth-sub{font-size:.85rem;color:var(--text-muted);margin-bottom:1rem;text-align:center}
 .paywall-sub{font-size:.8rem;color:#bcd8d1;margin-bottom:.75rem}
 .auth-row{display:flex;gap:.5rem;align-items:center}
-.auth-row input{flex:1;background:#fff;color:#0f1720;border:1px solid #d3d7dd;border-radius:12px;padding:.85rem .95rem}
-.auth-divider{display:flex;align-items:center;gap:.55rem;margin:.85rem 0;color:#737b87;font-size:.9rem}
-.auth-divider::before,.auth-divider::after{content:"";flex:1;height:1px;background:#d4d8de}
+.auth-row input{flex:1;background:var(--bg-2);color:var(--white);border:1px solid var(--border);border-radius:0;padding:.85rem .95rem}
+.auth-divider{display:flex;align-items:center;gap:.55rem;margin:.85rem 0;color:var(--text-muted);font-size:.8rem;letter-spacing:.06em}
+.auth-divider::before,.auth-divider::after{content:"";flex:1;height:1px;background:var(--border)}
 .auth-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}
 .auth-social{display:flex;flex-direction:column;gap:.5rem;margin-top:.35rem}
-.auth-social .mode-opt{display:flex;align-items:center;justify-content:center;gap:.55rem;background:#ffffff;color:#2a313d;border:1px solid #d4d8dd;padding:.7rem 1rem;border-radius:10px;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .15s}
-.auth-social .mode-opt:hover{border-color:#c0c7d2;background:#f8fafc;transform:translateY(-1px)}
+.auth-social .mode-opt{display:flex;align-items:center;justify-content:center;gap:.55rem;background:transparent;color:var(--white);border:1px solid var(--border);padding:.7rem 1rem;border-radius:0;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .15s}
+.auth-social .mode-opt:hover{border-color:rgba(245,239,224,.35);background:rgba(245,239,224,.04);transform:translateY(-1px)}
 .auth-social .mode-opt svg{width:20px;height:20px;flex-shrink:0}
-.auth-card .back-btn{background:#ffffff;border-color:#d7dbe1;color:#25303f}
-.auth-card .back-btn:hover{background:#eef2f6}
-.auth-primary-btn{width:100%;margin-top:.7rem;background:linear-gradient(180deg,#2f3440,#222732)!important;color:#fff!important;border-color:#1f2430!important;border-radius:12px!important;padding:.78rem!important;font-size:.9rem!important}
+.auth-card .back-btn{background:transparent;border-color:var(--border);color:var(--white)}
+.auth-card .back-btn:hover{background:rgba(245,239,224,.06)}
+.auth-primary-btn{width:100%;margin-top:.7rem;background:transparent!important;color:var(--white)!important;border:1px solid rgba(245,239,224,.25)!important;border-radius:0!important;padding:.78rem!important;font-size:.82rem!important;letter-spacing:.08em!important;text-transform:uppercase}
 .auth-code-row{display:none;margin-top:.55rem}
 .auth-code-row.active{display:flex}
 .auth-logged-in{text-align:center;padding:.5rem 0}
@@ -562,13 +562,13 @@ input[type="file"]{display:none}
         <span class="lang-globe" aria-hidden="true">🌐</span>
         <select id="siteLanguageSelect" onchange="changeUILanguage(this.value)" aria-label="Site language"></select>
       </div>
-      <button class="home-burger" id="homeBurgerBtn" onclick="toggleBurgerDrawer()" aria-label="Menu"><span></span><span></span><span></span></button>
+      <button class="home-burger" id="homeBurgerBtn" onclick="openAuthModal()" aria-label="Menu"><span></span><span></span><span></span></button>
     </div>
   </div>
   <div class="home-hero">
     <div class="home-hero-bg"><img src="/background-image-mobile.jpg" alt="" loading="eager"></div>
     <div class="hero-content">
-      <h1 class="hero-title" id="homeHook">Your acting<br>partner,<br>always available<span class="hero-dot">.</span></h1>
+      <h1 class="hero-title" id="homeHook">Your acting partner,<br>always available<span class="hero-dot">.</span></h1>
       <div class="hero-ctas">
         <button class="cta-btn" onclick="goSetupAi()" id="homeSoloTitle"><span>SOLO MODE WITH AI</span><span class="cta-arrow">&rarr;</span></button>
         <button class="cta-btn" onclick="handlePartnerClick()" id="homePartnerTitle"><span>CALL A FRIEND<span class="cta-sub" id="homePartnerDesc">THE PARTNER</span></span><span class="cta-arrow">&rarr;</span></button>
@@ -607,12 +607,12 @@ input[type="file"]{display:none}
     </div>
     <div id="authAccountView" style="display:none">
       <div class="auth-logged-in">
-        <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#d92027,#8a1519);display:inline-flex;align-items:center;justify-content:center;font-size:1.4rem;color:#fff;font-weight:700;margin-bottom:.3rem" id="authAvatar">U</div>
+        <div style="width:56px;height:56px;border-radius:0;background:transparent;border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--white);font-weight:500;margin-bottom:.3rem;letter-spacing:.05em" id="authAvatar">U</div>
         <div class="auth-logged-email" id="authLoggedEmail">user@email.com</div>
       </div>
       <div id="profileCreditCard" style="background:#f0faf4;border-radius:12px;padding:16px;margin:12px 0;text-align:center">
         <div style="font-size:0.8rem;color:#6B7280;margin-bottom:4px" id="profileBalanceLabel">Credit Balance</div>
-        <div style="font-size:1.8rem;font-weight:700;color:#8a1519" id="profileBalanceAmount">$0.00</div>
+        <div style="font-size:1.6rem;font-weight:400;color:var(--white);font-family:'Playfair Display',serif" id="profileBalanceAmount">$0.00</div>
         <div style="display:flex;gap:8px;margin-top:12px;justify-content:center">
           <button class="mode-opt" onclick="openTopupModal('pack_5')" style="flex:1">$5</button>
           <button class="mode-opt" onclick="openTopupModal('pack_10')" style="flex:1">$10</button>
@@ -2402,7 +2402,7 @@ function applyUILanguage(){
   document.documentElement.lang=selectedUILanguage;
   document.documentElement.dir=selectedUILanguage==='ar'?'rtl':'ltr';
   const hookEl=document.getElementById('homeHook');
-  if(hookEl){const txt=t('homeHook')||'';hookEl.innerHTML=txt.replace(/,/,'<br>').replace(/ always/,'<br>always').replace(/\.\s*$/,'<span class="hero-dot">.</span>');}
+  if(hookEl){const txt=t('homeHook')||'';hookEl.innerHTML=txt.replace(/,\s*/,'<br>').replace(/\.\s*$/,'<span class="hero-dot">.</span>');}
   setTextById('siteLanguageLabel','siteLanguageLabel');
   const ndaTxt=t('ndaText');if(ndaTxt){document.querySelectorAll('#ndaBadgeHome span').forEach(s=>s.textContent=ndaTxt);}
   setTextById('partnerChoiceTitle','partnerChoiceTitle');
