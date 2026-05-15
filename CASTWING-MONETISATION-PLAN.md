@@ -1,4 +1,4 @@
-# Castwing — Plan de Monétisation & Crédits
+# CitizenTape — Plan de Monétisation & Crédits
 
 > **Date :** 15 avril 2026 | **Auteur :** Wael | **Version :** 1.0
 

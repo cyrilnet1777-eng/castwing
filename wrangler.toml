@@ -1,4 +1,4 @@
-name = "castwing"
+name = "citizentape"
 account_id = "2b8941187fc013611cd2dd5379ad0534"
 compatibility_date = "2026-04-14"
 main = "worker.js"
@@ -20,7 +20,7 @@ id = "5b1939098b2b471eaa8e8155d4cae205"
 ADMIN_EMAILS = "sersoub.w@gmail.com"
 
 [env.staging]
-name = "castwing-staging"
+name = "citizentape-staging"
 
 [env.staging.vars]
 ADMIN_EMAILS = "sersoub.w@gmail.com"

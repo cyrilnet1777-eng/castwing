@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 200" preserveAspectRatio="xMidYMid meet">
+  <rect width="1260" height="220" fill="#0a0a0a"/>
+  <text x="40" y="148"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="130"
+        font-weight="400"
+        letter-spacing="14"
+        fill="#f5efe0">CITIZENTAPE</text>
+  <circle cx="1050" cy="100" r="20" fill="#d92027"/>
+</svg>

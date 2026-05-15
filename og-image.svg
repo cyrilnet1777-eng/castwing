@@ -1,18 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#071614"/>
-      <stop offset="100%" stop-color="#0b2a27"/>
-    </linearGradient>
-  </defs>
-  <rect width="1200" height="630" fill="url(#bg)"/>
-  <circle cx="600" cy="240" r="48" fill="#c1121f" opacity="0.9"/>
-  <circle cx="600" cy="240" r="48" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
-  <circle cx="600" cy="240" r="56" fill="none" stroke="rgba(193,18,31,0.35)" stroke-width="1"/>
-  <text x="600" y="250" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="700" fill="#fff" letter-spacing="0.1em">REC</text>
-  <text x="600" y="360" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="700" fill="#f6fffd" letter-spacing="-0.02em">
-    <tspan>Cast</tspan><tspan fill="#7fd8bb" font-style="italic">wing</tspan>
-  </text>
-  <text x="600" y="420" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="28" fill="#7fd8bb" font-weight="500">Ton partenaire de jeu, toujours disponible.</text>
-  <text x="600" y="520" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#bfd9cf" letter-spacing="0.12em" text-transform="uppercase" font-weight="500">STUDIO D'AUDITION</text>
+  <rect width="1200" height="630" fill="#1a1a1a"/>
+  <text x="600" y="280" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="64" font-weight="300" fill="#f5efe0" letter-spacing="0.14em">CITIZENTAPE</text>
+  <circle cx="920" cy="262" r="8" fill="#d92027"/>
+  <text x="600" y="370" text-anchor="middle" font-family="Georgia, serif" font-size="28" fill="rgba(245,239,224,0.6)" font-weight="400" font-style="italic">Your acting partner, always available.</text>
+  <text x="600" y="520" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="14" fill="rgba(245,239,224,0.35)" letter-spacing="0.18em" font-weight="500">PRIVATE. SECURE. OFF RECORD.</text>
 </svg>

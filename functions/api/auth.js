@@ -41,8 +41,8 @@ async function sendResendEmail(apiKey, fromEmail, toEmail, code) {
     body: JSON.stringify({
       from: fromEmail,
       to: [toEmail],
-      subject: "Castwing verification code",
-      html: `<p>Your Castwing verification code is: <b>${code}</b></p><p>This code expires in 10 minutes.</p>`,
+      subject: "CitizenTape verification code",
+      html: `<p>Your CitizenTape verification code is: <b>${code}</b></p><p>This code expires in 10 minutes.</p>`,
     }),
   });
   return rsp.ok;

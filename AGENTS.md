@@ -1,10 +1,10 @@
-# Castwing — Studio d'Audition
+# CitizenTape — Acting Studio
 
 ## Cursor Cloud specific instructions
 
 ### Overview
 
-Castwing is a French-language audition studio web app. The UI is `index.html` (inline CSS/JS). **PDF and pasted screenplay parsing** runs on **`worker.js`** (Cloudflare Workers): **`POST /api/parse-screenplay`** sends the PDF (base64) or plain text to **Anthropic Messages API** and returns JSON `{ characters, lines }`.
+CitizenTape is a multilingual acting studio web app. The UI is `index.html` (inline CSS/JS). **PDF and pasted screenplay parsing** runs on **`worker.js`** (Cloudflare Workers): **`POST /api/parse-screenplay`** sends the PDF (base64) or plain text to **Anthropic Messages API** and returns JSON `{ characters, lines }`.
 
 Optional **Cursor MCP**: submodule `tools/pdf-mcp-server` — see `.cursor/mcp.json`.
 
@@ -18,19 +18,21 @@ npx wrangler dev
 
 Uses `worker.js` + static assets from `wrangler.toml` (`[assets]`).
 
-Define secrets (once) — localement ou dans le dashboard Worker :
+Define secrets (once) — locally or in the Worker dashboard:
 
 ```sh
 wrangler secret put ANTHROPIC_API_KEY
 ```
 
-### Déploiement continu (GitHub → Cloudflare)
+### Continuous deployment (GitHub → Cloudflare)
 
-Le workflow **`.github/workflows/deploy-cloudflare.yml`** exécute `wrangler deploy` à chaque push sur `main`.
+The workflow **`.github/workflows/deploy-cloudflare.yml`** runs `wrangler deploy` on every push to `main`.
 
-Dans GitHub : **Settings → Secrets and variables → Actions** → ajouter **`CLOUDFLARE_API_TOKEN`** (token API Cloudflare avec droit **Edit Cloudflare Workers**). Sans ce secret, le workflow échoue jusqu’à configuration.
+In GitHub: **Settings → Secrets and variables → Actions** → add **`CLOUDFLARE_API_TOKEN`** (Cloudflare API token with **Edit Cloudflare Workers** permission). Without this secret, the workflow will fail.
 
-Alternative : **`wrangler deploy`** sur ta machine (Node + `npx wrangler deploy`) si tu es déjà authentifié (`wrangler login`).
+Alternative: **`wrangler deploy`** on your machine (Node + `npx wrangler deploy`) if already authenticated (`wrangler login`).
+
+**Important:** Always commit and push changes before (or right after) doing a `wrangler deploy`. That way git and the deployed site stay in sync, and anyone working from GitHub has the latest code.
 
 Optional vars in `wrangler.toml` or dashboard: `ANTHROPIC_MODEL`, `ANTHROPIC_MAX_TOKENS`.
 

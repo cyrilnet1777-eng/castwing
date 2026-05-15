@@ -8,7 +8,7 @@ This project is now compatible with Cloudflare Pages:
 ## 1) Create the Cloudflare Pages project
 
 1. In Cloudflare dashboard, go to **Workers & Pages** -> **Create** -> **Pages**.
-2. Connect your GitHub repository: `cyrilnet1777-eng/castwing`.
+2. Connect your GitHub repository: `cyrilnet1777-eng/citizentape`.
 3. Build settings:
    - Framework preset: **None**
    - Build command: *(leave empty)*

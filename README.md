@@ -1,9 +1,9 @@
-# Castwing -- Audition Studio
+# CitizenTape -- Audition Studio
 
 A browser-based audition/rehearsal studio for actors. Load a screenplay (PDF or pasted text), pick your character, and rehearse with an AI partner that reads the other lines aloud -- or invite a real partner over WebRTC.
 
-**Live:** https://cast-wing.com
-**Staging:** https://v2.cast-wing.com (testing new voices/features before production)
+**Live:** https://citizentape.com
+**Staging:** https://staging.citizentape.com (testing new voices/features before production)
 
 ## Features
 
@@ -75,7 +75,7 @@ A browser-based audition/rehearsal studio for actors. Load a screenplay (PDF or 
 ### URL routing
 - Hash-based routing: each screen has a shareable URL (`#solo`, `#partner`, `#create`, `#join`, `#session`).
 - Browser back button navigates between screens.
-- Direct links work: `cast-wing.com/#solo` opens the Solo + AI page directly.
+- Direct links work: `citizentape.com/#solo` opens the Solo + AI page directly.
 
 ### Settings persistence
 - All user preferences (UI language, voice locale, selected voice, emotion, speed, mode, view mode) are saved in `localStorage`.
@@ -86,6 +86,7 @@ A browser-based audition/rehearsal studio for actors. Load a screenplay (PDF or 
 
 - `main` is the deployment branch.
 - Push to `main` triggers GitHub Actions deploy via `wrangler deploy`.
+- **Always commit and push changes before (or right after) doing a `wrangler deploy`.** That way git and the deployed site stay in sync, and anyone working from GitHub has the latest code. Never deploy local-only changes without committing them — CI auto-deploys on push and will overwrite anything not in git.
 
 ### File structure
 
@@ -133,7 +134,7 @@ The app is deployed as a Worker with static assets.
 - `STRIPE_SECRET_KEY` -- Stripe secret key for credit top-ups.
 - `STRIPE_WEBHOOK_SECRET` -- Stripe webhook signing secret.
 - `RESEND_API_KEY` -- Resend API key for email verification codes.
-- `AUTH_FROM_EMAIL` -- sender email for auth codes (e.g. `hello@cast-wing.com`).
+- `AUTH_FROM_EMAIL` -- sender email for auth codes (e.g. `hello@citizentape.com`).
 
 Set all in Cloudflare Worker Settings -> Variables and Secrets.
 
@@ -144,15 +145,15 @@ Requires `CLOUDFLARE_API_TOKEN` secret in GitHub repo settings.
 ### Stripe webhook setup
 
 1. Stripe Dashboard -> Developers -> Webhooks -> Add endpoint
-2. URL: `https://cast-wing.com/api/stripe-webhook`
+2. URL: `https://citizentape.com/api/stripe-webhook`
 3. Event: `checkout.session.completed`
 4. Copy signing secret -> set as `STRIPE_WEBHOOK_SECRET` in Cloudflare
 
 ### Staging environment
 
-A separate worker (`castwing-staging`) is configured in `wrangler.toml` under `[env.staging]`. It shares the same D1 database and KV namespace as production but runs independently.
+A separate worker (`citizentape-staging`) is configured in `wrangler.toml` under `[env.staging]`. It shares the same D1 database and KV namespace as production but runs independently.
 
-- **URL:** https://v2.cast-wing.com (custom domain) or `castwing-staging.cyrilnet1777.workers.dev`
+- **URL:** https://staging.citizentape.com (custom domain) or `citizentape-staging.cyrilnet1777.workers.dev`
 - **Deploy:** `npx wrangler deploy --env staging` (manual, not auto-deployed from git)
 - **Secrets:** must be set once per env with `wrangler secret put <NAME> --env staging`
 - **Use case:** test new ElevenLabs voices, speed changes, or UI features before promoting to production
@@ -175,8 +176,8 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 ## Key technical details
 
 ### WebRTC flow
-1. Actor creates a PeerJS peer with ID `castwing-{CODE}` and starts a keepalive heartbeat.
-2. Partner creates a peer with ID `castwing-p-{CODE}-{random}` and connects to the actor's peer. Retries up to 3 times on failure.
+1. Actor creates a PeerJS peer with ID `citizentape-{CODE}` and starts a keepalive heartbeat.
+2. Partner creates a peer with ID `citizentape-p-{CODE}-{random}` and connects to the actor's peer. Retries up to 3 times on failure.
 3. ICE uses STUN (Google) + TURN (openrelay.metered.ca) for NAT traversal.
 4. On connection, the actor sends the script; the partner sends a `ready` signal.
 5. The actor then initiates a media call; audio streams both ways.

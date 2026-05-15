@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Castwing — Tests de régression</title>
+<title>CitizenTape — Tests de régression</title>
 <style>
 * { box-sizing: border-box; }
 body {
@@ -142,12 +142,12 @@ button {
 <body>
 
 <div class="container">
-  <h1>Tests de régression Castwing</h1>
+  <h1>Tests de régression CitizenTape</h1>
   <p class="subtitle">Lance avant chaque déploiement. 15 tests : auto + manuel avec boutons pass/fail.</p>
 
   <div class="controls">
     <input type="text" id="target-url" class="target-url-input"
-           value="https://cast-wing.com" placeholder="URL à tester">
+           value="https://citizentape.com" placeholder="URL à tester">
     <button class="btn-primary" id="run-all-btn" onclick="runAllAutoTests()">
       Lancer les tests auto
     </button>
@@ -208,7 +208,7 @@ const TESTS = [
         { key: 'peerjs', label: 'PeerJS (WebRTC)' },
         { key: 'pdf.js', label: 'PDF.js' },
         { key: 'DM Sans', label: 'Font DM Sans' },
-        { key: 'castwing', label: 'Markers Castwing' }
+        { key: 'citizentape', label: 'Markers CitizenTape' }
       ];
       const missing = checks.filter(c => !html.toLowerCase().includes(c.key.toLowerCase()));
       if (missing.length > 0) {
@@ -238,7 +238,7 @@ const TESTS = [
     category: 'Santé backend',
     type: 'auto',
     test: async (url) => {
-      const testEmail = `test-${Date.now()}@castwing-test.invalid`;
+      const testEmail = `test-${Date.now()}@citizentape-test.invalid`;
       try {
         const res = await fetch(url + '/api/auth/send-code', {
           method: 'POST',
@@ -493,7 +493,7 @@ function resetAll() {
 }
 
 function exportResults() {
-  const lines = ['# Castwing — Rapport de tests', ''];
+  const lines = ['# CitizenTape — Rapport de tests', ''];
   lines.push(`Date: ${new Date().toLocaleString()}`);
   lines.push(`Cible: ${document.getElementById('target-url').value}`);
   lines.push('');
@@ -518,7 +518,7 @@ function exportResults() {
   const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `castwing-tests-${Date.now()}.md`;
+  a.download = `citizentape-tests-${Date.now()}.md`;
   a.click();
 }
 

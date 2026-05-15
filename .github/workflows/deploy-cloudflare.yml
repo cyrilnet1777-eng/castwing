@@ -11,7 +11,7 @@ on:
       - main
 
 concurrency:
-  group: deploy-castwing-${{ github.ref }}
+  group: deploy-citizentape-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

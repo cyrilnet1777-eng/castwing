@@ -1,5 +1,5 @@
 /* =========================================================
-   CASTWING WORKER — Backend
+   CITIZENTAPE WORKER — Backend
    Routes: /api/tts, /api/claude-parse-script (pdfText → Claude JSON),
            /api/parse-screenplay (multipart PDF or JSON text → Claude native PDF reading),
            /api/parse-script (multipart legacy), /api/auth, /api/auth/google,
@@ -630,122 +630,122 @@ function normalizeAuthEmailLang(raw) {
 
 const VERIFICATION_EMAIL_TRANSLATIONS = {
   fr: {
-    subject: "Ton code Castwing",
+    subject: "Ton code CitizenTape",
     title: "Voici ton code.",
-    subtitle: "Colle-le dans Castwing pour te connecter.",
+    subtitle: "Colle-le dans CitizenTape pour te connecter.",
     expiry: "Ce code expire dans 10 minutes. Si tu n'as pas demandé à te connecter, ignore simplement ce message.",
     asideTitle: "Entre nous.",
-    asideBody: "Castwing est quasi gratuit. Deux heures d'AI toutes les trois heures, juste en étant inscrit. Largement de quoi préparer une audition. Si un jour tu veux les voix premium ou la direction AI, Oscar est à 9,99 € par mois. Tant que t'en as pas besoin, n'en prends pas.",
+    asideBody: "CitizenTape est quasi gratuit. Deux heures d'AI toutes les trois heures, juste en étant inscrit. Largement de quoi préparer une audition. Si un jour tu veux les voix premium ou la direction AI, Oscar est à 9,99 € par mois. Tant que t'en as pas besoin, n'en prends pas.",
     asideClose: "Bonnes prises. Décroche ce rôle.",
     signature: "— Solo + IA",
   },
   en: {
-    subject: "Your Castwing code",
+    subject: "Your CitizenTape code",
     title: "Here's your code.",
-    subtitle: "Paste it into Castwing to sign in.",
+    subtitle: "Paste it into CitizenTape to sign in.",
     expiry: "This code expires in 10 minutes. If you didn't request it, just ignore this email.",
     asideTitle: "Between us.",
-    asideBody: "Castwing is nearly free. Two hours of AI every three hours, just for being signed up. Plenty to prep an audition. If one day you want premium voices or AI direction, Oscar is €9.99/month. Until you need it, don't buy it.",
+    asideBody: "CitizenTape is nearly free. Two hours of AI every three hours, just for being signed up. Plenty to prep an audition. If one day you want premium voices or AI direction, Oscar is €9.99/month. Until you need it, don't buy it.",
     asideClose: "Break a leg. Land the role.",
     signature: "— Solo + AI",
   },
   es: {
-    subject: "Tu código Castwing",
+    subject: "Tu código CitizenTape",
     title: "Aquí está tu código.",
-    subtitle: "Pégalo en Castwing para iniciar sesión.",
+    subtitle: "Pégalo en CitizenTape para iniciar sesión.",
     expiry: "Este código expira en 10 minutos. Si no lo solicitaste, ignora este mensaje.",
     asideTitle: "Entre nosotros.",
-    asideBody: "Castwing es casi gratis. Dos horas de IA cada tres horas, solo por estar inscrito. Suficiente para preparar una audición. Si algún día quieres voces premium o dirección de escena AI, Oscar cuesta 9,99 € al mes. Mientras no lo necesites, no lo tomes.",
+    asideBody: "CitizenTape es casi gratis. Dos horas de IA cada tres horas, solo por estar inscrito. Suficiente para preparar una audición. Si algún día quieres voces premium o dirección de escena AI, Oscar cuesta 9,99 € al mes. Mientras no lo necesites, no lo tomes.",
     asideClose: "Mucha mierda. A por ese papel.",
     signature: "— Solo + IA",
   },
   it: {
-    subject: "Il tuo codice Castwing",
+    subject: "Il tuo codice CitizenTape",
     title: "Ecco il tuo codice.",
-    subtitle: "Incollalo in Castwing per accedere.",
+    subtitle: "Incollalo in CitizenTape per accedere.",
     expiry: "Questo codice scade tra 10 minuti. Se non l'hai richiesto, ignora questo messaggio.",
     asideTitle: "Tra noi.",
-    asideBody: "Castwing è quasi gratuito. Due ore di IA ogni tre ore, solo per essere iscritto. Più che sufficiente per preparare un'audizione. Se un giorno vuoi le voci premium o la direzione AI, Oscar costa 9,99 € al mese. Finché non ti serve, non prenderlo.",
+    asideBody: "CitizenTape è quasi gratuito. Due ore di IA ogni tre ore, solo per essere iscritto. Più che sufficiente per preparare un'audizione. Se un giorno vuoi le voci premium o la direzione AI, Oscar costa 9,99 € al mese. Finché non ti serve, non prenderlo.",
     asideClose: "In bocca al lupo. Prendi quel ruolo.",
     signature: "— Solo + IA",
   },
   de: {
-    subject: "Dein Castwing-Code",
+    subject: "Dein CitizenTape-Code",
     title: "Hier ist dein Code.",
-    subtitle: "Füge ihn in Castwing ein, um dich anzumelden.",
+    subtitle: "Füge ihn in CitizenTape ein, um dich anzumelden.",
     expiry: "Dieser Code läuft in 10 Minuten ab. Wenn du ihn nicht angefordert hast, ignoriere diese Nachricht.",
     asideTitle: "Unter uns.",
-    asideBody: "Castwing ist fast kostenlos. Zwei Stunden KI alle drei Stunden, einfach weil du angemeldet bist. Mehr als genug für eine Audition-Vorbereitung. Wenn du eines Tages Premium-Stimmen oder KI-Regie willst, Oscar kostet 9,99 € pro Monat. Solange du es nicht brauchst, kauf es nicht.",
+    asideBody: "CitizenTape ist fast kostenlos. Zwei Stunden KI alle drei Stunden, einfach weil du angemeldet bist. Mehr als genug für eine Audition-Vorbereitung. Wenn du eines Tages Premium-Stimmen oder KI-Regie willst, Oscar kostet 9,99 € pro Monat. Solange du es nicht brauchst, kauf es nicht.",
     asideClose: "Toi, toi, toi. Hol dir die Rolle.",
     signature: "— Solo + KI",
   },
   pt: {
-    subject: "Seu código Castwing",
+    subject: "Seu código CitizenTape",
     title: "Aqui está seu código.",
-    subtitle: "Cole-o no Castwing para entrar.",
+    subtitle: "Cole-o no CitizenTape para entrar.",
     expiry: "Este código expira em 10 minutos. Se você não o solicitou, ignore esta mensagem.",
     asideTitle: "Entre nós.",
-    asideBody: "Castwing é quase gratuito. Duas horas de IA a cada três horas, apenas por estar registrado. Mais que suficiente para preparar uma audição. Se um dia quiser vozes premium ou direção AI, Oscar custa 9,99 € por mês. Até você precisar, não compre.",
+    asideBody: "CitizenTape é quase gratuito. Duas horas de IA a cada três horas, apenas por estar registrado. Mais que suficiente para preparar uma audição. Se um dia quiser vozes premium ou direção AI, Oscar custa 9,99 € por mês. Até você precisar, não compre.",
     asideClose: "Merda! Pegue esse papel.",
     signature: "— Solo + IA",
   },
   ja: {
-    subject: "Castwing 認証コード",
+    subject: "CitizenTape 認証コード",
     title: "あなたのコード",
-    subtitle: "Castwing に貼り付けてサインインしてください。",
+    subtitle: "CitizenTape に貼り付けてサインインしてください。",
     expiry: "このコードは10分で期限切れになります。リクエストしていない場合は無視してください。",
     asideTitle: "ここだけの話。",
-    asideBody: "Castwing はほぼ無料で使えます。登録するだけで3時間ごとに2時間のAI。オーディション準備には十分です。プレミアム音声やAIディレクションが欲しくなったら、Oscarは月額9.99ユーロです。必要になるまで、買わなくて大丈夫。",
+    asideBody: "CitizenTape はほぼ無料で使えます。登録するだけで3時間ごとに2時間のAI。オーディション準備には十分です。プレミアム音声やAIディレクションが欲しくなったら、Oscarは月額9.99ユーロです。必要になるまで、買わなくて大丈夫。",
     asideClose: "頑張って。その役を勝ち取ろう。",
     signature: "— Solo + AI",
   },
   zh: {
-    subject: "你的 Castwing 验证码",
+    subject: "你的 CitizenTape 验证码",
     title: "这是你的验证码。",
-    subtitle: "粘贴到 Castwing 中登录。",
+    subtitle: "粘贴到 CitizenTape 中登录。",
     expiry: "此验证码将在 10 分钟后失效。如果不是你请求的,请忽略此邮件。",
     asideTitle: "悄悄话。",
-    asideBody: "Castwing 几乎免费。注册就能每三小时获得两小时 AI 使用时间,足够准备一场试镜。如果哪天你想要高级语音或 AI 执导,Oscar 每月 9.99 欧元。不需要就别买。",
+    asideBody: "CitizenTape 几乎免费。注册就能每三小时获得两小时 AI 使用时间,足够准备一场试镜。如果哪天你想要高级语音或 AI 执导,Oscar 每月 9.99 欧元。不需要就别买。",
     asideClose: "祝你好运。拿下那个角色。",
     signature: "— Solo + AI",
   },
   ko: {
-    subject: "Castwing 인증 코드",
+    subject: "CitizenTape 인증 코드",
     title: "인증 코드를 보내드립니다.",
-    subtitle: "Castwing에 붙여넣어 로그인하세요.",
+    subtitle: "CitizenTape에 붙여넣어 로그인하세요.",
     expiry: "이 코드는 10분 후 만료됩니다. 요청하지 않았다면 이 메일을 무시하셔도 됩니다.",
     asideTitle: "우리끼리 얘기.",
-    asideBody: "Castwing은 거의 무료예요. 가입만 하면 3시간마다 2시간의 AI 사용이 가능해요. 오디션 준비에 충분하죠. 언젠가 프리미엄 음성이나 AI 디렉팅이 필요하면, Oscar가 월 9.99유로예요. 필요하기 전까진 사지 마세요.",
+    asideBody: "CitizenTape은 거의 무료예요. 가입만 하면 3시간마다 2시간의 AI 사용이 가능해요. 오디션 준비에 충분하죠. 언젠가 프리미엄 음성이나 AI 디렉팅이 필요하면, Oscar가 월 9.99유로예요. 필요하기 전까진 사지 마세요.",
     asideClose: "행운을 빌어요. 그 역할 꼭 따내세요.",
     signature: "— Solo + AI",
   },
   ar: {
-    subject: "رمز Castwing الخاص بك",
+    subject: "رمز CitizenTape الخاص بك",
     title: "إليك رمزك.",
-    subtitle: "الصقه في Castwing لتسجيل الدخول.",
+    subtitle: "الصقه في CitizenTape لتسجيل الدخول.",
     expiry: "ينتهي هذا الرمز خلال 10 دقائق. إذا لم تطلبه، تجاهل هذه الرسالة.",
     asideTitle: "بيننا.",
-    asideBody: "Castwing مجاني تقريباً. ساعتان من الذكاء الاصطناعي كل ثلاث ساعات، فقط بالتسجيل. أكثر من كافٍ لتحضير اختبار أداء. إذا أردت يوماً أصواتاً مميزة أو إخراجاً بالذكاء الاصطناعي، Oscar بـ 9,99 € شهرياً. حتى تحتاجه، لا تشتريه.",
+    asideBody: "CitizenTape مجاني تقريباً. ساعتان من الذكاء الاصطناعي كل ثلاث ساعات، فقط بالتسجيل. أكثر من كافٍ لتحضير اختبار أداء. إذا أردت يوماً أصواتاً مميزة أو إخراجاً بالذكاء الاصطناعي، Oscar بـ 9,99 € شهرياً. حتى تحتاجه، لا تشتريه.",
     asideClose: "بالتوفيق. احصل على الدور.",
     signature: "— Solo + AI",
   },
   he: {
-    subject: "הקוד שלך ב-Castwing",
+    subject: "הקוד שלך ב-CitizenTape",
     title: "הנה הקוד שלך.",
-    subtitle: "הדבק אותו ב-Castwing כדי להתחבר.",
+    subtitle: "הדבק אותו ב-CitizenTape כדי להתחבר.",
     expiry: "הקוד פג תוקף בעוד 10 דקות. אם לא ביקשת, התעלם מההודעה הזו.",
     asideTitle: "בינינו.",
-    asideBody: "Castwing כמעט חינם. שעתיים של AI כל שלוש שעות, רק על ידי הרשמה. מספיק בהחלט להכין אודישן. אם יום אחד תרצה קולות פרימיום או הכוונת AI, Oscar עולה 9.99 € לחודש. עד שתצטרך, אל תקנה.",
+    asideBody: "CitizenTape כמעט חינם. שעתיים של AI כל שלוש שעות, רק על ידי הרשמה. מספיק בהחלט להכין אודישן. אם יום אחד תרצה קולות פרימיום או הכוונת AI, Oscar עולה 9.99 € לחודש. עד שתצטרך, אל תקנה.",
     asideClose: "בהצלחה. תשיג את התפקיד.",
     signature: "— Solo + AI",
   },
   ru: {
-    subject: "Ваш код Castwing",
+    subject: "Ваш код CitizenTape",
     title: "Вот ваш код.",
-    subtitle: "Вставьте его в Castwing, чтобы войти.",
+    subtitle: "Вставьте его в CitizenTape, чтобы войти.",
     expiry: "Код истечёт через 10 минут. Если вы его не запрашивали, просто проигнорируйте это письмо.",
     asideTitle: "Между нами.",
-    asideBody: "Castwing почти бесплатный. Два часа ИИ каждые три часа, просто за регистрацию. Более чем достаточно, чтобы подготовить прослушивание. Если однажды захотите премиум-голоса или режиссуру ИИ, Oscar стоит 9,99 € в месяц. Пока не нужно — не покупайте.",
+    asideBody: "CitizenTape почти бесплатный. Два часа ИИ каждые три часа, просто за регистрацию. Более чем достаточно, чтобы подготовить прослушивание. Если однажды захотите премиум-голоса или режиссуру ИИ, Oscar стоит 9,99 € в месяц. Пока не нужно — не покупайте.",
     asideClose: "Удачи. Получите эту роль.",
     signature: "— Solo + AI",
   },
@@ -822,7 +822,7 @@ function getVerificationEmailHtml(code, lang) {
           <tr>
             <td style="background:#FAFAF8;border-top:1px solid #EDEDEA;padding:20px 40px;text-align:center;border-radius:0 0 16px 16px;">
               <p style="margin:0;font-size:11px;color:#9CA3AF;line-height:1.5;letter-spacing:0.01em;">
-                <a href="https://cast-wing.com" style="color:#4A7C59;text-decoration:none;font-weight:500;">cast-wing.com</a>
+                <a href="https://citizentape.com" style="color:#4A7C59;text-decoration:none;font-weight:500;">citizentape.com</a>
               </p>
             </td>
           </tr>
@@ -842,7 +842,7 @@ async function sendResendEmail(apiKey, fromEmail, toEmail, code, lang) {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
-      from: `Castwing <${fromEmail}>`,
+      from: `CitizenTape <${fromEmail}>`,
       to: [toEmail],
       subject: t.subject,
       html,
@@ -1042,7 +1042,7 @@ async function handleCreateInvite(request, env) {
   return json({
     ok: true,
     inviteId,
-    inviteUrl: `https://cast-wing.com/?invite=${rawToken}`,
+    inviteUrl: `https://citizentape.com/?invite=${rawToken}`,
     inviteCode: rawToken,
   });
 }
@@ -1190,7 +1190,7 @@ const PARSE_SCREENPLAY_CORS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-function buildCastwingPlaySchemaPrompt() {
+function buildCitizenTapePlaySchemaPrompt() {
   return [
     "Tu extrais un scénario pour une application de répétition (ordre des répliques et didascalies).",
     "Réponds uniquement avec un objet JSON UTF-8 valide, sans markdown ni texte hors JSON.",
@@ -1215,7 +1215,7 @@ function extractAnthropicMessageTextBlocks(message) {
   return out;
 }
 
-function parseCastwingPlayModelJson(rawText) {
+function parseCitizenTapePlayModelJson(rawText) {
   let s = String(rawText || "").trim();
   const fence = /^```(?:json)?\s*([\s\S]*?)```/im.exec(s);
   if (fence) s = fence[1].trim();
@@ -1292,7 +1292,7 @@ async function handleParseScreenplay(request, env) {
       type: "text",
       text:
         (fileName ? `Fichier : ${fileName}\n\n` : "") +
-        buildCastwingPlaySchemaPrompt() +
+        buildCitizenTapePlaySchemaPrompt() +
         "\nAnalyse le PDF joint et produis le JSON.",
     });
   } else {
@@ -1302,7 +1302,7 @@ async function handleParseScreenplay(request, env) {
         "Scénario en texte :\n---\n" +
         screenplayText +
         "\n---\n\n" +
-        buildCastwingPlaySchemaPrompt(),
+        buildCitizenTapePlaySchemaPrompt(),
     });
   }
 
@@ -1347,7 +1347,7 @@ async function handleParseScreenplay(request, env) {
     const textOut = extractAnthropicMessageTextBlocks(data);
     let parsed;
     try {
-      parsed = parseCastwingPlayModelJson(textOut);
+      parsed = parseCitizenTapePlayModelJson(textOut);
     } catch (e) {
       return json(
         {
