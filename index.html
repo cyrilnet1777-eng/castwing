@@ -88,12 +88,13 @@ body::after{content:none}
 }
 
 /* SETUP */
-#setupAi,#setupPartner,#joinScreen{padding:1.5rem;justify-content:flex-start;gap:1.2rem;overflow-y:auto;-webkit-overflow-scrolling:touch;background:transparent}
-.setup-header{display:flex;align-items:center;gap:.8rem}
-.back-btn{background:transparent;border:1px solid var(--border);cursor:pointer;font-size:1.25rem;color:var(--white);padding:.25rem .5rem;border-radius:var(--radius);transition:var(--tf)}
-.back-btn:hover{border-color:rgba(255,255,255,.25);background:var(--glass-bg)}
+#setupAi,#setupPartner,#joinScreen,#partnerChoice{padding:1.5rem;justify-content:flex-start;gap:1.2rem;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg-1)}
+.setup-header{display:flex;align-items:center;gap:.8rem;margin-bottom:.5rem}
+.back-btn{background:transparent;border:1px solid var(--border);cursor:pointer;font-size:1.25rem;color:var(--white);padding:.25rem .5rem;border-radius:0;transition:var(--tf)}
+.back-btn:hover{border-color:rgba(245,239,224,.25);background:var(--glass-bg)}
 .setup-header h2{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:400;color:var(--white);letter-spacing:-.01em}
-.setup-card{background:var(--bg-2);border:1px solid var(--border);border-radius:0;padding:1.5rem;margin-bottom:1rem}
+.setup-privacy{display:flex;align-items:center;gap:.4rem;font-size:.6rem;color:var(--text-muted);letter-spacing:.12em;text-transform:uppercase;font-weight:500;margin-top:.8rem;opacity:.7}
+.setup-card{background:transparent;border:1px solid var(--border);border-radius:0;padding:1.5rem;margin-bottom:1rem}
 .setup-card label{display:block;font-size:.75rem;font-weight:600;color:var(--text-muted);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.06em}
 .setup-card input,.setup-card textarea,.setup-card select{width:100%;padding:.7rem .9rem;border:1px solid var(--border-light);border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:500;color:var(--white);background:var(--bg-1);outline:none;transition:var(--tf)}
 .setup-card input:focus,.setup-card textarea:focus,.setup-card select:focus{border-color:rgba(255,255,255,.40)}
@@ -109,9 +110,9 @@ body::after{content:none}
 .code-hint{font-size:.75rem;color:var(--text-muted);text-align:center;margin-top:.3rem}
 
 /* PDF */
-.upload-zone{border:2px dashed rgba(255,255,255,.18);border-radius:var(--radius-lg);padding:1.8rem;text-align:center;cursor:pointer;transition:var(--ts);background:var(--bg-1)}
-.upload-zone:hover{border-color:rgba(255,255,255,.35);background:var(--bg-3)}
-.upload-zone.dragover{border-style:solid;border-color:rgba(255,255,255,.50);background:var(--bg-3)}
+.upload-zone{border:1px dashed rgba(245,239,224,.2);border-radius:0;padding:1.8rem;text-align:center;cursor:pointer;transition:var(--ts);background:transparent}
+.upload-zone:hover{border-color:rgba(245,239,224,.4);background:rgba(245,239,224,.03)}
+.upload-zone.dragover{border-style:solid;border-color:rgba(245,239,224,.5);background:rgba(245,239,224,.05)}
 .upload-zone .up-icon{font-size:2.2rem;margin-bottom:.5rem}.upload-zone .up-label{font-size:.9rem;font-weight:700;color:var(--white)}.upload-zone .up-sub{font-size:.75rem;color:var(--text-muted);margin-top:.2rem}
 input[type="file"]{display:none}
 .upload-ok{display:flex;align-items:center;gap:.6rem;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.20);border-radius:var(--radius);padding:.7rem 1rem;font-size:.85rem;font-weight:600;color:#22c55e}
@@ -652,17 +653,9 @@ input[type="file"]{display:none}
 <div id="partnerChoice" class="screen">
   <div class="screen-content">
   <div class="setup-header"><button class="back-btn" onclick="goHome()">←</button><h2 id="partnerChoiceTitle">Partner session</h2></div>
-  <div class="setup-card">
-    <div class="home-cards">
-      <div class="hcard" onclick="goSetupPartner()">
-        <div class="hcard-icon blue">🎬</div>
-        <div class="hcard-text"><h3 id="partnerCreateTitle">Create session (actor)</h3><p id="partnerCreateDesc">Generate a code and invite a partner</p></div>
-      </div>
-      <div class="hcard" onclick="goJoin()">
-        <div class="hcard-icon navy">🎬</div>
-        <div class="hcard-text"><h3 id="partnerJoinTitle">Join session (partner)</h3><p id="partnerJoinDesc">Enter the actor's code</p></div>
-      </div>
-    </div>
+  <div style="display:flex;flex-direction:column;gap:.75rem;margin-top:.5rem">
+    <button class="cta-btn" onclick="goSetupPartner()" style="max-width:100%"><span><span id="partnerCreateTitle" style="display:block">Create session (actor)</span><span class="cta-sub" id="partnerCreateDesc">Generate a code and invite a partner</span></span><span class="cta-arrow">&rarr;</span></button>
+    <button class="cta-btn" onclick="goJoin()" style="max-width:100%"><span><span id="partnerJoinTitle" style="display:block">Join session (partner)</span><span class="cta-sub" id="partnerJoinDesc">Enter the actor's code</span></span><span class="cta-arrow">&rarr;</span></button>
   </div>
   </div>
 </div>
@@ -673,13 +666,13 @@ input[type="file"]{display:none}
   <div class="setup-header"><button class="back-btn" onclick="goHome()">←</button><h2 id="setupAiTitle">Solo + AI</h2></div>
   <div class="setup-card">
     <label id="scriptLabel1">Script (PDF or text)</label>
-    <div class="upload-zone" id="uploadZone1" onclick="openPdfPicker(1)"><div class="up-icon">📄</div><div class="up-label" id="uploadLabel1">Drop your PDF here or click</div><div class="up-sub" id="uploadSub1">Standard screenplay format</div></div>
+    <div class="upload-zone" id="uploadZone1" onclick="openPdfPicker(1)"><div class="up-icon"><svg viewBox="0 0 24 24" style="width:2rem;height:2rem;fill:var(--text-muted)"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg></div><div class="up-label" id="uploadLabel1">Drop your PDF here or click</div><div class="up-sub" id="uploadSub1">Standard screenplay format</div></div>
     <div class="upload-ok" id="uploadOk1" style="display:none"><span>✓</span><span class="fname" id="fileName1"></span><button class="clear-btn" onclick="clearPDF(1)">✕</button></div>
     <input type="file" id="pdfInput1" accept=".pdf,application/pdf,*/*" onchange="handlePDFInput(1,this)">
     <button type="button" class="btn btn-secondary btn-full" style="margin-top:.35rem;padding:.45rem;font-size:.78rem" onclick="void newScriptReset(1)" id="newScriptBtn1">🗑️ Clear cache · new script</button>
     <div class="setup-status" id="setupStatus1"></div>
     <button type="button" class="btn btn-secondary btn-full" style="margin-top:.45rem;display:none;padding:.45rem;font-size:.78rem" onclick="openOptionalScriptReview(1)" id="optionalReviewBtn1">Review / refine script…</button>
-    <div class="nda-badge" id="ndaBadgeSetup"><svg viewBox="0 0 24 24"><path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zM9 6a3 3 0 0 1 6 0v2H9V6zm9 14H6V10h12v10zm-6-3a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg><span>Peer-to-peer · No script stored</span></div>
+    <div class="setup-privacy"><svg viewBox="0 0 24 24" style="width:.7rem;height:.7rem;fill:var(--raspberry);flex-shrink:0"><path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zM9 6a3 3 0 0 1 6 0v2H9V6zm9 14H6V10h12v10zm-6-3a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg><span>PRIVATE. SECURE. OFF RECORD.</span></div>
     <div id="charSection1" style="display:none;margin-top:1rem"><label id="myCharacterLabel1">My character</label><div class="char-grid" id="charGrid1"></div><div id="partnerAssignWrap1" style="display:none;margin-top:1rem"><label id="partnerReadsLabel1">AI reads lines for:</label><div class="char-grid partner-char-grid" id="partnerCharGrid1"></div><div class="mode-hint" id="partnerAssignHint1"></div></div></div>
     <div style="margin-top:1rem"><label id="pasteScriptLabel1">Or paste text</label><textarea id="scriptInput1" placeholder="ME: My line&#10;PARTNER: Their line"></textarea><button type="button" class="btn btn-secondary btn-full" style="margin-top:.5rem;padding:.55rem" onclick="processTextImport(1)" id="importPastedBtn1">Import pasted text</button></div>
   </div>

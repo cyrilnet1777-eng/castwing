@@ -1,9 +1,16 @@
-# CitizenTape -- Audition Studio
+# CitizenTape -- Your Acting Partner
 
-A browser-based audition/rehearsal studio for actors. Load a screenplay (PDF or pasted text), pick your character, and rehearse with an AI partner that reads the other lines aloud -- or invite a real partner over WebRTC.
+A premium acting rehearsal studio. Upload a screenplay, pick your role, and rehearse with an AI partner that reads the other lines aloud -- or invite a real partner over WebRTC.
 
 **Live:** https://citizentape.com
-**Staging:** https://staging.citizentape.com (testing new voices/features before production)
+**Staging:** https://staging.citizentape.com
+**Legacy domain:** cast-wing.com (301 redirects to citizentape.com)
+
+### Design
+- Luxury cinematic aesthetic: dark charcoal/cream/raspberry palette
+- Playfair Display serif for headings, DM Sans for UI
+- Landing page: full-bleed studio photo with director's chair (responsive mobile/desktop images)
+- Inner pages: outlined buttons, square corners, editorial spacing
 
 ## Features
 
