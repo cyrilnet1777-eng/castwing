@@ -423,6 +423,7 @@ input[type="file"]{display:none}
 </head>
 <body>
 <div id="toast" class="toast"></div>
+<div id="versionBanner" style="display:none;position:fixed;top:12px;left:50%;transform:translateX(-50%);background:#8FBCA8;color:#101010;padding:.5rem 1rem;border-radius:999px;font-size:.78rem;font-weight:600;cursor:pointer;z-index:99999;box-shadow:0 4px 14px rgba(0,0,0,.3);user-select:none" onclick="location.reload()" title="A new version is available — tap to update">🔄 New version available — tap to update</div>
 <div id="cwSessionBadge" class="cw-session-badge" style="display:none"></div>
 <div id="cwBurgerRoot" class="cw-burger-root" style="display:none" aria-hidden="true">
   <button type="button" id="cwBurgerBtn" class="cw-burger-btn" aria-label="Menu" aria-expanded="false" onclick="toggleBurgerDrawer()">
@@ -5973,6 +5974,28 @@ function initCardTilt(){
     card.addEventListener('mouseleave',()=>{card.style.transform='';});
   });
 }
+
+(function setupVersionCheck(){
+  if(typeof window.__deploy!=='number')return;
+  const current=window.__deploy;
+  async function check(){
+    try{
+      const r=await fetch(location.pathname+'?_v='+Date.now(),{cache:'no-store',credentials:'omit'});
+      if(!r.ok)return;
+      const html=await r.text();
+      const m=html.match(/window\.__deploy\s*=\s*(\d+)/);
+      if(!m)return;
+      const live=Number(m[1]);
+      if(Number.isFinite(live)&&live>current){
+        const el=document.getElementById('versionBanner');
+        if(el)el.style.display='block';
+      }
+    }catch(_e){}
+  }
+  setTimeout(check,5000);
+  setInterval(check,5*60*1000);
+  window.addEventListener('focus',check);
+})();
 
 document.addEventListener('DOMContentLoaded',async ()=>{
   const pa=document.getElementById('prompterArea');
