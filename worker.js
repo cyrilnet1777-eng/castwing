@@ -2140,7 +2140,7 @@ export default {
     } catch (_) {}
     if (clientScheme === "http" && url.hostname !== "localhost" && url.hostname !== "127.0.0.1") {
       url.protocol = "https:";
-      return Response.redirect(url.toString(), 301);
+      return Response.redirect(url.toString(), 308);
     }
 
     if (env.DB) await ensureD1Tables(env.DB);
