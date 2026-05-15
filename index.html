@@ -52,7 +52,9 @@ body::after{content:none}
 
 /* HOME */
 #home{justify-content:flex-start;align-items:stretch;padding:0;background:#1a1a1a;position:relative;overflow:hidden;width:100%}
-.home-hero{position:relative;display:flex;flex-direction:column;width:100%;min-height:100vh;min-height:100dvh;padding:5rem 1.5rem 2rem;z-index:2;background-color:#1a1a1a;background-image:url('/background-image-mobile.jpg');background-size:cover;background-position:top right;background-repeat:no-repeat}
+.home-hero{position:relative;display:flex;flex-direction:column;width:100%;min-height:100vh;min-height:100dvh;padding:5rem 1.5rem 2rem;z-index:2;background:#1a1a1a}
+.home-hero-bg{position:absolute;inset:0;z-index:0}
+.home-hero-bg img{width:100%;height:100%;object-fit:cover;object-position:bottom right;display:block}
 .home-top-bar{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:.8rem 1.2rem;padding-top:calc(.8rem + env(safe-area-inset-top,0px));z-index:50}
 .home-wordmark{font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:500;color:var(--white);letter-spacing:.22em;text-transform:uppercase;opacity:.85}
 .home-top-right{display:flex;align-items:center;gap:.8rem}
@@ -78,7 +80,8 @@ body::after{content:none}
 .join-link{font-size:.78rem;color:var(--text-muted);text-align:center}
 .join-link a{color:var(--raspberry);cursor:pointer;text-decoration:underline;font-weight:700}
 @media(min-width:768px){
-  .home-hero{padding:4rem 5rem 2.5rem;background-image:url('/background-image-desktop.jpg');background-position:center center}
+  .home-hero{padding:4rem 5rem 2.5rem}
+  .home-hero-bg img{content:url('/background-image-desktop.jpg')}
   .hero-title{font-size:3.2rem}
   .hero-ctas{max-width:420px}
 }
@@ -561,6 +564,7 @@ input[type="file"]{display:none}
     </div>
   </div>
   <div class="home-hero">
+    <div class="home-hero-bg"><img src="/background-image-mobile.jpg" alt="" loading="eager"></div>
     <div class="hero-content">
       <h1 class="hero-title" id="homeHook">Your acting<br>partner,<br>always available<span class="hero-dot">.</span></h1>
       <div class="hero-ctas">
@@ -2197,7 +2201,7 @@ const UI_FALLBACK_TRANSLATIONS={
   waitOneHourBtn:{fr:'Attendre 1 heure',en:'Wait 1 hour',es:'Esperar 1 hora',it:'Attendi 1 ora',zh:'等待1小时',ko:'1시간 기다리기',ja:'1時間待つ',ar:'انتظر ساعة',de:'1 Stunde warten',pt:'Esperar 1 hora',hi:'1 घंटा प्रतीक्षा करें'},
   authCodeSent:{fr:'Code envoyé. Vérifie ta boîte mail.',en:'Code sent. Check your inbox.',es:'Código enviado. Revisa tu email.',it:'Codice inviato. Controlla la tua email.',zh:'验证码已发送，请查收邮箱。',ko:'코드를 보냈습니다. 메일함을 확인하세요.',ja:'コードを送信しました。メールを確認してください。',ar:'تم إرسال الرمز. تحقق من بريدك.',de:'Code gesendet. Bitte E-Mail prüfen.',pt:'Código enviado. Verifique seu e-mail.',hi:'कोड भेज दिया गया है। अपना ईमेल देखें।'},
   authVerified:{fr:'Email vérifié ✅',en:'Email verified ✅',es:'Email verificado ✅',it:'Email verificata ✅',zh:'邮箱验证成功 ✅',ko:'이메일 인증 완료 ✅',ja:'メール認証完了 ✅',ar:'تم التحقق من البريد ✅',de:'E-Mail bestätigt ✅',pt:'E-mail verificado ✅',hi:'ईमेल सत्यापित ✅'},
-  authWelcomeNew:{fr:’Bienvenue sur CitizenTape. 2 h d’IA débloquées.’,en:’Welcome to CitizenTape. 2h of AI unlocked.’,es:’Bienvenido a CitizenTape. 2 h de IA desbloqueadas.’,it:’Benvenuto su CitizenTape. 2 h di IA sbloccate.’,zh:’欢迎使用 CitizenTape，已解锁 2 小时 AI。’,ko:’CitizenTape에 오신 걸 환영합니다. AI 2시간이 열렸습니다.’,ja:’CitizenTapeへようこそ。AIが2時間利用できます。’,ar:’مرحبًا بك في CitizenTape. تم تفعيل ساعتين من الذكاء الاصطناعي.’,de:’Willkommen bei CitizenTape. 2 h KI freigeschaltet.’,pt:’Bem-vindo ao CitizenTape. 2 h de IA liberadas.’,hi:’CitizenTape में आपका स्वागत है। 2 घंटे AI अनलॉक।’},
+  authWelcomeNew:{fr:'Bienvenue sur CitizenTape. 2 h d\'IA débloquées.',en:'Welcome to CitizenTape. 2h of AI unlocked.',es:'Bienvenido a CitizenTape. 2 h de IA desbloqueadas.',it:'Benvenuto su CitizenTape. 2 h di IA sbloccate.',zh:'欢迎使用 CitizenTape，已解锁 2 小时 AI。',ko:'CitizenTape에 오신 걸 환영합니다. AI 2시간이 열렸습니다.',ja:'CitizenTapeへようこそ。AIが2時間利用できます。',ar:'مرحبًا بك في CitizenTape. تم تفعيل ساعتين من الذكاء الاصطناعي.',de:'Willkommen bei CitizenTape. 2 h KI freigeschaltet.',pt:'Bem-vindo ao CitizenTape. 2 h de IA liberadas.',hi:'CitizenTape में आपका स्वागत है। 2 घंटे AI अनलॉक।'},
   authWelcomeBack:{fr:'Content de te revoir.',en:'Good to see you again.',es:'Me alegra verte de nuevo.',it:'Che bello rivederti.',zh:'欢迎回来。',ko:'다시 만나서 반가워요.',ja:'おかえりなさい。',ar:'سعداء برؤيتك مجددًا.',de:'Schön, dass du wieder da bist.',pt:'Bom te ver de novo.',hi:'फिर से स्वागत है।'},
   authInvalidCode:{fr:'Code invalide',en:'Invalid code',es:'Código inválido',it:'Codice non valido',zh:'验证码无效',ko:'코드가 올바르지 않습니다',ja:'コードが無効です',ar:'رمز غير صالح',de:'Ungültiger Code',pt:'Código inválido',hi:'कोड अमान्य है'},
   usageBlocked:{fr:'Limite atteinte. Attends 1h ou débloque à 1$.',en:'Limit reached. Wait 1h or unlock for $1.',es:'Límite alcanzado. Espera 1h o desbloquea por 1$.',it:'Limite raggiunto. Attendi 1h o sblocca con 1$.',zh:'已达上限。等待1小时或支付1美元解锁。',ko:'사용 한도 도달. 1시간 대기 또는 1달러 결제로 해제.',ja:'上限に達しました。1時間待つか1ドルで解除。',ar:'تم بلوغ الحد. انتظر ساعة أو افتح مقابل 1$.',de:'Limit erreicht. 1h warten oder für 1$ entsperren.',pt:'Limite atingido. Aguarde 1h ou desbloqueie por 1$.',hi:'सीमा पूरी। 1 घंटा प्रतीक्षा करें या 1$ देकर अनलॉक करें।'},
