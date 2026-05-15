@@ -52,9 +52,7 @@ body::after{content:none}
 
 /* HOME */
 #home{justify-content:flex-start;align-items:stretch;padding:0;background:#1a1a1a;position:relative;overflow:hidden}
-.home-hero{position:relative;display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;padding:5rem 1.5rem 2rem;z-index:2}
-.home-chair{position:absolute;right:-8%;bottom:0;width:70%;max-width:420px;pointer-events:none;z-index:1;opacity:.92}
-.home-chair img{width:100%;height:auto;display:block;filter:drop-shadow(0 0 40px rgba(0,0,0,.5))}
+.home-hero{position:relative;display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;padding:5rem 1.5rem 2rem;z-index:2;background:url('/background-image-mobile.jpg') center/cover no-repeat}
 .home-top-bar{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:.8rem 1.2rem;padding-top:calc(.8rem + env(safe-area-inset-top,0px));z-index:50}
 .home-wordmark{font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:500;color:var(--white);letter-spacing:.22em;text-transform:uppercase;opacity:.85}
 .home-top-right{display:flex;align-items:center;gap:.8rem}
@@ -69,19 +67,18 @@ body::after{content:none}
 .hero-title{font-family:'Playfair Display',serif;font-size:2.4rem;font-weight:400;color:var(--white);line-height:1.22;letter-spacing:-.01em;margin-bottom:2rem}
 .hero-dot{color:var(--raspberry);font-family:'Playfair Display',serif}
 .hero-ctas{display:flex;flex-direction:column;gap:.75rem;max-width:380px}
-.cta-btn{display:flex;align-items:center;justify-content:space-between;width:100%;padding:1.05rem 1.3rem;background:rgba(26,26,26,.65);border:1px solid rgba(245,239,224,.22);color:var(--white);font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:var(--tf);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
-.cta-btn:hover{border-color:rgba(245,239,224,.45);background:rgba(26,26,26,.85)}
+.cta-btn{display:flex;align-items:center;justify-content:space-between;width:100%;padding:1.05rem 1.3rem;background:rgba(26,26,26,.55);border:1px solid rgba(245,239,224,.22);color:var(--white);font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:var(--tf);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.cta-btn:hover{border-color:rgba(245,239,224,.45);background:rgba(26,26,26,.75)}
 .cta-btn:active{transform:scale(.99)}
 .cta-arrow{color:var(--raspberry);font-size:1.1rem;font-weight:400;transition:transform .15s ease}
 .cta-btn:hover .cta-arrow{transform:translateX(3px)}
 .cta-sub{display:block;font-size:.62rem;font-weight:400;letter-spacing:.08em;opacity:.5;margin-top:.15rem}
-.home-privacy{position:relative;z-index:3;display:flex;align-items:center;gap:.45rem;font-size:.65rem;color:var(--text-muted);letter-spacing:.14em;text-transform:uppercase;font-weight:500;margin-top:2.5rem;padding-bottom:env(safe-area-inset-bottom,0px)}
+.home-privacy{position:relative;z-index:3;display:flex;align-items:center;gap:.45rem;font-size:.65rem;color:var(--text-muted);letter-spacing:.14em;text-transform:uppercase;font-weight:500;margin-top:2rem;padding-bottom:env(safe-area-inset-bottom,0px)}
 .home-privacy svg{width:.75rem;height:.75rem;fill:var(--raspberry);flex-shrink:0}
 .join-link{font-size:.78rem;color:var(--text-muted);text-align:center}
 .join-link a{color:var(--raspberry);cursor:pointer;text-decoration:underline;font-weight:700}
 @media(min-width:768px){
-  .home-hero{padding:5rem 4rem 3rem}
-  .home-chair{right:2%;width:45%;max-width:500px}
+  .home-hero{padding:4rem 5rem 2.5rem;background-image:url('/background-image-desktop.jpg')}
   .hero-title{font-size:3.2rem}
   .hero-ctas{max-width:420px}
 }
@@ -564,7 +561,6 @@ input[type="file"]{display:none}
     </div>
   </div>
   <div class="home-hero">
-    <div class="home-chair"><img src="/director-chair.png" alt="" loading="eager"></div>
     <div class="hero-content">
       <h1 class="hero-title" id="homeHook">Your acting<br>partner,<br>always available<span class="hero-dot">.</span></h1>
       <div class="hero-ctas">
