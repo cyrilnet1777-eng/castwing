@@ -18,7 +18,9 @@ A browser-based audition/rehearsal studio for actors. Load a screenplay (PDF or 
 - Built-in teleprompter highlights the current line and scrolls automatically.
 - **View modes** during session: Prompt only / Video only / 50-50 (switchable live or from pause menu).
 - Camera + mic preview with toggle controls.
+- **Mobile session controls**: Record, Mic toggle, and End session buttons accessible via a floating action column on the right side of the video area. Desktop uses a bottom toolbar with a green "Done" button (becomes "Save & Exit" when recording).
 - Record the session and download as **MP4** (converted from WebM via **ffmpeg.wasm**, loaded on demand). Falls back to WebM if conversion fails.
+- **REC indicator**: visible "REC" label with blinking dot when recording is active.
 
 ### Partner mode (WebRTC)
 - The actor creates a session and gets an 8-character code.
@@ -28,7 +30,7 @@ A browser-based audition/rehearsal studio for actors. Load a screenplay (PDF or 
 - **Keepalive heartbeat** every 25 seconds prevents the signaling server from dropping idle connections.
 - Script is synced between peers; both see the teleprompter.
 - Audio is streamed both ways.
-- Share the code/link via clipboard, WhatsApp, Telegram, WeChat, or native share.
+- Smart share button: uses native OS share sheet on mobile, copies link to clipboard on desktop.
 
 ### Voice system
 - **13+ ElevenLabs voices** mapped by alias (serena, daniel, rachel, nova_f, giulia_v2, etc.). Supports both pre-built voices and Voice Library voices by full ID.

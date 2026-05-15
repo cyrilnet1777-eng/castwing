@@ -2191,6 +2191,8 @@ export default {
       const newResponse = new Response(assetResponse.body, assetResponse);
       newResponse.headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
       newResponse.headers.set("Pragma", "no-cache");
+      newResponse.headers.set("Expires", "0");
+      newResponse.headers.set("X-App-Version", "2026.05.10a");
       return newResponse;
     }
     return assetResponse;
