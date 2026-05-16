@@ -764,65 +764,53 @@ function getVerificationEmailHtml(code, lang) {
 <meta name="color-scheme" content="light dark">
 <title>${t.subject}</title>
 </head>
-<body style="margin:0;padding:0;background:#FAFAF8;font-family:'Inter','Helvetica Neue','Segoe UI','Noto Sans',system-ui,-apple-system,sans-serif;color:#0F1624;-webkit-font-smoothing:antialiased;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FAFAF8;padding:48px 16px;">
+<body style="margin:0;padding:0;background:#1a1a1a;font-family:'Helvetica Neue','Segoe UI',system-ui,-apple-system,sans-serif;color:#f5efe0;-webkit-font-smoothing:antialiased;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#1a1a1a;padding:48px 16px;">
     <tr>
       <td align="center">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:16px;border:1px solid #EDEDEA;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#212121;border:1px solid rgba(245,239,224,0.12);">
           <tr>
             <td style="padding:40px 40px 32px;">
-              <table role="presentation" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="vertical-align:middle;">
-                    <div style="display:inline-block;position:relative;width:28px;height:28px;line-height:28px;text-align:center;">
-                      <span style="font-family:'Inter','Helvetica Neue',sans-serif;font-size:26px;font-weight:700;color:#0F1624;letter-spacing:-0.04em;">C</span>
-                      <span style="position:absolute;top:4px;right:-2px;width:5px;height:5px;background:#E63946;border-radius:50%;"></span>
-                    </div>
-                  </td>
-                  <td style="vertical-align:middle;padding-left:8px;padding-bottom:2px;">
-                    <span style="font-size:19px;font-weight:600;letter-spacing:-0.02em;color:#0F1624;">ast<em style="font-style:italic;font-weight:500;color:#4A7C59;">wing</em></span>
-                  </td>
-                </tr>
-              </table>
+              <span style="font-size:13px;font-weight:500;letter-spacing:0.22em;color:rgba(245,239,224,0.7);text-transform:uppercase;">CITIZENTAPE</span><span style="display:inline-block;width:5px;height:5px;background:#d92027;border-radius:50%;margin-left:6px;vertical-align:middle;"></span>
             </td>
           </tr>
           <tr>
             <td style="padding:0 40px 8px;">
-              <h1 style="margin:0;font-size:24px;font-weight:600;color:#0F1624;letter-spacing:-0.015em;line-height:1.3;">${t.title}</h1>
+              <h1 style="margin:0;font-size:22px;font-weight:400;color:#f5efe0;letter-spacing:-0.01em;line-height:1.3;font-family:Georgia,'Times New Roman',serif;">${t.title}</h1>
             </td>
           </tr>
           <tr>
             <td style="padding:0 40px 32px;">
-              <p style="margin:0;font-size:15px;color:#6B7280;line-height:1.5;letter-spacing:-0.005em;">${t.subtitle}</p>
+              <p style="margin:0;font-size:14px;color:rgba(245,239,224,0.55);line-height:1.5;">${t.subtitle}</p>
             </td>
           </tr>
           <tr>
             <td style="padding:0 40px 32px;">
-              <div style="background:#FAFAF8;border:1px solid #EDEDEA;border-radius:12px;padding:28px 24px;text-align:center;">
-                <div style="font-family:'SF Mono','JetBrains Mono','Menlo','Courier New',monospace;font-size:34px;font-weight:700;letter-spacing:12px;color:#0F1624;line-height:1;padding-left:12px;">${escCode}</div>
+              <div style="border:1px solid rgba(245,239,224,0.15);padding:28px 24px;text-align:center;">
+                <div style="font-family:'SF Mono','JetBrains Mono','Menlo','Courier New',monospace;font-size:34px;font-weight:700;letter-spacing:12px;color:#f5efe0;line-height:1;padding-left:12px;">${escCode}</div>
               </div>
             </td>
           </tr>
           <tr>
             <td style="padding:0 40px 32px;">
-              <p style="margin:0;font-size:13px;color:#9CA3AF;line-height:1.5;">${t.expiry}</p>
+              <p style="margin:0;font-size:13px;color:rgba(245,239,224,0.4);line-height:1.5;">${t.expiry}</p>
             </td>
           </tr>
           <tr>
-            <td style="padding:0 40px;"><div style="height:1px;background:#EDEDEA;"></div></td>
+            <td style="padding:0 40px;"><div style="height:1px;background:rgba(245,239,224,0.1);"></div></td>
           </tr>
           <tr>
             <td style="padding:28px 40px 32px;">
-              <p style="margin:0 0 10px;font-size:14px;font-weight:600;color:#0F1624;letter-spacing:-0.005em;">${t.asideTitle}</p>
-              <p style="margin:0;font-size:13.5px;color:#4B5563;line-height:1.65;">${t.asideBody}</p>
-              <p style="margin:16px 0 0;font-size:13.5px;color:#4B5563;line-height:1.65;">${t.asideClose}</p>
-              <p style="margin:14px 0 0;font-size:13.5px;color:#0F1624;font-weight:500;">${t.signature}</p>
+              <p style="margin:0 0 10px;font-size:14px;font-weight:500;color:#f5efe0;">${t.asideTitle}</p>
+              <p style="margin:0;font-size:13px;color:rgba(245,239,224,0.5);line-height:1.65;">${t.asideBody}</p>
+              <p style="margin:16px 0 0;font-size:13px;color:rgba(245,239,224,0.5);line-height:1.65;">${t.asideClose}</p>
+              <p style="margin:14px 0 0;font-size:13px;color:#f5efe0;font-weight:500;">${t.signature}</p>
             </td>
           </tr>
           <tr>
-            <td style="background:#FAFAF8;border-top:1px solid #EDEDEA;padding:20px 40px;text-align:center;border-radius:0 0 16px 16px;">
-              <p style="margin:0;font-size:11px;color:#9CA3AF;line-height:1.5;letter-spacing:0.01em;">
-                <a href="https://citizentape.com" style="color:#4A7C59;text-decoration:none;font-weight:500;">citizentape.com</a>
+            <td style="border-top:1px solid rgba(245,239,224,0.1);padding:20px 40px;text-align:center;">
+              <p style="margin:0;font-size:10px;color:rgba(245,239,224,0.3);line-height:1.5;letter-spacing:0.12em;text-transform:uppercase;">
+                <a href="https://citizentape.com" style="color:rgba(245,239,224,0.4);text-decoration:none;">citizentape.com</a>
               </p>
             </td>
           </tr>
