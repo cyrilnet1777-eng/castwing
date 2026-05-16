@@ -860,6 +860,7 @@ const SFX={
   ambienceValley:'/sounds/ambience-valley.mp3',
   ambienceHorror:'/sounds/ambience-horror.mp3',
   ambienceOffice:'/sounds/ambience-office.mp3',
+  countdown:'/countdown.mp3',
 };
 function playCountdownBeep(frequency,duration){
   try{
@@ -1315,24 +1316,21 @@ function showClapperboard(onComplete){
   const overlay=document.createElement('div');
   overlay.id='clapOverlay';
   overlay.className='clap-overlay';
-  overlay.innerHTML='<div class="clap-countdown">3</div>';
+  const cdEl=document.createElement('div');
+  cdEl.className='clap-countdown';
+  overlay.appendChild(cdEl);
   document.body.appendChild(overlay);
-  playCountdownBeep(800);
   warmAudioForMobile();
-  setTimeout(()=>{
-    overlay.innerHTML='<div class="clap-countdown">2</div>';
-    playCountdownBeep(800);
-    warmAudioForMobile();
-    setTimeout(()=>{
-      overlay.innerHTML='<div class="clap-countdown">1</div>';
-      playCountdownBeep(1200);
-      warmAudioForMobile();
-      setTimeout(()=>{
-        if(overlay.parentElement)overlay.remove();
-        if(typeof onComplete==='function')onComplete();
-      },1000);
-    },1000);
-  },1000);
+  const steps=[3,2,1];
+  let i=0;
+  function tick(){
+    if(i>=steps.length){if(overlay.parentElement)overlay.remove();if(typeof onComplete==='function')onComplete();return}
+    cdEl.textContent=steps[i];
+    requestAnimationFrame(()=>{playSfx('countdown',0.7)});
+    i++;
+    setTimeout(tick,1000);
+  }
+  tick();
 }
 function updateCreditBadge(){
   var cents=(cwServerSession.creditBalance||0);
@@ -6235,9 +6233,23 @@ function endSession(){
   if(_preItalienneVoice){selectedVoice=_preItalienneVoice;_preItalienneVoice=null}
   hideEndTakeModal();
   if(connectionTimeout)clearTimeout(connectionTimeout);cancelSpeechFlow();
-  if(isRecording)stopRecording();try{if(conn&&conn.open)conn.send({type:'end-session'})}catch(e){}if(call){call.close();call=null}if(conn){conn.close();conn=null}if(peer){peer.destroy();peer=null}
-  if(window._cwMicStream){window._cwMicStream.getTracks().forEach(t=>t.stop());window._cwMicStream=null}
-  if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null}
+  // Stop recording and wait for save before tearing down streams
+  const wasRecording=isRecording;
+  if(wasRecording&&mediaRecorder&&mediaRecorder.state!=='inactive'){
+    const origOnStop=mediaRecorder.onstop;
+    mediaRecorder.onstop=async function(){
+      if(origOnStop)await origOnStop.call(this);
+      teardownStreamsAndPeers();
+    };
+    stopRecording();
+  }else{
+    teardownStreamsAndPeers();
+  }
+  function teardownStreamsAndPeers(){
+    try{if(conn&&conn.open)conn.send({type:'end-session'})}catch(e){}if(call){call.close();call=null}if(conn){conn.close();conn=null}if(peer){peer.destroy();peer=null}
+    if(window._cwMicStream){window._cwMicStream.getTracks().forEach(t=>t.stop());window._cwMicStream=null}
+    if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null}
+  }
   const lv=document.getElementById('localVideo');lv.srcObject=null;lv.style.display='';lv.classList.remove('mirror');
   document.getElementById('remoteVideo').srcObject=null;document.getElementById('remoteVideo').style.display='none';
   document.getElementById('remoteAudio').srcObject=null;
@@ -6247,7 +6259,7 @@ function endSession(){
   hideTimerBadge();
   lockedVoiceLocale='';userScrolledUp=false;
   const _pa=document.getElementById('prompterArea');if(_pa)_pa.classList.remove('rear-cam');
-  stopPeerKeepalive();hideOverlay();isMicOn=true;isCamOn=true;currentFacingMode='user';prompterLines=[];prompterIndex=0;pdfScript=[];scriptRawText='';_bgRefinementToken++;_fastFullParseToken++;syncPdfScriptDebugMirror();selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;currentScriptName='';showScreen('home');
+  stopPeerKeepalive();hideOverlay();isMicOn=true;isCamOn=true;currentFacingMode='user';prompterLines=[];prompterIndex=0;lastAutoSpokenIndex=-1;activeSpeechToken=0;recordedChunks=[];mediaRecorder=null;pdfScript=[];scriptRawText='';_bgRefinementToken++;_fastFullParseToken++;syncPdfScriptDebugMirror();selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;currentScriptName='';role='actor';sessionMode='ai';showScreen('home');
 }
 function cancelConnection(){hideOverlay();if(!conn||!conn.open)endSession()}
 
