@@ -2760,7 +2760,7 @@ async function verifyEmailCode(){
   showToast(isSignup?t('authWelcomeNew'):t('authWelcomeBack'),isSignup?4200:3200);
   try{closeAuthModal()}catch(_e){}
 }
-const GOOGLE_CLIENT_ID='690445077464-pg7tjrp06tfhd9nq0k626bsa9qlia4s5.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID='580840125965-vrcb9nvptv4mj1ua0v66mq1asl5t6o51.apps.googleusercontent.com';
 function startGoogleSignIn(){
   if(typeof google==='undefined'||!google.accounts){showToast('Google non disponible, utilise ton email');return}
   google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:handleGoogleCredential,auto_prompt:false});
