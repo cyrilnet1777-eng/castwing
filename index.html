@@ -51,9 +51,9 @@ body::after{content:none}
 .screen-content{width:100%;max-width:560px;margin:0 auto;padding:1rem 1rem 2rem;box-sizing:border-box}
 
 /* HOME */
-#home{padding:0;background:#1a1a1a;position:fixed;inset:0;overflow:hidden;z-index:1}
-#home.active{display:flex}
-.home-hero{position:absolute;inset:0;display:flex;flex-direction:column;padding:5rem 1.5rem 2rem;z-index:2}
+#home{padding:0;background:#1a1a1a;overflow-y:auto;overflow-x:hidden;z-index:1}
+#home.active{display:flex;flex-direction:column}
+.home-hero{position:relative;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;padding:5rem 1.5rem 2rem;z-index:2}
 .home-hero-bg{position:absolute;inset:0;z-index:0}
 .home-hero-bg img{width:100%;height:100%;object-fit:cover;object-position:bottom right;display:block}
 .home-top-bar{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:.8rem 1.2rem;padding-top:calc(.8rem + env(safe-area-inset-top,0px));z-index:50}
@@ -80,12 +80,47 @@ body::after{content:none}
 .home-privacy svg{width:.75rem;height:.75rem;fill:var(--raspberry);flex-shrink:0}
 .join-link{font-size:.78rem;color:var(--text-muted);text-align:center}
 .join-link a{color:var(--raspberry);cursor:pointer;text-decoration:underline;font-weight:700}
+.hero-subtitle{font-size:.85rem;color:var(--text-muted);margin-bottom:2rem;font-weight:400;line-height:1.5}
+.hero-import-btn{display:flex;align-items:center;justify-content:center;gap:.6rem;width:100%;max-width:380px;padding:1.1rem 1.5rem;background:rgba(26,26,26,.55);border:1px solid rgba(245,239,224,.25);color:var(--white);font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:var(--tf);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.hero-import-btn:hover{border-color:rgba(245,239,224,.5);background:rgba(26,26,26,.75)}
+.hero-import-btn:active{transform:scale(.98)}
+.hero-import-btn svg{width:18px;height:18px;fill:currentColor;flex-shrink:0}
+.hero-microcopy{font-size:.68rem;color:var(--text-muted);margin-top:.5rem;letter-spacing:.06em}
+.hero-join-link{font-size:.72rem;color:var(--text-muted);margin-top:1.5rem;cursor:pointer}
+.hero-join-link a{color:rgba(245,239,224,.5);text-decoration:underline;cursor:pointer}
+.hero-join-link a:hover{color:var(--white)}
+#home.dragover .home-hero{outline:2px solid var(--raspberry);outline-offset:-2px}
+.home-flow{background:#111;padding:4rem 1.5rem;position:relative;z-index:3}
+.flow-header{font-size:.7rem;font-weight:600;color:#888;letter-spacing:.14em;text-transform:uppercase;text-align:center;margin-bottom:2.5rem}
+.flow-steps{display:flex;flex-direction:column;gap:2rem;max-width:800px;margin:0 auto}
+.flow-step{display:flex;gap:1rem;align-items:flex-start}
+.flow-num{width:32px;height:32px;border-radius:50%;background:var(--raspberry);color:#fff;font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.flow-body h3{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:400;color:var(--white);margin-bottom:.3rem}
+.flow-body ul{list-style:none;padding:0;margin:0}
+.flow-body li{font-size:.78rem;color:#888;line-height:1.6;padding-left:.8rem;position:relative}
+.flow-body li::before{content:'·';position:absolute;left:0;color:var(--raspberry)}
 @media(min-width:768px){
   .home-hero{padding:4rem 5rem 2.5rem}
   .home-hero-bg img{content:url('/background-image-desktop.jpg')}
   .hero-title{font-size:3.2rem}
-  .hero-ctas{max-width:420px}
+  .hero-import-btn{max-width:420px}
+  .flow-steps{flex-direction:row;gap:1.5rem}
+  .flow-step{flex:1;flex-direction:column;align-items:center;text-align:center}
+  .flow-body li{padding-left:0}.flow-body li::before{display:none}
 }
+/* IMPORT SCENE */
+#importScene .screen-content{max-width:520px}
+.import-sub{font-size:.85rem;color:var(--text-muted);margin-bottom:1.5rem}
+.import-divider{text-align:center;font-size:.75rem;color:#666;margin:1rem 0;letter-spacing:.1em;text-transform:uppercase}
+/* CHOOSE MODE */
+#chooseMode .screen-content{max-width:520px}
+.choose-sub{font-size:.85rem;color:var(--text-muted);margin-bottom:1.5rem}
+.choose-card{flex-direction:row;gap:1rem;text-align:left;padding:1.2rem 1.3rem;margin-bottom:.75rem}
+.choose-icon{width:40px;height:40px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.choose-icon svg{width:20px;height:20px;fill:var(--text-muted)}
+.choose-title{display:block;font-size:.82rem;font-weight:700;letter-spacing:.08em;margin-bottom:.2rem}
+.choose-desc{display:block;font-size:.72rem;font-weight:400;color:var(--text-muted);letter-spacing:.02em;line-height:1.4;text-transform:none}
+.choose-privacy{font-size:.6rem;color:#666;letter-spacing:.12em;text-transform:uppercase;text-align:center;margin-top:1.5rem}
 
 /* SETUP */
 #setupAi,#setupPartner,#joinScreen,#partnerChoice{padding:1.5rem;justify-content:flex-start;gap:1.2rem;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg-1)}
@@ -560,7 +595,7 @@ input[type="file"]{display:none}
 <div id="connectOverlay" class="overlay"><div class="spinner"></div><h3 id="overlayTitle">Connecting…</h3><p id="overlayMsg"></p><button class="btn btn-secondary" onclick="cancelConnection()" style="margin-top:.5rem">Cancel</button></div>
 
 <!-- ═══ HOME ═══ -->
-<div id="home" class="screen active">
+<div id="home" class="screen active" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="event.preventDefault();this.classList.remove('dragover');handleHomeDrop(event)">
   <div class="home-top-bar" id="homeTopBar">
     <span class="home-wordmark">CITIZENTAPE</span>
     <div class="home-top-right">
@@ -574,12 +609,23 @@ input[type="file"]{display:none}
   <div class="home-hero">
     <div class="home-hero-bg"><img src="/background-image-mobile.jpg" alt="" loading="eager"></div>
     <div class="hero-content">
-      <h1 class="hero-title" id="homeHook">Your acting partner,<br>always available<span class="hero-dot">.</span></h1>
-      <div class="hero-ctas">
-        <button class="cta-btn" onclick="goSetupAi()" id="homeSoloTitle"><span>SOLO MODE WITH AI</span><span class="cta-arrow">&rarr;</span></button>
-        <button class="cta-btn" onclick="handlePartnerClick()" id="homePartnerTitle"><span>WITH A FRIEND<span class="cta-sub" id="homePartnerDesc">FREE</span></span><span class="cta-arrow">&rarr;</span></button>
-      </div>
+      <h1 class="hero-title" id="homeHook">Your scene partner,<br>always available<span class="hero-dot">.</span></h1>
+      <p class="hero-subtitle" id="homeSubtitle">Rehearse your auditions alone, at your own pace.</p>
+      <button class="hero-import-btn" onclick="goImportScene()" id="homeImportBtn">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+        <span id="homeImportLabel">IMPORT A SCENE</span>
+      </button>
+      <div class="hero-microcopy" id="homeImportMicro">PDF, Final Draft, or plain text</div>
+      <div class="hero-join-link"><a onclick="goJoin()" id="homeJoinLink">Join a session</a></div>
       <div class="home-privacy" id="ndaBadgeHome"><svg viewBox="0 0 24 24"><path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zM9 6a3 3 0 0 1 6 0v2H9V6zm9 14H6V10h12v10zm-6-3a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg><span id="ndaText">PRIVATE. SECURE. OFF RECORD.</span></div>
+    </div>
+  </div>
+  <div class="home-flow">
+    <div class="flow-header" id="flowHeader">THE FLOW IN 3 STEPS</div>
+    <div class="flow-steps">
+      <div class="flow-step"><div class="flow-num">1</div><div class="flow-body"><h3 id="flowStep1Title">Import a scene</h3><ul><li>PDF</li><li>Final Draft</li><li id="flowStep1Text">Plain text</li></ul></div></div>
+      <div class="flow-step"><div class="flow-num">2</div><div class="flow-body"><h3 id="flowStep2Title">Choose how to rehearse</h3><ul><li id="flowStep2Ai">With AI</li><li id="flowStep2Partner">With a partner</li></ul></div></div>
+      <div class="flow-step"><div class="flow-num">3</div><div class="flow-body"><h3 id="flowStep3Title">Rehearse instantly</h3><ul><li id="flowStep3a">Natural reading</li><li id="flowStep3b">Realistic pauses</li><li id="flowStep3c">Unlimited retakes</li></ul></div></div>
     </div>
   </div>
 </div>
@@ -655,10 +701,54 @@ input[type="file"]{display:none}
 </div>
 
 
+<!-- ═══ IMPORT SCENE ═══ -->
+<div id="importScene" class="screen">
+  <div class="screen-content">
+  <div class="setup-header"><button class="back-btn" onclick="goHome()">←</button><h2 id="importSceneTitle">Import your scene</h2></div>
+  <p class="import-sub" id="importSceneSub">PDF, Final Draft, or plain text</p>
+  <div class="setup-card">
+    <div class="upload-zone" id="uploadZone1" onclick="openPdfPicker(1)"><div class="up-icon"><svg viewBox="0 0 24 24" style="width:2rem;height:2rem;fill:var(--text-muted)"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg></div><div class="up-label" id="uploadLabel1">Drop your file here or click</div><div class="up-sub" id="uploadSub1">PDF, FDX, or TXT</div></div>
+    <div class="upload-ok" id="uploadOk1" style="display:none"><span>✓</span><span class="fname" id="fileName1"></span><button class="clear-btn" onclick="clearPDF(1)">✕</button></div>
+    <input type="file" id="pdfInput1" accept=".pdf,.fdx,.txt,application/pdf,*/*" onchange="handlePDFInput(1,this)">
+    <button type="button" class="btn btn-secondary btn-full" style="margin-top:.35rem;padding:.45rem;font-size:.78rem" onclick="void newScriptReset(1)" id="newScriptBtn1">Clear cache · new script</button>
+    <div class="setup-status" id="setupStatus1"></div>
+    <button type="button" class="btn btn-secondary btn-full" style="margin-top:.45rem;display:none;padding:.45rem;font-size:.78rem" onclick="openOptionalScriptReview(1)" id="optionalReviewBtn1">Review / refine script…</button>
+    <div class="setup-privacy"><svg viewBox="0 0 24 24" style="width:.7rem;height:.7rem;fill:var(--raspberry);flex-shrink:0"><path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zM9 6a3 3 0 0 1 6 0v2H9V6zm9 14H6V10h12v10zm-6-3a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg><span>PRIVATE. SECURE. OFF RECORD.</span></div>
+    <div id="charSection1" style="display:none;margin-top:1rem"><label id="myCharacterLabel1">My character</label><div class="char-grid" id="charGrid1"></div><div id="partnerAssignWrap1" style="display:none;margin-top:1rem"><label id="partnerReadsLabel1">AI reads lines for:</label><div class="char-grid partner-char-grid" id="partnerCharGrid1"></div><div class="mode-hint" id="partnerAssignHint1"></div></div></div>
+  </div>
+  <div class="import-divider" id="importOrLabel">or</div>
+  <div class="setup-card">
+    <label id="pasteScriptLabel1">Paste text</label>
+    <textarea id="scriptInput1" placeholder="ME: My line&#10;PARTNER: Their line"></textarea>
+    <button type="button" class="btn btn-secondary btn-full" style="margin-top:.5rem;padding:.55rem" onclick="processTextImport(1)" id="importPastedBtn1">Import pasted text</button>
+  </div>
+  <button class="btn btn-primary btn-full" id="importContinueBtn" style="display:none;margin-top:1rem" onclick="goChooseMode()">Continue →</button>
+  </div>
+</div>
+
+<!-- ═══ CHOOSE MODE ═══ -->
+<div id="chooseMode" class="screen">
+  <div class="screen-content">
+  <div class="setup-header"><button class="back-btn" onclick="goImportScene()">←</button><h2 id="chooseModeTitle">How do you want to rehearse?</h2></div>
+  <p class="choose-sub" id="chooseModeSub">You can change anytime.</p>
+  <button class="cta-btn choose-card" onclick="goConfigAi()">
+    <div class="choose-icon"><svg viewBox="0 0 24 24"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1.07A7 7 0 0 1 14 23h-4a7 7 0 0 1-6.93-4H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2zm-4 13a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/></svg></div>
+    <div><span class="choose-title" id="chooseAiTitle">WITH AI</span><span class="choose-desc" id="chooseAiDesc">The AI plays the other characters with natural delivery and reacts to your pace.</span></div>
+    <span class="cta-arrow">&rarr;</span>
+  </button>
+  <button class="cta-btn choose-card" onclick="goPartnerChoice()">
+    <div class="choose-icon"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></div>
+    <div><span class="choose-title" id="choosePartnerTitle">WITH A PARTNER</span><span class="choose-desc" id="choosePartnerDesc">Invite a friend and rehearse together in real time.</span></div>
+    <span class="cta-arrow">&rarr;</span>
+  </button>
+  <div class="choose-privacy">Everything stays private and offline.</div>
+  </div>
+</div>
+
 <!-- ═══ PARTNER CHOICE ═══ -->
 <div id="partnerChoice" class="screen">
   <div class="screen-content">
-  <div class="setup-header"><button class="back-btn" onclick="goHome()">←</button><h2 id="partnerChoiceTitle">Partner session</h2></div>
+  <div class="setup-header"><button class="back-btn" onclick="goChooseMode()">←</button><h2 id="partnerChoiceTitle">Partner session</h2></div>
   <div style="display:flex;flex-direction:column;gap:.75rem;margin-top:.5rem">
     <button class="cta-btn" onclick="goSetupPartner()" style="max-width:100%"><span><span id="partnerCreateTitle" style="display:block">Create session (actor)</span><span class="cta-sub" id="partnerCreateDesc">Generate a code and invite a partner</span></span><span class="cta-arrow">&rarr;</span></button>
     <button class="cta-btn" onclick="goJoin()" style="max-width:100%"><span><span id="partnerJoinTitle" style="display:block">Join session (partner)</span><span class="cta-sub" id="partnerJoinDesc">Enter the actor's code</span></span><span class="cta-arrow">&rarr;</span></button>
@@ -669,19 +759,7 @@ input[type="file"]{display:none}
 <!-- ═══ SETUP: SOLO + IA ═══ -->
 <div id="setupAi" class="screen">
   <div class="screen-content">
-  <div class="setup-header"><button class="back-btn" onclick="goHome()">←</button><h2 id="setupAiTitle">Solo + AI</h2></div>
-  <div class="setup-card">
-    <label id="scriptLabel1">Script (PDF or text)</label>
-    <div class="upload-zone" id="uploadZone1" onclick="openPdfPicker(1)"><div class="up-icon"><svg viewBox="0 0 24 24" style="width:2rem;height:2rem;fill:var(--text-muted)"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg></div><div class="up-label" id="uploadLabel1">Drop your PDF here or click</div><div class="up-sub" id="uploadSub1">Standard screenplay format</div></div>
-    <div class="upload-ok" id="uploadOk1" style="display:none"><span>✓</span><span class="fname" id="fileName1"></span><button class="clear-btn" onclick="clearPDF(1)">✕</button></div>
-    <input type="file" id="pdfInput1" accept=".pdf,application/pdf,*/*" onchange="handlePDFInput(1,this)">
-    <button type="button" class="btn btn-secondary btn-full" style="margin-top:.35rem;padding:.45rem;font-size:.78rem" onclick="void newScriptReset(1)" id="newScriptBtn1">🗑️ Clear cache · new script</button>
-    <div class="setup-status" id="setupStatus1"></div>
-    <button type="button" class="btn btn-secondary btn-full" style="margin-top:.45rem;display:none;padding:.45rem;font-size:.78rem" onclick="openOptionalScriptReview(1)" id="optionalReviewBtn1">Review / refine script…</button>
-    <div class="setup-privacy"><svg viewBox="0 0 24 24" style="width:.7rem;height:.7rem;fill:var(--raspberry);flex-shrink:0"><path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zM9 6a3 3 0 0 1 6 0v2H9V6zm9 14H6V10h12v10zm-6-3a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg><span>PRIVATE. SECURE. OFF RECORD.</span></div>
-    <div id="charSection1" style="display:none;margin-top:1rem"><label id="myCharacterLabel1">My character</label><div class="char-grid" id="charGrid1"></div><div id="partnerAssignWrap1" style="display:none;margin-top:1rem"><label id="partnerReadsLabel1">AI reads lines for:</label><div class="char-grid partner-char-grid" id="partnerCharGrid1"></div><div class="mode-hint" id="partnerAssignHint1"></div></div></div>
-    <div style="margin-top:1rem"><label id="pasteScriptLabel1">Or paste text</label><textarea id="scriptInput1" placeholder="ME: My line&#10;PARTNER: Their line"></textarea><button type="button" class="btn btn-secondary btn-full" style="margin-top:.5rem;padding:.55rem" onclick="processTextImport(1)" id="importPastedBtn1">Import pasted text</button></div>
-  </div>
+  <div class="setup-header"><button class="back-btn" onclick="goChooseMode()">←</button><h2 id="setupAiTitle">Solo + AI</h2></div>
   <div class="setup-card">
     <label id="replyModeLabel">Reply mode</label>
     <div class="mode-toggle">
@@ -2186,8 +2264,8 @@ const UI_LANGUAGES=[
   {id:'ur',label:'اردو',flag:'🇵🇰'},
 ];
 const UI_I18N={
-  fr:{siteLanguageLabel:'Langue du site',homeSoloTitle:'Mode solo avec IA',homeSoloDesc:"Solo avec l'IA ou lecture manuelle",homePartnerTitle:'Avec un ami',homePartnerDesc:'Gratuit',homeFooterText:'Pair-à-pair · Aucune donnée stockée',ndaText:'PRIVATE. SECURE. OFF RECORD.',partnerChoiceTitle:'Session partenaire',partnerCreateTitle:'Je crée la session (acteur)',partnerCreateDesc:'Générer un code et inviter un partenaire',partnerJoinTitle:'Je rejoins une session (partenaire)',partnerJoinDesc:"Entrer le code de l'acteur",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF ou texte)',uploadLabel:'Glisse ton PDF ici ou clique',uploadSub:'Les personnages sont détectés automatiquement (format scénario habituel)',myCharacterLabel:'Quel rôle jouez-vous ?',partnerReadsLabel:'IA lit les répliques de :',partnerAllOthersBtn:'Tous les autres personnages',partnerHintAll:'L’IA joue tous les rôles sauf le tien.',partnerHintDuo:'Mode duo : uniquement les échanges entre toi et ce personnage.',pickCharacterFirst:'Choisis ton personnage pour continuer.',pasteScriptLabel:'Ou colle le texte',replyModeLabel:'Mode réplique',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuel',modeAutoBtn:'🎤 Auto',voiceSectionLabel:"Voix de l'IA",voiceLanguageLabel:'Langue voix',emotionLabel:'Émotion',speedLabel:'Vitesse',speedSlowBtn:'Lent x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rapide x1.6',launchAiBtn:'Lancer la session 🦾',setupPartnerTitle:'Avec un partenaire',sessionCodeLabel:'Ton code de session',sessionCodeHint:'Partage ce code à ton partenaire',copyCodeBtn:'📋 Copier code',copyLinkBtn:'🔗 Copier lien',shareBtn:'📤 Partager',launchPartnerBtn:'Lancer la session 🎬',joinScreenTitle:'Rejoindre une session',joinCodeLabel:'Code de session',joinCodePlaceholder:"Entre le code de l'acteur",joinSessionBtn:'Rejoindre 🎙️',prompterEmptyText:'Aucun texte chargé',sessionVoiceLabel:'🦾 Voix :',prevBtn:'◀ Préc',nextBtn:'Suiv ▶',quitBtn:'Quitter',modeHintAi:"L'IA lit les répliques du partenaire automatiquement.",modeHintManual:'Avance les répliques manuellement avec les boutons.',modeHintAuto:"L'IA lit le partenaire puis détecte la fin de ta phrase (silence) pour avancer — durée adaptée à la longueur de ta réplique.",toastEmotion:'Émotion',toastSpeed:'Vitesse',toastVoice:'Voix',toastAccent:'Langue voix',toastLanguage:'Langue du site',toastVoiceFallback:'Voix de secours utilisée',sessionReadyLabel:'Prêt · réplique IA'},
-  en:{siteLanguageLabel:'Website language',homeSoloTitle:'Solo mode with AI',homeSoloDesc:'Solo with AI or manual reading',homePartnerTitle:'With a friend',homePartnerDesc:'Free',homeFooterText:'Peer-to-peer · No data stored',ndaText:'PRIVATE. SECURE. OFF RECORD.',partnerChoiceTitle:'Partner session',partnerCreateTitle:'Create session (actor)',partnerCreateDesc:'Generate a code and invite a partner',partnerJoinTitle:'Join session (partner)',partnerJoinDesc:"Enter the actor's code",setupAiTitle:'Solo + AI',scriptLabel:'Script (PDF or text)',uploadLabel:'Drop your PDF here or click',uploadSub:'Characters are detected automatically when the screenplay format matches',myCharacterLabel:'Which role are you playing?',partnerReadsLabel:'Scene partner reads:',partnerAllOthersBtn:'All other characters',partnerHintAll:'The AI plays every role except yours.',partnerHintDuo:'Duo mode: only lines between you and this character.',pickCharacterFirst:'Choose your character to continue.',pasteScriptLabel:'Or paste text',replyModeLabel:'Reply mode',modeAiBtn:'🦾 Voice AI',modeManBtn:'✋ Manual',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'AI voice',voiceLanguageLabel:'Voice language',emotionLabel:'Emotion',speedLabel:'Speed',speedSlowBtn:'Slow x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Fast x1.6',launchAiBtn:'Start session 🦾',setupPartnerTitle:'With a partner',sessionCodeLabel:'Your session code',sessionCodeHint:'Share this code with your partner',copyCodeBtn:'📋 Copy code',copyLinkBtn:'🔗 Copy link',shareBtn:'📤 Share',launchPartnerBtn:'Start session 🎬',joinScreenTitle:'Join a session',joinCodeLabel:'Session code',joinCodePlaceholder:"Enter actor's code",joinSessionBtn:'Join 🎙️',prompterEmptyText:'No script loaded',sessionVoiceLabel:'🦾 Voice:',prevBtn:'◀ Prev',nextBtn:'Next ▶',quitBtn:'Quit',modeHintAi:'AI reads partner lines automatically.',modeHintManual:'Advance lines manually with the buttons.',modeHintAuto:'AI reads partner lines, then waits for the end of your line (silence) — pause scales with line length.',toastEmotion:'Emotion',toastSpeed:'Speed',toastVoice:'Voice',toastAccent:'Voice language',toastLanguage:'Website language',toastVoiceFallback:'Backup voice used',sessionReadyLabel:'Ready · AI cue'},
+  fr:{siteLanguageLabel:'Langue du site',homeSoloTitle:'Mode solo avec IA',homeSoloDesc:"Solo avec l'IA ou lecture manuelle",homePartnerTitle:'Avec un ami',homePartnerDesc:'Gratuit',homeFooterText:'Pair-à-pair · Aucune donnée stockée',ndaText:'PRIVATE. SECURE. OFF RECORD.',partnerChoiceTitle:'Session partenaire',partnerCreateTitle:'Je crée la session (acteur)',partnerCreateDesc:'Générer un code et inviter un partenaire',partnerJoinTitle:'Je rejoins une session (partenaire)',partnerJoinDesc:"Entrer le code de l'acteur",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF ou texte)',uploadLabel:'Glisse ton PDF ici ou clique',uploadSub:'Les personnages sont détectés automatiquement (format scénario habituel)',myCharacterLabel:'Quel rôle jouez-vous ?',partnerReadsLabel:'IA lit les répliques de :',partnerAllOthersBtn:'Tous les autres personnages',partnerHintAll:'L’IA joue tous les rôles sauf le tien.',partnerHintDuo:'Mode duo : uniquement les échanges entre toi et ce personnage.',pickCharacterFirst:'Choisis ton personnage pour continuer.',pasteScriptLabel:'Ou colle le texte',replyModeLabel:'Mode réplique',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuel',modeAutoBtn:'🎤 Auto',voiceSectionLabel:"Voix de l'IA",voiceLanguageLabel:'Langue voix',emotionLabel:'Émotion',speedLabel:'Vitesse',speedSlowBtn:'Lent x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rapide x1.6',launchAiBtn:'Lancer la session 🦾',setupPartnerTitle:'Avec un partenaire',sessionCodeLabel:'Ton code de session',sessionCodeHint:'Partage ce code à ton partenaire',copyCodeBtn:'📋 Copier code',copyLinkBtn:'🔗 Copier lien',shareBtn:'📤 Partager',launchPartnerBtn:'Lancer la session 🎬',joinScreenTitle:'Rejoindre une session',joinCodeLabel:'Code de session',joinCodePlaceholder:"Entre le code de l'acteur",joinSessionBtn:'Rejoindre 🎙️',prompterEmptyText:'Aucun texte chargé',sessionVoiceLabel:'🦾 Voix :',prevBtn:'◀ Préc',nextBtn:'Suiv ▶',quitBtn:'Quitter',modeHintAi:"L'IA lit les répliques du partenaire automatiquement.",modeHintManual:'Avance les répliques manuellement avec les boutons.',modeHintAuto:"L'IA lit le partenaire puis détecte la fin de ta phrase (silence) pour avancer — durée adaptée à la longueur de ta réplique.",toastEmotion:'Émotion',toastSpeed:'Vitesse',toastVoice:'Voix',toastAccent:'Langue voix',toastLanguage:'Langue du site',toastVoiceFallback:'Voix de secours utilisée',sessionReadyLabel:'Prêt · réplique IA',homeSubtitle:'Répète tes auditions seul, à ton rythme.',homeCtaImport:'IMPORTER UNE SCÈNE',homeCtaMicrocopy:'PDF, Final Draft ou texte brut',homeJoinLink:'Rejoindre une session',importSceneTitle:'Importe ta scène',importSceneSub:'PDF, Final Draft ou texte brut',chooseModeTitle:'Comment veux-tu répéter ?',chooseModeSub:'Tu pourras changer à tout moment.',chooseAiTitle:'AVEC IA',chooseAiDesc:'L\'IA joue les autres personnages avec naturel et réagit à ton jeu.',choosePartnerTitle:'AVEC UN PARTENAIRE',choosePartnerDesc:'Invite un ami et répétez ensemble en temps réel.'},
+  en:{siteLanguageLabel:'Website language',homeSoloTitle:'Solo mode with AI',homeSoloDesc:'Solo with AI or manual reading',homePartnerTitle:'With a friend',homePartnerDesc:'Free',homeFooterText:'Peer-to-peer · No data stored',ndaText:'PRIVATE. SECURE. OFF RECORD.',partnerChoiceTitle:'Partner session',partnerCreateTitle:'Create session (actor)',partnerCreateDesc:'Generate a code and invite a partner',partnerJoinTitle:'Join session (partner)',partnerJoinDesc:"Enter the actor's code",setupAiTitle:'Solo + AI',scriptLabel:'Script (PDF or text)',uploadLabel:'Drop your PDF here or click',uploadSub:'Characters are detected automatically when the screenplay format matches',myCharacterLabel:'Which role are you playing?',partnerReadsLabel:'Scene partner reads:',partnerAllOthersBtn:'All other characters',partnerHintAll:'The AI plays every role except yours.',partnerHintDuo:'Duo mode: only lines between you and this character.',pickCharacterFirst:'Choose your character to continue.',pasteScriptLabel:'Or paste text',replyModeLabel:'Reply mode',modeAiBtn:'🦾 Voice AI',modeManBtn:'✋ Manual',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'AI voice',voiceLanguageLabel:'Voice language',emotionLabel:'Emotion',speedLabel:'Speed',speedSlowBtn:'Slow x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Fast x1.6',launchAiBtn:'Start session 🦾',setupPartnerTitle:'With a partner',sessionCodeLabel:'Your session code',sessionCodeHint:'Share this code with your partner',copyCodeBtn:'📋 Copy code',copyLinkBtn:'🔗 Copy link',shareBtn:'📤 Share',launchPartnerBtn:'Start session 🎬',joinScreenTitle:'Join a session',joinCodeLabel:'Session code',joinCodePlaceholder:"Enter actor's code",joinSessionBtn:'Join 🎙️',prompterEmptyText:'No script loaded',sessionVoiceLabel:'🦾 Voice:',prevBtn:'◀ Prev',nextBtn:'Next ▶',quitBtn:'Quit',modeHintAi:'AI reads partner lines automatically.',modeHintManual:'Advance lines manually with the buttons.',modeHintAuto:'AI reads partner lines, then waits for the end of your line (silence) — pause scales with line length.',toastEmotion:'Emotion',toastSpeed:'Speed',toastVoice:'Voice',toastAccent:'Voice language',toastLanguage:'Website language',toastVoiceFallback:'Backup voice used',sessionReadyLabel:'Ready · AI cue',homeSubtitle:'Rehearse your auditions alone, at your own pace.',homeCtaImport:'IMPORT A SCENE',homeCtaMicrocopy:'PDF, Final Draft, or plain text',homeJoinLink:'Join a session',importSceneTitle:'Import your scene',importSceneSub:'PDF, Final Draft, or plain text',chooseModeTitle:'How do you want to rehearse?',chooseModeSub:'You can change anytime.',chooseAiTitle:'WITH AI',chooseAiDesc:'The AI plays the other characters with natural delivery and reacts to your pace.',choosePartnerTitle:'WITH A PARTNER',choosePartnerDesc:'Invite a friend and rehearse together in real time.'},
   es:{siteLanguageLabel:'Idioma del sitio',homeVoicesLabel:'Voces IA disponibles',homeSoloTitle:'Modo solo con IA',homeSoloDesc:'La IA da la réplica con voz',homePartnerTitle:'Con un amigo',homePartnerDesc:'Gratis',homeFooterText:'WebRTC punto a punto · Sin datos guardados',ndaText:'PRIVATE. SECURE. OFF RECORD.',partnerChoiceTitle:'Sesión con compañero',partnerCreateTitle:'Creo la sesión (actor)',partnerCreateDesc:'Generar código e invitar a un compañero',partnerJoinTitle:'Me uno a una sesión (compañero)',partnerJoinDesc:'Ingresar el código del actor',setupAiTitle:'Solo + IA',scriptLabel:'Guion (PDF o texto)',uploadLabel:'Arrastra tu PDF aquí o haz clic',uploadSub:'Formato estándar de guion',myCharacterLabel:'Mi personaje',pasteScriptLabel:'O pega el texto',replyModeLabel:'Modo de réplica',modeAiBtn:'🦾 IA vocal',modeManBtn:'✋ Manual',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'Voz de IA',voiceLanguageLabel:'Idioma de voz',emotionLabel:'Emoción',speedLabel:'Velocidad',speedSlowBtn:'Lento x0.7',speedNormalBtn:'Normal x1',speedFastBtn:'Rápido x1.6',launchAiBtn:'Iniciar sesión 🦾',setupPartnerTitle:'Con un compañero',sessionCodeLabel:'Tu código de sesión',sessionCodeHint:'Comparte este código',copyCodeBtn:'📋 Copiar código',copyLinkBtn:'🔗 Copiar enlace',shareBtn:'📤 Compartir',launchPartnerBtn:'Iniciar sesión 🎬',joinScreenTitle:'Unirse a una sesión',joinCodeLabel:'Código de sesión',joinCodePlaceholder:'Ingresa el código del actor',joinSessionBtn:'Unirse 🎙️',prompterEmptyText:'Ningún texto cargado',sessionVoiceLabel:'🦾 Voz:',prevBtn:'◀ Ant',nextBtn:'Sig ▶',quitBtn:'Salir',modeHintAi:'La IA lee las líneas del compañero automáticamente.',modeHintManual:'Avanza manualmente con los botones.',modeHintAuto:'La IA lee y avanza tras 1.5s de silencio.',toastEmotion:'Emoción',toastSpeed:'Velocidad',toastVoice:'Voz',toastAccent:'Idioma de voz',toastLanguage:'Idioma del sitio',toastVoiceFallback:'Voz de respaldo usada'},
   it:{siteLanguageLabel:'Lingua del sito',homeVoicesLabel:'Voci IA disponibili',homeSoloTitle:'Modo solo con IA',homeSoloDesc:'L’IA recita le battute partner',homePartnerTitle:'Con un amico',homePartnerDesc:'Gratis',homeFooterText:'WebRTC peer-to-peer · Nessun dato salvato',ndaText:'PRIVATE. SECURE. OFF RECORD.',partnerChoiceTitle:'Sessione partner',partnerCreateTitle:'Creo sessione (attore)',partnerCreateDesc:'Genera codice e invita un partner',partnerJoinTitle:'Mi unisco a una sessione',partnerJoinDesc:"Inserisci il codice dell'attore",setupAiTitle:'Solo + IA',scriptLabel:'Script (PDF o testo)',uploadLabel:'Trascina il PDF o fai clic',uploadSub:'Formato copione standard',myCharacterLabel:'Il mio personaggio',pasteScriptLabel:'Oppure incolla il testo',replyModeLabel:'Modalità battuta',modeAiBtn:'🦾 IA vocale',modeManBtn:'✋ Manuale',modeAutoBtn:'🎤 Auto',voiceSectionLabel:'Voce IA',voiceLanguageLabel:'Lingua voce',emotionLabel:'Emozione',speedLabel:'Velocità',speedSlowBtn:'Lento x0.7',speedNormalBtn:'Normale x1',speedFastBtn:'Veloce x1.6',launchAiBtn:'Avvia sessione 🦾',setupPartnerTitle:'Con un partner',sessionCodeLabel:'Codice sessione',sessionCodeHint:'Condividi questo codice',copyCodeBtn:'📋 Copia codice',copyLinkBtn:'🔗 Copia link',shareBtn:'📤 Condividi',launchPartnerBtn:'Avvia sessione 🎬',joinScreenTitle:'Unisciti a una sessione',joinCodeLabel:'Codice sessione',joinCodePlaceholder:"Inserisci il codice dell'attore",joinSessionBtn:'Unisciti 🎙️',prompterEmptyText:'Nessun testo caricato',sessionVoiceLabel:'🦾 Voce:',prevBtn:'◀ Prec',nextBtn:'Succ ▶',quitBtn:'Esci',modeHintAi:'L’IA legge automaticamente le battute partner.',modeHintManual:'Avanza manualmente con i pulsanti.',modeHintAuto:'L’IA avanza dopo 1.5s di silenzio.',toastEmotion:'Emozione',toastSpeed:'Velocità',toastVoice:'Voce',toastAccent:'Lingua voce',toastLanguage:'Lingua sito',toastVoiceFallback:'Usata voce di backup'},
   zh:{siteLanguageLabel:'网站语言',homeVoicesLabel:'可用 AI 语音',homeSoloTitle:'AI独练模式',homeSoloDesc:'AI 朗读对手台词',homePartnerTitle:'与朋友',homePartnerDesc:'免费',homeFooterText:'点对点 WebRTC · 不保存数据',ndaText:'PRIVATE. SECURE. OFF RECORD.',partnerChoiceTitle:'搭档会话',partnerCreateTitle:'创建会话（演员）',partnerCreateDesc:'生成代码并邀请搭档',partnerJoinTitle:'加入会话（搭档）',partnerJoinDesc:'输入演员代码',setupAiTitle:'单人 + AI',scriptLabel:'剧本（PDF 或文本）',uploadLabel:'拖放 PDF 或点击上传',uploadSub:'标准剧本格式',myCharacterLabel:'我的角色',pasteScriptLabel:'或粘贴文本',replyModeLabel:'台词模式',modeAiBtn:'🦾 AI 语音',modeManBtn:'✋ 手动',modeAutoBtn:'🎤 自动',voiceSectionLabel:'AI 语音',voiceLanguageLabel:'语音语言',emotionLabel:'情绪',speedLabel:'速度',speedSlowBtn:'慢速 x0.7',speedNormalBtn:'正常 x1',speedFastBtn:'快速 x1.6',launchAiBtn:'开始会话 🦾',setupPartnerTitle:'与搭档',sessionCodeLabel:'会话代码',sessionCodeHint:'把代码发给搭档',copyCodeBtn:'📋 复制代码',copyLinkBtn:'🔗 复制链接',shareBtn:'📤 分享',launchPartnerBtn:'开始会话 🎬',joinScreenTitle:'加入会话',joinCodeLabel:'会话代码',joinCodePlaceholder:'输入演员代码',joinSessionBtn:'加入 🎙️',prompterEmptyText:'尚未加载文本',sessionVoiceLabel:'🦾 语音:',prevBtn:'◀ 上一条',nextBtn:'下一条 ▶',quitBtn:'退出',modeHintAi:'AI 自动朗读对手台词。',modeHintManual:'使用按钮手动推进。',modeHintAuto:'静音 1.5 秒后自动推进。',toastEmotion:'情绪',toastSpeed:'速度',toastVoice:'语音',toastAccent:'语音语言',toastLanguage:'网站语言',toastVoiceFallback:'已使用备用语音'},
@@ -2296,7 +2374,7 @@ const UI_FALLBACK_TRANSLATIONS={
   partnerGateDesc:{fr:'Sign up for free to unlock partner mode.',en:'Sign up for free to unlock partner mode.',es:'Regístrate gratis para desbloquear el modo compañero.',it:'Iscriviti gratis per sbloccare la modalità partner.',zh:'免费注册以解锁搭档模式。',ko:'무료로 가입하여 파트너 모드를 잠금 해제하세요.',ja:'無料登録でパートナーモードを解除。',ar:'سجّل مجانًا لفتح وضع الشريك.',de:'Melde dich kostenlos an, um den Partnermodus freizuschalten.',pt:'Cadastre-se grátis para desbloquear o modo parceiro.',hi:'पार्टनर मोड अनलॉक करने के लिए मुफ़्त में साइन अप करें।',tr:'Partner modunu açmak için ücretsiz kaydolun.',ru:'Зарегистрируйтесь бесплатно, чтобы разблокировать режим партнёра.'},
   partnerGateSignup:{fr:'Créer un compte',en:'Create account',es:'Crear cuenta',it:'Crea account',zh:'创建帐户',ko:'계정 만들기',ja:'アカウント作成',ar:'إنشاء حساب',de:'Konto erstellen',pt:'Criar conta',hi:'अकाउंट बनाएं',tr:'Hesap oluştur',ru:'Создать аккаунт'},
   partnerGateSolo:{fr:'Continuer solo',en:'Continue solo',es:'Continuar solo',it:'Continua da solo',zh:'独自继续',ko:'혼자 계속',ja:'ソロで続ける',ar:'متابعة منفردًا',de:'Alleine fortfahren',pt:'Continuar sozinho',hi:'अकेले जारी रखें',tr:'Yalnız devam et',ru:'Продолжить одному'},
-  homeHook:{fr:'Ton partenaire de jeu, toujours disponible.',en:'Your acting partner, always available.',es:'Tu compañero de actuación, siempre disponible.',it:'Il tuo partner di scena, sempre disponibile.',zh:'你的表演搭档，随时待命。',ko:'당신의 연기 파트너, 언제나 준비.',ja:'あなたの演技パートナー、いつでも。',ar:'شريكك في التمثيل، متاح دائمًا.',de:'Dein Schauspielpartner, immer verfügbar.',pt:'Seu parceiro de cena, sempre disponível.',hi:'आपका एक्टिंग पार्टनर, हमेशा उपलब्ध।',tr:'Oyunculuk partnerin, her zaman hazır.',ru:'Ваш партнёр по сцене, всегда доступен.',he:'שותף המשחק שלך, תמיד זמין.',th:'คู่แสดงของคุณ, พร้อมเสมอ.',vi:'Bạn diễn của bạn, luôn sẵn sàng.',pl:'Twój partner sceniczny, zawsze dostępny.',nl:'Je acteerpartner, altijd beschikbaar.',sv:'Din skådespelarpartner, alltid tillgänglig.',no:'Din skuespillerpartner, alltid tilgjengelig.',el:'Ο συνεργάτης σου στη σκηνή, πάντα διαθέσιμος.',cs:'Váš herecký partner, vždy k dispozici.',id:'Partner akting Anda, selalu tersedia.',ms:'Rakan lakonan anda, sentiasa sedia.',ur:'آپ کا اداکاری کا ساتھی، ہمیشہ دستیاب۔'},
+  homeHook:{fr:'Ton partenaire de jeu, toujours disponible.',en:'Your scene partner, always available.',es:'Tu compañero de actuación, siempre disponible.',it:'Il tuo partner di scena, sempre disponibile.',zh:'你的表演搭档，随时待命。',ko:'당신의 연기 파트너, 언제나 준비.',ja:'あなたの演技パートナー、いつでも。',ar:'شريكك في التمثيل، متاح دائمًا.',de:'Dein Schauspielpartner, immer verfügbar.',pt:'Seu parceiro de cena, sempre disponível.',hi:'आपका एक्टिंग पार्टनर, हमेशा उपलब्ध।',tr:'Oyunculuk partnerin, her zaman hazır.',ru:'Ваш партнёр по сцене, всегда доступен.',he:'שותף המשחק שלך, תמיד זמין.',th:'คู่แสดงของคุณ, พร้อมเสมอ.',vi:'Bạn diễn của bạn, luôn sẵn sàng.',pl:'Twój partner sceniczny, zawsze dostępny.',nl:'Je acteerpartner, altijd beschikbaar.',sv:'Din skådespelarpartner, alltid tillgänglig.',no:'Din skuespillerpartner, alltid tilgjengelig.',el:'Ο συνεργάτης σου στη σκηνή, πάντα διαθέσιμος.',cs:'Váš herecký partner, vždy k dispozici.',id:'Partner akting Anda, selalu tersedia.',ms:'Rakan lakonan anda, sentiasa sedia.',ur:'آپ کا اداکاری کا ساتھی، ہمیشہ دستیاب۔'},
   homeCastingReady:{fr:'Prêt à envoyer au casting.',en:'Ready to send to casting.',es:'Listo para enviar al casting.',it:'Pronto da inviare al casting.',zh:'准备发送给选角。',ko:'캐스팅에 보낼 준비 완료.',ja:'キャスティングに送る準備ができました。',ar:'جاهز للإرسال إلى الكاستينغ.',de:'Bereit zum Senden an das Casting.',pt:'Pronto para enviar ao casting.',hi:'कास्टिंग को भेजने के लिए तैयार।',tr:'Casting\'e göndermeye hazır.',ru:'Готово к отправке на кастинг.'},
   referralReward:{fr:'+30 min offertes ! Merci du partage.',en:'+30 min free! Thanks for sharing.',es:'+30 min gratis. ¡Gracias por compartir!',it:'+30 min gratis! Grazie per aver condiviso.',zh:'赠送30分钟！感谢分享。',ko:'+30분 무료! 공유해 주셔서 감사합니다.',ja:'+30分無料！シェアありがとうございます。',ar:'+30 دقيقة مجانية! شكرًا للمشاركة.',de:'+30 Min geschenkt! Danke fürs Teilen.',pt:'+30 min grátis! Obrigado por compartilhar.',hi:'+30 मिनट मुफ़्त! शेयर करने के लिए धन्यवाद।',tr:'+30 dk hediye! Paylaştığınız için teşekkürler.',ru:'+30 мин бесплатно! Спасибо за рекомендацию.'},
   speedSlow:{fr:'Lent',en:'Slow',es:'Lento',it:'Lento',zh:'慢',ko:'느림',ja:'遅い',ar:'بطيء',de:'Langsam',pt:'Lento',hi:'धीमा',tr:'Yavaş',ru:'Медленно'},
@@ -2469,11 +2547,18 @@ function applyUILanguage(){
   if(hookEl){const txt=t('homeHook')||'';hookEl.innerHTML=txt.replace(/,\s*/,'<br>').replace(/\.\s*$/,'<span class="hero-dot">.</span>');}
   setTextById('siteLanguageLabel','siteLanguageLabel');
   const ndaTxt=t('ndaText');if(ndaTxt){document.querySelectorAll('#ndaBadgeHome span').forEach(s=>s.textContent=ndaTxt);}
-  // Update CTA buttons (have inner span structure)
-  const soloBtn=document.getElementById('homeSoloTitle');
-  if(soloBtn){const s=soloBtn.querySelector('span:first-child');if(s)s.textContent=t('homeSoloTitle')||'SOLO MODE WITH AI';}
-  const partnerBtn=document.getElementById('homePartnerTitle');
-  if(partnerBtn){const s=partnerBtn.querySelector('span:first-child');if(s){const sub=s.querySelector('.cta-sub');const label=t('homePartnerTitle')||'WITH A FRIEND';const desc=t('homePartnerDesc')||'FREE';s.childNodes[0].textContent=label;if(sub)sub.textContent=desc;}}
+  setTextById('homeSubtitle','homeSubtitle');
+  setTextById('homeImportLabel','homeCtaImport');
+  setTextById('homeImportMicro','homeCtaMicrocopy');
+  setTextById('homeJoinLink','homeJoinLink');
+  setTextById('importSceneTitle','importSceneTitle');
+  setTextById('importSceneSub','importSceneSub');
+  setTextById('chooseModeTitle','chooseModeTitle');
+  setTextById('chooseModeSub','chooseModeSub');
+  setTextById('chooseAiTitle','chooseAiTitle');
+  setTextById('chooseAiDesc','chooseAiDesc');
+  setTextById('choosePartnerTitle','choosePartnerTitle');
+  setTextById('choosePartnerDesc','choosePartnerDesc');
   setTextById('partnerChoiceTitle','partnerChoiceTitle');
   setTextById('partnerCreateTitle','partnerCreateTitle');
   setTextById('partnerCreateDesc','partnerCreateDesc');
@@ -3450,7 +3535,7 @@ function setScriptReviewInteractive(enabled){
   const ok=document.getElementById('scriptReviewValidateBtn');
   if(ok)ok.disabled=!enabled;
 }
-const SCREEN_ROUTES={home:'',setupAi:'solo',partnerChoice:'partner',setupPartner:'create',joinScreen:'join',session:'session'};
+const SCREEN_ROUTES={home:'',importScene:'import',chooseMode:'choose',setupAi:'solo',partnerChoice:'partner',setupPartner:'create',joinScreen:'join',session:'session'};
 const ROUTE_TO_SCREEN=Object.fromEntries(Object.entries(SCREEN_ROUTES).map(([k,v])=>[v,k]));
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -3484,10 +3569,11 @@ function trStatusLabel(key){
   return row[selectedUILanguage]||row.en;
 }
 function goHome(){endSession();showScreen('home')}
+function goImportScene(){showScreen('importScene');initDragDrop('uploadZone1')}
+function goChooseMode(){showScreen('chooseMode')}
 function goPartnerChoice(){showScreen('partnerChoice')}
-function handlePartnerClick(){
-  goPartnerChoice();
-}
+function handlePartnerClick(){goPartnerChoice()}
+function handleHomeDrop(e){var f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f){goImportScene();setTimeout(()=>{var inp=document.getElementById('pdfInput1');if(inp){var dt=new DataTransfer();dt.items.add(f);inp.files=dt.files;handlePDFInput(1,inp)}},200)}}
 function hideAiOnlyControls(){
   var ids=['sessionModeManualBtn','sessionModeAutoBtn','speedBtnsSession','viewModeSession','aiPanel','speedBtnsOverlay'];
   ids.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none'});
@@ -3497,7 +3583,8 @@ function showAiControls(){
   ids.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display=''});
 }
 function goJoin(){showScreen('joinScreen')}
-function goSetupAi(){
+function goSetupAi(){goImportScene()}
+function goConfigAi(){
   showScreen('setupAi');
   loadVoices();
   initVoiceCountrySelect();
@@ -3507,7 +3594,6 @@ function goSetupAi(){
   const emo=document.getElementById('emotionSelect');if(emo)emo.value=selectedEmotion;
   updateEmotionLock();
   updateSetupCameraButton();
-  initDragDrop('uploadZone1');
 }
 function toggleSetupCamera(){
   isCamOn=!isCamOn;
@@ -3609,11 +3695,28 @@ function isPdfUploadFile(file){
   if(!file)return false;
   const name=String(file.name||'');
   const t=String(file.type||'').toLowerCase().trim();
-  if(/\.pdf$/i.test(name))return true;
+  if(/\.(pdf|fdx|txt)$/i.test(name))return true;
   if(t==='application/pdf'||t==='application/x-pdf')return true;
-  if((t==='application/octet-stream'||t==='binary/octet-stream')&&/\.pdf$/i.test(name))return true;
-  if(!t&&/\.pdf$/i.test(name))return true;
+  if(t==='text/plain'||t==='text/xml'||t==='application/xml')return true;
+  if((t==='application/octet-stream'||t==='binary/octet-stream')&&/\.(pdf|fdx)$/i.test(name))return true;
+  if(!t&&/\.(pdf|fdx|txt)$/i.test(name))return true;
   return false;
+}
+function parseFdxFile(xmlText){
+  const parser=new DOMParser();
+  const doc=parser.parseFromString(xmlText,'text/xml');
+  const paragraphs=doc.querySelectorAll('Paragraph');
+  const lines=[];const characters=new Set();
+  let currentChar='';
+  paragraphs.forEach(p=>{
+    const type=(p.getAttribute('Type')||'').trim();
+    const text=Array.from(p.querySelectorAll('Text')).map(t=>t.textContent||'').join('').trim();
+    if(!text)return;
+    if(type==='Character'){currentChar=text.replace(/\s*\(.*\)$/,'').trim();characters.add(currentChar)}
+    else if(type==='Dialogue'&&currentChar){lines.push({character:currentChar,text,type:'dialogue'})}
+    else if(type==='Action'||type==='Scene Heading'||type==='General'){lines.push({text,type:type==='Scene Heading'?'slug':'action'})}
+  });
+  return{characters:Array.from(characters),lines};
 }
 function initDragDrop(zoneId){
   const zone=document.getElementById(zoneId);if(!zone||zone.dataset.dd)return;zone.dataset.dd='1';
@@ -3631,7 +3734,36 @@ function initDragDrop(zoneId){
 
 async function handlePDFInput(n,input){
   const f=input.files[0];if(!f)return;
-  if(!isPdfUploadFile(f)){showToast('Seuls les fichiers PDF sont acceptés',4000);input.value='';return}
+  if(!isPdfUploadFile(f)){showToast('Unsupported file format',4000);input.value='';return}
+  const name=String(f.name||'').toLowerCase();
+  if(name.endsWith('.fdx')){
+    try{
+      const text=await f.text();
+      const parsed=parseFdxFile(text);
+      if(!parsed.lines.length){showToast('No dialogue found in FDX file');return}
+      scriptRawText=parsed.lines.map(l=>l.character?(l.character+': '+l.text):l.text).join('\n');
+      pdfScript=parsed.lines.map(l=>({
+        kind:l.type==='dialogue'?'dialogue':(l.type==='slug'?'slug':'action'),
+        char:l.character||'',line:l.text,isStageDirection:l.type!=='dialogue',isSpoken:l.type==='dialogue',parenthetical:null
+      }));
+      pdfScript=mergeCharacterVariants(pdfScript);
+      applyValidatedCharactersFromParsed(parsed);
+      const detectedLang=detectTextLanguage(scriptRawText);
+      currentScriptName=f.name;
+      finishPdfSetupUi(n,scriptRawText,parsed.characters,detectedLang);
+    }catch(e){showToast('Error reading FDX: '+e.message)}
+    return;
+  }
+  if(name.endsWith('.txt')){
+    try{
+      const text=await f.text();
+      const si=document.getElementById('scriptInput'+n);
+      if(si){si.value=text;si.style.display='block'}
+      currentScriptName=f.name;
+      processTextImport(n);
+    }catch(e){showToast('Error reading file')}
+    return;
+  }
   await processPDF(n,f);
 }
 function openPdfPicker(n){
@@ -5337,7 +5469,7 @@ function renderPartnerAssignment(n){
 }
 function renderChars(n,chars){
   const g=document.getElementById('charGrid'+n);g.innerHTML='';
-  chars.forEach(({char,count})=>{const el=document.createElement('div');el.className='char-item';el.innerHTML=`${char}<span class="cc">(${count})</span>`;el.onclick=()=>{selectedChar=char;soloPartnerMode='all';soloPartnerChar=null;g.querySelectorAll('.char-item').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');showToast('Tu joues '+char);if(n===1)renderPartnerAssignment(1)};g.appendChild(el)});
+  chars.forEach(({char,count})=>{const el=document.createElement('div');el.className='char-item';el.innerHTML=`${char}<span class="cc">(${count})</span>`;el.onclick=()=>{selectedChar=char;soloPartnerMode='all';soloPartnerChar=null;g.querySelectorAll('.char-item').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');showToast(char);if(n===1)renderPartnerAssignment(1);const cb=document.getElementById('importContinueBtn');if(cb)cb.style.display='block'};g.appendChild(el)});
   if(n===1)renderPartnerAssignment(1);
 }
 function clearPDF(n){__cwSessionActive=false;cwSessionStateClear('clearPDF');pdfScript=[];scriptRawText='';_bgRefinementToken++;_fastFullParseToken++;syncPdfScriptDebugMirror();clearPersistedScriptMemory().catch(()=>{});selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;lockedVoiceLocale='';initVoiceCountrySelect();document.getElementById('uploadZone'+n).style.display='block';document.getElementById('uploadOk'+n).style.display='none';document.getElementById('charSection'+n).style.display='none';if(n===1){const w=document.getElementById('partnerAssignWrap1');if(w)w.style.display='none'}document.getElementById('setupStatus'+n).textContent='';document.getElementById('pdfInput'+n).value='';const orb=document.getElementById('optionalReviewBtn'+n);if(orb)orb.style.display='none'}
