@@ -183,7 +183,7 @@ input[type="file"]{display:none}
 .pause-settings-panel .ps-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-top:.5rem}
 .pause-settings-panel .ps-toggle{position:relative;width:42px;height:24px;background:rgba(255,255,255,.12);border-radius:12px;border:none;cursor:pointer;transition:background .2s;flex-shrink:0}
 .pause-settings-panel .ps-toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s}
-.pause-settings-panel .ps-toggle.on{background:#d92027}
+.pause-settings-panel .ps-toggle.on{background:rgba(245,239,224,.45)}
 .pause-settings-panel .ps-toggle.on::after{transform:translateX(18px)}
 .pause-settings-panel .ps-label{font-size:.8rem;color:#C8CED0;font-weight:600}
 .pause-settings-panel .ps-close{position:absolute;top:.6rem;right:.6rem;width:28px;height:28px;border-radius:50%;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#fff;font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
@@ -218,7 +218,7 @@ input[type="file"]{display:none}
 .session-top{display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem;background:rgba(10,10,10,.92);border-bottom:1px solid var(--border-light);flex-shrink:0;position:fixed;top:0;left:0;right:0;z-index:60}
 .ps-toggle{position:relative;width:42px;height:24px;background:rgba(200,200,200,.3);border-radius:12px;border:none;cursor:pointer;transition:background .2s;flex-shrink:0}
 .ps-toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .2s}
-.ps-toggle.on{background:#d92027}
+.ps-toggle.on{background:rgba(245,239,224,.45)}
 .ps-toggle.on::after{transform:translateX(18px)}
 .session-top .status{display:flex;align-items:center;gap:.4rem;font-size:.75rem;font-weight:700}
 .status-dot{width:8px;height:8px;border-radius:50%;background:var(--success);animation:blink 2s ease infinite}
@@ -255,7 +255,7 @@ input[type="file"]{display:none}
 .pause-controls input[type="range"]{width:100%;accent-color:rgba(245,239,224,.6)}
 .pause-controls .ps-toggle{position:relative;width:42px;height:24px;background:rgba(255,255,255,.12);border-radius:12px;border:none;cursor:pointer;transition:background .2s;flex-shrink:0}
 .pause-controls .ps-toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s}
-.pause-controls .ps-toggle.on{background:#d92027}
+.pause-controls .ps-toggle.on{background:rgba(245,239,224,.45)}
 .pause-controls .ps-toggle.on::after{transform:translateX(18px)}
 .script-review-overlay{display:none;position:fixed;inset:0;z-index:10060;background:rgba(0,0,0,.92);overflow:auto;padding:max(16px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}.script-review-overlay.active{display:block}
 .script-review-inner{max-width:720px;margin:0 auto;font-family:'DM Sans',sans-serif;color:#e8e8e8}
@@ -2180,6 +2180,7 @@ const UI_FALLBACK_TRANSLATIONS={
   modeHintManual:{ko:'버튼으로 수동 진행합니다.',hi:'बटन से मैन्युअल आगे बढ़ें।'},
   authMiniBtn:{fr:'Se connecter',en:'Login / Sign up',es:'Entrar / Registro',it:'Accedi / Iscriviti',zh:'登录 / 注册',ko:'로그인 / 가입',ja:'ログイン / 登録',ar:'تسجيل الدخول / إنشاء حساب',de:'Login / Registrieren',pt:'Entrar / Cadastro',hi:'लॉगिन / साइन अप'},
   authTitle:{fr:'Connexion / Inscription',en:'Login / Sign up',es:'Iniciar sesión / Registro',it:'Accesso / Registrazione',zh:'登录 / 注册',ko:'로그인 / 가입',ja:'ログイン / 登録',ar:'تسجيل الدخول / إنشاء حساب',de:'Login / Registrieren',pt:'Entrar / Cadastro',hi:'लॉगिन / साइन अप'},
+  authAccountTitle:{fr:'Mon compte',en:'My account',es:'Mi cuenta',it:'Il mio account',zh:'我的帐户',ko:'내 계정',ja:'マイアカウント',ar:'حسابي',de:'Mein Konto',pt:'Minha conta',hi:'मेरा खाता'},
   authSubtitle:{fr:'Connecte-toi pour accéder à toutes les fonctionnalités.',en:'Sign in to access all features.',es:'Verifica tu email con un código para asegurar el acceso.',it:'Verifica la tua email con un codice per proteggere l’accesso.',zh:'使用邮箱验证码保护访问。',ko:'이메일 코드로 접근을 보호하세요.',ja:'メールコードでアクセスを保護します。',ar:'تحقق من بريدك برمز لتأمين الدخول.',de:'Bestätige deine E-Mail per Code für sicheren Zugriff.',pt:'Verifique seu e-mail com código para proteger o acesso.',hi:'एक्सेस सुरक्षित करने के लिए ईमेल कोड से सत्यापित करें।'},
   authSendCodeBtn:{fr:'Continuer avec email',en:'Continue',es:'Continuar',it:'Continua',zh:'继续',ko:'계속',ja:'続ける',ar:'متابعة',de:'Weiter',pt:'Continuar',hi:'जारी रखें'},
   authVerifyCodeBtn:{fr:'Vérifier',en:'Verify',es:'Verificar',it:'Verifica',zh:'验证',ko:'확인',ja:'確認',ar:'تحقق',de:'Prüfen',pt:'Verificar',hi:'सत्यापित करें'},
@@ -2405,6 +2406,11 @@ function applyUILanguage(){
   if(hookEl){const txt=t('homeHook')||'';hookEl.innerHTML=txt.replace(/,\s*/,'<br>').replace(/\.\s*$/,'<span class="hero-dot">.</span>');}
   setTextById('siteLanguageLabel','siteLanguageLabel');
   const ndaTxt=t('ndaText');if(ndaTxt){document.querySelectorAll('#ndaBadgeHome span').forEach(s=>s.textContent=ndaTxt);}
+  // Update CTA buttons (have inner span structure)
+  const soloBtn=document.getElementById('homeSoloTitle');
+  if(soloBtn){const s=soloBtn.querySelector('span:first-child');if(s)s.textContent=t('homeSoloTitle')||'SOLO MODE WITH AI';}
+  const partnerBtn=document.getElementById('homePartnerTitle');
+  if(partnerBtn){const s=partnerBtn.querySelector('span:first-child');if(s){const sub=s.querySelector('.cta-sub');const label=t('homePartnerTitle')||'WITH A FRIEND';const desc=t('homePartnerDesc')||'FREE';s.childNodes[0].textContent=label;if(sub)sub.textContent=desc;}}
   setTextById('partnerChoiceTitle','partnerChoiceTitle');
   setTextById('partnerCreateTitle','partnerCreateTitle');
   setTextById('partnerCreateDesc','partnerCreateDesc');
@@ -2508,38 +2514,21 @@ function mapLanguageCodeToUI(code){
   return UI_LANGUAGES.some(l=>l.id===base)?base:'';
 }
 async function detectPreferredUILanguage(){
+  // Priority: browser language first, geo/IP only as fallback
+  const langs=[...(navigator.languages||[]),navigator.language].filter(Boolean);
+  for(const lang of langs){
+    const mapped=mapLanguageCodeToUI(lang);
+    if(mapped)return mapped;
+  }
   const countryMap=getLanguageSuggestionCountryMap();
   try{
     const rsp=await fetch('/api/geo',{cache:'no-store'});
     if(rsp.ok){
       const geo=await rsp.json().catch(()=>null);
       const country=geo&&geo.country?String(geo.country).toUpperCase():'';
-      if(country&&countryMap[country]&&countryMap[country]!==selectedUILanguage&&UI_LANGUAGES.some(l=>l.id===countryMap[country]))return countryMap[country];
-      const acceptLanguage=geo&&geo.acceptLanguage?String(geo.acceptLanguage):'';
-      const accepted=acceptLanguage.split(',').map(v=>v.split(';')[0].trim()).filter(Boolean);
-      for(const lang of accepted){
-        const mapped=mapLanguageCodeToUI(lang);
-        if(mapped&&mapped!==selectedUILanguage)return mapped;
-      }
+      if(country&&countryMap[country]&&UI_LANGUAGES.some(l=>l.id===countryMap[country]))return countryMap[country];
     }
   }catch(e){}
-  try{
-    const controller=new AbortController();
-    const timer=setTimeout(()=>controller.abort(),2500);
-    const rsp=await fetch('https://www.cloudflare.com/cdn-cgi/trace',{cache:'no-store',signal:controller.signal});
-    clearTimeout(timer);
-    if(rsp.ok){
-      const text=await rsp.text();
-      const locLine=text.split('\n').find(line=>line.startsWith('loc='));
-      const country=locLine?locLine.replace('loc=','').trim().toUpperCase():'';
-      if(country&&countryMap[country]&&countryMap[country]!==selectedUILanguage&&UI_LANGUAGES.some(l=>l.id===countryMap[country]))return countryMap[country];
-    }
-  }catch(e){}
-  const langs=[...(navigator.languages||[]),navigator.language].filter(Boolean);
-  for(const lang of langs){
-    const mapped=mapLanguageCodeToUI(lang);
-    if(mapped&&mapped!==selectedUILanguage)return mapped;
-  }
   return '';
 }
 function persistSettings(){
@@ -2615,7 +2604,7 @@ function openAuthModal(){
     if(loginView)loginView.style.display='none';
     if(accountView)accountView.style.display='block';
     const titleEl=document.getElementById('authTitle');
-    if(titleEl)titleEl.textContent='Mon compte';
+    if(titleEl)titleEl.textContent=t('authAccountTitle')||'My account';
     const avatar=document.getElementById('authAvatar');
     const emailEl=document.getElementById('authLoggedEmail');
     if(avatar){avatar.textContent=emailInitials(userAccess.email);}
@@ -2672,8 +2661,8 @@ async function requestEmailCode(){
   try{
     const rsp=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'request_code',email,lang:authEmailLangFromUI()}),credentials:'same-origin'});
     const out=await rsp.json().catch(()=>null);
-    if(!rsp.ok){showToast((out&&out.error)||'Envoi email échoué');return}
-    showToast('Code envoyé à '+email+'. Vérifie ta boîte mail.',5000);
+    if(!rsp.ok){showToast((out&&out.error)||'Email failed');return}
+    showToast((t('authCodeSent')||'Code sent. Check your inbox.')+' ('+email+')',5000);
     const codeRow=document.getElementById('authCodeRow');
     if(codeRow)codeRow.classList.add('active');
     const codeInput=document.getElementById('authCodeInput');
