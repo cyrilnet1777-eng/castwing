@@ -302,15 +302,16 @@ input[type="file"]{display:none}
 .prompter-group-user .prompter-character{color:var(--white)}
 .prompter-segments{padding-left:.5rem;border-left:none}
 .prompter-group-user .prompter-segments{}
-.prompter-slug{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(127,227,163,.6);background:rgba(127,227,163,.05);border:1px solid rgba(127,227,163,.12);padding:10px 14px;border-radius:6px;margin:24px 0 16px;font-style:normal}
-.prompter-action{font-size:14.5px;line-height:1.55;color:rgba(255,255,255,.4);font-style:italic;padding:6px 12px;margin-bottom:8px}
-.prompter-parenthetical{font-size:13px;font-style:italic;color:rgba(255,255,255,.4);padding:2px 12px 2px 0;margin-bottom:2px}
-.prompter-line{font-family:'DM Sans',-apple-system,sans-serif;font-size:1.02rem;line-height:1.55;font-weight:400;color:rgba(255,255,255,.85);margin-bottom:.35rem;transition:background-color .15s ease;padding:.45rem .65rem;border-radius:6px;cursor:pointer;-webkit-tap-highlight-color:transparent;font-style:normal;position:relative}
-.prompter-line.is-stage-direction{font-style:italic;color:rgba(255,255,255,.4);font-size:.9rem}
-.prompter-line.prompter-line-partner{color:rgba(255,255,255,.7)}
+.prompter-slug{font-size:.68rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#888;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);padding:8px 14px;border-radius:0;margin:20px 0 12px;font-style:italic}
+.prompter-action{font-size:.82rem;line-height:1.55;color:#888;font-style:italic;padding:4px 12px;margin-bottom:6px}
+.prompter-parenthetical{font-size:.78rem;font-style:italic;color:#888;padding:2px 12px 2px 0;margin-bottom:2px}
+.prompter-line{font-family:'DM Sans',-apple-system,sans-serif;font-size:1.02rem;line-height:1.55;font-weight:400;color:#E0E0E0;margin-bottom:.3rem;transition:all .2s ease;padding:.4rem .65rem;border-left:3px solid transparent;border-radius:0;cursor:pointer;-webkit-tap-highlight-color:transparent;font-style:normal;position:relative}
+.prompter-line.is-stage-direction{font-style:italic;color:#888;font-size:.82rem}
+.prompter-line.prompter-line-partner{color:#E0E0E0}
 .prompter-line:active{background:rgba(255,255,255,.04)}
-.prompter-line.active{color:#fff;font-weight:600;background:rgba(255,255,255,.06);position:relative}
-.prompter-group-user .prompter-line{color:#fff}
+.prompter-line.active{color:#FFFFFF;font-weight:700;font-size:1.35rem;background:rgba(255,255,255,.05);border-left:3px solid var(--raspberry);padding:14px 16px 14px 20px;position:relative}
+.prompter-group-user .prompter-line{color:#f0f0f0}
+.prompter-group-user .prompter-line.active{color:#FFFFFF}
 .prompter-line::before,.prompter-character::before{content:none!important;display:none!important}
 .turn-dot{display:none;width:8px;height:8px;border-radius:50%;position:absolute;right:10px;top:50%;transform:translateY(-50%);flex-shrink:0}
 .turn-actor{display:block;background:#ef4444}
@@ -5342,6 +5343,10 @@ function groupConsecutiveLines(scriptLines){
   if(cur)grouped.push(cur);
   return grouped;
 }
+function scrollActiveLineTo30(pa,el){
+  const targetY=pa.scrollTop+el.getBoundingClientRect().top-pa.getBoundingClientRect().top-pa.clientHeight*0.3;
+  pa.scrollTo({top:Math.max(0,targetY),behavior:'smooth'});
+}
 function renderPrompter(){
   const a=document.getElementById('prompterArea');
   const emptyTxt=(typeof t==='function'&&t('prompterEmptyText'))||'Aucun texte chargé';
@@ -5400,7 +5405,7 @@ function renderPrompter(){
   }
   if(!userScrolledUp){
     const act=a.querySelector('.prompter-line.active');
-    if(act){_scrollSyncProgrammatic=true;requestAnimationFrame(()=>{act.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>{_scrollSyncProgrammatic=false},300)})}
+    if(act){_scrollSyncProgrammatic=true;requestAnimationFrame(()=>{scrollActiveLineTo30(a,act);setTimeout(()=>{_scrollSyncProgrammatic=false},300)})}
   }
 }
 let vadSilenceSeconds=(()=>{
@@ -5604,14 +5609,17 @@ function handleTapToJump(targetIndex){
 }
 function syncPrompter(){if(conn&&conn.open)conn.send({type:'prompter',index:prompterIndex})}
 var _scrollSyncTimer=null,_scrollSyncProgrammatic=false;
+var _scrollOwner=null,_scrollOwnerTimer=null;
+function claimScrollOwnership(){_scrollOwner='local';if(_scrollOwnerTimer)clearTimeout(_scrollOwnerTimer);_scrollOwnerTimer=setTimeout(()=>{_scrollOwner=null;_scrollOwnerTimer=null},500)}
 function onPrompterScrollSync(){
   if(_scrollSyncProgrammatic)return;
+  claimScrollOwnership();
   if(_scrollSyncTimer)clearTimeout(_scrollSyncTimer);
   _scrollSyncTimer=setTimeout(()=>{
     _scrollSyncTimer=null;
     const pa=document.getElementById('prompterArea');
     if(!pa||!prompterLines.length)return;
-    const centerY=pa.getBoundingClientRect().top+pa.clientHeight/2;
+    const centerY=pa.getBoundingClientRect().top+pa.clientHeight*0.3;
     let closest=-1,closestDist=Infinity;
     pa.querySelectorAll('.prompter-line').forEach(el=>{
       const idx=parseInt(el.dataset.lineIndex);if(isNaN(idx))return;
@@ -5629,7 +5637,7 @@ function onPrompterScrollSync(){
       });
       syncPrompter();
     }
-  },150);
+  },50);
 }
 
 // ── Camera ──
@@ -5972,8 +5980,18 @@ function handleDataMessage(d){
   if(d.type==='pause'){togglePause(true);return}
   if(d.type==='resume'){togglePause(false);return}
   if(d.type==='prompter'||d.type==='jump'){
+    if(_scrollOwner==='local')return; // last-touch-wins: local user is scrolling
     prompterIndex=d.index;
-    renderPrompter();
+    // Lightweight update: move active class without full DOM rebuild
+    const pa=document.getElementById('prompterArea');
+    const target=pa&&pa.querySelector('[data-line-index="'+d.index+'"]');
+    if(target){
+      pa.querySelectorAll('.prompter-line.active').forEach(el=>el.classList.remove('active'));
+      target.classList.add('active');
+      if(!userScrolledUp){_scrollSyncProgrammatic=true;requestAnimationFrame(()=>{scrollActiveLineTo30(pa,target);setTimeout(()=>{_scrollSyncProgrammatic=false},300)})}
+    }else{
+      renderPrompter();
+    }
   }else if(d.type==='script'){
     prompterLines=(d.lines||[]).map(l=>({...l}));
     prompterIndex=d.index||0;
