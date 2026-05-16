@@ -6172,6 +6172,10 @@ async function joinAsPartner(){
     var doneBtn=document.getElementById('quitBtn');if(doneBtn)doneBtn.style.display='none';
     var mobRecs=document.getElementById('mobRecsBtn');if(mobRecs)mobRecs.style.display='none';
     var endBtn=document.getElementById('sessionEndBtn');if(endBtn)endBtn.style.display='none';
+    var btnRec=document.getElementById('btnRec');if(btnRec)btnRec.style.display='none';
+    var btnPause=document.getElementById('btnPause');if(btnPause)btnPause.style.display='none';
+    var mobMain=document.getElementById('mobMainBtn');if(mobMain)mobMain.style.display='none';
+    var psQuit=document.querySelector('.ps-quit-btn');if(psQuit)psQuit.style.display='none';
     var pe=document.getElementById('prompterEmptyText');
     if(pe)pe.textContent='Waiting for actor to start the session…';
     cwCommitSessionLive();
