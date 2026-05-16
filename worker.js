@@ -897,7 +897,7 @@ async function upsertAuthUserRecord(env, email) {
    GOOGLE OAUTH — Verify ID token from Google Identity Services
 ========================================================= */
 
-const GOOGLE_CLIENT_ID = "690445077464-pg7tjrp06tfhd9nq0k626bsa9qlia4s5.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = "580840125965-vrcb9nvptv4mj1ua0v66mq1asl5t6o51.apps.googleusercontent.com";
 
 async function handleGoogleAuth(request, env) {
   try {
