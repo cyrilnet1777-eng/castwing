@@ -1,4 +1,4 @@
-# CitizenTape — Plan de Monétisation & Crédits
+# CitizenTape — Monetisation Plan & Credits (Legacy)
 
 > **Date :** 15 avril 2026 | **Auteur :** Wael | **Version :** 1.0
 
