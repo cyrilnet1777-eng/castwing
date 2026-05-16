@@ -126,7 +126,7 @@ input[type="file"]{display:none}
 .char-grid .char-item:hover{border-color:rgba(255,255,255,.30)}
 .char-grid .char-item.selected{background:rgba(245,239,224,.1);color:var(--white) !important;border-color:rgba(245,239,224,.5)}
 .char-grid .char-item .cc{font-weight:400;font-size:.72rem;opacity:.75;margin-left:.3rem;color:rgba(245,239,224,.45) !important}
-.char-item.selected .cc{color:rgba(4,33,29,.7) !important}
+.char-item.selected .cc{color:var(--text-muted) !important}
 .partner-char-grid .char-item.partner-all-chip{flex:1 1 100%;justify-content:center;text-align:center}
 
 /* MODE TOGGLE */
@@ -137,11 +137,11 @@ input[type="file"]{display:none}
 
 .speed-btns{display:flex;gap:.3rem}
 .speed-btn{width:32px;height:32px;border-radius:6px;border:1px solid var(--border-light);background:var(--bg-1);text-align:center;cursor:pointer;font-size:.82rem;font-weight:700;color:rgba(255,255,255,.55);transition:var(--tf);line-height:32px;flex-shrink:0}
-.speed-btn:hover{border-color:rgba(255,255,255,.30);color:var(--white)}
-.speed-btn.active{background:var(--white);color:#0a0a0a;border-color:var(--white)}
+.speed-btn:hover{border-color:rgba(245,239,224,.30);color:var(--white)}
+.speed-btn.active{background:rgba(245,239,224,.08);color:var(--white);border-color:rgba(245,239,224,.5)}
 .speed-btns-overlay{display:flex;gap:.2rem;align-items:center}
 .speed-btns-overlay .speed-btn{width:28px;height:28px;line-height:28px;font-size:.72rem;border-radius:6px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.12)}
-.speed-btns-overlay .speed-btn.active{background:var(--white);color:#0a0a0a;border-color:var(--white)}
+.speed-btns-overlay .speed-btn.active{background:rgba(245,239,224,.08);color:var(--white);border-color:rgba(245,239,224,.5)}
 .mob-controls-row{display:none;position:fixed;top:calc(50vh - 70px);top:calc(50dvh - 70px);left:50%;transform:translateX(-50%);z-index:200;align-items:center;gap:12px}
 .mob-nav-btn{width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.15);color:#fff;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--tf)}
 .mob-nav-btn:active{background:rgba(255,255,255,.12);transform:scale(.9)}
@@ -195,9 +195,9 @@ input[type="file"]{display:none}
 .voice-section{margin-top:1rem;display:none}.voice-section.active{display:block}
 .voice-grid{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.4rem}
 .voice-item{padding:.55rem .9rem;border-radius:var(--radius);border:1px solid var(--border-light);background:var(--bg-1);cursor:pointer;transition:var(--tf);font-size:.82rem;font-weight:600;color:rgba(255,255,255,.65)}
-.voice-item:hover{border-color:rgba(255,255,255,.30);color:var(--white)}.voice-item.selected{background:var(--white);color:#0a0a0a;border-color:var(--white);font-weight:700}
+.voice-item:hover{border-color:rgba(245,239,224,.30);color:var(--white)}.voice-item.selected{background:rgba(245,239,224,.08);color:var(--white);border-color:rgba(245,239,224,.5);font-weight:700}
 .voice-item .vtag{font-size:.7rem;display:block;opacity:.5;margin-top:.1rem;font-weight:400}
-.voice-item.selected .vtag{color:#333;opacity:.8}
+.voice-item.selected .vtag{color:var(--text-muted);opacity:.8}
 
 /* BUTTONS */
 .btn{display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.85rem 1.5rem;border-radius:0;font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;border:none;transition:var(--tf);text-transform:uppercase;letter-spacing:.08em}
@@ -293,7 +293,7 @@ input[type="file"]{display:none}
 .pause-settings-panel .char-grid .char-item{background:rgba(16,22,20,.9);color:#C8CED0 !important;border-color:rgba(217,32,39,.2);font-size:.78rem;padding:.4rem .7rem}
 .pause-settings-panel .char-grid .char-item.selected{background:var(--blue);color:#1a1a1a !important;border-color:rgba(245,239,224,.6)}
 .pause-settings-panel .char-grid .char-item .cc{color:rgba(217,239,231,.6) !important}
-.pause-settings-panel .char-item.selected .cc{color:rgba(4,33,29,.7) !important}
+.pause-settings-panel .char-item.selected .cc{color:var(--text-muted) !important}
 .pause-settings-panel select{width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid rgba(217,32,39,.2);background:rgba(16,22,20,.9);color:#C8CED0;font-size:.82rem;font-family:'DM Sans',sans-serif}
 .pause-settings-panel .speed-btns{gap:.3rem}
 .prompter-area{flex:1;background:rgba(0,0,0,.85);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.25rem 1rem 6rem;margin-top:35vh;max-width:720px;margin-left:auto;margin-right:auto;color:rgba(255,255,255,.92)}
@@ -4200,7 +4200,7 @@ async function processPDF(n,file){
     if(_pdfParseCancelled)return;
     var parsed=await parseViaExtractAndLabel(file);
     scriptRawText=(parsed.lines||[]).map(l=>String(l.text||'').trim()).filter(Boolean).join('\n');
-    pdfScript=mapClaudeScriptToPdfScript(parsed);
+    pdfScript=mergeCharacterVariants(mapClaudeScriptToPdfScript(parsed));
     applyValidatedCharactersFromParsed(parsed);
     const detectedLang=detectTextLanguage(scriptRawText);
     if(!pdfScript||!pdfScript.length){
@@ -4466,6 +4466,67 @@ function sanitizeCharacterNames(script){
     if(!row||row.kind!=='dialogue'||!bad.has(row.char))return row;
     return{kind:'action',char:'',line:row.line,isStageDirection:true,isSpoken:false,parenthetical:null};
   });
+}
+function mergeCharacterVariants(script){
+  const SUFFIXES=/\s*\(CONT'?D\)|\s*\(CONTINUED\)|\s*\(V\.O\.\)|\s*\(O\.S\.\)|\s*\(O\.C\.\)|\s+OFF$/i;
+  function stripSuffix(n){return n.replace(SUFFIXES,'').trim()}
+  function removeAccents(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
+  function normKey(n){return removeAccents(stripSuffix(n)).toUpperCase().trim()}
+  // Pass 1: deterministic suffix stripping and accent merging
+  const groups={};
+  const charCounts={};
+  for(const row of script){
+    if(!row||row.kind!=='dialogue'||!row.char)continue;
+    charCounts[row.char]=(charCounts[row.char]||0)+1;
+  }
+  for(const name of Object.keys(charCounts)){
+    const stripped=stripSuffix(name);
+    const key=normKey(name);
+    if(!groups[key])groups[key]={names:{},total:0};
+    groups[key].names[stripped]=(groups[key].names[stripped]||0)+charCounts[name];
+    groups[key].total+=charCounts[name];
+  }
+  // Handle compound names like GEORGES/GURN
+  const compoundSplits={};
+  for(const name of Object.keys(charCounts)){
+    const stripped=stripSuffix(name);
+    if(stripped.includes('/')){
+      const parts=stripped.split('/').map(p=>p.trim()).filter(Boolean);
+      if(parts.length>=2){
+        compoundSplits[name]=parts;
+        for(const part of parts){
+          const pk=removeAccents(part).toUpperCase();
+          if(!groups[pk])groups[pk]={names:{},total:0};
+          groups[pk].names[part]=(groups[pk].names[part]||0)+charCounts[name];
+          groups[pk].total+=charCounts[name];
+        }
+      }
+    }
+  }
+  // Build rename map: every variant → canonical name (most-used variant in group)
+  const renameMap={};
+  for(const key of Object.keys(groups)){
+    const g=groups[key];
+    const canonical=Object.entries(g.names).sort((a,b)=>b[1]-a[1])[0][0];
+    for(const variant of Object.keys(charCounts)){
+      if(normKey(variant)===key&&variant!==canonical){
+        renameMap[variant]=canonical;
+      }
+    }
+  }
+  // For compounds, map the compound to the first part
+  for(const [compound,parts] of Object.entries(compoundSplits)){
+    renameMap[compound]=parts[0];
+  }
+  if(Object.keys(renameMap).length===0)return script;
+  let merged=0;
+  const result=script.map(row=>{
+    if(!row||row.kind!=='dialogue'||!row.char||!renameMap[row.char])return row;
+    merged++;
+    return Object.assign({},row,{char:renameMap[row.char]});
+  });
+  console.info('[mergeCharacterVariants] merged '+merged+' lines, renames:',renameMap);
+  return result;
 }
 function sanitizeDialogueVsAction(script){
   let reclassed=0;
@@ -5042,7 +5103,7 @@ function closeScriptReview(applyEdits){
       return;
     }
     const merged=collected&&collected.length
-      ?mergeConsecutiveDialogues(sanitizeDialogueVsAction(sanitizeCharacterNames(collected)))
+      ?mergeConsecutiveDialogues(sanitizeDialogueVsAction(mergeCharacterVariants(sanitizeCharacterNames(collected))))
       :[];
     if(isPdfScriptValidationBroken(merged,reviewSnapshot)){
       pdfScript=reviewSnapshot;
@@ -5059,6 +5120,48 @@ function closeScriptReview(applyEdits){
   finishPdfSetupUi(ctx.n,ctx.rawNorm,ctx.validChars,ctx.detectedLang);
   _scriptReviewCtx=null;
 }
+async function aiMergeCharacters(n){
+  const chars=getChars();if(chars.length<3)return;
+  function removeAccents(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
+  function editDist(a,b){a=a.toUpperCase();b=b.toUpperCase();if(a===b)return 0;const m=a.length,nn=b.length;const d=Array.from({length:m+1},(_,i)=>i);for(let j=1;j<=nn;j++){let prev=d[0];d[0]=j;for(let i=1;i<=m;i++){const tmp=d[i];d[i]=a[i-1]===b[j-1]?prev:1+Math.min(prev,d[i],d[i-1]);prev=tmp}}return d[m]}
+  const candidates=[];
+  for(let i=0;i<chars.length;i++){
+    for(let j=i+1;j<chars.length;j++){
+      const a=removeAccents(chars[i].char),b=removeAccents(chars[j].char);
+      const dist=editDist(a,b);
+      const shorter=Math.min(a.length,b.length);
+      if(dist<=2||(shorter>=5&&(a.includes(b)||b.includes(a)))){
+        candidates.push([chars[i].char,chars[j].char,chars[i].count,chars[j].count]);
+      }
+    }
+  }
+  if(!candidates.length)return;
+  console.info('[aiMerge] asking AI about',candidates.length,'candidate pairs');
+  try{
+    const res=await fetch('/api/merge-characters',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidates})});
+    const data=await res.json();
+    if(!data.merges||!data.merges.length)return;
+    const renameMap={};
+    for(const m of data.merges){
+      if(!m.same)continue;
+      const pair=candidates[m.pair-1];if(!pair)continue;
+      const canonical=m.canonical||pair[0];
+      const other=canonical===pair[0]?pair[1]:pair[0];
+      renameMap[other]=canonical;
+    }
+    if(!Object.keys(renameMap).length)return;
+    let merged=0;
+    pdfScript=pdfScript.map(row=>{
+      if(!row||row.kind!=='dialogue'||!row.char||!renameMap[row.char])return row;
+      merged++;
+      return Object.assign({},row,{char:renameMap[row.char]});
+    });
+    console.info('[aiMerge] merged '+merged+' lines, renames:',renameMap);
+    syncPdfScriptDebugMirror();
+    renderChars(n,getChars());
+    showToast('Merged '+Object.keys(renameMap).length+' character variants',3000);
+  }catch(e){console.warn('[aiMerge] failed',e)}
+}
 function finishPdfSetupUi(n,rawText,validChars,detectedLang){
   syncPdfScriptDebugMirror();
   selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;
@@ -5069,6 +5172,7 @@ function finishPdfSetupUi(n,rawText,validChars,detectedLang){
   if(pdfScript.length>0&&chars.length>0){
     renderChars(n,chars);
     document.getElementById('charSection'+n).style.display='block';
+    setTimeout(()=>aiMergeCharacters(n),500);
     document.getElementById('setupStatus'+n).textContent=pdfScript.length+' lines · '+(pdfScript.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length)+' dialogues';
     const orb=document.getElementById('optionalReviewBtn'+n);
     if(orb)orb.style.display='block';
@@ -5106,7 +5210,7 @@ async function runImportedScriptPipeline(n,normText,displayName){
     return;
   }
   setLoading(false);
-  pdfScript=mapClaudeScriptToPdfScript(parsed);
+  pdfScript=mergeCharacterVariants(mapClaudeScriptToPdfScript(parsed));
   applyValidatedCharactersFromParsed(parsed);
   const validatedCharacters=typeof window!=='undefined'&&Array.isArray(window.__lastValidatedChars)?window.__lastValidatedChars.slice():[];
   const detectedLang=detectTextLanguage(workingNorm);

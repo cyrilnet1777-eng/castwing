@@ -1919,6 +1919,50 @@ ${numberedLines}`;
   return json({ ok: false, error: lastErr || "classify_failed", detail: lastDetail.slice(0, 500) }, 502);
 }
 
+async function handleMergeCharacters(request, env) {
+  if (!env.ANTHROPIC_API_KEY) return json({ error: "missing_anthropic_api_key" }, 500);
+  let body;
+  try { body = await request.json(); } catch (_) { return json({ error: "invalid_json" }, 400); }
+  const candidates = body.candidates;
+  if (!Array.isArray(candidates) || !candidates.length) return json({ merges: [] });
+  const prompt = `You are analyzing a screenplay's character list. Some character names may be typos, abbreviations, or variants of the same person. Others may be genuinely different roles.
+
+For each pair below, decide: are they the SAME character (merge) or DIFFERENT characters (keep separate)?
+
+Pairs to evaluate:
+${candidates.map((p, i) => `${i + 1}. "${p[0]}" (${p[2] || '?'} lines) vs "${p[1]}" (${p[3] || '?'} lines)`).join('\n')}
+
+Reply with a JSON array of objects: [{"pair": 1, "same": true/false, "canonical": "preferred name"}]
+Only include pairs where same=true. If all are different, return [].
+Return ONLY the JSON array, no explanation.`;
+
+  try {
+    const model = env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001";
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1024,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    if (!res.ok) return json({ merges: [], error: "api_error" });
+    const data = await res.json();
+    const text = (data.content || []).map(b => b.text || "").join("");
+    const match = text.match(/\[[\s\S]*\]/);
+    if (!match) return json({ merges: [] });
+    const merges = JSON.parse(match[0]);
+    return json({ merges });
+  } catch (e) {
+    return json({ merges: [], error: String(e.message || e) });
+  }
+}
+
 /* =========================================================
    D1 MIGRATION HELPER
 ========================================================= */
@@ -2178,8 +2222,9 @@ export default {
     if (url.pathname === "/api/admin/create-invite" && request.method === "POST") return handleCreateInvite(request, env);
     if (url.pathname === "/api/admin/list-invites" && request.method === "GET") return handleListInvites(request, env);
     if (url.pathname === "/api/admin/revoke-invite" && request.method === "POST") return handleRevokeInvite(request, env);
+    if (url.pathname === "/api/merge-characters" && request.method === "POST") return handleMergeCharacters(request, env);
 
-    const apiPaths = ["/api/tts", "/api/claude-parse-script", "/api/label-script", "/api/parse-screenplay", "/api/parse-script", "/api/validate-characters", "/api/classify-lines", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/", "/api/stripe-webhook", "/api/invite/redeem", "/api/admin/"];
+    const apiPaths = ["/api/tts", "/api/claude-parse-script", "/api/label-script", "/api/parse-screenplay", "/api/parse-script", "/api/validate-characters", "/api/classify-lines", "/api/merge-characters", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/", "/api/stripe-webhook", "/api/invite/redeem", "/api/admin/"];
     if (apiPaths.some(p => url.pathname.startsWith(p))) {
       return json({ error: "Method not allowed" }, 405);
     }
