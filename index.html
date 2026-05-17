@@ -1575,7 +1575,7 @@ async function loadUsageHistory(){
     var list=document.getElementById('profileUsageList');
     if(!list)return;
     var txs=data.transactions||[];
-    if(!txs.length){list.innerHTML='<div style="color:#9CA3AF;padding:8px 0">No activity yet</div>';return}
+    if(!txs.length){list.innerHTML='<div style="color:#9CA3AF;padding:8px 0">'+t('noActivityYet')+'</div>';return}
     // Group TTS debits by date, show topups/grants individually
     var groups=[];
     var currentDateDebits=null;
@@ -2355,6 +2355,28 @@ const UI_FALLBACK_TRANSLATIONS={
   autoTopupDesc:{fr:'Recharger quand le solde descend sous 2$',en:'Add credits when balance drops below $2',es:'Agregar créditos cuando el saldo baje de $2',it:'Aggiungi crediti quando il saldo scende sotto $2',zh:'余额低于$2时自动充值',ko:'잔액이 $2 이하로 떨어지면 충전',ja:'残高が$2未満になったら自動チャージ',ar:'إضافة رصيد عندما ينخفض تحت 2$',de:'Guthaben aufladen wenn unter 2$',pt:'Adicionar créditos quando saldo cair abaixo de $2',hi:'बैलेंस $2 से कम होने पर क्रेडिट जोड़ें',tr:'Bakiye 2$ altına düşünce yükle',ru:'Пополнить при балансе ниже 2$'},
   authCodePlaceholder:{fr:'Code à 6 chiffres',en:'6-digit code',es:'Código de 6 dígitos',it:'Codice a 6 cifre',zh:'6位验证码',ko:'6자리 코드',ja:'6桁コード',ar:'رمز من 6 أرقام',de:'6-stelliger Code',pt:'Código de 6 dígitos',hi:'6 अंकों का कोड',tr:'6 haneli kod',ru:'6-значный код'},
   autoTopupAmountLabel:{fr:'Montant à ajouter',en:'Amount to add',es:'Monto a agregar',it:'Importo da aggiungere',zh:'充值金额',ko:'충전 금액',ja:'チャージ額',ar:'المبلغ المراد إضافته',de:'Aufladebetrag',pt:'Valor a adicionar',hi:'जोड़ने की राशि',tr:'Eklenecek miktar',ru:'Сумма пополнения'},
+  logoutBtn:{fr:'Se déconnecter',en:'Log out',es:'Cerrar sesión',it:'Esci',zh:'退出登录',ko:'로그아웃',ja:'ログアウト',ar:'تسجيل خروج',de:'Abmelden',pt:'Sair',hi:'लॉग आउट',tr:'Çıkış yap',ru:'Выйти'},
+  continueBtn:{fr:'Continuer →',en:'Continue →',es:'Continuar →',it:'Continua →',zh:'继续 →',ko:'계속 →',ja:'続ける →',ar:'متابعة →',de:'Weiter →',pt:'Continuar →',hi:'जारी रखें →',tr:'Devam →',ru:'Продолжить →'},
+  resendCodeBtn:{fr:'Renvoyer le code',en:'Resend code',es:'Reenviar código',it:'Invia di nuovo',zh:'重新发送',ko:'코드 재전송',ja:'コード再送信',ar:'إعادة إرسال',de:'Code erneut senden',pt:'Reenviar código',hi:'कोड दोबारा भेजें',tr:'Kodu tekrar gönder',ru:'Отправить снова'},
+  reviewScriptBtn:{fr:'Revoir / affiner le script…',en:'Review / refine script…',es:'Revisar / refinar guion…',it:'Rivedi / affina script…',zh:'审查 / 优化剧本…',ko:'대본 검토 / 수정…',ja:'台本を確認 / 修正…',ar:'مراجعة / تحسين النص…',de:'Skript überprüfen…',pt:'Revisar / refinar roteiro…',hi:'स्क्रिप्ट समीक्षा…',tr:'Senaryoyu incele…',ru:'Проверить / уточнить…'},
+  privacyNote:{fr:'Tout reste privé et hors ligne.',en:'Everything stays private and offline.',es:'Todo permanece privado y sin conexión.',it:'Tutto resta privato e offline.',zh:'所有内容保持私密和离线。',ko:'모든 것이 비공개로 유지됩니다.',ja:'すべてプライベート、オフラインです。',ar:'كل شيء يبقى خاصًا وبدون اتصال.',de:'Alles bleibt privat und offline.',pt:'Tudo permanece privado e offline.',hi:'सब कुछ निजी और ऑफ़लाइन रहता है।',tr:'Her şey gizli ve çevrimdışı kalır.',ru:'Всё остаётся конфиденциальным и офлайн.'},
+  cancelBtn2:{fr:'Annuler',en:'Cancel',es:'Cancelar',it:'Annulla',zh:'取消',ko:'취소',ja:'キャンセル',ar:'إلغاء',de:'Abbrechen',pt:'Cancelar',hi:'रद्द करें',tr:'İptal',ru:'Отмена'},
+  psPartnerPace:{fr:'RYTHME DU PARTENAIRE',en:"PARTNER'S PACE",es:'RITMO DEL COMPAÑERO',it:'RITMO DEL PARTNER',zh:'搭档语速',ko:'파트너 속도',ja:'パートナーの速度',ar:'سرعة الشريك',de:'TEMPO DES PARTNERS',pt:'RITMO DO PARCEIRO',hi:'पार्टनर की गति',tr:'PARTNER HIZI',ru:'ТЕМП ПАРТНЁРА'},
+  psPartnerPaceDesc:{fr:'Vitesse de lecture de l\'IA',en:'How fast the AI says its lines',es:'Velocidad con la que la IA dice sus líneas',it:'Quanto veloce l\'IA dice le sue battute',zh:'AI 朗读台词的速度',ko:'AI가 대사를 읽는 속도',ja:'AI の読み上げ速度',ar:'سرعة قراءة الذكاء الاصطناعي',de:'Wie schnell die KI ihre Zeilen spricht',pt:'Velocidade de leitura da IA',hi:'AI कितनी तेज़ी से बोलती है',tr:'AI repliklerini ne hızda söyler',ru:'Скорость реплик ИИ'},
+  psReactionTime:{fr:'TEMPS DE RÉACTION',en:'REACTION TIME',es:'TIEMPO DE REACCIÓN',it:'TEMPO DI REAZIONE',zh:'反应时间',ko:'반응 시간',ja:'反応時間',ar:'وقت الاستجابة',de:'REAKTIONSZEIT',pt:'TEMPO DE REAÇÃO',hi:'प्रतिक्रिया समय',tr:'TEPKİ SÜRESİ',ru:'ВРЕМЯ РЕАКЦИИ'},
+  psReactionTimeDesc:{fr:'Délai avant que l\'IA enchaîne après ta réplique',en:'Delay before the AI follows up after your line',es:'Pausa antes de que la IA responda tras tu línea',it:'Attesa prima che l\'IA risponda dopo la tua battuta',zh:'你台词之后AI跟进的延迟',ko:'당신의 대사 후 AI가 반응하기까지 대기 시간',ja:'あなたのセリフ後 AI が応答するまでの間',ar:'التأخير قبل أن يتابع الذكاء الاصطناعي بعد جملتك',de:'Verzögerung bevor die KI nach deiner Zeile antwortet',pt:'Atraso antes da IA responder após sua fala',hi:'आपकी लाइन के बाद AI के जवाब में देरी',tr:'AI repliğinizden sonra ne kadar bekler',ru:'Задержка перед ответом ИИ после вашей реплики'},
+  psSlow:{fr:'Lent',en:'Slow',es:'Lento',it:'Lento',zh:'慢',ko:'느림',ja:'遅い',ar:'بطيء',de:'Langsam',pt:'Lento',hi:'धीमा',tr:'Yavaş',ru:'Медленно'},
+  psFast:{fr:'Rapide',en:'Fast',es:'Rápido',it:'Veloce',zh:'快',ko:'빠름',ja:'速い',ar:'سريع',de:'Schnell',pt:'Rápido',hi:'तेज़',tr:'Hızlı',ru:'Быстро'},
+  psShort:{fr:'Court',en:'Short',es:'Corto',it:'Breve',zh:'短',ko:'짧음',ja:'短い',ar:'قصير',de:'Kurz',pt:'Curto',hi:'छोटा',tr:'Kısa',ru:'Короткая'},
+  psLong:{fr:'Long',en:'Long',es:'Largo',it:'Lungo',zh:'长',ko:'길음',ja:'長い',ar:'طويل',de:'Lang',pt:'Longo',hi:'लंबा',tr:'Uzun',ru:'Длинная'},
+  psDisplay:{fr:'AFFICHAGE',en:'DISPLAY',es:'PANTALLA',it:'VISUALIZZAZIONE',zh:'显示',ko:'디스플레이',ja:'表示',ar:'العرض',de:'ANZEIGE',pt:'EXIBIÇÃO',hi:'डिस्प्ले',tr:'GÖRÜNÜM',ru:'ОТОБРАЖЕНИЕ'},
+  psResume:{fr:'REPRENDRE',en:'RESUME',es:'REANUDAR',it:'RIPRENDI',zh:'继续',ko:'재개',ja:'再開',ar:'استئناف',de:'FORTFAHREN',pt:'RETOMAR',hi:'फिर शुरू करें',tr:'DEVAM',ru:'ПРОДОЛЖИТЬ'},
+  endTakeBtn:{fr:'Fin de la prise',en:'End take',es:'Fin de la toma',it:'Fine ripresa',zh:'结束录制',ko:'테이크 종료',ja:'テイク終了',ar:'إنهاء المشهد',de:'Aufnahme beenden',pt:'Encerrar tomada',hi:'टेक समाप्त',tr:'Çekimi bitir',ru:'Завершить дубль'},
+  noActivityYet:{fr:'Aucune activité pour le moment',en:'No activity yet',es:'Sin actividad aún',it:'Nessuna attività',zh:'暂无活动',ko:'아직 활동 없음',ja:'まだアクティビティなし',ar:'لا يوجد نشاط بعد',de:'Noch keine Aktivität',pt:'Nenhuma atividade ainda',hi:'अभी कोई गतिविधि नहीं',tr:'Henüz aktivite yok',ru:'Пока нет активности'},
+  recordingsTitle:{fr:'Enregistrements',en:'Recordings',es:'Grabaciones',it:'Registrazioni',zh:'录音',ko:'녹음',ja:'録音',ar:'التسجيلات',de:'Aufnahmen',pt:'Gravações',hi:'रिकॉर्डिंग',tr:'Kayıtlar',ru:'Записи'},
+  noRecordingsYet:{fr:'Pas encore d\'enregistrement',en:'No recordings yet',es:'Sin grabaciones aún',it:'Nessuna registrazione',zh:'暂无录音',ko:'아직 녹음 없음',ja:'まだ録音なし',ar:'لا تسجيلات بعد',de:'Noch keine Aufnahmen',pt:'Nenhuma gravação ainda',hi:'अभी कोई रिकॉर्डिंग नहीं',tr:'Henüz kayıt yok',ru:'Пока нет записей'},
+  cameraOn:{fr:'Caméra ON',en:'Camera ON',es:'Cámara ON',it:'Camera ON',zh:'摄像头 开',ko:'카메라 켜짐',ja:'カメラ ON',ar:'الكاميرا مفعلة',de:'Kamera AN',pt:'Câmera ON',hi:'कैमरा चालू',tr:'Kamera AÇIK',ru:'Камера ВКЛ'},
+  cameraOff:{fr:'Caméra OFF',en:'Camera OFF',es:'Cámara OFF',it:'Camera OFF',zh:'摄像头 关',ko:'카메라 꺼짐',ja:'カメラ OFF',ar:'الكاميرا معطلة',de:'Kamera AUS',pt:'Câmera OFF',hi:'कैमरा बंद',tr:'Kamera KAPALI',ru:'Камера ВЫКЛ'},
 };
 const TTS_LANGS=['fr','en','es','it','de','pt','ar','zh','ja','ko','hi','tr','ru'];
 
@@ -2606,9 +2628,25 @@ function applyUILanguage(){
   const _ipb1=document.getElementById('importPastedBtn1');if(_ipb1)_ipb1.textContent=t('importPastedBtn');
   const _aci=document.getElementById('authCodeInput');if(_aci)_aci.placeholder=t('authCodePlaceholder');
   document.querySelectorAll('[onclick="startChangeEmail()"]').forEach(el=>{el.textContent=t('changeEmailBtn')});
+  document.querySelectorAll('.auth-logout-btn').forEach(el=>{el.textContent=t('logoutBtn')});
   const _atTitle=document.querySelector('#profileAutoTopup div[style*="font-weight:600"]');if(_atTitle)_atTitle.textContent=t('autoTopupTitle');
   const _atDesc=document.querySelector('#profileAutoTopup div[style*="font-size:.72rem"]');if(_atDesc)_atDesc.textContent=t('autoTopupDesc');
   const _atAmtLabel=document.querySelector('#autoTopupAmountRow label');if(_atAmtLabel)_atAmtLabel.textContent=t('autoTopupAmountLabel');
+  const _icb=document.getElementById('importContinueBtn');if(_icb)_icb.textContent=t('continueBtn');
+  const _arl=document.getElementById('authResendLink');if(_arl)_arl.textContent=t('resendCodeBtn');
+  const _orb=document.getElementById('optionalReviewBtn1');if(_orb)_orb.textContent=t('reviewScriptBtn');
+  const _priv=document.querySelector('.choose-privacy');if(_priv)_priv.textContent=t('privacyNote');
+  const _olCancel=document.querySelector('#connectOverlay button');if(_olCancel)_olCancel.textContent=t('cancelBtn2');
+  // Pause screen
+  const _psSL=document.getElementById('psSpeedLabel');if(_psSL)_psSL.textContent=t('psPartnerPace');
+  const _psSD=_psSL&&_psSL.nextElementSibling;if(_psSD&&_psSD.classList.contains('ps-section-sub'))_psSD.textContent=t('psPartnerPaceDesc');
+  const _psVL=document.getElementById('psVadLabel');if(_psVL)_psVL.textContent=t('psReactionTime');
+  const _psVD=_psVL&&_psVL.nextElementSibling;if(_psVD&&_psVD.classList.contains('ps-section-sub'))_psVD.textContent=t('psReactionTimeDesc');
+  document.querySelectorAll('.ps-end-label').forEach((el,i)=>{const keys=['psSlow','psFast','psShort','psLong'];if(keys[i])el.textContent=t(keys[i])});
+  const _psDisp=document.querySelector('.pause-controls .ps-section-label[style*="color:#888"]');if(_psDisp)_psDisp.textContent=t('psDisplay');
+  const _psResume=document.querySelector('.ps-resume-btn');if(_psResume)_psResume.innerHTML='\u25B6 \u00A0'+t('psResume');
+  const _psQuit=document.querySelector('.ps-quit-btn');if(_psQuit)_psQuit.textContent=t('endTakeBtn');
+  const _recTitle=document.querySelector('.rec-panel-title span');if(_recTitle)_recTitle.textContent=t('recordingsTitle');
   updateAuthMiniButton();
 }
 function changeUILanguage(languageId,silent){
@@ -3646,7 +3684,7 @@ function updateSetupCameraButton(){
   const btn=document.getElementById('setupCamBtn');
   if(!btn)return;
   const svgIcon='<svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;vertical-align:middle;margin-right:4px"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>';
-  btn.innerHTML=svgIcon+(isCamOn?'Camera ON':'Camera OFF');
+  btn.innerHTML=svgIcon+(isCamOn?t('cameraOn'):t('cameraOff'));
 }
 function setSessionSpeed(v){setVoiceSpeed(v,false);}
 function switchSessionMode(nextMode){
@@ -4832,7 +4870,7 @@ function toggleRecPanel(){const p=document.getElementById('recPanel');p.classLis
 async function renderRecordingsList(){
   const recs=await getRecsFromDB();const list=document.getElementById('recPanelList');const btn=document.getElementById('recToggleBtn');const badge=document.getElementById('recBadge');
   const mobBtn=document.getElementById('mobRecsBtn');const mobBadge=document.getElementById('mobRecBadge');
-  if(!recs.length){btn.style.display='none';if(mobBtn)mobBtn.style.display='none';list.innerHTML='<div style="font-size:.72rem;color:var(--text-muted);text-align:center;padding:.5rem">No recordings yet</div>';return}
+  if(!recs.length){btn.style.display='none';if(mobBtn)mobBtn.style.display='none';list.innerHTML='<div style="font-size:.72rem;color:var(--text-muted);text-align:center;padding:.5rem">'+t('noRecordingsYet')+'</div>';return}
   btn.style.display='flex';badge.style.display='flex';badge.textContent=recs.length;
   if(mobBtn){mobBtn.style.display='flex';if(mobBadge){mobBadge.style.display='flex';mobBadge.textContent=recs.length}}
   list.innerHTML=recs.sort((a,b)=>b.date-a.date).map(r=>`<div class="rec-item"><div class="rec-item-info"><div class="rec-item-name">${r.fname}</div><div class="rec-item-meta">${formatRecDate(r.date)} · ${formatRecSize(r.size)}</div></div><button class="rec-item-btn" onclick="reShareRec(${r.id})" title="Share/Download"><svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 1 0-3-3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 1 0 0 6c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65a2.88 2.88 0 0 0 5.84 0 2.88 2.88 0 0 0-2.92-2.88z"/></svg></button><button class="rec-item-btn del" onclick="deleteRec(${r.id})" title="Delete"><svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button></div>`).join('')
