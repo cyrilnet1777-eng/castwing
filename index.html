@@ -17,6 +17,15 @@
 <meta name="twitter:description" content="Your acting partner, always available.">
 <meta name="twitter:image" content="https://citizentape.com/og-image.svg">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-90E8W237ZN"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-90E8W237ZN');
+  function gaEvent(name, params){ try{ gtag('event', name, params||{}); }catch(e){} }
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -1474,6 +1483,7 @@ function showVisitorSignupPrompt(){
   document.body.appendChild(overlay);
 }
 async function openTopupModal(packId){
+  gaEvent('begin_checkout',{item_id:packId});
   dismissPaywall();
   showToast(t('redirectingToPayment'),3000);
   try{
@@ -1505,6 +1515,7 @@ async function toggleAutoTopup(){
   var tog=document.getElementById('autoTopupToggle');
   var row=document.getElementById('autoTopupAmountRow');
   var isOn=tog&&tog.classList.contains('on');
+  gaEvent('toggle_auto_topup',{enabled:!isOn});
   if(isOn){
     tog.classList.remove('on');if(row)row.style.display='none';localStorage.removeItem('cw_autoTopup');
     showToast('Auto top-up disabled',2000);
@@ -2651,6 +2662,7 @@ function applyUILanguage(){
 }
 function changeUILanguage(languageId,silent){
   const safe=UI_LANGUAGES.some(l=>l.id===languageId)?languageId:'fr';
+  if(!silent)gaEvent('change_language',{language:safe});
   selectedUILanguage=safe;
   const select=document.getElementById('siteLanguageSelect');
   if(select)select.value=safe;
@@ -2799,6 +2811,7 @@ function openAuthModal(){
 }
 function closeAuthModal(){var m=document.getElementById('authModal');if(m)m.classList.remove('active')}
 async function logoutUser(){
+  gaEvent('logout');
   userAccess={email:'',verified:false,provider:'',paid:false,usageMs:0,cooldownUntil:0,lastTick:0};
   persistAccess();
   saveUserData(createFreshUserData('figurant'));
@@ -2825,6 +2838,7 @@ function authEmailLangFromUI(){
   return allowed.has(id)?id:'fr';
 }
 async function requestEmailCode(){
+  gaEvent('auth_request_code');
   const email=(document.getElementById('authEmailInput').value||'').trim().toLowerCase();
   if(!email||!/@/.test(email)){showToast('Email invalide');return}
   authPendingEmail=email;
@@ -2856,6 +2870,7 @@ async function verifyEmailCode(){
   try{isSignup=getPlan().tier==='visitor'}catch(_e){}
   if(out.isNewUser===true)isSignup=true;else if(out.isNewUser===false)isSignup=false;
   userAccess.email=authPendingEmail;userAccess.verified=true;userAccess.provider='email';
+  gaEvent(isSignup?'sign_up':'login',{method:'email'});
   try{persistAccess()}catch(_e){}
   try{updateAuthMiniButton()}catch(_e){}
   try{
@@ -2890,6 +2905,7 @@ async function handleGoogleCredential(response){
   try{isSignup=getPlan().tier==='visitor'}catch(_e){}
   if(out.isNewUser===true)isSignup=true;else if(out.isNewUser===false)isSignup=false;
   userAccess.email=out.email;userAccess.verified=true;userAccess.provider='google';
+  gaEvent(isSignup?'sign_up':'login',{method:'google'});
   try{persistAccess()}catch(_e){}
   try{updateAuthMiniButton()}catch(_e){}
   try{
@@ -3560,6 +3576,7 @@ function setScriptReviewInteractive(enabled){
 const SCREEN_ROUTES={home:'',importScene:'import',chooseMode:'choose',setupAi:'solo',partnerChoice:'partner',setupPartner:'create',joinScreen:'join',session:'session'};
 const ROUTE_TO_SCREEN=Object.fromEntries(Object.entries(SCREEN_ROUTES).map(([k,v])=>[v,k]));
 function showScreen(id){
+  gaEvent('screen_view',{screen_name:id});
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   const bb=document.getElementById('homeBottomBar');if(bb)bb.style.display=id==='home'?'flex':'none';
@@ -3651,6 +3668,7 @@ async function shareVia(channel){
   if(channel==='wechat'){await copyToClipboard(text);window.open('https://web.wechat.com/','_blank');showToast(t('shareTextCopied'));return}
   const ok=await copyToClipboard(text);showToast(ok?t('shareTextCopied')+' ✅':t('shareUnavailable'))}
 async function smartShare(){
+  gaEvent('share_session');
   const link=getJoinLink();if(!link){showToast(t('codeUnavailable'));return}
   const isMobile=window.matchMedia('(max-width:767px)').matches;
   if(isMobile&&navigator.share){try{await navigator.share({title:'CitizenTape',text:'Join my CitizenTape session',url:link});return}catch(e){if(e.name==='AbortError')return}}
@@ -3757,6 +3775,7 @@ function initDragDrop(zoneId){
 
 async function handlePDFInput(n,input){
   const f=input.files[0];if(!f)return;
+  gaEvent('import_script',{method:'file',file_type:f.name.split('.').pop()});
   if(!isPdfUploadFile(f)){showToast('Unsupported file format',4000);input.value='';return}
   const name=String(f.name||'').toLowerCase();
   if(name.endsWith('.fdx')){
@@ -5455,6 +5474,7 @@ async function runImportedScriptPipeline(n,normText,displayName){
   finishPdfSetupUi(n,workingNorm,validatedCharacters,detectedLang);
 }
 async function processTextImport(n){
+  gaEvent('import_script',{method:'paste'});
   const raw=document.getElementById('scriptInput'+n).value;
   scriptRawText=raw;
   const norm=await normalizeScreenplayWhitespaceAsync(raw);
@@ -6044,6 +6064,7 @@ function hideEndTakeModal(){
   const m=document.getElementById('endTakeModal');if(m)m.classList.remove('active');
 }
 function confirmEndTake(){
+  gaEvent('end_take',{mode:sessionMode});
   hideEndTakeModal();
   endSession();
 }
@@ -6373,10 +6394,12 @@ async function enterRehearsalMode(importScreenN,pdfScriptSnapshot,selectedCharac
   return ok!==false;
 }
 async function startAiSession(){
+  gaEvent('start_session',{mode:'ai'});
   await requestRehearsalStart({source:'manual'});
 }
 
 async function startPartnerSession(){
+  gaEvent('start_session',{mode:'partner_host'});
   await cwEnqueueSessionBoot(async()=>{
     if(__cwSessionActive)return false;
     unlockAudio();
@@ -6408,6 +6431,7 @@ async function startPartnerSession(){
 }
 
 async function joinAsPartner(){
+  gaEvent('start_session',{mode:'partner_join'});
   await cwEnqueueSessionBoot(async()=>{
     if(__cwSessionActive)return false;
     role='partner';sessionMode='partner';
