@@ -241,7 +241,7 @@ input[type="file"]{display:none}
 .session-top{display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem;background:rgba(10,10,10,.92);border-bottom:1px solid var(--border-light);flex-shrink:0;position:fixed;top:0;left:0;right:0;z-index:60}
 .ps-toggle{position:relative;width:42px;height:24px;background:rgba(200,200,200,.3);border-radius:12px;border:none;cursor:pointer;transition:background .2s;flex-shrink:0}
 .ps-toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .2s}
-.ps-toggle.on{background:rgba(245,239,224,.45)}
+.ps-toggle.on{background:#22c55e}
 .ps-toggle.on::after{transform:translateX(18px)}
 .session-top .status{display:flex;align-items:center;gap:.4rem;font-size:.75rem;font-weight:700}
 .status-dot{width:8px;height:8px;border-radius:50%;background:var(--success);animation:blink 2s ease infinite}
@@ -1607,7 +1607,7 @@ async function loadUsageHistory(){
           +'</div>';
       }else{
         var sign=g.amount>=0?'+':'';
-        var color=g.amount>=0?'#8a1519':'#D96F6F';
+        var color=g.amount>=0?'#22c55e':'#D96F6F';
         return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee">'
           +'<span style="color:#4B5563">'+g.date+' '+g.time+' — '+g.description+'</span>'
           +'<span style="color:'+color+';font-weight:600">'+sign+'$'+(Math.abs(g.amount)/100).toFixed(2)+'</span>'
@@ -2348,6 +2348,13 @@ const UI_FALLBACK_TRANSLATIONS={
   referralReward:{fr:'+30 min offertes ! Merci du partage.',en:'+30 min free! Thanks for sharing.',es:'+30 min gratis. ¡Gracias por compartir!',it:'+30 min gratis! Grazie per aver condiviso.',zh:'赠送30分钟！感谢分享。',ko:'+30분 무료! 공유해 주셔서 감사합니다.',ja:'+30分無料！シェアありがとうございます。',ar:'+30 دقيقة مجانية! شكرًا للمشاركة.',de:'+30 Min geschenkt! Danke fürs Teilen.',pt:'+30 min grátis! Obrigado por compartilhar.',hi:'+30 मिनट मुफ़्त! शेयर करने के लिए धन्यवाद।',tr:'+30 dk hediye! Paylaştığınız için teşekkürler.',ru:'+30 мин бесплатно! Спасибо за рекомендацию.'},
   speedSlow:{fr:'Lent',en:'Slow',es:'Lento',it:'Lento',zh:'慢',ko:'느림',ja:'遅い',ar:'بطيء',de:'Langsam',pt:'Lento',hi:'धीमा',tr:'Yavaş',ru:'Медленно'},
   speedFast:{fr:'Rapide',en:'Fast',es:'Rápido',it:'Veloce',zh:'快',ko:'빠름',ja:'速い',ar:'سريع',de:'Schnell',pt:'Rápido',hi:'तेज़',tr:'Hızlı',ru:'Быстро'},
+  clearCacheBtn:{fr:'Vider le cache · nouveau script',en:'Clear cache · new script',es:'Borrar cache · nuevo guion',it:'Svuota cache · nuovo script',zh:'清除缓存 · 新剧本',ko:'캐시 지우기 · 새 대본',ja:'キャッシュクリア · 新しい台本',ar:'مسح التخزين · نص جديد',de:'Cache leeren · neues Skript',pt:'Limpar cache · novo roteiro',hi:'कैश साफ़ करें · नई स्क्रिप्ट',tr:'Belleği temizle · yeni senaryo',ru:'Очистить кэш · новый сценарий'},
+  importPastedBtn:{fr:'Importer le texte collé',en:'Import pasted text',es:'Importar texto pegado',it:'Importa testo incollato',zh:'导入粘贴的文本',ko:'붙여넣은 텍스트 가져오기',ja:'貼り付けテキストをインポート',ar:'استيراد النص الملصق',de:'Eingefügten Text importieren',pt:'Importar texto colado',hi:'चिपकाया गया टेक्स्ट आयात करें',tr:'Yapıştırılan metni içe aktar',ru:'Импортировать вставленный текст'},
+  changeEmailBtn:{fr:'Changer d\'email',en:'Change email',es:'Cambiar email',it:'Cambia email',zh:'更换邮箱',ko:'이메일 변경',ja:'メール変更',ar:'تغيير البريد',de:'E-Mail ändern',pt:'Alterar email',hi:'ईमेल बदलें',tr:'E-posta değiştir',ru:'Изменить email'},
+  autoTopupTitle:{fr:'Recharge automatique',en:'Auto top-up',es:'Recarga automática',it:'Ricarica automatica',zh:'自动充值',ko:'자동 충전',ja:'自動チャージ',ar:'شحن تلقائي',de:'Automatisch aufladen',pt:'Recarga automática',hi:'ऑटो टॉप-अप',tr:'Otomatik yükleme',ru:'Автопополнение'},
+  autoTopupDesc:{fr:'Recharger quand le solde descend sous 2$',en:'Add credits when balance drops below $2',es:'Agregar créditos cuando el saldo baje de $2',it:'Aggiungi crediti quando il saldo scende sotto $2',zh:'余额低于$2时自动充值',ko:'잔액이 $2 이하로 떨어지면 충전',ja:'残高が$2未満になったら自動チャージ',ar:'إضافة رصيد عندما ينخفض تحت 2$',de:'Guthaben aufladen wenn unter 2$',pt:'Adicionar créditos quando saldo cair abaixo de $2',hi:'बैलेंस $2 से कम होने पर क्रेडिट जोड़ें',tr:'Bakiye 2$ altına düşünce yükle',ru:'Пополнить при балансе ниже 2$'},
+  authCodePlaceholder:{fr:'Code à 6 chiffres',en:'6-digit code',es:'Código de 6 dígitos',it:'Codice a 6 cifre',zh:'6位验证码',ko:'6자리 코드',ja:'6桁コード',ar:'رمز من 6 أرقام',de:'6-stelliger Code',pt:'Código de 6 dígitos',hi:'6 अंकों का कोड',tr:'6 haneli kod',ru:'6-значный код'},
+  autoTopupAmountLabel:{fr:'Montant à ajouter',en:'Amount to add',es:'Monto a agregar',it:'Importo da aggiungere',zh:'充值金额',ko:'충전 금액',ja:'チャージ額',ar:'المبلغ المراد إضافته',de:'Aufladebetrag',pt:'Valor a adicionar',hi:'जोड़ने की राशि',tr:'Eklenecek miktar',ru:'Сумма пополнения'},
 };
 const TTS_LANGS=['fr','en','es','it','de','pt','ar','zh','ja','ko','hi','tr','ru'];
 
@@ -2594,6 +2601,14 @@ function applyUILanguage(){
   }
   document.getElementById('modeHint').textContent=modeHintText(mode);
   if(pdfScript.length&&selectedChar)renderPartnerAssignment(1);
+  // Buttons & profile elements
+  const _nsb1=document.getElementById('newScriptBtn1');if(_nsb1)_nsb1.textContent=t('clearCacheBtn');
+  const _ipb1=document.getElementById('importPastedBtn1');if(_ipb1)_ipb1.textContent=t('importPastedBtn');
+  const _aci=document.getElementById('authCodeInput');if(_aci)_aci.placeholder=t('authCodePlaceholder');
+  document.querySelectorAll('[onclick="startChangeEmail()"]').forEach(el=>{el.textContent=t('changeEmailBtn')});
+  const _atTitle=document.querySelector('#profileAutoTopup div[style*="font-weight:600"]');if(_atTitle)_atTitle.textContent=t('autoTopupTitle');
+  const _atDesc=document.querySelector('#profileAutoTopup div[style*="font-size:.72rem"]');if(_atDesc)_atDesc.textContent=t('autoTopupDesc');
+  const _atAmtLabel=document.querySelector('#autoTopupAmountRow label');if(_atAmtLabel)_atAmtLabel.textContent=t('autoTopupAmountLabel');
   updateAuthMiniButton();
 }
 function changeUILanguage(languageId,silent){
