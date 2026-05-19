@@ -2826,10 +2826,15 @@ function authEmailLangFromUI(){
   const allowed=new Set(['fr','en','es','it','de','pt','ja','zh','ko','ar','he','ru']);
   return allowed.has(id)?id:'fr';
 }
+var _authCodeSending=false;
 async function requestEmailCode(){
+  if(_authCodeSending)return;
+  _authCodeSending=true;
+  const btn=document.getElementById('authSendCodeBtn');
+  if(btn)btn.disabled=true;
   gaEvent('auth_request_code');
   const email=(document.getElementById('authEmailInput').value||'').trim().toLowerCase();
-  if(!email||!/@/.test(email)){showToast('Email invalide');return}
+  if(!email||!/@/.test(email)){showToast('Email invalide');_authCodeSending=false;if(btn)btn.disabled=false;return}
   authPendingEmail=email;
   try{
     const rsp=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'request_code',email,lang:authEmailLangFromUI()}),credentials:'same-origin'});
@@ -2844,6 +2849,7 @@ async function requestEmailCode(){
     if(resendLink)resendLink.style.display='block';
     document.getElementById('authStatusText').textContent=t('authCodeSent');
   }catch(e){showToast('Connection failed');}
+  finally{_authCodeSending=false;if(btn)btn.disabled=false;}
 }
 async function verifyEmailCode(){
   const code=(document.getElementById('authCodeInput').value||'').trim();
