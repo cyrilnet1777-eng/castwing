@@ -194,13 +194,9 @@ async function verifyPolarWebhook(body, headers, secret) {
       console.error("[polar-wh] timestamp too old:", age, "seconds");
       return false;
     }
-    // Strip known prefixes, then base64-decode the secret
-    let secretB64 = secret;
-    if (secretB64.startsWith("whsec_")) secretB64 = secretB64.slice(6);
-    else if (secretB64.startsWith("polar_whs_")) secretB64 = secretB64.slice(10);
-    // Ensure proper base64 padding
-    while (secretB64.length % 4 !== 0) secretB64 += "=";
-    const keyBytes = Uint8Array.from(atob(secretB64), c => c.charCodeAt(0));
+    // Polar SDK uses raw UTF-8 bytes of the full secret as the HMAC key
+    // (it base64-encodes the whole string, then Standard Webhooks base64-decodes it back)
+    const keyBytes = new TextEncoder().encode(secret);
     const signedContent = msgId + "." + timestamp + "." + body;
     const key = await crypto.subtle.importKey(
       "raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
