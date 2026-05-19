@@ -3437,14 +3437,18 @@ async function speakWithElevenLabs(text,preset,token,cb){
       try{
         var arrayBuf=await blob.arrayBuffer();
         var audioBuffer=await _recAudioCtx.decodeAudioData(arrayBuf);
-        var recDone=function(){if(token===activeSpeechToken&&cb)cb();lastTTSEndTs=Date.now()};
+        var _recDoneFired=false;
+        var recDone=function(){if(_recDoneFired)return;_recDoneFired=true;if(token===activeSpeechToken&&cb)cb();lastTTSEndTs=Date.now()};
         var src=_recAudioCtx.createBufferSource();
         src.buffer=audioBuffer;
         src.connect(_recDest);
         src.connect(_recAudioCtx.destination);
         src.onended=recDone;
         src.start(0);
-        ttsAudio={stop:function(){try{src.stop()}catch(e){}}};
+        // Safety: onended can fail to fire on iOS Safari — use duration-based fallback
+        var _safetyMs=Math.ceil((audioBuffer.duration||3)*1000)+500;
+        var _safetyTimer=setTimeout(function(){console.warn('[TTS] onended safety timeout after '+_safetyMs+'ms');recDone()},_safetyMs);
+        ttsAudio={stop:function(){try{src.stop()}catch(e){}clearTimeout(_safetyTimer)}};
         return true;
       }catch(e){console.warn('[TTS] AudioContext decode failed, falling back to element:',e.message)}
     }
