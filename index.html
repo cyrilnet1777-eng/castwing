@@ -1402,7 +1402,7 @@ function updateTakeInfo(){
   const el=document.getElementById('takeInfo');if(!el)return;
   const sc=getSceneLabel();
   const prod=currentScriptName?currentScriptName.replace(/\.pdf$/i,''):'—';
-  el.innerHTML=`<div class="take-scene">Scène ${sc} — TAKE ${takeNumber}</div><div class="take-prod">Prod: ${prod}</div>`;
+  el.innerHTML=`<div class="take-scene">Scène ${escHtml(sc)} — TAKE ${escHtml(takeNumber)}</div><div class="take-prod">Prod: ${escHtml(prod)}</div>`;
 }
 function showClapperboard(onComplete){
   const existing=document.getElementById('clapOverlay');
@@ -1490,7 +1490,7 @@ async function openTopupModal(packId){
     var rsp=await fetch('/api/credits/topup',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({pack:packId})});
     var data=await rsp.json().catch(function(){return null});
     if(data&&data.ok&&data.checkoutUrl){
-      window.location.href=data.checkoutUrl;
+      if(data.checkoutUrl&&data.checkoutUrl.startsWith('https://polar.sh/'))window.location.href=data.checkoutUrl;else showToast('Invalid checkout URL',3000);
     }else if(rsp.status===401||((data&&data.error)==='AUTH_REQUIRED')){
       showToast('Please log in first',2000);
       setTimeout(function(){openAuthModal()},500);
@@ -1559,7 +1559,7 @@ async function checkAutoTopup(){
       var rsp=await fetch('/api/credits/topup',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({pack:packId})});
       var data=await rsp.json().catch(function(){return null});
       if(data&&data.ok&&data.checkoutUrl){
-        window.location.href=data.checkoutUrl;
+        if(data.checkoutUrl&&data.checkoutUrl.startsWith('https://polar.sh/'))window.location.href=data.checkoutUrl;else showToast('Invalid checkout URL',3000);
       }else{
         showToast('Could not start checkout: '+(data&&data.error||'error'),4000);
       }
@@ -1832,7 +1832,7 @@ async function adminCreateInvite(){
     if(!data||!data.ok){showToast('Error: '+(data&&data.error||'unknown'));return;}
     const res=document.getElementById('cwInviteResult');
     res.style.display='block';
-    res.innerHTML=`<b>Invite created!</b><br>URL: <a href="${data.inviteUrl}" style="color:rgba(245,239,224,.6);word-break:break-all">${data.inviteUrl}</a><br>Code: <code>${data.inviteCode}</code><br><button class="cw-admin-btn-secondary" style="margin-top:.4rem;font-size:.72rem" onclick="navigator.clipboard.writeText('${data.inviteUrl}');showToast('Copied!')">Copy URL</button>`;
+    res.innerHTML=`<b>Invite created!</b><br>URL: <a href="${escHtml(data.inviteUrl)}" style="color:rgba(245,239,224,.6);word-break:break-all">${escHtml(data.inviteUrl)}</a><br>Code: <code>${escHtml(data.inviteCode)}</code><br><button class="cw-admin-btn-secondary" style="margin-top:.4rem;font-size:.72rem" onclick="navigator.clipboard.writeText('${escHtml(data.inviteUrl)}');showToast('Copied!')">Copy URL</button>`;
     adminLoadInvites();
   }catch(e){showToast('Network error');}
 }
@@ -3512,6 +3512,7 @@ async function aiSpeak(text,cb){
 
 // ── Helpers ──
 function genCode(){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let r='';for(let i=0;i<8;i++)r+=c[Math.floor(Math.random()*c.length)];return r}
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function showToast(m,d=3000){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),d)}
 function showOverlay(t,m){document.getElementById('overlayTitle').textContent=t;document.getElementById('overlayMsg').textContent=m;document.getElementById('connectOverlay').classList.add('active')}
 function hideOverlay(){document.getElementById('connectOverlay').classList.remove('active')}
@@ -4885,7 +4886,7 @@ async function renderRecordingsList(){
   if(!recs.length){btn.style.display='none';if(mobBtn)mobBtn.style.display='none';list.innerHTML='<div style="font-size:.72rem;color:var(--text-muted);text-align:center;padding:.5rem">'+t('noRecordingsYet')+'</div>';return}
   btn.style.display='flex';badge.style.display='flex';badge.textContent=recs.length;
   if(mobBtn){mobBtn.style.display='flex';if(mobBadge){mobBadge.style.display='flex';mobBadge.textContent=recs.length}}
-  list.innerHTML=recs.sort((a,b)=>b.date-a.date).map(r=>`<div class="rec-item"><div class="rec-item-info"><div class="rec-item-name">${r.fname}</div><div class="rec-item-meta">${formatRecDate(r.date)} · ${formatRecSize(r.size)}</div></div><button class="rec-item-btn" onclick="reShareRec(${r.id})" title="Share/Download"><svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 1 0-3-3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 1 0 0 6c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65a2.88 2.88 0 0 0 5.84 0 2.88 2.88 0 0 0-2.92-2.88z"/></svg></button><button class="rec-item-btn del" onclick="deleteRec(${r.id})" title="Delete"><svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button></div>`).join('')
+  list.innerHTML=recs.sort((a,b)=>b.date-a.date).map(r=>`<div class="rec-item"><div class="rec-item-info"><div class="rec-item-name">${escHtml(r.fname)}</div><div class="rec-item-meta">${formatRecDate(r.date)} · ${formatRecSize(r.size)}</div></div><button class="rec-item-btn" onclick="reShareRec(${r.id})" title="Share/Download"><svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 1 0-3-3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 1 0 0 6c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65a2.88 2.88 0 0 0 5.84 0 2.88 2.88 0 0 0-2.92-2.88z"/></svg></button><button class="rec-item-btn del" onclick="deleteRec(${r.id})" title="Delete"><svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button></div>`).join('')
 }
 async function reShareRec(id){const recs=await getRecsFromDB();const rec=recs.find(r=>r.id===id);if(rec)shareOrDownloadRec(rec)}
 async function deleteRec(id){await deleteRecFromDB(id);renderRecordingsList();showToast('Recording deleted')}
@@ -5508,7 +5509,7 @@ function renderPartnerAssignment(n){
     const el=document.createElement('div');
     el.className='char-item'+(soloPartnerMode==='single'&&soloPartnerChar===ch?' selected':'');
     const cnt=pdfScript.filter(s=>s&&s.kind===LINE_TYPE.DIALOGUE&&s.char===ch).length;
-    el.innerHTML=`${ch}<span class="cc">(${cnt})</span>`;
+    el.innerHTML=`${escHtml(ch)}<span class="cc">(${cnt})</span>`;
     el.onclick=()=>{soloPartnerMode='single';soloPartnerChar=ch;renderPartnerAssignment(1)};
     grid.appendChild(el);
   });
@@ -5516,7 +5517,7 @@ function renderPartnerAssignment(n){
 }
 function renderChars(n,chars){
   const g=document.getElementById('charGrid'+n);g.innerHTML='';
-  chars.forEach(({char,count})=>{const el=document.createElement('div');el.className='char-item';el.innerHTML=`${char}<span class="cc">(${count})</span>`;el.onclick=()=>{selectedChar=char;soloPartnerMode='all';soloPartnerChar=null;g.querySelectorAll('.char-item').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');showToast(char);if(n===1)renderPartnerAssignment(1);const cb=document.getElementById('importContinueBtn');if(cb)cb.style.display='block'};g.appendChild(el)});
+  chars.forEach(({char,count})=>{const el=document.createElement('div');el.className='char-item';el.innerHTML=`${escHtml(char)}<span class="cc">(${count})</span>`;el.onclick=()=>{selectedChar=char;soloPartnerMode='all';soloPartnerChar=null;g.querySelectorAll('.char-item').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');showToast(char);if(n===1)renderPartnerAssignment(1);const cb=document.getElementById('importContinueBtn');if(cb)cb.style.display='block'};g.appendChild(el)});
   if(n===1)renderPartnerAssignment(1);
 }
 function clearPDF(n){__cwSessionActive=false;cwSessionStateClear('clearPDF');pdfScript=[];scriptRawText='';_bgRefinementToken++;_fastFullParseToken++;syncPdfScriptDebugMirror();clearPersistedScriptMemory().catch(()=>{});selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;lockedVoiceLocale='';initVoiceCountrySelect();document.getElementById('uploadZone'+n).style.display='block';document.getElementById('uploadOk'+n).style.display='none';document.getElementById('charSection'+n).style.display='none';if(n===1){const w=document.getElementById('partnerAssignWrap1');if(w)w.style.display='none'}document.getElementById('setupStatus'+n).textContent='';document.getElementById('pdfInput'+n).value='';const orb=document.getElementById('optionalReviewBtn'+n);if(orb)orb.style.display='none'}

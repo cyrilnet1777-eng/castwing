@@ -83,7 +83,8 @@ const SESSION_COOKIE_NAME = "cw_session";
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60;
 
 async function createSignedSessionCookie(email, env) {
-  const secret = String(env.INVITE_SIGNING_SECRET || env.AUTH_CODE_SECRET || "dev-session-secret");
+  const secret = String(env.INVITE_SIGNING_SECRET || env.AUTH_CODE_SECRET || "");
+  if (!secret) throw new Error("Session signing secret not configured");
   const exp = Date.now() + SESSION_MAX_AGE * 1000;
   const payload = JSON.stringify({ email: email.toLowerCase(), exp });
   const sig = await sha256Hex(payload + "|" + secret);
@@ -99,7 +100,7 @@ async function readSignedSessionCookie(request, env) {
   if (parts.length !== 2) { console.log("[session] cookie malformed"); return null; }
   try {
     const payload = b64urlDecode(parts[0]);
-    const secret = String(env.INVITE_SIGNING_SECRET || env.AUTH_CODE_SECRET || "dev-session-secret");
+    const secret = String(env.INVITE_SIGNING_SECRET || env.AUTH_CODE_SECRET || "");
     const expected = await sha256Hex(payload + "|" + secret);
     if (expected !== parts[1]) { console.log("[session] sig mismatch"); return null; }
     const parsed = JSON.parse(payload);
@@ -512,15 +513,39 @@ async function handleTTS(request, env) {
     const charCount = text.length;
     const costCents = Math.max(1, Math.ceil((charCount / 1000) * CREDIT_PRICING.TTS_COST_PER_1K_CHARS_CENTS));
 
-    // Authenticated users must have credits (visitors get 2 free lines client-side)
+    // Atomic credit deduction: debit BEFORE making TTS call (prevents overdraft race condition)
+    let _ttsDebitId = null;
     if (!isAdmin && email && env.DB) {
-      const { balance_cents } = await getCreditBalance(env.DB, email);
-      if (balance_cents < costCents) {
-        return json({
-          ok: false, error: "INSUFFICIENT_CREDITS",
-          balance_cents, cost_cents: costCents, char_count: charCount,
-        }, 402);
+      _ttsDebitId = generateId("ctx");
+      try {
+        const result = await env.DB.prepare(
+          `INSERT INTO credit_transactions (id, email, amount_cents, type, description, char_count, created_at)
+           SELECT ?, ?, ?, 'tts_debit', ?, ?, datetime('now')
+           WHERE (SELECT COALESCE(SUM(amount_cents),0) FROM credit_transactions WHERE lower(email) = ?) >= ?`
+        ).bind(_ttsDebitId, email.toLowerCase(), -costCents, "TTS " + charCount + " chars", charCount, email.toLowerCase(), costCents).run();
+        if (!result.meta || !result.meta.changes) {
+          const { balance_cents } = await getCreditBalance(env.DB, email);
+          return json({
+            ok: false, error: "INSUFFICIENT_CREDITS",
+            balance_cents, cost_cents: costCents, char_count: charCount,
+          }, 402);
+        }
+      } catch (e) {
+        console.error("credit pre-debit:", e);
+        const { balance_cents } = await getCreditBalance(env.DB, email);
+        return json({ ok: false, error: "INSUFFICIENT_CREDITS", balance_cents, cost_cents: costCents, char_count: charCount }, 402);
       }
+    }
+    // Rate limit: max 30 TTS calls per minute per user
+    if (!isAdmin && email && env.AUTH_KV) {
+      const ttsRateKey = `rate:tts:${email}`;
+      const ttsCalls = parseInt(await env.AUTH_KV.get(ttsRateKey) || "0");
+      if (ttsCalls >= 30) {
+        // Refund the pre-debit
+        if (_ttsDebitId && env.DB) try { await env.DB.prepare("DELETE FROM credit_transactions WHERE id = ?").bind(_ttsDebitId).run(); } catch(e) {}
+        return json({ ok: false, error: "RATE_LIMIT", message: "Too many requests" }, 429);
+      }
+      await env.AUTH_KV.put(ttsRateKey, String(ttsCalls + 1), { expirationTtl: 60 });
     }
 
     const emotionMap = {
@@ -567,16 +592,10 @@ async function handleTTS(request, env) {
           );
 
           if (response.ok) {
-            // Deduct credits after successful TTS
+            // Credits already debited atomically before TTS call
             let newBalance = null;
             if (!isAdmin && email && env.DB) {
-              try {
-                await env.DB.prepare(
-                  `INSERT INTO credit_transactions (id, email, amount_cents, type, description, char_count, created_at)
-                   VALUES (?, ?, ?, 'tts_debit', ?, ?, datetime('now'))`
-                ).bind(generateId("ctx"), email.toLowerCase(), -costCents, "TTS " + charCount + " chars", charCount).run();
-                newBalance = (await getCreditBalance(env.DB, email)).balance_cents;
-              } catch (e) { console.error("credit deduct:", e); }
+              try { newBalance = (await getCreditBalance(env.DB, email)).balance_cents; } catch (e) {}
             }
             const headers = {
               "Content-Type": "audio/mpeg",
@@ -609,15 +628,20 @@ async function handleTTS(request, env) {
           }
 
           if (response.status === 401 || response.status === 403) {
+            if (_ttsDebitId && env.DB) try { await env.DB.prepare("DELETE FROM credit_transactions WHERE id = ?").bind(_ttsDebitId).run(); } catch(e) {}
             return json({ ok: false, error: "TTS_PROVIDER_ERROR", message: `Auth error ${response.status}`, details: detail }, 502);
           }
         }
       }
     }
 
+    // Refund pre-debited credits on TTS failure
+    if (_ttsDebitId && env.DB) try { await env.DB.prepare("DELETE FROM credit_transactions WHERE id = ?").bind(_ttsDebitId).run(); } catch(e) {}
     const errorCode = lastStatus === 404 ? "VOICE_UNAVAILABLE" : "TTS_PROVIDER_ERROR";
     return json({ ok: false, error: errorCode, message: lastDetail, fallbackTried: usedFallback, status: lastStatus }, 502);
   } catch (error) {
+    // Refund pre-debited credits on TTS failure
+    if (_ttsDebitId && env.DB) try { await env.DB.prepare("DELETE FROM credit_transactions WHERE id = ?").bind(_ttsDebitId).run(); } catch(e) {}
     return json({ ok: false, error: "TTS_PROVIDER_ERROR", message: toText((error && error.message) || error) }, 500);
   }
 }
@@ -943,6 +967,13 @@ async function handleAuth(request, env) {
     if (!isEmail(email)) return json({ error: "Invalid email" }, 400);
 
     if (action === "request_code") {
+      // Rate limit: max 3 code requests per 15 minutes per email
+      if (env.AUTH_KV) {
+        const rateKey = `rate:code:${email}`;
+        const attempts = parseInt(await env.AUTH_KV.get(rateKey) || "0");
+        if (attempts >= 3) return json({ ok: false, error: "Too many requests. Try again later." }, 429);
+        await env.AUTH_KV.put(rateKey, String(attempts + 1), { expirationTtl: 900 });
+      }
       const code = String(Math.floor(100000 + Math.random() * 900000));
       const lang = normalizeAuthEmailLang(payload.lang);
 
@@ -965,6 +996,14 @@ async function handleAuth(request, env) {
     const code = String(payload.code || "").trim();
     if (!code) return json({ ok: false, error: "Missing code" }, 400);
 
+    // Rate limit: max 5 verification attempts per 10 minutes per email
+    if (env.AUTH_KV) {
+      const verifyKey = `rate:verify:${email}`;
+      const verifyAttempts = parseInt(await env.AUTH_KV.get(verifyKey) || "0");
+      if (verifyAttempts >= 5) return json({ ok: false, error: "Too many attempts. Try again later." }, 429);
+      await env.AUTH_KV.put(verifyKey, String(verifyAttempts + 1), { expirationTtl: 600 });
+    }
+
     if (env.AUTH_KV) {
       const stored = await env.AUTH_KV.get(`auth_code:${email}`);
       if (!stored || stored !== code) {
@@ -974,7 +1013,8 @@ async function handleAuth(request, env) {
     } else {
       const token = String(payload.token || "");
       if (!token) return json({ ok: false, error: "Missing token" }, 400);
-      const secret = String(env.AUTH_CODE_SECRET || "dev-auth-secret-change-me");
+      const secret = String(env.AUTH_CODE_SECRET || "");
+      if (!secret) return json({ ok: false, error: "Auth not configured" }, 500);
       let parsed;
       try { parsed = JSON.parse(b64urlDecode(token)); } catch (e) { return json({ ok: false, error: "Invalid token" }, 400); }
       if (!parsed || parsed.email !== email || Number(parsed.exp || 0) < Date.now()) {
@@ -1178,9 +1218,10 @@ async function handleCreditsConsume(request, env) {
 ========================================================= */
 
 const PARSE_SCREENPLAY_CORS = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://citizentape.com",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, Cookie",
+  "Access-Control-Allow-Credentials": "true",
 };
 
 function buildCitizenTapePlaySchemaPrompt() {
@@ -1219,6 +1260,8 @@ function parseCitizenTapePlayModelJson(rawText) {
 }
 
 async function handleParseScreenplay(request, env) {
+  const email = await resolveCurrentUser(request, env);
+  if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401, PARSE_SCREENPLAY_CORS);
   const apiKey = String(env.ANTHROPIC_API_KEY || "").trim();
   if (!apiKey) {
     return json({ error: "Missing ANTHROPIC_API_KEY" }, 500, PARSE_SCREENPLAY_CORS);
@@ -1748,6 +1791,8 @@ async function handleParseScript(request, env) {
 ========================================================= */
 
 async function handleValidateCharacters(request, env) {
+  const email = await resolveCurrentUser(request, env);
+  if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
   if (!env.ANTHROPIC_API_KEY) {
     return json({ ok: false, error: "missing_anthropic_api_key", characters: [] }, 500);
   }
@@ -1808,6 +1853,8 @@ async function handleValidateCharacters(request, env) {
 }
 
 async function handleClassifyLines(request, env) {
+  const email = await resolveCurrentUser(request, env);
+  if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
   if (!env.ANTHROPIC_API_KEY) {
     return json({ ok: false, error: "missing_anthropic_api_key" }, 500);
   }
@@ -1913,6 +1960,8 @@ ${numberedLines}`;
 }
 
 async function handleMergeCharacters(request, env) {
+  const email = await resolveCurrentUser(request, env);
+  if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
   if (!env.ANTHROPIC_API_KEY) return json({ error: "missing_anthropic_api_key" }, 500);
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: "invalid_json" }, 400); }
@@ -1981,9 +2030,10 @@ async function ensureD1Tables(db) {
 
 async function handleClaudeParseScript(request, env) {
   const cors = {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": "https://citizentape.com",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Cookie",
+    "Access-Control-Allow-Credentials": "true",
   };
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: cors });
@@ -1991,6 +2041,8 @@ async function handleClaudeParseScript(request, env) {
   if (request.method !== "POST") {
     return Response.json({ success: false, error: "Method not allowed" }, { status: 405, headers: cors });
   }
+  const _cpEmail = await resolveCurrentUser(request, env);
+  if (!_cpEmail) return json({ ok: false, error: "AUTH_REQUIRED" }, 401, cors);
 
   const apiKey = String(env.ANTHROPIC_API_KEY || "").trim();
   if (!apiKey) {
@@ -2071,9 +2123,10 @@ ${slice}`;
 
 async function handleLabelScript(request, env) {
   const cors = {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": "https://citizentape.com",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Cookie",
+    "Access-Control-Allow-Credentials": "true",
   };
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: cors });
@@ -2081,6 +2134,8 @@ async function handleLabelScript(request, env) {
   if (request.method !== "POST") {
     return Response.json({ success: false, error: "Method not allowed" }, { status: 405, headers: cors });
   }
+  const _lsEmail = await resolveCurrentUser(request, env);
+  if (!_lsEmail) return json({ ok: false, error: "AUTH_REQUIRED" }, 401, cors);
 
   const apiKey = String(env.ANTHROPIC_API_KEY || "").trim();
   if (!apiKey) {
