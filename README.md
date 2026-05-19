@@ -89,7 +89,8 @@ Partners join directly via the "Join a session" link on the landing page (no imp
 - Session cookies (HttpOnly, Secure, SameSite=Lax, 30-day expiry)
 - All AI parsing and TTS endpoints require authentication
 - CORS restricted to `https://citizentape.com`
-- TTS rate-limited to 30 calls/min per user
+- TTS rate-limited: 30 calls/min per user + 500/min global (protects ElevenLabs API quota)
+- Anthropic concurrency capped at 50 simultaneous parsing requests (KV semaphore)
 - XSS-safe: all user-controlled innerHTML escaped via `escHtml()`
 
 ### Analytics
@@ -148,3 +149,20 @@ Google Sign-In requires a Google Cloud project with:
 - `invites` — admin-created invite tokens with credit grants
 - `credit_transactions` — append-only ledger (topups, TTS debits, free grants)
 - `usage_events` — audit log for TTS usage
+
+**Indexes** (auto-created by `ensureD1Tables`):
+- `idx_credit_email` — `credit_transactions(email)` — balance lookups
+- `idx_credit_stripe_id` — `credit_transactions(stripe_session_id)` — idempotency checks
+- `idx_credit_created` — `credit_transactions(email, created_at DESC)` — history queries
+- `idx_invite_redemptions_email` — `invite_redemptions(email)`
+- `idx_usage_events_email` — `usage_events(email, created_at DESC)`
+- Unique partial index on `stripe_session_id` — prevents duplicate topup credits
+
+### Scalability notes
+- **Cloudflare Workers**: auto-scales, no config needed
+- **D1**: single-writer SQLite — indexed queries keep writes fast; atomic debit-before-call prevents overdraft
+- **ElevenLabs**: global 500 req/min cap prevents API quota exhaustion; upgrade plan or add keys to scale
+- **Anthropic**: max 50 concurrent requests via KV semaphore; increase limit as plan allows
+- **KV rate limiting**: eventually consistent (get→put race possible at extreme concurrency); migrate to Durable Objects at 10K+ daily active users
+- **CDN caching**: HTML cached 5min, images/sounds 24h immutable
+- **PeerJS**: uses default public signaling server; self-host on Fly.io when partner mode exceeds ~500 concurrent sessions
