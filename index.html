@@ -6637,6 +6637,7 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   var paymentParam=urlParams.get('payment');
   var cardSaved=urlParams.get('card_saved');
   if(paymentParam==='success'){
+    gaEvent('purchase',{currency:'USD'});
     setTimeout(async function(){
       // Reconcile orders from Polar in case webhook hasn't arrived yet
       try{await fetch('/api/credits/reconcile',{method:'POST',credentials:'same-origin'})}catch(e){}
@@ -6645,6 +6646,7 @@ document.addEventListener('DOMContentLoaded',async ()=>{
       history.replaceState({},'','/');
     },2000);
   }else if(paymentParam==='cancel'){
+    gaEvent('checkout_cancel');
     showToast(tt('paymentCancelled','Payment cancelled.'),3000);history.replaceState({},'','/');
   }else if(cardSaved==='success'){
     showToast('Card saved! Auto top-up is active.',5000);
