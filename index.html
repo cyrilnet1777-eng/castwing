@@ -1520,17 +1520,10 @@ async function toggleAutoTopup(){
     tog.classList.remove('on');if(row)row.style.display='none';localStorage.removeItem('cw_autoTopup');
     showToast('Auto top-up disabled',2000);
   }else{
-    // Save card via Stripe Checkout (setup mode)
-    showToast('Redirecting to save your card...',3000);
     var amt=2500;
-    try{
-      var rsp=await fetch('/api/credits/setup-card',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({autoTopupAmount:amt})});
-      var data=await rsp.json().catch(function(){return null});
-      if(data&&data.ok&&data.checkoutUrl){
-        localStorage.setItem('cw_autoTopup',JSON.stringify({amount:amt}));
-        window.location.href=data.checkoutUrl;
-      }else{showToast((data&&data.error)||'Failed to set up card',3000)}
-    }catch(e){showToast('Error setting up card',3000)}
+    localStorage.setItem('cw_autoTopup',JSON.stringify({amount:amt}));
+    tog.classList.add('on');if(row)row.style.display='';updateAutoTopupBtns();
+    showToast('Auto top-up enabled',2000);
   }
 }
 function setAutoTopupAmount(cents){
@@ -1560,19 +1553,15 @@ async function checkAutoTopup(){
   if(!saved||!cwServerSession.email)return;
   if((cwServerSession.creditBalance||0)<200){
     _autoCharging=true;
-    showToast('Auto top-up: charging $'+(saved.amount/100).toFixed(2)+'...',3000);
+    var packId=saved.amount<=500?'pack_5':saved.amount<=1000?'pack_10':'pack_25';
+    showToast('Low balance — redirecting to add credits…',3000);
     try{
-      var rsp=await fetch('/api/credits/auto-charge',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:saved.amount})});
+      var rsp=await fetch('/api/credits/topup',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({pack:packId})});
       var data=await rsp.json().catch(function(){return null});
-      if(data&&data.ok){
-        cwServerSession.creditBalance=data.balance_cents||0;
-        updateCreditBadge();
-        showToast('Auto top-up: $'+(saved.amount/100).toFixed(2)+' charged!',3000);
-      }else if(data&&data.error==='NO_SAVED_CARD'){
-        showToast('No saved card. Set up auto top-up in your profile.',4000);
-        localStorage.removeItem('cw_autoTopup');
+      if(data&&data.ok&&data.checkoutUrl){
+        window.location.href=data.checkoutUrl;
       }else{
-        showToast('Auto top-up failed: '+(data&&data.detail||data&&data.error||'Unknown error'),4000);
+        showToast('Could not start checkout: '+(data&&data.error||'error'),4000);
       }
     }catch(e){showToast('Auto top-up error',3000)}
     _autoCharging=false;

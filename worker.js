@@ -126,11 +126,19 @@ const CREDIT_PRICING = {
   FREE_SIGNUP_GRANT_CENTS: 150,       // $1.50 free credit on signup
 };
 
-const STRIPE_PACKS = {
-  pack_5:  { amount_cents: 500,  label: "$5 credit pack" },
-  pack_10: { amount_cents: 1000, label: "$10 credit pack" },
-  pack_25: { amount_cents: 2500, label: "$25 credit pack" },
+/* ── Polar product mapping ── */
+const POLAR_PACKS = {
+  pack_5:  { product_id: "7bd95b3c-100d-46a9-887c-50c3ee1a2b19", amount_cents: 500,  label: "$5 credit pack" },
+  pack_10: { product_id: "816fcdb6-707b-4286-bc44-2aaa8b07584a", amount_cents: 1000, label: "$10 credit pack" },
+  pack_25: { product_id: "74e79ddc-8e62-4a4d-84dc-14cc6122bb9d", amount_cents: 2500, label: "$25 credit pack" },
 };
+
+/* ── Stripe packs (kept for reference) ── */
+// const STRIPE_PACKS = {
+//   pack_5:  { amount_cents: 500,  label: "$5 credit pack" },
+//   pack_10: { amount_cents: 1000, label: "$10 credit pack" },
+//   pack_25: { amount_cents: 2500, label: "$25 credit pack" },
+// };
 
 async function getCreditBalance(db, email) {
   if (!db || !email) return { balance_cents: 0 };
@@ -166,8 +174,110 @@ async function handleCreditsBalance(request, env) {
 }
 
 /* =========================================================
-   STRIPE INTEGRATION
+   POLAR INTEGRATION
 ========================================================= */
+
+async function verifyPolarWebhook(body, headers, secret) {
+  // Standard Webhooks spec: HMAC-SHA256 over "msg_id.timestamp.body"
+  // Secret is base64-encoded (after stripping optional "whsec_" prefix)
+  try {
+    const msgId = headers.get("webhook-id") || "";
+    const timestamp = headers.get("webhook-timestamp") || "";
+    const signatures = headers.get("webhook-signature") || "";
+    if (!msgId || !timestamp || !signatures) return false;
+    // Reject if timestamp is more than 5 minutes old
+    if (Math.abs(Date.now() / 1000 - parseInt(timestamp)) > 300) return false;
+    // Strip known prefixes (whsec_ or polar_whs_), then base64-decode the secret
+    const secretRaw = secret.startsWith("whsec_") ? secret.slice(6) : secret.startsWith("polar_whs_") ? secret.slice(10) : secret;
+    const keyBytes = Uint8Array.from(atob(secretRaw), c => c.charCodeAt(0));
+    const signedContent = msgId + "." + timestamp + "." + body;
+    const key = await crypto.subtle.importKey(
+      "raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    );
+    const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(signedContent));
+    const expected = btoa(String.fromCharCode(...new Uint8Array(sig)));
+    // Check each space-separated signature (supports key rotation)
+    for (const s of signatures.split(" ")) {
+      const val = s.startsWith("v1,") ? s.slice(3) : null;
+      if (val && val === expected) return true;
+    }
+    return false;
+  } catch (e) { console.error("polar webhook verify error:", e); return false; }
+}
+
+async function handleCreditsTopup(request, env) {
+  const email = await resolveCurrentUser(request, env);
+  if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
+  const polarKey = String(env.POLAR_ACCESS_TOKEN || "").trim();
+  if (!polarKey) return json({ ok: false, error: "POLAR_NOT_CONFIGURED" }, 500);
+  const payload = await request.json().catch(() => ({}));
+  const packId = String(payload.pack || "").trim();
+  const pack = POLAR_PACKS[packId];
+  if (!pack) return json({ ok: false, error: "INVALID_PACK", valid: Object.keys(POLAR_PACKS) }, 400);
+
+  const origin = new URL(request.url).origin;
+  const rsp = await fetch("https://api.polar.sh/v1/checkouts/", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + polarKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      products: [pack.product_id],
+      customer_email: email,
+      success_url: origin + "/?payment=success",
+      metadata: { email, pack: packId, amount_cents: String(pack.amount_cents) },
+    }),
+  });
+  const session = await rsp.json().catch(() => ({}));
+  if (!rsp.ok || !session.url) return json({ ok: false, error: "POLAR_ERROR", detail: session.detail || "" }, 502);
+  return json({ ok: true, checkoutUrl: session.url, sessionId: session.id });
+}
+
+async function handlePolarWebhook(request, env) {
+  const webhookSecret = String(env.POLAR_WEBHOOK_SECRET || "").trim();
+  if (!webhookSecret) return json({ error: "Not configured" }, 500);
+  const body = await request.text();
+  const verified = await verifyPolarWebhook(body, request.headers, webhookSecret);
+  if (!verified) return json({ error: "Invalid signature" }, 400);
+
+  const event = JSON.parse(body);
+  // Handle order.paid — credit the user's account
+  if (event.type === "order.paid") {
+    const order = event.data;
+    const email = ((order.metadata && order.metadata.email) || (order.customer && order.customer.email) || "").toLowerCase();
+    const packId = (order.metadata && order.metadata.pack) || "";
+    const amountCents = parseInt((order.metadata && order.metadata.amount_cents) || "0") || (order.total_amount || 0);
+    if (!email || !amountCents || !env.DB) return json({ ok: true, skipped: "missing_data" });
+
+    // Idempotency: check if this order was already processed
+    try {
+      const existing = await env.DB.prepare(
+        "SELECT id FROM credit_transactions WHERE stripe_session_id = ?"
+      ).bind(order.id).first();
+      if (existing) return json({ ok: true, skipped: "already_processed" });
+    } catch (e) {}
+
+    const pack = POLAR_PACKS[packId];
+    try {
+      await env.DB.prepare(
+        `INSERT INTO credit_transactions (id, email, amount_cents, type, description, stripe_session_id, created_at)
+         VALUES (?, ?, ?, 'topup', ?, ?, datetime('now'))`
+      ).bind(
+        generateId("ctx"), email, amountCents,
+        pack ? pack.label : "$" + (amountCents / 100).toFixed(2) + " credit pack",
+        order.id
+      ).run();
+    } catch (e) { console.error("polar webhook insert:", e); }
+
+    await logUsageEvent(env.DB, { email, eventType: "credit_topup", meta: { packId, amountCents, orderId: order.id } });
+  }
+  return json({ ok: true });
+}
+
+/* =========================================================
+   STRIPE INTEGRATION (commented out — kept for reference)
+=========================================================
 
 async function verifyStripeSignature(payload, sigHeader, secret) {
   try {
@@ -191,7 +301,7 @@ async function verifyStripeSignature(payload, sigHeader, secret) {
   } catch (e) { return false; }
 }
 
-async function handleCreditsTopup(request, env) {
+async function handleCreditsTopup_STRIPE(request, env) {
   const email = await resolveCurrentUser(request, env);
   if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
   const stripeKey = String(env.STRIPE_SECRET_KEY || "").trim();
@@ -200,7 +310,6 @@ async function handleCreditsTopup(request, env) {
   const packId = String(payload.pack || "").trim();
   const pack = STRIPE_PACKS[packId];
   if (!pack) return json({ ok: false, error: "INVALID_PACK", valid: Object.keys(STRIPE_PACKS) }, 400);
-
   const customerId = await getOrCreateStripeCustomer(env.DB, email, stripeKey);
   const origin = new URL(request.url).origin;
   const params = new URLSearchParams();
@@ -216,13 +325,9 @@ async function handleCreditsTopup(request, env) {
   params.append("metadata[email]", email);
   params.append("metadata[pack]", packId);
   params.append("metadata[amount_cents]", String(pack.amount_cents));
-
   const rsp = await fetch("https://api.stripe.com/v1/checkout/sessions", {
     method: "POST",
-    headers: {
-      "Authorization": "Bearer " + stripeKey,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
+    headers: { "Authorization": "Bearer " + stripeKey, "Content-Type": "application/x-www-form-urlencoded" },
     body: params.toString(),
   });
   const session = await rsp.json().catch(() => ({}));
@@ -240,14 +345,12 @@ async function stripeRequest(path, params, stripeKey) {
 }
 
 async function getOrCreateStripeCustomer(db, email, stripeKey) {
-  // Check if we have a stored customer ID
   if (db) {
     try {
       const row = await db.prepare("SELECT stripe_customer_id FROM users WHERE lower(email) = ?").bind(email.toLowerCase()).first();
       if (row && row.stripe_customer_id) return row.stripe_customer_id;
-    } catch (e) { /* column might not exist */ }
+    } catch (e) {}
   }
-  // Search Stripe for existing customer
   const searchRsp = await fetch("https://api.stripe.com/v1/customers?email=" + encodeURIComponent(email) + "&limit=1", {
     headers: { "Authorization": "Bearer " + stripeKey },
   });
@@ -257,7 +360,6 @@ async function getOrCreateStripeCustomer(db, email, stripeKey) {
     if (db) try { await db.prepare("UPDATE users SET stripe_customer_id = ? WHERE lower(email) = ?").bind(custId, email.toLowerCase()).run(); } catch (e) {}
     return custId;
   }
-  // Create new customer
   const params = new URLSearchParams();
   params.append("email", email);
   const cust = await stripeRequest("/customers", params, stripeKey);
@@ -267,155 +369,11 @@ async function getOrCreateStripeCustomer(db, email, stripeKey) {
   return cust.id || null;
 }
 
-async function handleSetupCard(request, env) {
-  const email = await resolveCurrentUser(request, env);
-  if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
-  const stripeKey = String(env.STRIPE_SECRET_KEY || "").trim();
-  if (!stripeKey) return json({ ok: false, error: "STRIPE_NOT_CONFIGURED" }, 500);
+async function handleSetupCard(request, env) { ... }
+async function handleAutoCharge(request, env) { ... }
+async function handleStripeWebhook(request, env) { ... }
 
-  const customerId = await getOrCreateStripeCustomer(env.DB, email, stripeKey);
-  if (!customerId) return json({ ok: false, error: "CUSTOMER_CREATE_FAILED" }, 500);
-
-  const payload = await request.json().catch(() => ({}));
-  const autoTopupCents = parseInt(payload.autoTopupAmount || "2500") || 2500;
-
-  // Create SetupIntent for saving card
-  const origin = new URL(request.url).origin;
-  const params = new URLSearchParams();
-  params.append("mode", "setup");
-  params.append("customer", customerId);
-  params.append("payment_method_types[0]", "card");
-  params.append("success_url", origin + "/?card_saved=success");
-  params.append("cancel_url", origin + "/?card_saved=cancel");
-  params.append("metadata[email]", email);
-  params.append("metadata[auto_topup_cents]", String(autoTopupCents));
-
-  const session = await stripeRequest("/checkout/sessions", params, stripeKey);
-  if (!session.url) return json({ ok: false, error: "SETUP_SESSION_FAILED", detail: session.error && session.error.message }, 502);
-  return json({ ok: true, checkoutUrl: session.url });
-}
-
-async function handleAutoCharge(request, env) {
-  // Called internally or via webhook — charges the saved card
-  const email = await resolveCurrentUser(request, env);
-  if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
-  const stripeKey = String(env.STRIPE_SECRET_KEY || "").trim();
-  if (!stripeKey) return json({ ok: false, error: "STRIPE_NOT_CONFIGURED" }, 500);
-
-  const payload = await request.json().catch(() => ({}));
-  const amountCents = parseInt(payload.amount || "2500") || 2500;
-
-  const customerId = await getOrCreateStripeCustomer(env.DB, email, stripeKey);
-  if (!customerId) return json({ ok: false, error: "NO_CUSTOMER" }, 400);
-
-  // Get default payment method
-  const custRsp = await fetch("https://api.stripe.com/v1/customers/" + customerId, {
-    headers: { "Authorization": "Bearer " + stripeKey },
-  });
-  const custData = await custRsp.json().catch(() => ({}));
-  const pmId = (custData.invoice_settings && custData.invoice_settings.default_payment_method) || custData.default_source;
-
-  if (!pmId) {
-    // Try to get any saved payment method
-    const pmRsp = await fetch("https://api.stripe.com/v1/payment_methods?customer=" + customerId + "&type=card&limit=1", {
-      headers: { "Authorization": "Bearer " + stripeKey },
-    });
-    const pmData = await pmRsp.json().catch(() => ({}));
-    if (!pmData.data || !pmData.data.length) return json({ ok: false, error: "NO_SAVED_CARD" }, 400);
-    var paymentMethodId = pmData.data[0].id;
-  } else {
-    var paymentMethodId = pmId;
-  }
-
-  // Create PaymentIntent and charge immediately
-  const params = new URLSearchParams();
-  params.append("amount", String(amountCents));
-  params.append("currency", "usd");
-  params.append("customer", customerId);
-  params.append("payment_method", paymentMethodId);
-  params.append("off_session", "true");
-  params.append("confirm", "true");
-  params.append("metadata[email]", email);
-  params.append("metadata[auto_topup]", "true");
-  params.append("metadata[amount_cents]", String(amountCents));
-
-  const pi = await stripeRequest("/payment_intents", params, stripeKey);
-  if (pi.status === "succeeded") {
-    // Credit the account
-    const packLabel = "$" + (amountCents / 100).toFixed(2) + " auto top-up";
-    try {
-      await env.DB.prepare(
-        `INSERT INTO credit_transactions (id, email, amount_cents, type, description, stripe_session_id, created_at)
-         VALUES (?, ?, ?, 'topup', ?, ?, datetime('now'))`
-      ).bind(generateId("ctx"), email.toLowerCase(), amountCents, packLabel, pi.id).run();
-    } catch (e) { console.error("auto-charge credit insert:", e); }
-    const { balance_cents } = await getCreditBalance(env.DB, email);
-    return json({ ok: true, charged: amountCents, balance_cents });
-  }
-
-  return json({ ok: false, error: "CHARGE_FAILED", detail: pi.error && pi.error.message, status: pi.status }, 402);
-}
-
-async function handleStripeWebhook(request, env) {
-  const webhookSecret = String(env.STRIPE_WEBHOOK_SECRET || "").trim();
-  if (!webhookSecret) return json({ error: "Not configured" }, 500);
-  const body = await request.text();
-  const sig = request.headers.get("stripe-signature") || "";
-  const verified = await verifyStripeSignature(body, sig, webhookSecret);
-  if (!verified) return json({ error: "Invalid signature" }, 400);
-
-  const event = JSON.parse(body);
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object;
-    const email = ((session.metadata && session.metadata.email) || session.customer_email || "").toLowerCase();
-
-    if (session.mode === "setup") {
-      // Card saved — set the setup_intent's payment method as default on the customer
-      const stripeKey = String(env.STRIPE_SECRET_KEY || "").trim();
-      if (stripeKey && session.setup_intent && session.customer) {
-        try {
-          const siRsp = await fetch("https://api.stripe.com/v1/setup_intents/" + session.setup_intent, {
-            headers: { "Authorization": "Bearer " + stripeKey },
-          });
-          const si = await siRsp.json().catch(() => ({}));
-          if (si.payment_method) {
-            const params = new URLSearchParams();
-            params.append("invoice_settings[default_payment_method]", si.payment_method);
-            await stripeRequest("/customers/" + session.customer, params, stripeKey);
-          }
-        } catch (e) { console.error("setup webhook set default pm:", e); }
-      }
-      return json({ ok: true, action: "card_saved" });
-    }
-
-    // Payment mode — credit the account
-    const packId = (session.metadata && session.metadata.pack) || "";
-    const amountCents = parseInt((session.metadata && session.metadata.amount_cents) || "0") || 0;
-    if (!email || !amountCents || !env.DB) return json({ ok: true, skipped: "missing_data" });
-
-    try {
-      const existing = await env.DB.prepare(
-        "SELECT id FROM credit_transactions WHERE stripe_session_id = ?"
-      ).bind(session.id).first();
-      if (existing) return json({ ok: true, skipped: "already_processed" });
-    } catch (e) {}
-
-    const pack = STRIPE_PACKS[packId];
-    try {
-      await env.DB.prepare(
-        `INSERT INTO credit_transactions (id, email, amount_cents, type, description, stripe_session_id, created_at)
-         VALUES (?, ?, ?, 'topup', ?, ?, datetime('now'))`
-      ).bind(
-        generateId("ctx"), email, amountCents,
-        pack ? pack.label : "$" + (amountCents / 100).toFixed(2) + " credit pack",
-        session.id
-      ).run();
-    } catch (e) { console.error("stripe webhook insert:", e); }
-
-    await logUsageEvent(env.DB, { email, eventType: "credit_topup", meta: { packId, amountCents, sessionId: session.id } });
-  }
-  return json({ ok: true });
-}
+END STRIPE COMMENTED BLOCK */
 
 /* =========================================================
    SESSION STATE
@@ -2203,16 +2161,18 @@ export default {
     if (url.pathname === "/api/credits/consume" && request.method === "POST") return handleCreditsConsume(request, env);
     if (url.pathname === "/api/credits/balance" && request.method === "GET") return handleCreditsBalance(request, env);
     if (url.pathname === "/api/credits/topup" && request.method === "POST") return handleCreditsTopup(request, env);
-    if (url.pathname === "/api/stripe-webhook" && request.method === "POST") return handleStripeWebhook(request, env);
-    if (url.pathname === "/api/credits/setup-card" && request.method === "POST") return handleSetupCard(request, env);
-    if (url.pathname === "/api/credits/auto-charge" && request.method === "POST") return handleAutoCharge(request, env);
+    if (url.pathname === "/api/polar-webhook" && request.method === "POST") return handlePolarWebhook(request, env);
+    // Stripe routes (disabled — kept for reference):
+    // if (url.pathname === "/api/stripe-webhook" && request.method === "POST") return handleStripeWebhook(request, env);
+    // if (url.pathname === "/api/credits/setup-card" && request.method === "POST") return handleSetupCard(request, env);
+    // if (url.pathname === "/api/credits/auto-charge" && request.method === "POST") return handleAutoCharge(request, env);
     if (url.pathname === "/api/invite/redeem" && request.method === "POST") return handleRedeemInvite(request, env);
     if (url.pathname === "/api/admin/create-invite" && request.method === "POST") return handleCreateInvite(request, env);
     if (url.pathname === "/api/admin/list-invites" && request.method === "GET") return handleListInvites(request, env);
     if (url.pathname === "/api/admin/revoke-invite" && request.method === "POST") return handleRevokeInvite(request, env);
     if (url.pathname === "/api/merge-characters" && request.method === "POST") return handleMergeCharacters(request, env);
 
-    const apiPaths = ["/api/tts", "/api/claude-parse-script", "/api/label-script", "/api/parse-screenplay", "/api/parse-script", "/api/validate-characters", "/api/classify-lines", "/api/merge-characters", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/", "/api/stripe-webhook", "/api/invite/redeem", "/api/admin/"];
+    const apiPaths = ["/api/tts", "/api/claude-parse-script", "/api/label-script", "/api/parse-screenplay", "/api/parse-script", "/api/validate-characters", "/api/classify-lines", "/api/merge-characters", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/", "/api/polar-webhook", "/api/invite/redeem", "/api/admin/"];
     if (apiPaths.some(p => url.pathname.startsWith(p))) {
       return json({ error: "Method not allowed" }, 405);
     }
