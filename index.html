@@ -6632,12 +6632,18 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   initCardTilt();
   await fetchServerSession();
   if(isServerAdmin()){dismissPaywall();closePaywallModal();}
-  // Handle Stripe payment return
+  // Handle payment return
   var urlParams=new URLSearchParams(window.location.search);
   var paymentParam=urlParams.get('payment');
   var cardSaved=urlParams.get('card_saved');
   if(paymentParam==='success'){
-    setTimeout(async function(){await refreshCreditBalance();showToast(tt('paymentSuccess','Payment confirmed! Credits added.'),5000);history.replaceState({},'','/');},1500);
+    setTimeout(async function(){
+      // Reconcile orders from Polar in case webhook hasn't arrived yet
+      try{await fetch('/api/credits/reconcile',{method:'POST',credentials:'same-origin'})}catch(e){}
+      await refreshCreditBalance();
+      showToast(tt('paymentSuccess','Payment confirmed! Credits added.'),5000);
+      history.replaceState({},'','/');
+    },2000);
   }else if(paymentParam==='cancel'){
     showToast(tt('paymentCancelled','Payment cancelled.'),3000);history.replaceState({},'','/');
   }else if(cardSaved==='success'){

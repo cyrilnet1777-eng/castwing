@@ -234,6 +234,45 @@ async function handleCreditsTopup(request, env) {
   return json({ ok: true, checkoutUrl: session.url, sessionId: session.id });
 }
 
+async function handlePolarReconcile(request, env) {
+  // Called after checkout redirect — fetches recent orders from Polar and credits any missing ones
+  const email = await resolveCurrentUser(request, env);
+  if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
+  const polarKey = String(env.POLAR_ACCESS_TOKEN || "").trim();
+  if (!polarKey || !env.DB) return json({ ok: false, error: "NOT_CONFIGURED" }, 500);
+  try {
+    const rsp = await fetch("https://api.polar.sh/v1/orders/?limit=10&sorting=-created_at", {
+      headers: { "Authorization": "Bearer " + polarKey },
+    });
+    const data = await rsp.json().catch(() => ({}));
+    if (!data.items) return json({ ok: false, error: "POLAR_API_ERROR" }, 502);
+    let credited = 0;
+    for (const order of data.items) {
+      if (order.status !== "paid") continue;
+      const orderEmail = ((order.metadata && order.metadata.email) || (order.customer && order.customer.email) || "").toLowerCase();
+      if (orderEmail !== email.toLowerCase()) continue;
+      const amountCents = parseInt((order.metadata && order.metadata.amount_cents) || "0") || (order.product_price && order.product_price.price_amount) || 0;
+      if (!amountCents) continue;
+      // Idempotency check
+      try {
+        const existing = await env.DB.prepare("SELECT id FROM credit_transactions WHERE stripe_session_id = ?").bind(order.id).first();
+        if (existing) continue;
+      } catch (e) {}
+      const packId = (order.metadata && order.metadata.pack) || "";
+      const pack = POLAR_PACKS[packId];
+      try {
+        await env.DB.prepare(
+          `INSERT INTO credit_transactions (id, email, amount_cents, type, description, stripe_session_id, created_at)
+           VALUES (?, ?, ?, 'topup', ?, ?, datetime('now'))`
+        ).bind(generateId("ctx"), orderEmail, amountCents, pack ? pack.label : "$" + (amountCents / 100).toFixed(2) + " credit pack", order.id).run();
+        credited++;
+      } catch (e) { console.error("reconcile insert:", e); }
+    }
+    const { balance_cents } = await getCreditBalance(env.DB, email);
+    return json({ ok: true, credited, balance_cents });
+  } catch (e) { return json({ ok: false, error: "RECONCILE_ERROR" }, 500); }
+}
+
 async function handlePolarWebhook(request, env) {
   const webhookSecret = String(env.POLAR_WEBHOOK_SECRET || "").trim();
   if (!webhookSecret) return json({ error: "Not configured" }, 500);
@@ -2161,6 +2200,7 @@ export default {
     if (url.pathname === "/api/credits/consume" && request.method === "POST") return handleCreditsConsume(request, env);
     if (url.pathname === "/api/credits/balance" && request.method === "GET") return handleCreditsBalance(request, env);
     if (url.pathname === "/api/credits/topup" && request.method === "POST") return handleCreditsTopup(request, env);
+    if (url.pathname === "/api/credits/reconcile" && request.method === "POST") return handlePolarReconcile(request, env);
     if (url.pathname === "/api/polar-webhook" && request.method === "POST") return handlePolarWebhook(request, env);
     // Stripe routes (disabled — kept for reference):
     // if (url.pathname === "/api/stripe-webhook" && request.method === "POST") return handleStripeWebhook(request, env);
