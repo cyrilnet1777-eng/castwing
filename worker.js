@@ -541,11 +541,20 @@ async function handleTTS(request, env) {
       const ttsRateKey = `rate:tts:${email}`;
       const ttsCalls = parseInt(await env.AUTH_KV.get(ttsRateKey) || "0");
       if (ttsCalls >= 30) {
-        // Refund the pre-debit
         if (_ttsDebitId && env.DB) try { await env.DB.prepare("DELETE FROM credit_transactions WHERE id = ?").bind(_ttsDebitId).run(); } catch(e) {}
         return json({ ok: false, error: "RATE_LIMIT", message: "Too many requests" }, 429);
       }
       await env.AUTH_KV.put(ttsRateKey, String(ttsCalls + 1), { expirationTtl: 60 });
+    }
+    // Global rate limit: max 500 TTS calls per minute across all users
+    if (env.AUTH_KV) {
+      const globalKey = "rate:tts:global";
+      const globalCalls = parseInt(await env.AUTH_KV.get(globalKey) || "0");
+      if (globalCalls >= 500) {
+        if (_ttsDebitId && env.DB) try { await env.DB.prepare("DELETE FROM credit_transactions WHERE id = ?").bind(_ttsDebitId).run(); } catch(e) {}
+        return json({ ok: false, error: "RATE_LIMIT", message: "High demand, try again in a moment" }, 429);
+      }
+      await env.AUTH_KV.put(globalKey, String(globalCalls + 1), { expirationTtl: 60 });
     }
 
     const emotionMap = {
@@ -1211,6 +1220,35 @@ async function handleCreditsConsume(request, env) {
   });
 
   return json({ ok: true, creditsRemaining: remaining - 1 });
+}
+
+/* =========================================================
+   ANTHROPIC CONCURRENCY SEMAPHORE
+========================================================= */
+
+const ANTHROPIC_MAX_CONCURRENT = 50;
+
+async function acquireAnthropicSlot(env) {
+  if (!env.AUTH_KV) return true;
+  const key = "semaphore:anthropic";
+  const current = parseInt(await env.AUTH_KV.get(key) || "0");
+  if (current >= ANTHROPIC_MAX_CONCURRENT) return false;
+  await env.AUTH_KV.put(key, String(current + 1), { expirationTtl: 180 });
+  return true;
+}
+
+async function releaseAnthropicSlot(env) {
+  if (!env.AUTH_KV) return;
+  const key = "semaphore:anthropic";
+  const current = parseInt(await env.AUTH_KV.get(key) || "0");
+  await env.AUTH_KV.put(key, String(Math.max(0, current - 1)), { expirationTtl: 180 });
+}
+
+async function withAnthropicSlot(env, handler, request, corsHeaders) {
+  const acquired = await acquireAnthropicSlot(env);
+  if (!acquired) return json({ ok: false, error: "SERVER_BUSY", message: "High demand, please try again" }, 503, corsHeaders);
+  try { return await handler(request, env); }
+  finally { await releaseAnthropicSlot(env); }
 }
 
 /* =========================================================
@@ -2255,16 +2293,16 @@ export default {
     }
 
     if (url.pathname === "/api/tts" && request.method === "POST") return handleTTS(request, env);
-    if (url.pathname === "/api/label-script") return handleLabelScript(request, env);
-    if (url.pathname === "/api/claude-parse-script") return handleClaudeParseScript(request, env);
+    if (url.pathname === "/api/label-script") return withAnthropicSlot(env, handleLabelScript, request);
+    if (url.pathname === "/api/claude-parse-script") return withAnthropicSlot(env, handleClaudeParseScript, request);
     if (url.pathname === "/api/parse-screenplay") {
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: PARSE_SCREENPLAY_CORS });
-      if (request.method === "POST") return handleParseScreenplay(request, env);
+      if (request.method === "POST") return withAnthropicSlot(env, handleParseScreenplay, request, PARSE_SCREENPLAY_CORS);
       return json({ error: "Method not allowed" }, 405, PARSE_SCREENPLAY_CORS);
     }
-    if (url.pathname === "/api/parse-script" && request.method === "POST") return handleParseScript(request, env);
-    if (url.pathname === "/api/validate-characters" && request.method === "POST") return handleValidateCharacters(request, env);
-    if (url.pathname === "/api/classify-lines" && request.method === "POST") return handleClassifyLines(request, env);
+    if (url.pathname === "/api/parse-script" && request.method === "POST") return withAnthropicSlot(env, handleParseScript, request);
+    if (url.pathname === "/api/validate-characters" && request.method === "POST") return withAnthropicSlot(env, handleValidateCharacters, request);
+    if (url.pathname === "/api/classify-lines" && request.method === "POST") return withAnthropicSlot(env, handleClassifyLines, request);
     if (url.pathname === "/api/auth" && request.method === "POST") return handleAuth(request, env);
     if (url.pathname === "/api/auth/google" && request.method === "POST") return handleGoogleAuth(request, env);
     if (url.pathname === "/api/session" && request.method === "GET") return handleSession(request, env);
@@ -2284,7 +2322,7 @@ export default {
     if (url.pathname === "/api/admin/create-invite" && request.method === "POST") return handleCreateInvite(request, env);
     if (url.pathname === "/api/admin/list-invites" && request.method === "GET") return handleListInvites(request, env);
     if (url.pathname === "/api/admin/revoke-invite" && request.method === "POST") return handleRevokeInvite(request, env);
-    if (url.pathname === "/api/merge-characters" && request.method === "POST") return handleMergeCharacters(request, env);
+    if (url.pathname === "/api/merge-characters" && request.method === "POST") return withAnthropicSlot(env, handleMergeCharacters, request);
 
     const apiPaths = ["/api/tts", "/api/claude-parse-script", "/api/label-script", "/api/parse-screenplay", "/api/parse-script", "/api/validate-characters", "/api/classify-lines", "/api/merge-characters", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/", "/api/polar-webhook", "/api/invite/redeem", "/api/admin/"];
     if (apiPaths.some(p => url.pathname.startsWith(p))) {
