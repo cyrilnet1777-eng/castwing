@@ -179,17 +179,28 @@ async function handleCreditsBalance(request, env) {
 
 async function verifyPolarWebhook(body, headers, secret) {
   // Standard Webhooks spec: HMAC-SHA256 over "msg_id.timestamp.body"
-  // Secret is base64-encoded (after stripping optional "whsec_" prefix)
+  // Secret is base64-encoded (after stripping prefix)
   try {
     const msgId = headers.get("webhook-id") || "";
     const timestamp = headers.get("webhook-timestamp") || "";
     const signatures = headers.get("webhook-signature") || "";
-    if (!msgId || !timestamp || !signatures) return false;
+    if (!msgId || !timestamp || !signatures) {
+      console.error("[polar-wh] missing headers:", { msgId: !!msgId, timestamp: !!timestamp, signatures: !!signatures });
+      return false;
+    }
     // Reject if timestamp is more than 5 minutes old
-    if (Math.abs(Date.now() / 1000 - parseInt(timestamp)) > 300) return false;
-    // Strip known prefixes (whsec_ or polar_whs_), then base64-decode the secret
-    const secretRaw = secret.startsWith("whsec_") ? secret.slice(6) : secret.startsWith("polar_whs_") ? secret.slice(10) : secret;
-    const keyBytes = Uint8Array.from(atob(secretRaw), c => c.charCodeAt(0));
+    const age = Math.abs(Date.now() / 1000 - parseInt(timestamp));
+    if (age > 300) {
+      console.error("[polar-wh] timestamp too old:", age, "seconds");
+      return false;
+    }
+    // Strip known prefixes, then base64-decode the secret
+    let secretB64 = secret;
+    if (secretB64.startsWith("whsec_")) secretB64 = secretB64.slice(6);
+    else if (secretB64.startsWith("polar_whs_")) secretB64 = secretB64.slice(10);
+    // Ensure proper base64 padding
+    while (secretB64.length % 4 !== 0) secretB64 += "=";
+    const keyBytes = Uint8Array.from(atob(secretB64), c => c.charCodeAt(0));
     const signedContent = msgId + "." + timestamp + "." + body;
     const key = await crypto.subtle.importKey(
       "raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
@@ -201,8 +212,9 @@ async function verifyPolarWebhook(body, headers, secret) {
       const val = s.startsWith("v1,") ? s.slice(3) : null;
       if (val && val === expected) return true;
     }
+    console.error("[polar-wh] signature mismatch. expected:", expected, "got:", signatures);
     return false;
-  } catch (e) { console.error("polar webhook verify error:", e); return false; }
+  } catch (e) { console.error("[polar-wh] verify error:", e); return false; }
 }
 
 async function handleCreditsTopup(request, env) {
