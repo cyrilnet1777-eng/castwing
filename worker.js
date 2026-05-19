@@ -2022,6 +2022,17 @@ async function ensureD1Tables(db) {
     try { await db.prepare(sql).run(); } catch (ee) { /* ignore */ }
   }
   try { await db.prepare("ALTER TABLE users ADD COLUMN stripe_customer_id TEXT").run(); } catch (e) { /* already exists */ }
+  // Performance indexes
+  const indexes = [
+    `CREATE INDEX IF NOT EXISTS idx_credit_email ON credit_transactions(email)`,
+    `CREATE INDEX IF NOT EXISTS idx_credit_stripe_id ON credit_transactions(stripe_session_id) WHERE stripe_session_id IS NOT NULL`,
+    `CREATE INDEX IF NOT EXISTS idx_credit_created ON credit_transactions(email, created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_invite_redemptions_email ON invite_redemptions(email)`,
+    `CREATE INDEX IF NOT EXISTS idx_usage_events_email ON usage_events(email, created_at DESC)`,
+  ];
+  for (const idx of indexes) {
+    try { await db.prepare(idx).run(); } catch (e) { /* ignore */ }
+  }
 }
 
 /* =========================================================

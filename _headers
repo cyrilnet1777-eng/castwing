@@ -1,9 +1,17 @@
 /
-  Cache-Control: no-cache, no-store, must-revalidate, max-age=0
-  Pragma: no-cache
-  Expires: 0
+  Cache-Control: public, max-age=300, must-revalidate
 
 /index.html
-  Cache-Control: no-cache, no-store, must-revalidate, max-age=0
-  Pragma: no-cache
-  Expires: 0
+  Cache-Control: public, max-age=300, must-revalidate
+
+/*.svg
+  Cache-Control: public, max-age=86400, immutable
+
+/*.png
+  Cache-Control: public, max-age=86400, immutable
+
+/*.jpg
+  Cache-Control: public, max-age=86400, immutable
+
+/sounds/*
+  Cache-Control: public, max-age=86400, immutable
