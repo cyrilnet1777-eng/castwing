@@ -73,18 +73,27 @@ Partners join directly via the "Join a session" link on the landing page (no imp
 
 ### Credit system
 - Visitors: 2 free TTS lines. Signed-up: $1.50 free credit.
-- Top-up: $5/$10/$25 via Stripe. Auto top-up with saved card.
+- Top-up: $5/$10/$25 via **Polar.sh** (Merchant of Record, handles tax).
+- Auto top-up: when enabled, redirects to Polar checkout when balance drops below $2.
 - $0.30 per 1K characters. PDF parsing and partner mode are free.
+- Atomic debit-before-call prevents concurrent overdraft.
 
 ### Internationalization
 - **25 languages**: French, English, Spanish, Italian, Chinese, Arabic, Hebrew, Thai, Vietnamese, Polish, Dutch, Swedish, Norwegian, Greek, Czech, Bahasa Indonesia, Bahasa Melayu, Urdu, German, Portuguese, Japanese, Korean, Hindi, Turkish, Russian.
 - RTL support for Arabic, Hebrew, and Urdu.
 - Auto-detects browser language first, geo/IP as fallback.
 
-### Auth
-- Email verification codes via **Resend**
+### Auth & security
+- Email verification codes via **Resend** (rate-limited: 3 codes/15min, 5 verify attempts/10min)
 - Google Sign-In (OAuth) — requires Google Cloud project with `citizentape.com` as authorized origin
-- Session cookies (HttpOnly, Secure, SameSite=Lax)
+- Session cookies (HttpOnly, Secure, SameSite=Lax, 30-day expiry)
+- All AI parsing and TTS endpoints require authentication
+- CORS restricted to `https://citizentape.com`
+- TTS rate-limited to 30 calls/min per user
+- XSS-safe: all user-controlled innerHTML escaped via `escHtml()`
+
+### Analytics
+- **Google Analytics** (G-90E8W237ZN) tracks: screen views, sign up/login, session starts, script imports, checkout/purchase, language changes, share actions
 
 ## Architecture
 
@@ -109,8 +118,10 @@ AGENTS.md                    AI assistant instructions
 ```
 
 ### Secrets (Cloudflare Worker dashboard)
-- `ELEVENLABS_API_KEY`, `ANTHROPIC_API_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`
+- `ELEVENLABS_API_KEY`, `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `AUTH_CODE_SECRET`
+- `POLAR_ACCESS_TOKEN`, `POLAR_WEBHOOK_SECRET`
 - `AUTH_FROM_EMAIL` — set in wrangler.toml as plain var (`hello@citizentape.com`)
+- Stripe secrets kept but inactive: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
 - For staging: set as **Encrypt** variables in dashboard, deploy with `--keep-vars`
 
 ### Local development
@@ -119,9 +130,11 @@ npx wrangler dev
 ```
 Create `.dev.vars` with your API keys.
 
-### Stripe webhook
-- Endpoint: `https://citizentape.com/api/stripe-webhook`
-- Event: `checkout.session.completed`
+### Polar webhook
+- Endpoint: `https://citizentape.com/api/polar-webhook`
+- Event: `order.paid`
+- Signature: Standard Webhooks HMAC-SHA256 (secret = raw UTF-8 bytes of full `polar_whs_*` string)
+- Fallback: `/api/credits/reconcile` fetches recent orders from Polar API on payment return
 
 ### Google Auth setup
 Google Sign-In requires a Google Cloud project with:
