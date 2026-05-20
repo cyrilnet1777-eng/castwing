@@ -1351,7 +1351,10 @@ async function activateMeteredBilling(db, email, polarCustomerId) {
 
 async function sendPolarUsageEvent(env, email, charCount) {
   const polarKey = String(env.POLAR_ACCESS_TOKEN || "").trim();
-  if (!polarKey || !email) return;
+  if (!polarKey || !email) {
+    if (env.DB) try { await logUsageEvent(env.DB, { email: email || "unknown", eventType: "polar_skip", meta: { reason: !polarKey ? "no_token" : "no_email", charCount } }); } catch(_e){}
+    return;
+  }
   // Get polar customer ID
   let customerId = null;
   if (env.DB) {
@@ -1363,14 +1366,21 @@ async function sendPolarUsageEvent(env, email, charCount) {
     // Use Polar customer_id (UUID) if available, otherwise fall back to external_customer_id (email)
     if (customerId) event.customer_id = customerId;
     else event.external_customer_id = email.toLowerCase();
+    const body = JSON.stringify({ events: [event] });
     const resp = await fetch("https://api.polar.sh/v1/events/ingest", {
       method: "POST",
       headers: { "Authorization": "Bearer " + polarKey, "Content-Type": "application/json" },
       signal: AbortSignal.timeout(5000),
-      body: JSON.stringify({ events: [event] }),
+      body,
     });
-    if (!resp.ok) console.error("Polar event error:", resp.status, await resp.text().catch(() => ""));
-  } catch (e) { console.error("Polar event ingestion error:", e.message); }
+    const respText = await resp.text().catch(() => "");
+    // Log result to DB for debugging
+    if (env.DB) try { await logUsageEvent(env.DB, { email, eventType: "polar_event_sent", meta: { charCount, customerId, status: resp.status, ok: resp.ok, response: respText.slice(0, 500) } }); } catch(_e){}
+    if (!resp.ok) console.error("Polar event error:", resp.status, respText);
+  } catch (e) {
+    console.error("Polar event ingestion error:", e.message);
+    if (env.DB) try { await logUsageEvent(env.DB, { email, eventType: "polar_event_error", meta: { charCount, error: e.message } }); } catch(_e){}
+  }
 }
 
 async function isMeteredUser(db, email) {

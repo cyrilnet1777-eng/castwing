@@ -1943,7 +1943,7 @@ async function fetchTTSFromBestEndpoint(payload){
   const endpoints=[...primary,...candidates];
   let lastResponse=null,lastEndpoint='';
   for(const endpoint of endpoints){
-    const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),credentials:'same-origin'});
     lastResponse=response;
     lastEndpoint=endpoint;
     if(response.status===404){
