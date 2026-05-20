@@ -3602,6 +3602,7 @@ function showScreen(id){
 window.addEventListener('popstate',function(){
   var h=location.hash.slice(1);
   var screen=ROUTE_TO_SCREEN[h]||'home';
+  if(screen==='importScene'){goImportScene();return}
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(screen).classList.add('active');
   var bb=document.getElementById('homeBottomBar');if(bb)bb.style.display=screen==='home'?'flex':'none';
@@ -6567,8 +6568,11 @@ function endSession(){
   // Stop recording and wait for save before tearing down streams
   const wasRecording=isRecording;
   if(wasRecording&&mediaRecorder&&mediaRecorder.state!=='inactive'){
-    const origOnStop=mediaRecorder.onstop;
-    mediaRecorder.onstop=async function(){
+    const savedChunks=recordedChunks;
+    const savedRecorder=mediaRecorder;
+    const origOnStop=savedRecorder.onstop;
+    savedRecorder.onstop=async function(){
+      recordedChunks=savedChunks;
       if(origOnStop)await origOnStop.call(this);
       teardownStreamsAndPeers();
     };
@@ -6590,7 +6594,7 @@ function endSession(){
   hideTimerBadge();
   lockedVoiceLocale='';userScrolledUp=false;
   const _pa=document.getElementById('prompterArea');if(_pa)_pa.classList.remove('rear-cam');
-  stopPeerKeepalive();hideOverlay();isMicOn=true;isCamOn=true;currentFacingMode='user';prompterLines=[];prompterIndex=0;lastAutoSpokenIndex=-1;activeSpeechToken=0;recordedChunks=[];mediaRecorder=null;role='actor';sessionMode='ai';showScreen('home');
+  stopPeerKeepalive();hideOverlay();isMicOn=true;isCamOn=true;currentFacingMode='user';prompterLines=[];prompterIndex=0;lastAutoSpokenIndex=-1;activeSpeechToken=0;if(!wasRecording){recordedChunks=[];mediaRecorder=null;}role='actor';sessionMode='ai';showScreen('home');
 }
 function cancelConnection(){hideOverlay();if(!conn||!conn.open)endSession()}
 
@@ -6731,6 +6735,7 @@ document.addEventListener('DOMContentLoaded',async ()=>{
       var initScreen=ROUTE_TO_SCREEN[initHash]||'home';
       if(initScreen==='setupPartner')goSetupPartner();
       else if(initScreen==='setupAi')goSetupAi();
+      else if(initScreen==='importScene')goImportScene();
       else showScreen(initScreen);
       if(isUsageBlocked())openPaywallModal(t('usageBlocked'));
     }
