@@ -382,7 +382,7 @@ async function handlePolarWebhook(request, env) {
     const isMeteredSub = sub.product && sub.product.id === POLAR_METERED_PRODUCT_ID;
     if (email && isMeteredSub && env.DB) {
       const customerId = (sub.customer && sub.customer.id) || "";
-      await activateMeteredBilling(env.DB, email, customerId);
+      await activateMeteredBilling(env.DB, email, customerId, sub.id);
       await logUsageEvent(env.DB, { email, eventType: "metered_activated", meta: { subscriptionId: sub.id, customerId } });
     }
   }
@@ -1316,9 +1316,24 @@ async function handleSetAutoTopup(request, env) {
   if (!env.DB) return json({ ok: false, error: "DB not configured" }, 500);
   const payload = await request.json().catch(() => ({}));
 
-  // Handle billing_mode change
+  // Handle billing_mode change — disable PAYG and cancel Polar subscription
   if (payload.billing_mode === "credits") {
-    await env.DB.prepare("UPDATE users SET billing_mode = 'credits' WHERE lower(email) = ?").bind(email.toLowerCase()).run();
+    // Cancel Polar subscription if exists
+    const polarKey = String(env.POLAR_ACCESS_TOKEN || "").trim();
+    if (polarKey) {
+      const user = await env.DB.prepare("SELECT polar_subscription_id FROM users WHERE lower(email) = ?").bind(email.toLowerCase()).first();
+      if (user && user.polar_subscription_id) {
+        try {
+          const cancelResp = await fetch(`https://api.polar.sh/v1/subscriptions/${user.polar_subscription_id}`, {
+            method: "PATCH",
+            headers: { "Authorization": "Bearer " + polarKey, "Content-Type": "application/json" },
+            body: JSON.stringify({ revoke: true }),
+          });
+          if (!cancelResp.ok) console.error("Polar cancel error:", cancelResp.status, await cancelResp.text().catch(() => ""));
+        } catch (e) { console.error("Polar cancel error:", e.message); }
+      }
+    }
+    await env.DB.prepare("UPDATE users SET billing_mode = 'credits', polar_subscription_id = NULL WHERE lower(email) = ?").bind(email.toLowerCase()).run();
     return json({ ok: true, billingMode: "credits" });
   }
 
@@ -1340,31 +1355,37 @@ async function handleMeteredSubscribe(request, env) {
   if (!env.DB) return json({ ok: false, error: "DB not configured" }, 500);
 
   // Check if already subscribed
-  const user = await env.DB.prepare("SELECT billing_mode, polar_customer_id FROM users WHERE lower(email) = ?").bind(email.toLowerCase()).first();
-  if (user && user.billing_mode === "metered") {
+  const user = await env.DB.prepare("SELECT billing_mode, polar_customer_id, polar_subscription_id FROM users WHERE lower(email) = ?").bind(email.toLowerCase()).first();
+  if (user && user.billing_mode === "metered" && user.polar_subscription_id) {
     return json({ ok: true, already: true, billingMode: "metered" });
   }
 
   const origin = new URL(request.url).origin;
+  // Use customer_id if we have one from a previous subscription
+  const checkoutBody = {
+    products: [POLAR_METERED_PRODUCT_ID],
+    success_url: origin + "/?payment=metered-active",
+    metadata: { email, type: "metered_subscribe" },
+  };
+  if (user && user.polar_customer_id) {
+    checkoutBody.customer_id = user.polar_customer_id;
+  } else {
+    checkoutBody.customer_email = email;
+  }
   const rsp = await fetch("https://api.polar.sh/v1/checkouts/", {
     method: "POST",
     headers: { "Authorization": "Bearer " + polarKey, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      products: [POLAR_METERED_PRODUCT_ID],
-      customer_email: email,
-      success_url: origin + "/?payment=metered-active",
-      metadata: { email, type: "metered_subscribe" },
-    }),
+    body: JSON.stringify(checkoutBody),
   });
   const session = await rsp.json().catch(() => ({}));
-  if (!rsp.ok || !session.url) return json({ ok: false, error: "POLAR_ERROR", detail: session.detail || "" }, 502);
+  if (!rsp.ok || !session.url) return json({ ok: false, error: "POLAR_ERROR", detail: session.detail || session.error || "" }, 502);
   return json({ ok: true, checkoutUrl: session.url });
 }
 
-async function activateMeteredBilling(db, email, polarCustomerId) {
+async function activateMeteredBilling(db, email, polarCustomerId, polarSubscriptionId) {
   if (!db) return;
-  await db.prepare("UPDATE users SET billing_mode = 'metered', polar_customer_id = ? WHERE lower(email) = ?")
-    .bind(polarCustomerId || "", email.toLowerCase()).run();
+  await db.prepare("UPDATE users SET billing_mode = 'metered', polar_customer_id = ?, polar_subscription_id = ? WHERE lower(email) = ?")
+    .bind(polarCustomerId || "", polarSubscriptionId || "", email.toLowerCase()).run();
 }
 
 async function sendPolarUsageEvent(env, email, charCount) {
@@ -2252,6 +2273,7 @@ async function ensureD1Tables(db) {
   try { await db.prepare("ALTER TABLE users ADD COLUMN stripe_customer_id TEXT").run(); } catch (e) { /* already exists */ }
   try { await db.prepare("ALTER TABLE users ADD COLUMN auto_topup_cents INTEGER DEFAULT 0").run(); } catch (e) { /* already exists */ }
   try { await db.prepare("ALTER TABLE users ADD COLUMN polar_customer_id TEXT").run(); } catch (e) { /* already exists */ }
+  try { await db.prepare("ALTER TABLE users ADD COLUMN polar_subscription_id TEXT").run(); } catch (e) { /* already exists */ }
   try { await db.prepare("ALTER TABLE users ADD COLUMN billing_mode TEXT DEFAULT 'credits'").run(); } catch (e) { /* already exists */ }
   // Performance indexes
   const indexes = [
