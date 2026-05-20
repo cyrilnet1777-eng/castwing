@@ -334,6 +334,29 @@ async function handlePolarWebhook(request, env) {
 
     await logUsageEvent(env.DB, { email, eventType: "credit_topup", meta: { packId, amountCents, orderId: order.id } });
   }
+
+  // Handle subscription events — activate metered billing
+  if (event.type === "subscription.active" || event.type === "subscription.created") {
+    const sub = event.data;
+    const email = ((sub.metadata && sub.metadata.email) || (sub.customer && sub.customer.email) || "").toLowerCase();
+    const isMeteredSub = sub.product && sub.product.id === POLAR_METERED_PRODUCT_ID;
+    if (email && isMeteredSub && env.DB) {
+      const customerId = (sub.customer && sub.customer.id) || "";
+      await activateMeteredBilling(env.DB, email, customerId);
+      await logUsageEvent(env.DB, { email, eventType: "metered_activated", meta: { subscriptionId: sub.id, customerId } });
+    }
+  }
+
+  // Handle subscription cancellation — revert to credits
+  if (event.type === "subscription.canceled" || event.type === "subscription.revoked") {
+    const sub = event.data;
+    const email = ((sub.metadata && sub.metadata.email) || (sub.customer && sub.customer.email) || "").toLowerCase();
+    if (email && env.DB) {
+      await env.DB.prepare("UPDATE users SET billing_mode = 'credits' WHERE lower(email) = ?").bind(email).run();
+      await logUsageEvent(env.DB, { email, eventType: "metered_canceled", meta: { subscriptionId: sub.id } });
+    }
+  }
+
   return json({ ok: true });
 }
 
@@ -461,9 +484,10 @@ async function getSessionState(request, env) {
           const remaining = Math.max(0, (redemption.credits_granted || 0) - (redemption.credits_used || 0));
           let creditBalance = 0;
           let autoTopupCents = 0;
+          let billingMode = "credits";
           try { creditBalance = (await getCreditBalance(env.DB, email)).balance_cents; } catch (e) {}
-          try { const u = await env.DB.prepare("SELECT auto_topup_cents FROM users WHERE lower(email) = ?").bind(email.toLowerCase()).first(); if (u) autoTopupCents = u.auto_topup_cents || 0; } catch (e) {}
-          return { email, isAdmin: false, plan: "tester", creditsRemaining: remaining, inviteLabel: redemption.label, expiresAt: redemption.expires_at, creditBalance, autoTopupCents };
+          try { const u = await env.DB.prepare("SELECT auto_topup_cents, billing_mode FROM users WHERE lower(email) = ?").bind(email.toLowerCase()).first(); if (u) { autoTopupCents = u.auto_topup_cents || 0; billingMode = u.billing_mode || "credits"; } } catch (e) {}
+          return { email, isAdmin: false, plan: "tester", creditsRemaining: remaining, inviteLabel: redemption.label, expiresAt: redemption.expires_at, creditBalance, autoTopupCents, billingMode };
         }
       }
     } catch (e) { /* DB not ready yet */ }
@@ -475,13 +499,17 @@ async function getSessionState(request, env) {
     const { balance_cents } = await getCreditBalance(env.DB, email);
     creditBalance = balance_cents;
   } catch (e) { /* ignore */ }
+  let billingMode = "credits";
   if (env.DB) {
     try {
-      const row = await env.DB.prepare("SELECT auto_topup_cents FROM users WHERE lower(email) = ?").bind(email.toLowerCase()).first();
-      if (row) autoTopupCents = row.auto_topup_cents || 0;
-    } catch (e) { /* column may not exist yet */ }
+      const row = await env.DB.prepare("SELECT auto_topup_cents, billing_mode FROM users WHERE lower(email) = ?").bind(email.toLowerCase()).first();
+      if (row) {
+        autoTopupCents = row.auto_topup_cents || 0;
+        billingMode = row.billing_mode || "credits";
+      }
+    } catch (e) { /* columns may not exist yet */ }
   }
-  return { email, isAdmin: false, plan: "free", creditsRemaining: null, creditBalance, autoTopupCents };
+  return { email, isAdmin: false, plan: "free", creditsRemaining: null, creditBalance, autoTopupCents, billingMode };
 }
 
 async function logUsageEvent(db, event) {
@@ -536,9 +564,12 @@ async function handleTTS(request, env) {
     const charCount = text.length;
     const costCents = Math.max(1, Math.ceil((charCount / 1000) * CREDIT_PRICING.TTS_COST_PER_1K_CHARS_CENTS));
 
+    // Check billing mode: metered users skip credit deduction
+    const _isMetered = !isAdmin && email && await isMeteredUser(env.DB, email);
+
     // Atomic credit deduction: debit BEFORE making TTS call (prevents overdraft race condition)
     let _ttsDebitId = null;
-    if (!isAdmin && email && env.DB) {
+    if (!isAdmin && !_isMetered && email && env.DB) {
       _ttsDebitId = generateId("ctx");
       try {
         const result = await env.DB.prepare(
@@ -624,9 +655,11 @@ async function handleTTS(request, env) {
           );
 
           if (response.ok) {
+            // Send usage event to Polar for metered users (fire-and-forget)
+            if (_isMetered) sendPolarUsageEvent(env, email, charCount);
             // Credits already debited atomically before TTS call
             let newBalance = null;
-            if (!isAdmin && email && env.DB) {
+            if (!isAdmin && !_isMetered && email && env.DB) {
               try { newBalance = (await getCreditBalance(env.DB, email)).balance_cents; } catch (e) {}
             }
             const headers = {
@@ -1256,6 +1289,76 @@ async function handleSetAutoTopup(request, env) {
   }
   await env.DB.prepare("UPDATE users SET auto_topup_cents = ? WHERE lower(email) = ?").bind(cents, email.toLowerCase()).run();
   return json({ ok: true, autoTopupCents: cents });
+}
+
+const POLAR_METERED_PRODUCT_ID = "418d12be-cac3-4b87-a900-b80e07761392";
+
+async function handleMeteredSubscribe(request, env) {
+  const email = await resolveCurrentUser(request, env);
+  if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
+  const polarKey = String(env.POLAR_ACCESS_TOKEN || "").trim();
+  if (!polarKey) return json({ ok: false, error: "POLAR_NOT_CONFIGURED" }, 500);
+  if (!env.DB) return json({ ok: false, error: "DB not configured" }, 500);
+
+  // Check if already subscribed
+  const user = await env.DB.prepare("SELECT billing_mode, polar_customer_id FROM users WHERE lower(email) = ?").bind(email.toLowerCase()).first();
+  if (user && user.billing_mode === "metered") {
+    return json({ ok: true, already: true, billingMode: "metered" });
+  }
+
+  const origin = new URL(request.url).origin;
+  const rsp = await fetch("https://api.polar.sh/v1/checkouts/", {
+    method: "POST",
+    headers: { "Authorization": "Bearer " + polarKey, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      products: [POLAR_METERED_PRODUCT_ID],
+      customer_email: email,
+      success_url: origin + "/?payment=metered-active",
+      metadata: { email, type: "metered_subscribe" },
+    }),
+  });
+  const session = await rsp.json().catch(() => ({}));
+  if (!rsp.ok || !session.url) return json({ ok: false, error: "POLAR_ERROR", detail: session.detail || "" }, 502);
+  return json({ ok: true, checkoutUrl: session.url });
+}
+
+async function activateMeteredBilling(db, email, polarCustomerId) {
+  if (!db) return;
+  await db.prepare("UPDATE users SET billing_mode = 'metered', polar_customer_id = ? WHERE lower(email) = ?")
+    .bind(polarCustomerId || "", email.toLowerCase()).run();
+}
+
+async function sendPolarUsageEvent(env, email, charCount) {
+  const polarKey = String(env.POLAR_ACCESS_TOKEN || "").trim();
+  if (!polarKey || !email) return;
+  // Get polar customer ID
+  let customerId = null;
+  if (env.DB) {
+    const row = await env.DB.prepare("SELECT polar_customer_id FROM users WHERE lower(email) = ?").bind(email.toLowerCase()).first();
+    if (row) customerId = row.polar_customer_id;
+  }
+  try {
+    await fetch("https://api.polar.sh/v1/events", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + polarKey, "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(5000),
+      body: JSON.stringify({
+        events: [{
+          name: "tts_usage",
+          external_customer_id: customerId || email.toLowerCase(),
+          metadata: { tts_characters: charCount },
+        }],
+      }),
+    });
+  } catch (e) { console.error("Polar event ingestion error:", e.message); }
+}
+
+async function isMeteredUser(db, email) {
+  if (!db || !email) return false;
+  try {
+    const row = await db.prepare("SELECT billing_mode FROM users WHERE lower(email) = ?").bind(email.toLowerCase()).first();
+    return row && row.billing_mode === "metered";
+  } catch (e) { return false; }
 }
 
 /* =========================================================
@@ -2106,6 +2209,8 @@ async function ensureD1Tables(db) {
   }
   try { await db.prepare("ALTER TABLE users ADD COLUMN stripe_customer_id TEXT").run(); } catch (e) { /* already exists */ }
   try { await db.prepare("ALTER TABLE users ADD COLUMN auto_topup_cents INTEGER DEFAULT 0").run(); } catch (e) { /* already exists */ }
+  try { await db.prepare("ALTER TABLE users ADD COLUMN polar_customer_id TEXT").run(); } catch (e) { /* already exists */ }
+  try { await db.prepare("ALTER TABLE users ADD COLUMN billing_mode TEXT DEFAULT 'credits'").run(); } catch (e) { /* already exists */ }
   // Performance indexes
   const indexes = [
     `CREATE INDEX IF NOT EXISTS idx_credit_email ON credit_transactions(email)`,
@@ -2361,6 +2466,7 @@ export default {
     if (url.pathname === "/api/credits/balance" && request.method === "GET") return handleCreditsBalance(request, env);
     if (url.pathname === "/api/credits/topup" && request.method === "POST") return handleCreditsTopup(request, env);
     if (url.pathname === "/api/credits/auto-topup" && request.method === "POST") return handleSetAutoTopup(request, env);
+    if (url.pathname === "/api/credits/metered-subscribe" && request.method === "POST") return handleMeteredSubscribe(request, env);
     if (url.pathname === "/api/credits/reconcile" && request.method === "POST") return handlePolarReconcile(request, env);
     if (url.pathname === "/api/polar-webhook" && request.method === "POST") return handlePolarWebhook(request, env);
     // Stripe routes (disabled — kept for reference):

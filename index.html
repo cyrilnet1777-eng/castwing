@@ -660,6 +660,16 @@ input[type="file"]{display:none}
           <button class="mode-opt" onclick="openTopupModal('pack_25')" style="flex:1">$25</button>
         </div>
       </div>
+      <div id="profilePaygo" style="background:transparent;border:1px solid var(--border);border-radius:0;padding:12px;margin:8px 0;font-size:.82rem">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-weight:600;color:var(--white)">Pay As You Go</div>
+            <div style="font-size:.72rem;color:var(--text-muted)" id="paygoDesc">Billed monthly for actual usage — no pre-purchase needed</div>
+          </div>
+          <button class="mode-opt" id="paygoBtn" onclick="handlePaygoToggle()" style="flex-shrink:0;padding:.3rem .8rem;font-size:.72rem">Enable</button>
+        </div>
+        <div id="paygoActiveInfo" style="display:none;margin-top:8px;font-size:.72rem;color:#34C759">Active — you're billed monthly at $0.30/1,000 characters</div>
+      </div>
       <div id="profileAutoTopup" style="background:transparent;border:1px solid var(--border);border-radius:0;padding:12px;margin:8px 0;font-size:.82rem">
         <div style="display:flex;align-items:center;justify-content:space-between">
           <div>
@@ -1017,7 +1027,7 @@ function playSfx(key,vol=0.5){
 let authFlowToken='',authPendingEmail='';
 let userAccess={email:'',verified:false,provider:'',paid:false,usageMs:0,cooldownUntil:0,lastTick:0};
 let usageTimer=null;
-let cwServerSession={email:null,isAdmin:false,plan:'visitor',creditsRemaining:null,creditBalance:0,autoTopupCents:0};
+let cwServerSession={email:null,isAdmin:false,plan:'visitor',creditsRemaining:null,creditBalance:0,autoTopupCents:0,billingMode:'credits'};
 
 const useElevenLabs=true;
 function getPauseBetweenLines(){return voiceSpeed>=4.5?200:1000;}
@@ -1562,6 +1572,36 @@ function initAutoTopupUI(){
   if(amt){if(tog)tog.classList.add('on');if(row)row.style.display='';updateAutoTopupBtns()}
   else{if(tog)tog.classList.remove('on');if(row)row.style.display='none'}
 }
+function updatePaygoUI(){
+  var btn=document.getElementById('paygoBtn');
+  var info=document.getElementById('paygoActiveInfo');
+  var creditCard=document.getElementById('profileCreditCard');
+  var autoTopup=document.getElementById('profileAutoTopup');
+  if(cwServerSession.billingMode==='metered'){
+    if(btn){btn.textContent='Active';btn.style.opacity='.6';btn.disabled=true}
+    if(info)info.style.display='';
+    if(creditCard)creditCard.style.display='none';
+    if(autoTopup)autoTopup.style.display='none';
+  }else{
+    if(btn){btn.textContent='Enable';btn.style.opacity='1';btn.disabled=false}
+    if(info)info.style.display='none';
+    if(creditCard)creditCard.style.display='';
+    if(autoTopup)autoTopup.style.display='';
+  }
+}
+async function handlePaygoToggle(){
+  if(cwServerSession.billingMode==='metered'){showToast('Already active');return}
+  try{
+    var rsp=await fetch('/api/credits/metered-subscribe',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}});
+    var data=await rsp.json().catch(function(){return null});
+    if(data&&data.already){showToast('Pay-As-You-Go is already active');cwServerSession.billingMode='metered';updatePaygoUI();return}
+    if(data&&data.ok&&data.checkoutUrl){
+      window.location.href=data.checkoutUrl;
+    }else{
+      showToast('Could not start checkout: '+(data&&data.error||'error'),4000);
+    }
+  }catch(e){showToast('Error enabling Pay-As-You-Go',3000)}
+}
 var _autoCharging=false;
 async function checkAutoTopup(){
   if(_autoCharging)return;
@@ -1703,7 +1743,7 @@ async function fetchServerSession(){
     const data=await rsp.json().catch(()=>null);
     console.info('[session]',JSON.stringify(data));
     if(!data||!data.ok)return;
-    cwServerSession={email:data.email||null,isAdmin:!!data.isAdmin,plan:data.plan||'visitor',creditsRemaining:data.creditsRemaining,creditBalance:data.creditBalance||0,autoTopupCents:data.autoTopupCents||0};
+    cwServerSession={email:data.email||null,isAdmin:!!data.isAdmin,plan:data.plan||'visitor',creditsRemaining:data.creditsRemaining,creditBalance:data.creditBalance||0,autoTopupCents:data.autoTopupCents||0,billingMode:data.billingMode||'credits'};
     applyServerSessionUI();
   }catch(e){console.warn('[session] fetch failed',e);}
 }
@@ -2807,6 +2847,7 @@ function openAuthModal(){
     loadUsageHistory();
     refreshCreditBalance();
     initAutoTopupUI();
+    updatePaygoUI();
     renderProfileRecordings();
   }else{
     if(loginView)loginView.style.display='block';
@@ -6752,6 +6793,14 @@ document.addEventListener('DOMContentLoaded',async ()=>{
       try{await fetch('/api/credits/reconcile',{method:'POST',credentials:'same-origin'})}catch(e){}
       await refreshCreditBalance();
       showToast(tt('paymentSuccess','Payment confirmed! Credits added.'),5000);
+      history.replaceState({},'','/');
+    },2000);
+  }else if(paymentParam==='metered-active'){
+    gaEvent('purchase',{currency:'USD',type:'metered_subscribe'});
+    setTimeout(async function(){
+      await fetchServerSession();
+      cwServerSession.billingMode='metered';
+      showToast('Pay-As-You-Go activated! You\'ll be billed monthly for usage.',5000);
       history.replaceState({},'','/');
     },2000);
   }else if(paymentParam==='cancel'){
