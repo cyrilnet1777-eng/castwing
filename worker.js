@@ -29,6 +29,15 @@ function isEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 }
 
+function getAnthropicKey(env) {
+  const multi = String(env.ANTHROPIC_API_KEYS || "").trim();
+  if (multi) {
+    const keys = multi.split(",").map(k => k.trim()).filter(Boolean);
+    if (keys.length) return keys[Math.floor(Math.random() * keys.length)];
+  }
+  return String(env.ANTHROPIC_API_KEY || "").trim();
+}
+
 function b64urlEncode(text) {
   const bytes = new TextEncoder().encode(text);
   let bin = "";
@@ -1309,7 +1318,7 @@ function parseCitizenTapePlayModelJson(rawText) {
 async function handleParseScreenplay(request, env) {
   const email = await resolveCurrentUser(request, env);
   if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401, PARSE_SCREENPLAY_CORS);
-  const apiKey = String(env.ANTHROPIC_API_KEY || "").trim();
+  const apiKey = getAnthropicKey(env);
   if (!apiKey) {
     return json({ error: "Missing ANTHROPIC_API_KEY" }, 500, PARSE_SCREENPLAY_CORS);
   }
@@ -1460,7 +1469,7 @@ async function handleParseScreenplay(request, env) {
 ========================================================= */
 
 const MAX_REMOTE_PARSE_BYTES = 10 * 1024 * 1024;
-const PARSE_TIMEOUT_MS = 180000;
+const PARSE_TIMEOUT_MS = 25000;
 
 function logParse(event, data = {}) {
   try {
@@ -1565,7 +1574,7 @@ async function callAnthropicParse({ env, parseId, model, pdfBase64, fileName, at
       signal: controller.signal,
       headers: {
         "content-type": "application/json",
-        "x-api-key": String(env.ANTHROPIC_API_KEY || ""),
+        "x-api-key": getAnthropicKey(env),
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
@@ -1675,7 +1684,7 @@ async function callAnthropicParseText({ env, parseId, model, scriptText, fileNam
       signal: controller.signal,
       headers: {
         "content-type": "application/json",
-        "x-api-key": String(env.ANTHROPIC_API_KEY || ""),
+        "x-api-key": getAnthropicKey(env),
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
@@ -1727,7 +1736,7 @@ const SPLIT_TEXT_THRESHOLD = 30000;
 async function handleParseScript(request, env) {
   const parseId = generateId("parse");
   const startedAt = Date.now();
-  if (!env.ANTHROPIC_API_KEY) {
+  if (!getAnthropicKey(env)) {
     return json({ ok: false, error: "missing_anthropic_api_key", fallback_recommended: true, meta: { parse_id: parseId } }, 500);
   }
   const contentType = request.headers.get("content-type") || "";
@@ -1840,7 +1849,7 @@ async function handleParseScript(request, env) {
 async function handleValidateCharacters(request, env) {
   const email = await resolveCurrentUser(request, env);
   if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
-  if (!env.ANTHROPIC_API_KEY) {
+  if (!getAnthropicKey(env)) {
     return json({ ok: false, error: "missing_anthropic_api_key", characters: [] }, 500);
   }
   let body;
@@ -1869,7 +1878,7 @@ async function handleValidateCharacters(request, env) {
       signal: controller.signal,
       headers: {
         "content-type": "application/json",
-        "x-api-key": String(env.ANTHROPIC_API_KEY),
+        "x-api-key": getAnthropicKey(env),
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
@@ -1902,7 +1911,7 @@ async function handleValidateCharacters(request, env) {
 async function handleClassifyLines(request, env) {
   const email = await resolveCurrentUser(request, env);
   if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
-  if (!env.ANTHROPIC_API_KEY) {
+  if (!getAnthropicKey(env)) {
     return json({ ok: false, error: "missing_anthropic_api_key" }, 500);
   }
   let body;
@@ -1941,7 +1950,7 @@ Output format ONLY (no prose, no markdown fences):
 Lines:
 ${numberedLines}`;
 
-  const apiKey = String(env.ANTHROPIC_API_KEY).trim().replace(/^['"]|['"]$/g, "").replace(/^Bearer\s+/i, "");
+  const apiKey = getAnthropicKey(env).replace(/^['"]|['"]$/g, "").replace(/^Bearer\s+/i, "");
   const payloadBase = {
     model: "claude-haiku-4-5",
     max_tokens: 32768,
@@ -1953,8 +1962,7 @@ ${numberedLines}`;
   let lastDetail = "";
   for (let attempt = 1; attempt <= 3; attempt++) {
     const controller = new AbortController();
-    /** Stay under typical Workers HTTP wall-clock limits; small chunks keep Haiku fast. */
-    const timeout = setTimeout(() => controller.abort("timeout"), 75000);
+    const timeout = setTimeout(() => controller.abort("timeout"), 25000);
     try {
       const rsp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -2009,7 +2017,7 @@ ${numberedLines}`;
 async function handleMergeCharacters(request, env) {
   const email = await resolveCurrentUser(request, env);
   if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
-  if (!env.ANTHROPIC_API_KEY) return json({ error: "missing_anthropic_api_key" }, 500);
+  if (!getAnthropicKey(env)) return json({ error: "missing_anthropic_api_key" }, 500);
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: "invalid_json" }, 400); }
   const candidates = body.candidates;
@@ -2029,9 +2037,10 @@ Return ONLY the JSON array, no explanation.`;
     const model = env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001";
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
+      signal: AbortSignal.timeout(25000),
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": env.ANTHROPIC_API_KEY,
+        "x-api-key": getAnthropicKey(env),
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
@@ -2102,7 +2111,7 @@ async function handleClaudeParseScript(request, env) {
   const _cpEmail = await resolveCurrentUser(request, env);
   if (!_cpEmail) return json({ ok: false, error: "AUTH_REQUIRED" }, 401, cors);
 
-  const apiKey = String(env.ANTHROPIC_API_KEY || "").trim();
+  const apiKey = getAnthropicKey(env);
   if (!apiKey) {
     return Response.json({ success: false, error: "Missing ANTHROPIC_API_KEY" }, { status: 500, headers: cors });
   }
@@ -2131,6 +2140,7 @@ ${slice}`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
+      signal: AbortSignal.timeout(25000),
       headers: {
         "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
@@ -2195,7 +2205,7 @@ async function handleLabelScript(request, env) {
   const _lsEmail = await resolveCurrentUser(request, env);
   if (!_lsEmail) return json({ ok: false, error: "AUTH_REQUIRED" }, 401, cors);
 
-  const apiKey = String(env.ANTHROPIC_API_KEY || "").trim();
+  const apiKey = getAnthropicKey(env);
   if (!apiKey) {
     return Response.json({ success: false, error: "Missing ANTHROPIC_API_KEY" }, { status: 500, headers: cors });
   }
@@ -2231,6 +2241,7 @@ ${numberedText}`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
+      signal: AbortSignal.timeout(25000),
       headers: {
         "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",

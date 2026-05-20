@@ -4422,7 +4422,7 @@ async function parseViaExtractAndLabel(file){
   console.log('Extracted '+lines.length+' lines, sending for labeling...');
   if(!lines.length)throw new Error('Could not extract text from PDF');
   var numbered=buildNumberedText(lines);
-  var MAX_LINES=200;
+  var MAX_LINES=150;
   if(lines.length<=MAX_LINES){
     var labelData=await fetchLabelScript(numbered);
     return mergeLabelsWithText(lines,labelData);
