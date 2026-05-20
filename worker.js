@@ -1359,18 +1359,17 @@ async function sendPolarUsageEvent(env, email, charCount) {
     if (row) customerId = row.polar_customer_id;
   }
   try {
-    await fetch("https://api.polar.sh/v1/events", {
+    const event = { name: "tts_usage", metadata: { tts_characters: charCount } };
+    // Use Polar customer_id (UUID) if available, otherwise fall back to external_customer_id (email)
+    if (customerId) event.customer_id = customerId;
+    else event.external_customer_id = email.toLowerCase();
+    const resp = await fetch("https://api.polar.sh/v1/events/ingest", {
       method: "POST",
       headers: { "Authorization": "Bearer " + polarKey, "Content-Type": "application/json" },
       signal: AbortSignal.timeout(5000),
-      body: JSON.stringify({
-        events: [{
-          name: "tts_usage",
-          external_customer_id: customerId || email.toLowerCase(),
-          metadata: { tts_characters: charCount },
-        }],
-      }),
+      body: JSON.stringify({ events: [event] }),
     });
+    if (!resp.ok) console.error("Polar event error:", resp.status, await resp.text().catch(() => ""));
   } catch (e) { console.error("Polar event ingestion error:", e.message); }
 }
 
