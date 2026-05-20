@@ -9,6 +9,29 @@
            /api/admin/revoke-invite
 ========================================================= */
 
+// In-memory rate limiter (replaces KV-based rate limiting to avoid free-tier exhaustion)
+const _rateCounters = new Map();
+function rateCheck(key, maxCount, windowSec) {
+  const now = Date.now();
+  let entry = _rateCounters.get(key);
+  if (!entry || now - entry.start > windowSec * 1000) {
+    entry = { start: now, count: 0 };
+    _rateCounters.set(key, entry);
+  }
+  entry.count++;
+  return entry.count <= maxCount;
+}
+// Periodic cleanup of stale entries (every 5 min)
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of _rateCounters) {
+    if (now - v.start > 300000) _rateCounters.delete(k);
+  }
+}, 300000);
+
+// In-memory Anthropic concurrency semaphore (replaces KV-based semaphore)
+let _anthropicConcurrent = 0;
+
 function toText(value) {
   if (typeof value === "string") return value;
   if (value == null) return "";
@@ -590,25 +613,17 @@ async function handleTTS(request, env) {
         return json({ ok: false, error: "INSUFFICIENT_CREDITS", balance_cents, cost_cents: costCents, char_count: charCount }, 402);
       }
     }
-    // Rate limit: max 30 TTS calls per minute per user
-    if (!isAdmin && email && env.AUTH_KV) {
-      const ttsRateKey = `rate:tts:${email}`;
-      const ttsCalls = parseInt(await env.AUTH_KV.get(ttsRateKey) || "0");
-      if (ttsCalls >= 30) {
+    // Rate limit: max 30 TTS calls per minute per user (in-memory, no KV)
+    if (!isAdmin && email) {
+      if (!rateCheck(`tts:${email}`, 30, 60)) {
         if (_ttsDebitId && env.DB) try { await env.DB.prepare("DELETE FROM credit_transactions WHERE id = ?").bind(_ttsDebitId).run(); } catch(e) {}
         return json({ ok: false, error: "RATE_LIMIT", message: "Too many requests" }, 429);
       }
-      await env.AUTH_KV.put(ttsRateKey, String(ttsCalls + 1), { expirationTtl: 60 });
     }
-    // Global rate limit: max 500 TTS calls per minute across all users
-    if (env.AUTH_KV) {
-      const globalKey = "rate:tts:global";
-      const globalCalls = parseInt(await env.AUTH_KV.get(globalKey) || "0");
-      if (globalCalls >= 500) {
-        if (_ttsDebitId && env.DB) try { await env.DB.prepare("DELETE FROM credit_transactions WHERE id = ?").bind(_ttsDebitId).run(); } catch(e) {}
-        return json({ ok: false, error: "RATE_LIMIT", message: "High demand, try again in a moment" }, 429);
-      }
-      await env.AUTH_KV.put(globalKey, String(globalCalls + 1), { expirationTtl: 60 });
+    // Global rate limit: max 500 TTS calls per minute across all users (in-memory, no KV)
+    if (!rateCheck("tts:global", 500, 60)) {
+      if (_ttsDebitId && env.DB) try { await env.DB.prepare("DELETE FROM credit_transactions WHERE id = ?").bind(_ttsDebitId).run(); } catch(e) {}
+      return json({ ok: false, error: "RATE_LIMIT", message: "High demand, try again in a moment" }, 429);
     }
 
     const emotionMap = {
@@ -1374,20 +1389,14 @@ async function isMeteredUser(db, email) {
 
 const ANTHROPIC_MAX_CONCURRENT = 50;
 
-async function acquireAnthropicSlot(env) {
-  if (!env.AUTH_KV) return true;
-  const key = "semaphore:anthropic";
-  const current = parseInt(await env.AUTH_KV.get(key) || "0");
-  if (current >= ANTHROPIC_MAX_CONCURRENT) return false;
-  await env.AUTH_KV.put(key, String(current + 1), { expirationTtl: 180 });
+async function acquireAnthropicSlot(_env) {
+  if (_anthropicConcurrent >= ANTHROPIC_MAX_CONCURRENT) return false;
+  _anthropicConcurrent++;
   return true;
 }
 
-async function releaseAnthropicSlot(env) {
-  if (!env.AUTH_KV) return;
-  const key = "semaphore:anthropic";
-  const current = parseInt(await env.AUTH_KV.get(key) || "0");
-  await env.AUTH_KV.put(key, String(Math.max(0, current - 1)), { expirationTtl: 180 });
+async function releaseAnthropicSlot(_env) {
+  _anthropicConcurrent = Math.max(0, _anthropicConcurrent - 1);
 }
 
 const DEFAULT_API_CORS = {
