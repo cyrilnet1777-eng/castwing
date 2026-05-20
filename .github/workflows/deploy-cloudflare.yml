@@ -39,7 +39,7 @@ jobs:
 
       - name: Install and deploy
         run: |
-          npm install -g wrangler@3
+          npm install -g wrangler@4
           wrangler deploy --keep-vars
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
