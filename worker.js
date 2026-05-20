@@ -30,12 +30,17 @@ function isEmail(value) {
 }
 
 function getAnthropicKey(env) {
-  const multi = String(env.ANTHROPIC_API_KEYS || "").trim();
+  const multi = String(env.ANTHROPIC_API_KEYS || "").trim().replace(/^['"]|['"]$/g, "");
   if (multi) {
-    const keys = multi.split(",").map(k => k.trim()).filter(Boolean);
+    const keys = multi.split(",").map(k => k.trim().replace(/^['"]|['"]$/g, "")).filter(k => k.startsWith("sk-"));
     if (keys.length) return keys[Math.floor(Math.random() * keys.length)];
   }
-  return String(env.ANTHROPIC_API_KEY || "").trim();
+  const single = String(env.ANTHROPIC_API_KEY || "").trim().replace(/^['"]|['"]$/g, "");
+  if (single.includes(",")) {
+    const keys = single.split(",").map(k => k.trim()).filter(k => k.startsWith("sk-"));
+    if (keys.length) return keys[Math.floor(Math.random() * keys.length)];
+  }
+  return single;
 }
 
 function b64urlEncode(text) {
