@@ -666,9 +666,9 @@ input[type="file"]{display:none}
             <div style="font-weight:600;color:var(--white)">Pay As You Go</div>
             <div style="font-size:.72rem;color:var(--text-muted)" id="paygoDesc">Billed monthly for actual usage — no pre-purchase needed</div>
           </div>
-          <button class="mode-opt" id="paygoBtn" onclick="handlePaygoToggle()" style="flex-shrink:0;padding:.3rem .8rem;font-size:.72rem">Enable</button>
+          <button class="ps-toggle" id="paygoToggle" onclick="handlePaygoToggle()" style="flex-shrink:0"></button>
         </div>
-        <div id="paygoActiveInfo" style="display:none;margin-top:8px;font-size:.72rem;color:#34C759">Active — you're billed monthly at $0.30/1,000 characters</div>
+        <div id="paygoActiveInfo" style="display:none;margin-top:8px;font-size:.72rem;color:#34C759">$0.30/1,000 characters · billed monthly</div>
       </div>
       <div id="profileAutoTopup" style="background:transparent;border:1px solid var(--border);border-radius:0;padding:12px;margin:8px 0;font-size:.82rem">
         <div style="display:flex;align-items:center;justify-content:space-between">
@@ -1573,28 +1573,33 @@ function initAutoTopupUI(){
   else{if(tog)tog.classList.remove('on');if(row)row.style.display='none'}
 }
 function updatePaygoUI(){
-  var btn=document.getElementById('paygoBtn');
+  var tog=document.getElementById('paygoToggle');
   var info=document.getElementById('paygoActiveInfo');
-  var creditCard=document.getElementById('profileCreditCard');
   var autoTopup=document.getElementById('profileAutoTopup');
-  if(cwServerSession.billingMode==='metered'){
-    if(btn){btn.textContent='Active';btn.style.opacity='.6';btn.disabled=true}
-    if(info)info.style.display='';
-    if(creditCard)creditCard.style.display='none';
-    if(autoTopup)autoTopup.style.display='none';
-  }else{
-    if(btn){btn.textContent='Enable';btn.style.opacity='1';btn.disabled=false}
-    if(info)info.style.display='none';
-    if(creditCard)creditCard.style.display='';
-    if(autoTopup)autoTopup.style.display='';
-  }
+  var isOn=cwServerSession.billingMode==='metered';
+  if(tog)tog.classList.toggle('on',isOn);
+  if(info)info.style.display=isOn?'':'none';
+  // Hide auto-topup when PAYG is active (they're mutually exclusive)
+  if(autoTopup)autoTopup.style.display=isOn?'none':'';
 }
 async function handlePaygoToggle(){
-  if(cwServerSession.billingMode==='metered'){showToast('Already active');return}
+  var isOn=cwServerSession.billingMode==='metered';
+  if(isOn){
+    // Turning off — revert to credits
+    if(!confirm('Disable Pay-As-You-Go? You\'ll need credit packs to use TTS.'))return;
+    try{
+      await fetch('/api/credits/auto-topup',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({billing_mode:'credits'})});
+      cwServerSession.billingMode='credits';
+      updatePaygoUI();
+      showToast('Pay-As-You-Go disabled. Using credit packs.',3000);
+    }catch(e){showToast('Error',3000)}
+    return;
+  }
+  // Turning on — subscribe via Polar
   try{
     var rsp=await fetch('/api/credits/metered-subscribe',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}});
     var data=await rsp.json().catch(function(){return null});
-    if(data&&data.already){showToast('Pay-As-You-Go is already active');cwServerSession.billingMode='metered';updatePaygoUI();return}
+    if(data&&data.already){cwServerSession.billingMode='metered';updatePaygoUI();showToast('Pay-As-You-Go activated!');return}
     if(data&&data.ok&&data.checkoutUrl){
       window.location.href=data.checkoutUrl;
     }else{

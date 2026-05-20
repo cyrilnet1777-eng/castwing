@@ -1283,6 +1283,13 @@ async function handleSetAutoTopup(request, env) {
   if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
   if (!env.DB) return json({ ok: false, error: "DB not configured" }, 500);
   const payload = await request.json().catch(() => ({}));
+
+  // Handle billing_mode change
+  if (payload.billing_mode === "credits") {
+    await env.DB.prepare("UPDATE users SET billing_mode = 'credits' WHERE lower(email) = ?").bind(email.toLowerCase()).run();
+    return json({ ok: true, billingMode: "credits" });
+  }
+
   const cents = parseInt(payload.amount_cents) || 0;
   if (cents !== 0 && cents !== 500 && cents !== 1000 && cents !== 2500) {
     return json({ ok: false, error: "Invalid amount" }, 400);
