@@ -1915,8 +1915,8 @@ function yieldToBrowser(){
     }
   });
 }
-async function fetchParseScreenplayFile(file){var ac=new AbortController();_pdfParseAbort=ac;try{var form=new FormData();form.append('file',file);var res=await fetch('/api/parse-screenplay',{method:'POST',body:form,signal:ac.signal});var data=await res.json().catch(function(){return{}});if(!res.ok){var msg=data.error||data.message||('HTTP '+res.status);throw new Error(typeof msg==='string'?msg:JSON.stringify(msg))}var characters=Array.isArray(data.characters)?data.characters:[];var lines=Array.isArray(data.lines)?data.lines:[];if(!lines.length)throw new Error('Reponse serveur vide');return{characters:characters,lines:lines}}finally{if(_pdfParseAbort===ac)_pdfParseAbort=null}}
-async function fetchClaudeParseScript(pdfText){var text=String(pdfText||'');if(text.trim().length<8)throw new Error('Texte trop court');var ac=new AbortController();_pdfParseAbort=ac;try{var res=await fetch('/api/claude-parse-script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pdfText:text}),signal:ac.signal});var data=await res.json().catch(function(){return{}});if(!res.ok){var msg=data.error||data.message||('HTTP '+res.status);throw new Error(typeof msg==='string'?msg:JSON.stringify(msg))}if(data.success===false)throw new Error(String(data.error||'Echec parse'));var characters=Array.isArray(data.characters)?data.characters:[];var lines=Array.isArray(data.lines)?data.lines:[];if(!lines.length)throw new Error('Reponse serveur vide');return{characters:characters,lines:lines}}finally{if(_pdfParseAbort===ac)_pdfParseAbort=null}}
+async function fetchParseScreenplayFile(file){if(!cwServerSession.email){throw new Error('AUTH_REQUIRED')}var ac=new AbortController();_pdfParseAbort=ac;try{var form=new FormData();form.append('file',file);var res=await fetch('/api/parse-screenplay',{method:'POST',credentials:'same-origin',body:form,signal:ac.signal});var data=await res.json().catch(function(){return{}});if(!res.ok){var msg=data.error||data.message||('HTTP '+res.status);throw new Error(typeof msg==='string'?msg:JSON.stringify(msg))}var characters=Array.isArray(data.characters)?data.characters:[];var lines=Array.isArray(data.lines)?data.lines:[];if(!lines.length)throw new Error('Reponse serveur vide');return{characters:characters,lines:lines}}finally{if(_pdfParseAbort===ac)_pdfParseAbort=null}}
+async function fetchClaudeParseScript(pdfText){if(!cwServerSession.email){throw new Error('AUTH_REQUIRED')}var text=String(pdfText||'');if(text.trim().length<8)throw new Error('Texte trop court');var ac=new AbortController();_pdfParseAbort=ac;try{var res=await fetch('/api/claude-parse-script',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({pdfText:text}),signal:ac.signal});var data=await res.json().catch(function(){return{}});if(!res.ok){var msg=data.error||data.message||('HTTP '+res.status);throw new Error(typeof msg==='string'?msg:JSON.stringify(msg))}if(data.success===false)throw new Error(String(data.error||'Echec parse'));var characters=Array.isArray(data.characters)?data.characters:[];var lines=Array.isArray(data.lines)?data.lines:[];if(!lines.length)throw new Error('Reponse serveur vide');return{characters:characters,lines:lines}}finally{if(_pdfParseAbort===ac)_pdfParseAbort=null}}
 function mapClaudeScriptToPdfScript(parsed){
   const lines=parsed.lines||[];
   const out=[];
@@ -2283,6 +2283,7 @@ const UI_FALLBACK_TRANSLATIONS={
   analysisCancelled:{fr:'Analyse annulée',en:'Analysis cancelled',es:'Análisis cancelado',it:'Analisi annullata',zh:'分析已取消',ko:'분석 취소됨',ja:'分析がキャンセルされました',de:'Analyse abgebrochen',pt:'Análise cancelada'},
   analysisEmpty:{fr:'Analyse vide — réessaie ou colle le texte.',en:'Analysis empty — try again or paste the text.',es:'Análisis vacío — inténtalo de nuevo.',it:'Analisi vuota — riprova o incolla il testo.',zh:'分析结果为空 — 请重试或粘贴文本。',ko:'분석 결과 없음 — 다시 시도하거나 텍스트를 붙여넣으세요.',ja:'分析結果が空です — 再試行するかテキストを貼り付けてください。',de:'Analyse leer — versuche es erneut oder füge den Text ein.',pt:'Análise vazia — tente novamente ou cole o texto.'},
   analysisFailed:{fr:'Échec analyse',en:'Analysis failed',es:'Análisis fallido',it:'Analisi fallita',zh:'分析失败',ko:'분석 실패',ja:'分析失敗',de:'Analyse fehlgeschlagen',pt:'Análise falhou'},
+  loginRequired:{fr:'Connexion requise pour analyser un script',en:'Please log in to analyze a script',es:'Inicia sesión para analizar un guión',it:'Accedi per analizzare un copione',zh:'请登录以分析剧本',ko:'스크립트를 분석하려면 로그인하세요',ja:'スクリプトを分析するにはログインしてください',de:'Bitte einloggen um ein Skript zu analysieren',pt:'Faça login para analisar um roteiro'},
   uploadLabel:{ko:'PDF를 여기에 놓거나 클릭',hi:'अपना PDF यहां डालें या क्लिक करें'},
   uploadSub:{ko:'표준 대본 형식',hi:'मानक स्क्रीनप्ले फॉर्मेट'},
   pasteScriptLabel:{ko:'또는 텍스트 붙여넣기',hi:'या टेक्स्ट पेस्ट करें'},
@@ -4340,10 +4341,11 @@ function buildNumberedText(lines){
   return lines.map(function(l,i){return(i+1)+': '+l}).join('\n');
 }
 async function fetchLabelScript(numberedText){
+  if(!cwServerSession.email){throw new Error('AUTH_REQUIRED')}
   var ac=new AbortController();
   _pdfParseAbort=ac;
   try{
-    var res=await fetch('/api/label-script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({numberedText:numberedText}),signal:ac.signal});
+    var res=await fetch('/api/label-script',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({numberedText:numberedText}),signal:ac.signal});
     var data=await res.json().catch(function(){return{}});
     if(!res.ok){var msg=data.error||data.message||('HTTP '+res.status);throw new Error(typeof msg==='string'?msg:JSON.stringify(msg))}
     if(data.success===false)throw new Error(String(data.error||'Labeling failed'));
@@ -4450,6 +4452,7 @@ async function processPDF(n,file){
     void fillScriptInputProgressive(n,scriptRawText);
   }catch(e){
     console.error('PDF parse error:',e);
+    if(e&&e.message==='AUTH_REQUIRED'){showToast(t('loginRequired'),5000);showScreen('auth');return}
     showToast(t('analysisFailed')+': '+(e&&e.message?e.message:'check ANTHROPIC_API_KEY'),6500);
     pdfScript=[];
     syncPdfScriptDebugMirror();
@@ -5383,7 +5386,7 @@ async function aiMergeCharacters(n){
   if(!candidates.length)return;
   console.info('[aiMerge] asking AI about',candidates.length,'candidate pairs');
   try{
-    const res=await fetch('/api/merge-characters',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidates})});
+    const res=await fetch('/api/merge-characters',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidates})});
     const data=await res.json();
     if(!data.merges||!data.merges.length)return;
     const renameMap={};

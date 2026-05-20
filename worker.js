@@ -1244,9 +1244,18 @@ async function releaseAnthropicSlot(env) {
   await env.AUTH_KV.put(key, String(Math.max(0, current - 1)), { expirationTtl: 180 });
 }
 
+const DEFAULT_API_CORS = {
+  "Access-Control-Allow-Origin": "https://citizentape.com",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Cookie",
+  "Access-Control-Allow-Credentials": "true",
+};
+
 async function withAnthropicSlot(env, handler, request, corsHeaders) {
+  const cors = corsHeaders || DEFAULT_API_CORS;
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
   const acquired = await acquireAnthropicSlot(env);
-  if (!acquired) return json({ ok: false, error: "SERVER_BUSY", message: "High demand, please try again" }, 503, corsHeaders);
+  if (!acquired) return json({ ok: false, error: "SERVER_BUSY", message: "High demand, please try again" }, 503, cors);
   try { return await handler(request, env); }
   finally { await releaseAnthropicSlot(env); }
 }
