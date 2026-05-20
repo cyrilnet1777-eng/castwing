@@ -460,19 +460,28 @@ async function getSessionState(request, env) {
         if (!expired) {
           const remaining = Math.max(0, (redemption.credits_granted || 0) - (redemption.credits_used || 0));
           let creditBalance = 0;
+          let autoTopupCents = 0;
           try { creditBalance = (await getCreditBalance(env.DB, email)).balance_cents; } catch (e) {}
-          return { email, isAdmin: false, plan: "tester", creditsRemaining: remaining, inviteLabel: redemption.label, expiresAt: redemption.expires_at, creditBalance };
+          try { const u = await env.DB.prepare("SELECT auto_topup_cents FROM users WHERE lower(email) = ?").bind(email.toLowerCase()).first(); if (u) autoTopupCents = u.auto_topup_cents || 0; } catch (e) {}
+          return { email, isAdmin: false, plan: "tester", creditsRemaining: remaining, inviteLabel: redemption.label, expiresAt: redemption.expires_at, creditBalance, autoTopupCents };
         }
       }
     } catch (e) { /* DB not ready yet */ }
   }
-  // Get credit balance for authenticated users
+  // Get credit balance and auto-topup setting for authenticated users
   let creditBalance = 0;
+  let autoTopupCents = 0;
   try {
     const { balance_cents } = await getCreditBalance(env.DB, email);
     creditBalance = balance_cents;
   } catch (e) { /* ignore */ }
-  return { email, isAdmin: false, plan: "free", creditsRemaining: null, creditBalance };
+  if (env.DB) {
+    try {
+      const row = await env.DB.prepare("SELECT auto_topup_cents FROM users WHERE lower(email) = ?").bind(email.toLowerCase()).first();
+      if (row) autoTopupCents = row.auto_topup_cents || 0;
+    } catch (e) { /* column may not exist yet */ }
+  }
+  return { email, isAdmin: false, plan: "free", creditsRemaining: null, creditBalance, autoTopupCents };
 }
 
 async function logUsageEvent(db, event) {
@@ -1234,6 +1243,19 @@ async function handleCreditsConsume(request, env) {
   });
 
   return json({ ok: true, creditsRemaining: remaining - 1 });
+}
+
+async function handleSetAutoTopup(request, env) {
+  const email = await resolveCurrentUser(request, env);
+  if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
+  if (!env.DB) return json({ ok: false, error: "DB not configured" }, 500);
+  const payload = await request.json().catch(() => ({}));
+  const cents = parseInt(payload.amount_cents) || 0;
+  if (cents !== 0 && cents !== 500 && cents !== 1000 && cents !== 2500) {
+    return json({ ok: false, error: "Invalid amount" }, 400);
+  }
+  await env.DB.prepare("UPDATE users SET auto_topup_cents = ? WHERE lower(email) = ?").bind(cents, email.toLowerCase()).run();
+  return json({ ok: true, autoTopupCents: cents });
 }
 
 /* =========================================================
@@ -2083,6 +2105,7 @@ async function ensureD1Tables(db) {
     try { await db.prepare(sql).run(); } catch (ee) { /* ignore */ }
   }
   try { await db.prepare("ALTER TABLE users ADD COLUMN stripe_customer_id TEXT").run(); } catch (e) { /* already exists */ }
+  try { await db.prepare("ALTER TABLE users ADD COLUMN auto_topup_cents INTEGER DEFAULT 0").run(); } catch (e) { /* already exists */ }
   // Performance indexes
   const indexes = [
     `CREATE INDEX IF NOT EXISTS idx_credit_email ON credit_transactions(email)`,
@@ -2337,6 +2360,7 @@ export default {
     if (url.pathname === "/api/credits/consume" && request.method === "POST") return handleCreditsConsume(request, env);
     if (url.pathname === "/api/credits/balance" && request.method === "GET") return handleCreditsBalance(request, env);
     if (url.pathname === "/api/credits/topup" && request.method === "POST") return handleCreditsTopup(request, env);
+    if (url.pathname === "/api/credits/auto-topup" && request.method === "POST") return handleSetAutoTopup(request, env);
     if (url.pathname === "/api/credits/reconcile" && request.method === "POST") return handlePolarReconcile(request, env);
     if (url.pathname === "/api/polar-webhook" && request.method === "POST") return handlePolarWebhook(request, env);
     // Stripe routes (disabled — kept for reference):

@@ -1017,7 +1017,7 @@ function playSfx(key,vol=0.5){
 let authFlowToken='',authPendingEmail='';
 let userAccess={email:'',verified:false,provider:'',paid:false,usageMs:0,cooldownUntil:0,lastTick:0};
 let usageTimer=null;
-let cwServerSession={email:null,isAdmin:false,plan:'visitor',creditsRemaining:null,creditBalance:0};
+let cwServerSession={email:null,isAdmin:false,plan:'visitor',creditsRemaining:null,creditBalance:0,autoTopupCents:0};
 
 const useElevenLabs=true;
 function getPauseBetweenLines(){return voiceSpeed>=4.5?200:1000;}
@@ -1527,22 +1527,28 @@ async function toggleAutoTopup(){
   var isOn=tog&&tog.classList.contains('on');
   gaEvent('toggle_auto_topup',{enabled:!isOn});
   if(isOn){
-    tog.classList.remove('on');if(row)row.style.display='none';localStorage.removeItem('cw_autoTopup');
+    tog.classList.remove('on');if(row)row.style.display='none';
+    cwServerSession.autoTopupCents=0;
+    saveAutoTopupToServer(0);
     showToast('Auto top-up disabled',2000);
   }else{
     var amt=2500;
-    localStorage.setItem('cw_autoTopup',JSON.stringify({amount:amt}));
+    cwServerSession.autoTopupCents=amt;
+    saveAutoTopupToServer(amt);
     tog.classList.add('on');if(row)row.style.display='';updateAutoTopupBtns();
     showToast('Auto top-up enabled',2000);
   }
 }
 function setAutoTopupAmount(cents){
-  localStorage.setItem('cw_autoTopup',JSON.stringify({amount:cents}));
+  cwServerSession.autoTopupCents=cents;
+  saveAutoTopupToServer(cents);
   updateAutoTopupBtns();
 }
+function saveAutoTopupToServer(cents){
+  fetch('/api/credits/auto-topup',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount_cents:cents})}).catch(function(){});
+}
 function updateAutoTopupBtns(){
-  var saved=JSON.parse(localStorage.getItem('cw_autoTopup')||'null');
-  var amt=saved&&saved.amount||2500;
+  var amt=cwServerSession.autoTopupCents||2500;
   ['atAmt5','atAmt10','atAmt25'].forEach(function(id){
     var el=document.getElementById(id);if(!el)return;
     var v=id==='atAmt5'?500:id==='atAmt10'?1000:2500;
@@ -1550,20 +1556,20 @@ function updateAutoTopupBtns(){
   });
 }
 function initAutoTopupUI(){
-  var saved=JSON.parse(localStorage.getItem('cw_autoTopup')||'null');
+  var amt=cwServerSession.autoTopupCents||0;
   var tog=document.getElementById('autoTopupToggle');
   var row=document.getElementById('autoTopupAmountRow');
-  if(saved){if(tog)tog.classList.add('on');if(row)row.style.display='';updateAutoTopupBtns()}
+  if(amt){if(tog)tog.classList.add('on');if(row)row.style.display='';updateAutoTopupBtns()}
   else{if(tog)tog.classList.remove('on');if(row)row.style.display='none'}
 }
 var _autoCharging=false;
 async function checkAutoTopup(){
   if(_autoCharging)return;
-  var saved=JSON.parse(localStorage.getItem('cw_autoTopup')||'null');
-  if(!saved||!cwServerSession.email)return;
+  var amt=cwServerSession.autoTopupCents||0;
+  if(!amt||!cwServerSession.email)return;
   if((cwServerSession.creditBalance||0)<200){
     _autoCharging=true;
-    var packId=saved.amount<=500?'pack_5':saved.amount<=1000?'pack_10':'pack_25';
+    var packId=amt<=500?'pack_5':amt<=1000?'pack_10':'pack_25';
     showToast('Low balance — redirecting to add credits…',3000);
     try{
       var rsp=await fetch('/api/credits/topup',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({pack:packId})});
@@ -1697,7 +1703,7 @@ async function fetchServerSession(){
     const data=await rsp.json().catch(()=>null);
     console.info('[session]',JSON.stringify(data));
     if(!data||!data.ok)return;
-    cwServerSession={email:data.email||null,isAdmin:!!data.isAdmin,plan:data.plan||'visitor',creditsRemaining:data.creditsRemaining,creditBalance:data.creditBalance||0};
+    cwServerSession={email:data.email||null,isAdmin:!!data.isAdmin,plan:data.plan||'visitor',creditsRemaining:data.creditsRemaining,creditBalance:data.creditBalance||0,autoTopupCents:data.autoTopupCents||0};
     applyServerSessionUI();
   }catch(e){console.warn('[session] fetch failed',e);}
 }
@@ -2823,7 +2829,7 @@ async function logoutUser(){
   userAccess={email:'',verified:false,provider:'',paid:false,usageMs:0,cooldownUntil:0,lastTick:0};
   persistAccess();
   saveUserData(createFreshUserData('figurant'));
-  cwServerSession={email:null,isAdmin:false,plan:'visitor',creditsRemaining:null,creditBalance:0};
+  cwServerSession={email:null,isAdmin:false,plan:'visitor',creditsRemaining:null,creditBalance:0,autoTopupCents:0};
   try{await fetch('/api/logout',{method:'POST',credentials:'same-origin'});}catch(e){}
   applyServerSessionUI();
   updateAuthMiniButton();
@@ -3382,7 +3388,7 @@ async function speakWithElevenLabs(text,preset,token,cb){
         if(newBal!==null){
           cwServerSession.creditBalance=parseInt(newBal)||0;
           updateCreditBadge();
-          if(cwServerSession.creditBalance>0&&cwServerSession.creditBalance<=100){
+          if(cwServerSession.creditBalance>0&&cwServerSession.creditBalance<200){
             showToast(t('lowCredits')+': $'+(cwServerSession.creditBalance/100).toFixed(2),3000);
             checkAutoTopup();
           }
