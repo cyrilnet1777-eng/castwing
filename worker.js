@@ -564,7 +564,7 @@ async function fetchAccountFallbackVoiceId(apiKey, attemptedVoiceId) {
   } catch (e) { return ""; }
 }
 
-async function handleTTS(request, env) {
+async function handleTTS(request, env, ctx) {
   try {
     const apiKey = String(env.ELEVENLABS_API_KEY || "").trim().replace(/^['"]|['"]$/g, "").replace(/^Bearer\s+/i, "");
     if (!apiKey) return json({ ok: false, error: "TTS_PROVIDER_ERROR", message: "Missing API key" }, 500);
@@ -669,8 +669,8 @@ async function handleTTS(request, env) {
           );
 
           if (response.ok) {
-            // Send usage event to Polar for metered users (fire-and-forget)
-            if (_isMetered) sendPolarUsageEvent(env, email, charCount);
+            // Send usage event to Polar for metered users (keep alive after response)
+            if (_isMetered && ctx) ctx.waitUntil(sendPolarUsageEvent(env, email, charCount));
             // Credits already debited atomically before TTS call
             let newBalance = null;
             if (!isAdmin && !_isMetered && email && env.DB) {
@@ -2448,7 +2448,7 @@ ${numberedText}`;
 ========================================================= */
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     let clientScheme = url.protocol.replace(":", "");
@@ -2469,7 +2469,7 @@ export default {
       return json({ country, acceptLanguage });
     }
 
-    if (url.pathname === "/api/tts" && request.method === "POST") return handleTTS(request, env);
+    if (url.pathname === "/api/tts" && request.method === "POST") return handleTTS(request, env, ctx);
     if (url.pathname === "/api/label-script") return withAnthropicSlot(env, handleLabelScript, request);
     if (url.pathname === "/api/claude-parse-script") return withAnthropicSlot(env, handleClaudeParseScript, request);
     if (url.pathname === "/api/parse-screenplay") {
