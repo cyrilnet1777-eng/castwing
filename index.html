@@ -3284,6 +3284,7 @@ function changeSessionVoice(){
 function clearAutoTimer(){if(autoAdvanceTimer){clearTimeout(autoAdvanceTimer);autoAdvanceTimer=null}}
 function cancelTTSPlayback(){
   speechSynthesis.cancel();
+  if(ttsAudio&&typeof ttsAudio.stop==='function'){try{ttsAudio.stop()}catch(e){}}
   const el=document.getElementById('ttsAudioEl');
   if(el){
     el.pause();
@@ -6624,6 +6625,7 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   const _ssb=document.getElementById('smartShareBtn');if(_ssb&&!navigator.share)_ssb.textContent='Copy session link';
   const pa=document.getElementById('prompterArea');
   if(pa)pa.addEventListener('scroll',()=>{
+    if(_scrollSyncProgrammatic){_lastPrompterScrollTop=pa.scrollTop;return}
     const st=pa.scrollTop;
     if(st<_lastPrompterScrollTop){
       userScrolledUp=true;
