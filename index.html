@@ -5695,8 +5695,8 @@ function renderPrompter(){
     a.appendChild(groupEl);
   }
   if(!userScrolledUp){
-    const act=a.querySelector('.prompter-line.active');
-    if(act){_scrollSyncProgrammatic=true;requestAnimationFrame(()=>{scrollActiveLineTo30(a,act);setTimeout(()=>{_scrollSyncProgrammatic=false},300)})}
+    const act=a.querySelector('.prompter-line.active')||a.querySelector('[data-line-index="'+prompterIndex+'"]');
+    if(act){_scrollSyncProgrammatic=true;requestAnimationFrame(()=>{scrollActiveLineTo30(a,act);setTimeout(()=>{_scrollSyncProgrammatic=false},800)})}
   }
 }
 let vadSilenceSeconds=(()=>{
@@ -6285,7 +6285,7 @@ function handleDataMessage(d){
     if(target){
       pa.querySelectorAll('.prompter-line.active').forEach(el=>el.classList.remove('active'));
       target.classList.add('active');
-      if(!userScrolledUp){_scrollSyncProgrammatic=true;requestAnimationFrame(()=>{scrollActiveLineTo30(pa,target);setTimeout(()=>{_scrollSyncProgrammatic=false},300)})}
+      if(!userScrolledUp){_scrollSyncProgrammatic=true;requestAnimationFrame(()=>{scrollActiveLineTo30(pa,target);setTimeout(()=>{_scrollSyncProgrammatic=false},800)})}
     }else{
       renderPrompter();
     }
@@ -6376,6 +6376,7 @@ async function bootstrapAiSessionFromCurrentScript(importScreenN){
   setPrompterLinesForSession(n,'bootstrapAiSession');
   prompterIndex=0;
   lastAutoSpokenIndex=-1;
+  userScrolledUp=false;
   const _pCounts={actor:0,partner:0,context:0};
   prompterLines.forEach(l=>{_pCounts[l.type]=((_pCounts[l.type])||0)+1});
   console.info('[session] prompterLines:',prompterLines.length,'→ actor:',_pCounts.actor,'partner:',_pCounts.partner,'context:',_pCounts.context,'mode:',mode,'sessionMode:',sessionMode);
