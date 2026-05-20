@@ -668,24 +668,8 @@ input[type="file"]{display:none}
           </div>
           <button class="ps-toggle" id="paygoToggle" onclick="handlePaygoToggle()" style="flex-shrink:0"></button>
         </div>
-        <div id="paygoActiveInfo" style="display:none;margin-top:8px;font-size:.72rem;color:#34C759">$0.30/1,000 characters · billed monthly</div>
-      </div>
-      <div id="profileAutoTopup" style="background:transparent;border:1px solid var(--border);border-radius:0;padding:12px;margin:8px 0;font-size:.82rem">
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div>
-            <div style="font-weight:600;color:var(--white)">Auto top-up</div>
-            <div style="font-size:.72rem;color:var(--text-muted)">Add credits when balance drops below $2</div>
-          </div>
-          <button class="ps-toggle" id="autoTopupToggle" onclick="toggleAutoTopup()" style="flex-shrink:0"></button>
-        </div>
-        <div id="autoTopupAmountRow" style="display:none;margin-top:8px">
-          <label style="font-size:.72rem;color:var(--text-muted)">Amount to add</label>
-          <div style="display:flex;gap:6px;margin-top:4px">
-            <button class="mode-opt" onclick="setAutoTopupAmount(500)" id="atAmt5" style="flex:1;padding:.3rem">$5</button>
-            <button class="mode-opt" onclick="setAutoTopupAmount(1000)" id="atAmt10" style="flex:1;padding:.3rem">$10</button>
-            <button class="mode-opt active" onclick="setAutoTopupAmount(2500)" id="atAmt25" style="flex:1;padding:.3rem">$25</button>
-          </div>
-        </div>
+        <div id="paygoActiveInfo" style="display:none;margin-top:8px;font-size:.72rem;color:#34C759">Active · billed monthly</div>
+        <div style="margin-top:6px;font-size:.72rem;color:var(--text-muted)">$0.30 / 1,000 characters</div>
       </div>
       <div id="profileRecordings" style="margin:8px 0;border:1px solid var(--border)">
         <div onclick="toggleProfileSection('profileRecList','profileRecToggle')" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;cursor:pointer;user-select:none">
@@ -1531,56 +1515,12 @@ async function refreshCreditBalance(){
     }
   }catch(e){}
 }
-async function toggleAutoTopup(){
-  var tog=document.getElementById('autoTopupToggle');
-  var row=document.getElementById('autoTopupAmountRow');
-  var isOn=tog&&tog.classList.contains('on');
-  gaEvent('toggle_auto_topup',{enabled:!isOn});
-  if(isOn){
-    tog.classList.remove('on');if(row)row.style.display='none';
-    cwServerSession.autoTopupCents=0;
-    saveAutoTopupToServer(0);
-    showToast('Auto top-up disabled',2000);
-  }else{
-    var amt=2500;
-    cwServerSession.autoTopupCents=amt;
-    saveAutoTopupToServer(amt);
-    tog.classList.add('on');if(row)row.style.display='';updateAutoTopupBtns();
-    showToast('Auto top-up enabled',2000);
-  }
-}
-function setAutoTopupAmount(cents){
-  cwServerSession.autoTopupCents=cents;
-  saveAutoTopupToServer(cents);
-  updateAutoTopupBtns();
-}
-function saveAutoTopupToServer(cents){
-  fetch('/api/credits/auto-topup',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount_cents:cents})}).catch(function(){});
-}
-function updateAutoTopupBtns(){
-  var amt=cwServerSession.autoTopupCents||2500;
-  ['atAmt5','atAmt10','atAmt25'].forEach(function(id){
-    var el=document.getElementById(id);if(!el)return;
-    var v=id==='atAmt5'?500:id==='atAmt10'?1000:2500;
-    el.classList.toggle('active',v===amt);
-  });
-}
-function initAutoTopupUI(){
-  var amt=cwServerSession.autoTopupCents||0;
-  var tog=document.getElementById('autoTopupToggle');
-  var row=document.getElementById('autoTopupAmountRow');
-  if(amt){if(tog)tog.classList.add('on');if(row)row.style.display='';updateAutoTopupBtns()}
-  else{if(tog)tog.classList.remove('on');if(row)row.style.display='none'}
-}
 function updatePaygoUI(){
   var tog=document.getElementById('paygoToggle');
   var info=document.getElementById('paygoActiveInfo');
-  var autoTopup=document.getElementById('profileAutoTopup');
   var isOn=cwServerSession.billingMode==='metered';
   if(tog)tog.classList.toggle('on',isOn);
   if(info)info.style.display=isOn?'':'none';
-  // Hide auto-topup when PAYG is active (they're mutually exclusive)
-  if(autoTopup)autoTopup.style.display=isOn?'none':'';
 }
 async function handlePaygoToggle(){
   var isOn=cwServerSession.billingMode==='metered';
@@ -1606,27 +1546,6 @@ async function handlePaygoToggle(){
       showToast('Could not start checkout: '+(data&&data.error||'error'),4000);
     }
   }catch(e){showToast('Error enabling Pay-As-You-Go',3000)}
-}
-var _autoCharging=false;
-async function checkAutoTopup(){
-  if(_autoCharging)return;
-  var amt=cwServerSession.autoTopupCents||0;
-  if(!amt||!cwServerSession.email)return;
-  if((cwServerSession.creditBalance||0)<200){
-    _autoCharging=true;
-    var packId=amt<=500?'pack_5':amt<=1000?'pack_10':'pack_25';
-    showToast('Low balance — redirecting to add credits…',3000);
-    try{
-      var rsp=await fetch('/api/credits/topup',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({pack:packId})});
-      var data=await rsp.json().catch(function(){return null});
-      if(data&&data.ok&&data.checkoutUrl){
-        if(data.checkoutUrl&&data.checkoutUrl.startsWith('https://polar.sh/'))window.location.href=data.checkoutUrl;else showToast('Invalid checkout URL',3000);
-      }else{
-        showToast('Could not start checkout: '+(data&&data.error||'error'),4000);
-      }
-    }catch(e){showToast('Auto top-up error',3000)}
-    _autoCharging=false;
-  }
 }
 async function loadUsageHistory(){
   try{
@@ -2691,9 +2610,7 @@ function applyUILanguage(){
   const _aci=document.getElementById('authCodeInput');if(_aci)_aci.placeholder=t('authCodePlaceholder');
   document.querySelectorAll('[onclick="startChangeEmail()"]').forEach(el=>{el.textContent=t('changeEmailBtn')});
   document.querySelectorAll('.auth-logout-btn').forEach(el=>{el.textContent=t('logoutBtn')});
-  const _atTitle=document.querySelector('#profileAutoTopup div[style*="font-weight:600"]');if(_atTitle)_atTitle.textContent=t('autoTopupTitle');
-  const _atDesc=document.querySelector('#profileAutoTopup div[style*="font-size:.72rem"]');if(_atDesc)_atDesc.textContent=t('autoTopupDesc');
-  const _atAmtLabel=document.querySelector('#autoTopupAmountRow label');if(_atAmtLabel)_atAmtLabel.textContent=t('autoTopupAmountLabel');
+
   const _icb=document.getElementById('importContinueBtn');if(_icb)_icb.textContent=t('continueBtn');
   const _arl=document.getElementById('authResendLink');if(_arl)_arl.textContent=t('resendCodeBtn');
   const _orb=document.getElementById('optionalReviewBtn1');if(_orb)_orb.textContent=t('reviewScriptBtn');
@@ -2851,7 +2768,6 @@ function openAuthModal(){
     if(usageLabel)usageLabel.textContent=tt('recentActivity','Recent activity');
     loadUsageHistory();
     refreshCreditBalance();
-    initAutoTopupUI();
     updatePaygoUI();
     renderProfileRecordings();
   }else{
@@ -3436,7 +3352,6 @@ async function speakWithElevenLabs(text,preset,token,cb){
           updateCreditBadge();
           if(cwServerSession.creditBalance>0&&cwServerSession.creditBalance<200){
             showToast(t('lowCredits')+': $'+(cwServerSession.creditBalance/100).toFixed(2),3000);
-            checkAutoTopup();
           }
         }
         // Track free lines for visitors
@@ -6812,8 +6727,7 @@ document.addEventListener('DOMContentLoaded',async ()=>{
     gaEvent('checkout_cancel');
     showToast(tt('paymentCancelled','Payment cancelled.'),3000);history.replaceState({},'','/');
   }else if(cardSaved==='success'){
-    showToast('Card saved! Auto top-up is active.',5000);
-    initAutoTopupUI();
+    showToast('Card saved!',5000);
     history.replaceState({},'','/');
   }else if(cardSaved==='cancel'){
     localStorage.removeItem('cw_autoTopup');
