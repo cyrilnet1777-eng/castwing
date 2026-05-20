@@ -5638,6 +5638,14 @@ function scrollActiveLineTo30(pa,el){
   const targetY=pa.scrollTop+el.getBoundingClientRect().top-pa.getBoundingClientRect().top-pa.clientHeight*0.3;
   pa.scrollTo({top:Math.max(0,targetY),behavior:'smooth'});
 }
+function forceScrollToActive(){
+  const pa=document.getElementById('prompterArea');if(!pa)return;
+  const act=pa.querySelector('.prompter-line.active')||pa.querySelector('[data-line-index="'+prompterIndex+'"]');
+  if(!act)return;
+  userScrolledUp=false;
+  _scrollSyncProgrammatic=true;
+  requestAnimationFrame(()=>{scrollActiveLineTo30(pa,act);setTimeout(()=>{_scrollSyncProgrammatic=false},800)});
+}
 function renderPrompter(){
   const a=document.getElementById('prompterArea');
   const emptyTxt=(typeof t==='function'&&t('prompterEmptyText'))||'Aucun texte chargé';
@@ -5808,6 +5816,7 @@ function scheduleAfterPartner(lineIndex){
     lastAutoSpokenIndex=-1;
     renderPrompter();
     syncPrompter();
+    forceScrollToActive();
     handleCurrentLineAutomation();
   },getPauseBetweenLines());
 }
@@ -5830,6 +5839,7 @@ function handleCurrentLineAutomation(){
         prompterIndex=firstSpokenIdx;
         lastAutoSpokenIndex=firstSpokenIdx-1;
         renderPrompter();syncPrompter();
+        forceScrollToActive();
         handleCurrentLineAutomation();
         return;
       }
@@ -6396,7 +6406,9 @@ async function bootstrapAiSessionFromCurrentScript(importScreenN){
     if(tier!=='visitor'||getSpecTier()==='figurant')startSessionTimer();
     else hideTimerBadge();
     setViewMode(sessionViewMode);
+    userScrolledUp=false;
     handleCurrentLineAutomation();
+    forceScrollToActive();
   });
   return true;
 }
