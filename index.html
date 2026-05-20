@@ -681,6 +681,10 @@ input[type="file"]{display:none}
         <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;letter-spacing:.1em;text-transform:uppercase" id="profileUsageLabel">Recent activity</div>
         <div id="profileUsageList" style="font-size:0.82rem"></div>
       </div>
+      <div id="profileRecordings" style="max-height:200px;overflow-y:auto;margin:8px 0">
+        <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;letter-spacing:.1em;text-transform:uppercase">Recordings</div>
+        <div id="profileRecList" style="font-size:0.82rem"></div>
+      </div>
       <div class="auth-actions-grid">
         <button onclick="startChangeEmail()">Change email</button>
         <button class="auth-logout-btn" onclick="logoutUser()">Log out</button>
@@ -2791,6 +2795,7 @@ function openAuthModal(){
     loadUsageHistory();
     refreshCreditBalance();
     initAutoTopupUI();
+    renderProfileRecordings();
   }else{
     if(loginView)loginView.style.display='block';
     if(accountView)accountView.style.display='none';
@@ -4938,7 +4943,21 @@ async function renderRecordingsList(){
   list.innerHTML=recs.sort((a,b)=>b.date-a.date).map(r=>`<div class="rec-item"><div class="rec-item-info"><div class="rec-item-name">${escHtml(r.fname)}</div><div class="rec-item-meta">${formatRecDate(r.date)} · ${formatRecSize(r.size)}</div></div><button class="rec-item-btn" onclick="reShareRec(${r.id})" title="Share/Download"><svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 1 0-3-3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 1 0 0 6c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65a2.88 2.88 0 0 0 5.84 0 2.88 2.88 0 0 0-2.92-2.88z"/></svg></button><button class="rec-item-btn del" onclick="deleteRec(${r.id})" title="Delete"><svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button></div>`).join('')
 }
 async function reShareRec(id){const recs=await getRecsFromDB();const rec=recs.find(r=>r.id===id);if(rec)shareOrDownloadRec(rec)}
-async function deleteRec(id){await deleteRecFromDB(id);renderRecordingsList();showToast('Recording deleted')}
+async function deleteRec(id){await deleteRecFromDB(id);renderRecordingsList();renderProfileRecordings();showToast('Recording deleted')}
+async function renderProfileRecordings(){
+  const list=document.getElementById('profileRecList');if(!list)return;
+  const recs=await getRecsFromDB();
+  const wrap=document.getElementById('profileRecordings');
+  if(!recs.length){if(wrap)wrap.style.display='none';return}
+  if(wrap)wrap.style.display='';
+  list.innerHTML=recs.sort((a,b)=>b.date-a.date).map(r=>'<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.08)">'
+    +'<div style="min-width:0;flex:1"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--white);font-size:.78rem">'+escHtml(r.fname)+'</div>'
+    +'<div style="font-size:.68rem;color:var(--text-muted)">'+formatRecDate(r.date)+' · '+formatRecSize(r.size)+'</div></div>'
+    +'<div style="display:flex;gap:4px;flex-shrink:0">'
+    +'<button onclick="reShareRec('+r.id+')" style="background:none;border:1px solid var(--border);color:var(--white);padding:4px 8px;font-size:.68rem;cursor:pointer" title="Download">Save</button>'
+    +'<button onclick="deleteRec('+r.id+')" style="background:none;border:1px solid var(--border);color:#d92027;padding:4px 8px;font-size:.68rem;cursor:pointer" title="Delete">Del</button>'
+    +'</div></div>').join('');
+}
 function cwAwaitIndexedDbDelete(dbName){
   return new Promise(resolve=>{
     if(typeof indexedDB==='undefined'){resolve();return}
