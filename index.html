@@ -4420,7 +4420,8 @@ async function parseViaExtractAndLabel(file){
     chunks.push(chunkNumbered);
   }
   console.log('Labeling '+chunks.length+' chunks (2 at a time)...');
-  stopFakeProgress();
+  if(_fakeProgressTimer){clearInterval(_fakeProgressTimer);_fakeProgressTimer=null}
+  _fakeProgressPct=5;
   _updateRing(5);
   var allLabels=[];
   var allChars=[];
