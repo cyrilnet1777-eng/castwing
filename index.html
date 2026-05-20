@@ -4957,7 +4957,7 @@ async function renderRecordingsList(){
 }
 async function reShareRec(id){const recs=await getRecsFromDB();const rec=recs.find(r=>r.id===id);if(rec)shareOrDownloadRec(rec)}
 async function reDownloadRec(id){const recs=await getRecsFromDB();const rec=recs.find(r=>r.id===id);if(rec)downloadRecToDevice(rec)}
-async function deleteRec(id){await deleteRecFromDB(id);renderRecordingsList();renderProfileRecordings();showToast('Recording deleted')}
+async function deleteRec(id){if(!confirm('Delete this recording?'))return;await deleteRecFromDB(id);renderRecordingsList();renderProfileRecordings();showToast('Recording deleted')}
 async function renderProfileRecordings(){
   const list=document.getElementById('profileRecList');if(!list)return;
   const recs=await getRecsFromDB();
