@@ -3524,6 +3524,18 @@ function showToast(m,d=3000){const t=document.getElementById('toast');t.textCont
 function showOverlay(t,m){document.getElementById('overlayTitle').textContent=t;document.getElementById('overlayMsg').textContent=m;document.getElementById('connectOverlay').classList.add('active')}
 function hideOverlay(){document.getElementById('connectOverlay').classList.remove('active')}
 let _fakeProgressTimer=null,_fakeProgressPct=0;
+let _progressTarget=0,_progressCurrent=0,_progressAnimTimer=null;
+function _animateProgressTo(target){
+  _progressTarget=target;
+  if(_progressAnimTimer)return;
+  _progressAnimTimer=setInterval(function(){
+    if(_progressCurrent<_progressTarget){
+      _progressCurrent=Math.min(_progressCurrent+1,_progressTarget);
+      _updateRing(_progressCurrent);
+    }
+    if(_progressCurrent>=_progressTarget){clearInterval(_progressAnimTimer);_progressAnimTimer=null}
+  },50);
+}
 let _pdfParseAbort=null,_pdfParseCancelled=false;
 function setLoading(on,m){
   const e=document.getElementById('loadingOverlay');
@@ -3555,6 +3567,8 @@ function startFakeProgress(){
 }
 function stopFakeProgress(){
   if(_fakeProgressTimer){clearInterval(_fakeProgressTimer);_fakeProgressTimer=null}
+  if(_progressAnimTimer){clearInterval(_progressAnimTimer);_progressAnimTimer=null}
+  _progressCurrent=0;_progressTarget=0;
   _updateRing(100);
   const spinner=document.getElementById('loadingSpinner');
   const ring=document.getElementById('loadingRing');
@@ -4421,8 +4435,7 @@ async function parseViaExtractAndLabel(file){
   }
   console.log('Labeling '+chunks.length+' chunks (2 at a time)...');
   if(_fakeProgressTimer){clearInterval(_fakeProgressTimer);_fakeProgressTimer=null}
-  _fakeProgressPct=5;
-  _updateRing(5);
+  _progressCurrent=5;_updateRing(5);
   var allLabels=[];
   var allChars=[];
   var CONCURRENT=2;
@@ -4438,7 +4451,7 @@ async function parseViaExtractAndLabel(file){
       chars.forEach(function(c){if(allChars.indexOf(c)===-1)allChars.push(c)});
     }
     chunksCompleted+=batch.length;
-    _updateRing(Math.min(95,Math.floor(5+90*chunksCompleted/chunks.length)));
+    _animateProgressTo(Math.min(95,Math.floor(5+90*chunksCompleted/chunks.length)));
   }
   return mergeLabelsWithText(lines,{characters:allChars,labels:allLabels});
 }
