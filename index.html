@@ -4342,16 +4342,30 @@ function buildNumberedText(lines){
 }
 async function fetchLabelScript(numberedText){
   if(!cwServerSession.email){throw new Error('AUTH_REQUIRED')}
-  var ac=new AbortController();
-  _pdfParseAbort=ac;
-  try{
-    var res=await fetch('/api/label-script',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({numberedText:numberedText}),signal:ac.signal});
-    var data=await res.json().catch(function(){return{}});
-    if(!res.ok){var msg=data.error||data.message||('HTTP '+res.status);throw new Error(typeof msg==='string'?msg:JSON.stringify(msg))}
-    if(data.success===false)throw new Error(String(data.error||'Labeling failed'));
-    return data;
-  }finally{
-    if(_pdfParseAbort===ac)_pdfParseAbort=null;
+  var maxRetries=3;
+  for(var attempt=0;attempt<maxRetries;attempt++){
+    var ac=new AbortController();
+    _pdfParseAbort=ac;
+    try{
+      var res=await fetch('/api/label-script',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({numberedText:numberedText}),signal:ac.signal});
+      var data=await res.json().catch(function(){return{}});
+      if(res.status===503&&attempt<maxRetries-1){
+        await new Promise(function(r){setTimeout(r,2000*(attempt+1))});
+        continue;
+      }
+      if(!res.ok){var msg=data.error||data.message||('HTTP '+res.status);throw new Error(typeof msg==='string'?msg:JSON.stringify(msg))}
+      if(data.success===false)throw new Error(String(data.error||'Labeling failed'));
+      return data;
+    }catch(e){
+      if(e.name==='AbortError')throw e;
+      if(attempt<maxRetries-1&&e.message&&e.message.indexOf('Failed to fetch')!==-1){
+        await new Promise(function(r){setTimeout(r,2000*(attempt+1))});
+        continue;
+      }
+      throw e;
+    }finally{
+      if(_pdfParseAbort===ac)_pdfParseAbort=null;
+    }
   }
 }
 function mergeLabelsWithText(lines,labelData){
@@ -4405,10 +4419,13 @@ async function parseViaExtractAndLabel(file){
     var chunkNumbered=chunkLines.map(function(l,i){return(start+i+1)+': '+l}).join('\n');
     chunks.push(chunkNumbered);
   }
-  console.log('Labeling '+chunks.length+' chunks sequentially...');
+  console.log('Labeling '+chunks.length+' chunks (2 at a time)...');
+  stopFakeProgress();
+  _updateRing(5);
   var allLabels=[];
   var allChars=[];
   var CONCURRENT=2;
+  var chunksCompleted=0;
   for(var ci=0;ci<chunks.length;ci+=CONCURRENT){
     if(_pdfParseCancelled)throw new Error('Cancelled');
     var batch=chunks.slice(ci,ci+CONCURRENT);
@@ -4419,6 +4436,8 @@ async function parseViaExtractAndLabel(file){
       var chars=Array.isArray(results[i].characters)?results[i].characters:[];
       chars.forEach(function(c){if(allChars.indexOf(c)===-1)allChars.push(c)});
     }
+    chunksCompleted+=batch.length;
+    _updateRing(Math.min(95,Math.floor(5+90*chunksCompleted/chunks.length)));
   }
   return mergeLabelsWithText(lines,{characters:allChars,labels:allLabels});
 }
