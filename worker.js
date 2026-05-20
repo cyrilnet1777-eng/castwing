@@ -191,6 +191,7 @@ async function handleCreditsBalance(request, env) {
   const email = await resolveCurrentUser(request, env);
   if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
   const { balance_cents } = await getCreditBalance(env.DB, email);
+  const metered = await isMeteredUser(env.DB, email);
   let transactions = [];
   if (env.DB) {
     try {
@@ -202,11 +203,28 @@ async function handleCreditsBalance(request, env) {
       transactions = recent.results || [];
     } catch (e) { /* table may not exist yet */ }
   }
+  // Include metered usage events for PAYG users
+  let meteredEvents = [];
+  if (metered && env.DB) {
+    try {
+      const rows = await env.DB.prepare(
+        `SELECT event_type, meta_json, created_at FROM usage_events
+         WHERE lower(email) = ? AND event_type = 'polar_event_sent'
+         ORDER BY created_at DESC LIMIT 50`
+      ).bind(email.toLowerCase()).all();
+      meteredEvents = (rows.results || []).map(r => {
+        const meta = JSON.parse(r.meta_json || "{}");
+        return { type: "metered_tts", char_count: meta.charCount || 0, created_at: r.created_at, polar_ok: meta.ok };
+      });
+    } catch (e) {}
+  }
   return json({
     ok: true,
     balance_cents,
     balance_display: "$" + (balance_cents / 100).toFixed(2),
     transactions,
+    metered,
+    meteredEvents,
   });
 }
 
