@@ -844,10 +844,10 @@ input[type="file"]{display:none}
           <div class="ps-section-sub">Delay before the AI follows up after your line</div>
           <div class="ps-slider-wrap">
             <span class="ps-end-label">Short</span>
-            <input type="range" id="vadSilenceSlider" min="0.5" max="5" step="0.25" value="1.25" oninput="onVadSliderChange(this.value)" style="flex:1;accent-color:#FF3B30;cursor:pointer">
+            <input type="range" id="vadSilenceSlider" min="0.10" max="5" step="0.05" value="0.75" oninput="onVadSliderChange(this.value)" style="flex:1;accent-color:#FF3B30;cursor:pointer">
             <span class="ps-end-label">Long</span>
           </div>
-          <div class="ps-slider-value" id="vadSilenceLabel">1.25s</div>
+          <div class="ps-slider-value" id="vadSilenceLabel">0.75s</div>
         </div>
         <div class="ps-separator"></div>
         <div class="ps-section">
@@ -888,7 +888,7 @@ input[type="file"]{display:none}
 let role='actor',sessionMode='ai',mode='ai';
 let peer=null,conn=null,call=null,localStream=null,mediaRecorder=null,recordedChunks=[];
 let isRecording=false,isMicOn=true,isCamOn=true,currentFacingMode='user',prompterLines=[],prompterIndex=0,connectionTimeout=null;
-let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',selectedLocale='french',selectedUILanguage='en',voiceSpeed=1.5,availableVoices=[],presetVoiceMap={};
+let selectedChar=null,pdfScript=[],selectedVoice=null,selectedEmotion='neutral',selectedLocale='french',selectedUILanguage='en',voiceSpeed=4,availableVoices=[],presetVoiceMap={};
 let soloPartnerMode='all',soloPartnerChar=null;
 let lockedVoiceLocale='';
 let _preItalienneVoice=null;
@@ -2167,9 +2167,9 @@ const EMOTION_PRESETS={
   whisper:{label:'Chuchoté',pitch:1.28,rate:0.72,playbackRate:0.72},
 };
 const SPEED_MIN=0;
-const SPEED_MAX=5;
-const SPEED_DEFAULT=1.5;
-function sliderToElevenLabs(v){return 0.7+(Math.min(5,Math.max(0,v))/5)*0.5;}
+const SPEED_MAX=7;
+const SPEED_DEFAULT=4;
+function sliderToElevenLabs(v){return 0.7+(Math.min(7,Math.max(0,v))/7)*0.5;}
 const PREVIEW_TEXT_BY_LANG={
   fr:'Bonjour, je suis {name}.',
   en:'Hello, I am {name}.',
@@ -3169,7 +3169,7 @@ function renderSpeedSlider(containerId,compact){
   if(!g)return;
   g.innerHTML='';
   var slider=document.createElement('input');
-  slider.type='range';slider.min='0';slider.max='5';slider.step='0.5';
+  slider.type='range';slider.min='0';slider.max='7';slider.step='0.5';
   slider.value=String(voiceSpeed);
   slider.className='speed-slider';
   slider.style.cssText='width:100%;accent-color:#FF3B30;cursor:pointer';
@@ -5714,14 +5714,14 @@ function renderPrompter(){
 }
 let vadSilenceSeconds=(()=>{
   const raw=localStorage.getItem('cw_vadSilence');
-  if(raw===null||raw==='')return 1.25;
+  if(raw===null||raw==='')return 0.75;
   const v=parseFloat(raw);
-  return Number.isFinite(v)?Math.min(5,Math.max(0.5,v)):1.25;
+  return Number.isFinite(v)?Math.min(5,Math.max(0.10,v)):0.75;
 })();
 function onVadSliderChange(val){
   vadSilenceSeconds=parseFloat(val);
-  if(!Number.isFinite(vadSilenceSeconds))vadSilenceSeconds=1.25;
-  vadSilenceSeconds=Math.min(5,Math.max(0.5,vadSilenceSeconds));
+  if(!Number.isFinite(vadSilenceSeconds))vadSilenceSeconds=0.75;
+  vadSilenceSeconds=Math.min(5,Math.max(0.10,vadSilenceSeconds));
   localStorage.setItem('cw_vadSilence',String(vadSilenceSeconds));
   const lbl=document.getElementById('vadSilenceLabel');
   if(lbl){
@@ -6667,7 +6667,7 @@ document.addEventListener('DOMContentLoaded',async ()=>{
     if(saved.emotion&&EMOTION_PRESETS[saved.emotion])selectedEmotion=saved.emotion;
     if(Number.isFinite(Number(saved.speedValue))){
       var sv=Number(saved.speedValue);
-      if(sv<0||sv>5||!Number.isFinite(sv))sv=SPEED_DEFAULT;
+      if(sv<0||sv>7||!Number.isFinite(sv))sv=SPEED_DEFAULT;
       voiceSpeed=Math.max(SPEED_MIN,Math.min(SPEED_MAX,sv));
     }else voiceSpeed=SPEED_DEFAULT;
     if(saved.mode&&['ai','manual','auto'].includes(saved.mode))mode=saved.mode;
