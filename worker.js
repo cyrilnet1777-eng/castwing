@@ -2302,7 +2302,7 @@ export default {
     }
 
     if (url.pathname === "/api/tts" && request.method === "POST") return handleTTS(request, env);
-    if (url.pathname === "/api/label-script") return handleLabelScript(request, env);
+    if (url.pathname === "/api/label-script") return withAnthropicSlot(env, handleLabelScript, request);
     if (url.pathname === "/api/claude-parse-script") return withAnthropicSlot(env, handleClaudeParseScript, request);
     if (url.pathname === "/api/parse-screenplay") {
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: PARSE_SCREENPLAY_CORS });
