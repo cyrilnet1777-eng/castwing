@@ -203,9 +203,9 @@ async function handleCreditsBalance(request, env) {
       transactions = recent.results || [];
     } catch (e) { /* table may not exist yet */ }
   }
-  // Include metered usage events for PAYG users
+  // Include metered usage events (always, regardless of current billing mode)
   let meteredEvents = [];
-  if (metered && env.DB) {
+  if (env.DB) {
     try {
       const rows = await env.DB.prepare(
         `SELECT event_type, meta_json, created_at FROM usage_events
