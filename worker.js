@@ -13,6 +13,12 @@
 const _rateCounters = new Map();
 function rateCheck(key, maxCount, windowSec) {
   const now = Date.now();
+  // Lazy cleanup: purge stale entries when map grows large
+  if (_rateCounters.size > 200) {
+    for (const [k, v] of _rateCounters) {
+      if (now - v.start > 300000) _rateCounters.delete(k);
+    }
+  }
   let entry = _rateCounters.get(key);
   if (!entry || now - entry.start > windowSec * 1000) {
     entry = { start: now, count: 0 };
@@ -21,13 +27,6 @@ function rateCheck(key, maxCount, windowSec) {
   entry.count++;
   return entry.count <= maxCount;
 }
-// Periodic cleanup of stale entries (every 5 min)
-setInterval(() => {
-  const now = Date.now();
-  for (const [k, v] of _rateCounters) {
-    if (now - v.start > 300000) _rateCounters.delete(k);
-  }
-}, 300000);
 
 // In-memory Anthropic concurrency semaphore (replaces KV-based semaphore)
 let _anthropicConcurrent = 0;
