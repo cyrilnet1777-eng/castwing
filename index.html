@@ -2265,6 +2265,7 @@ const UI_FALLBACK_TRANSLATIONS={
   analysisEmpty:{fr:'Analyse vide — réessaie ou colle le texte.',en:'Analysis empty — try again or paste the text.',es:'Análisis vacío — inténtalo de nuevo.',it:'Analisi vuota — riprova o incolla il testo.',zh:'分析结果为空 — 请重试或粘贴文本。',ko:'분석 결과 없음 — 다시 시도하거나 텍스트를 붙여넣으세요.',ja:'分析結果が空です — 再試行するかテキストを貼り付けてください。',de:'Analyse leer — versuche es erneut oder füge den Text ein.',pt:'Análise vazia — tente novamente ou cole o texto.'},
   analysisFailed:{fr:'Échec analyse',en:'Analysis failed',es:'Análisis fallido',it:'Analisi fallita',zh:'分析失败',ko:'분석 실패',ja:'分析失敗',de:'Analyse fehlgeschlagen',pt:'Análise falhou'},
   loginRequired:{fr:'Connexion requise pour analyser un script',en:'Please log in to analyze a script',es:'Inicia sesión para analizar un guión',it:'Accedi per analizzare un copione',zh:'请登录以分析剧本',ko:'스크립트를 분석하려면 로그인하세요',ja:'スクリプトを分析するにはログインしてください',de:'Bitte einloggen um ein Skript zu analysieren',pt:'Faça login para analisar um roteiro'},
+  loginToStart:{fr:'Connectez-vous pour lancer votre tape',en:'Log in to start your tape',es:'Inicia sesión para comenzar tu tape',it:'Accedi per iniziare il tuo tape',zh:'登录以开始您的tape',ko:'테이프를 시작하려면 로그인하세요',ja:'テープを開始するにはログインしてください',de:'Einloggen um dein Tape zu starten',pt:'Faça login para iniciar seu tape'},
   uploadLabel:{ko:'PDF를 여기에 놓거나 클릭',hi:'अपना PDF यहां डालें या क्लिक करें'},
   uploadSub:{ko:'표준 대본 형식',hi:'मानक स्क्रीनप्ले फॉर्मेट'},
   pasteScriptLabel:{ko:'또는 텍스트 붙여넣기',hi:'या टेक्स्ट पेस्ट करें'},
@@ -2864,6 +2865,7 @@ async function verifyEmailCode(){
   try{var _ast=document.getElementById('authStatusText');if(_ast)_ast.textContent=t('authVerified')}catch(_e){}
   showToast(isSignup?t('authWelcomeNew'):t('authWelcomeBack'),isSignup?4200:3200);
   try{closeAuthModal()}catch(_e){}
+  resumePendingFileAfterAuth();
 }
 const GOOGLE_CLIENT_ID='580840125965-vrcb9nvptv4mj1ua0v66mq1asl5t6o51.apps.googleusercontent.com';
 function startGoogleSignIn(){
@@ -2899,6 +2901,18 @@ async function handleGoogleCredential(response){
   try{var st=document.getElementById('authStatusText');if(st)st.textContent=t('authVerified')}catch(_e){}
   showToast(isSignup?t('authWelcomeNew'):t('authWelcomeBack'),isSignup?4200:3200);
   try{closeAuthModal()}catch(_e){}
+  resumePendingFileAfterAuth();
+}
+function resumePendingFileAfterAuth(){
+  if(!_pendingFileAfterAuth)return;
+  const{n,file}=_pendingFileAfterAuth;
+  _pendingFileAfterAuth=null;
+  showScreen('importScene');
+  initDragDrop('uploadZone1');
+  setTimeout(()=>{
+    if(isPdfUploadFile(file)){processPDF(n,file)}
+    else{showToast('Unsupported file format',4000)}
+  },300);
 }
 function hasPaidAccess(){return true}
 function isUsageBlocked(){return false}
@@ -3180,7 +3194,6 @@ function renderSpeedSlider(containerId,compact){
   slider.oninput=function(){var v=parseFloat(this.value);val.textContent='x'+v.toFixed(1);setVoiceSpeed(v,true)};
   g.appendChild(slider);
   g.appendChild(val);
-  if(voiceSpeed>=4.5){var badge=document.createElement('span');badge.textContent='IT';badge.style.cssText='font-size:.6rem;font-weight:800;color:#1a1a1a;background:#FF3B30;border-radius:4px;padding:1px 4px;display:inline-block;margin-top:4px';g.appendChild(badge)}
 }
 function renderAllSpeedSliders(){
   renderSpeedSlider('speedBtnsSession',true);
@@ -3771,13 +3784,30 @@ function initDragDrop(zoneId){
     const f=e.dataTransfer.files;
     if(!f||!f.length){showToast('Seuls les PDF sont acceptés');return}
     const file=f[0];
-    if(isPdfUploadFile(file)){void processPDF(n,file)}
-    else showToast('Seuls les PDF sont acceptés');
+    if(!isPdfUploadFile(file)){showToast('Seuls les PDF sont acceptés');return}
+    const _isLoggedIn=!!(cwServerSession.email||(userAccess.verified&&userAccess.email));
+    if(!_isLoggedIn){
+      _pendingFileAfterAuth={n,file};
+      showToast(t('loginToStart')||'Log in to start your tape',3000);
+      openAuthModal();
+      return;
+    }
+    void processPDF(n,file);
   });
 }
 
+let _pendingFileAfterAuth=null;
 async function handlePDFInput(n,input){
   const f=input.files[0];if(!f)return;
+  // Auth gate: require login before analyzing
+  const _isLoggedIn=!!(cwServerSession.email||(userAccess.verified&&userAccess.email));
+  if(!_isLoggedIn){
+    _pendingFileAfterAuth={n,file:f};
+    showToast(t('loginToStart')||'Log in to start your tape',3000);
+    openAuthModal();
+    input.value='';
+    return;
+  }
   gaEvent('import_script',{method:'file',file_type:f.name.split('.').pop()});
   if(!isPdfUploadFile(f)){showToast('Unsupported file format',4000);input.value='';return}
   const name=String(f.name||'').toLowerCase();
