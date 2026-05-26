@@ -103,6 +103,11 @@ Partners join directly via the "Join a session" link on the landing page (no imp
 - **Always commit and push before deploying.** CI auto-deploys on push.
 - Staging: `npx wrangler deploy --env staging --keep-vars` (manual, preserves secrets).
 
+### Versioning
+- `APP_BUILD` in index.html uses today's date: `YYYY-MM-DDa` (e.g. `2026-05-26a`)
+- Increment the letter suffix (a→b→c) for multiple deploys on the same day
+- **Never** reuse or increment from a previous day's version — always use today's actual date
+
 ### File structure
 ```
 index.html                   Single-page app (HTML + inline CSS + JS)

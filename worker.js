@@ -2556,6 +2556,7 @@ export default {
       newResponse.headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
       newResponse.headers.set("Pragma", "no-cache");
       newResponse.headers.set("Expires", "0");
+      newResponse.headers.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
       newResponse.headers.set("X-App-Version", "2026.05.10a");
       return newResponse;
     }

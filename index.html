@@ -444,15 +444,28 @@ input[type="file"]{display:none}
 .rec-panel{bottom:auto!important;top:50dvh;left:8px;right:8px;width:auto;max-height:45dvh;z-index:210}
 .setup-header{padding-left:52px!important}
 }
-@media(max-width:767px) and (orientation:landscape){
-.video-area{height:100vh;height:100dvh}
-.prompter-area{position:fixed;bottom:0;left:0;right:0;height:30dvh;z-index:55;background:linear-gradient(0deg,rgba(0,0,0,.92) 60%,transparent);border-top:none;padding-top:1.5rem}
-.mob-controls-row{top:auto;bottom:12px;top:calc(50dvh - 24px)}
-.mob-action-col{top:50%;transform:translateY(-50%)}
-.session-top{background:linear-gradient(180deg,rgba(0,0,0,.75),transparent);border-bottom:none}
-.rec-panel{top:auto;bottom:8px;max-height:80dvh}
+@media(max-height:600px) and (orientation:landscape){
+.session-body{display:flex!important;flex-direction:row!important;height:100vh!important;height:100dvh!important}
+.video-area{position:fixed!important;top:0!important;left:0!important;right:auto!important;bottom:0!important;width:40%!important;height:100vh!important;height:100dvh!important;z-index:50!important}
+.video-container{height:100%!important}
+.video-container video{object-fit:cover!important;height:100%!important;width:100%!important}
+.video-controls{display:none!important}
+.speed-btns-overlay{display:none!important}
+.prompter-area{position:fixed!important;top:0!important;left:40%!important;right:0!important;bottom:0!important;width:auto!important;height:100vh!important;height:100dvh!important;margin-top:0!important;max-width:none!important;z-index:55!important;background:#000!important;border-top:none!important;border-left:1px solid rgba(255,255,255,.14)!important;padding:2.5rem 1rem 3rem!important;overflow-y:auto!important}
+.session-bottom{display:none!important}
+.ai-panel{display:none!important}
+.session-top{left:40%!important;right:0!important;width:auto!important;background:linear-gradient(180deg,rgba(0,0,0,.75),transparent)!important;border-bottom:none!important}
+.session-top #sessionBalanceBadge{display:none!important}
+.mob-controls-row{display:flex!important;position:fixed!important;top:auto!important;bottom:6px!important;left:0!important;right:60%!important;width:auto!important;transform:none!important;justify-content:center!important;align-items:center!important;z-index:60!important;gap:8px!important}
+.mob-main-btn{display:flex!important}
+.mob-action-col{display:flex!important;position:fixed!important;top:50%!important;right:auto!important;left:calc(40% - 52px)!important;transform:translateY(-50%)!important;z-index:60!important}
+.rec-panel{top:auto!important;bottom:8px!important;max-height:80dvh!important;right:8px!important;left:40%!important}
+.pause-overlay{padding:8px 8px env(safe-area-inset-bottom,8px)!important}
+.pause-overlay .pause-controls{height:100%!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom,12px)!important}
+.pause-overlay .ps-resume-btn{position:sticky!important;bottom:0!important;z-index:2!important}
 }
-@media(min-width:768px){#home{padding:3rem}.home-inner{max-width:520px}.logo h1{font-size:3.2rem}.session-body{flex-direction:row}.video-area{position:fixed;top:0;left:0;width:60%;height:100vh;z-index:50}.prompter-area{margin-top:2.5rem;margin-left:60%;flex:1;height:100vh;height:100dvh;border-top:none;border-left:1px solid rgba(255,255,255,.14);padding-bottom:5rem;overflow-y:auto}.session-top{left:60%}.session-bottom{left:60%}}
+@media(min-width:768px) and (min-height:601px){#home{padding:3rem}.home-inner{max-width:520px}.logo h1{font-size:3.2rem}.session-body{flex-direction:row}.video-area{position:fixed;top:0;left:0;width:60%;height:100vh;z-index:50}.prompter-area{margin-top:2.5rem;margin-left:60%;flex:1;height:100vh;height:100dvh;border-top:none;border-left:1px solid rgba(255,255,255,.14);padding-bottom:5rem;overflow-y:auto}.session-top{left:60%}.session-bottom{left:60%}}
+@media(min-width:768px) and (max-height:600px){#home{padding:3rem}.home-inner{max-width:520px}.logo h1{font-size:3.2rem}}
 .clap-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;z-index:10001;animation:clapIn .3s ease}
 .clap-card{background:linear-gradient(180deg,#2a2a2a,#161616);border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:0;width:280px;max-width:90%;font-family:'DM Sans',sans-serif;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06);position:relative}
 .clap-card::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 40%);border-radius:12px}
@@ -645,6 +658,7 @@ input[type="file"]{display:none}
       </div>
       <a class="auth-forgot" id="authResendLink" onclick="requestEmailCode()" style="display:none">Resend code</a>
       <p class="pay-lock" id="authStatusText"></p>
+      <div style="text-align:center;padding:8px 0 2px;font-size:.6rem;color:rgba(255,255,255,.25);letter-spacing:.05em" id="authBuildVersion"></div>
     </div>
     <div id="authAccountView" style="display:none">
       <div class="auth-logged-in">
@@ -690,6 +704,7 @@ input[type="file"]{display:none}
         <button onclick="startChangeEmail()">Change email</button>
         <button class="auth-logout-btn" onclick="logoutUser()">Log out</button>
       </div>
+      <div style="text-align:center;padding:8px 0 2px;font-size:.6rem;color:rgba(255,255,255,.25);letter-spacing:.05em" id="profileBuildVersion"></div>
     </div>
   </div>
 </div>
@@ -885,6 +900,9 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
+const APP_BUILD='2026-05-26a';
+console.info('[CitizenTape] build',APP_BUILD);
+const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
 let peer=null,conn=null,call=null,localStream=null,mediaRecorder=null,recordedChunks=[];
 let isRecording=false,isMicOn=true,isCamOn=true,currentFacingMode='user',prompterLines=[],prompterIndex=0,connectionTimeout=null;
@@ -2070,6 +2088,8 @@ const ELEVEN_VOICE_IDS={
   omar:'xvhpbk8otnNHtT3fjCpr',
   salma:'B5xxC4eQoOFJnY4R5XkI',
   sadie:'bD9maNcCuQQS75DGuteM',
+  caty:'54Cze5LrTSyLgbO6Fhlc',
+  lucy:'lcMyyd2HUfFzxdCaC4Ta',
   // Library voices (staging test)
   nova_f:'kdmDKE6EkgrWrrykO9Qt',
   nova_m:'mZ8K1MPRiT5wDQaasg3i',
@@ -2109,10 +2129,12 @@ const VOICE_ALIAS_GENDER={
   leo_kid:'male',
   isa:'female',
   sadie:'female',
+  caty:'female',
+  lucy:'female',
 };
 const VOICE_LOCALES=[
   {id:'french',label:'Français 🇫🇷',languageCode:'fr',profiles:[
-    {id:'fr-f',voice:'nova_f',fallback:['charlotte','francesca','eliza','elen'],label:'Camille',tag:'Standard',gender:'female',languageCode:'fr-fr'},
+    {id:'fr-f',voice:'glinda',fallback:['nova_f','charlotte','francesca','eliza','elen'],label:'Léonie',tag:'Standard',gender:'female',languageCode:'fr-fr'},
     {id:'fr-m',voice:'nova_m',fallback:['james','camille_m','john_doe','austin'],label:'Lucas',tag:'Standard',gender:'male',languageCode:'fr-fr'},
     {id:'fr-sadie',voice:'sadie',fallback:['charlotte','francesca','eliza'],label:'Sadie',tag:'Calm & Gritty',gender:'female',languageCode:'fr-fr'},
   ]},
@@ -2122,6 +2144,9 @@ const VOICE_LOCALES=[
     {id:'en-gb-f',voice:'eliza',fallback:['isa','elen','charlotte','francesca'],label:'Emma',tag:'UK',gender:'female',languageCode:'en-gb'},
     {id:'en-gb-m',voice:'austin',fallback:['john_doe','edward','camille_m','james'],label:'Oliver',tag:'UK',gender:'male',languageCode:'en-gb'},
     {id:'en-sadie',voice:'sadie',fallback:['elen','eliza','charlotte'],label:'Sadie',tag:'Calm & Gritty',gender:'female',languageCode:'en-us'},
+    {id:'en-isla',voice:'isa',fallback:['eliza','elen','charlotte'],label:'Isla',tag:'Scottish',gender:'female',languageCode:'en-gb'},
+    {id:'en-caty',voice:'caty',fallback:['elen','eliza','charlotte'],label:'Caty',tag:'Droll & Dry',gender:'female',languageCode:'en-us'},
+    {id:'en-lucy',voice:'lucy',fallback:['elen','eliza','charlotte'],label:'Lucy',tag:'Fresh & Casual',gender:'female',languageCode:'en-us'},
   ]},
   {id:'spanish',label:'Español 🇪🇸',languageCode:'es',profiles:[
     {id:'es-f',voice:'charlotte',fallback:['eliza','salma'],label:'Valentina',tag:'Standard',gender:'female',languageCode:'es-es'},
@@ -2783,6 +2808,8 @@ function openAuthModal(){
     refreshCreditBalance();
     updatePaygoUI();
     renderProfileRecordings();
+    var bv=document.getElementById('profileBuildVersion');if(bv)bv.textContent='v'+APP_BUILD;
+    var abv=document.getElementById('authBuildVersion');if(abv)abv.textContent='v'+APP_BUILD;
   }else{
     if(loginView)loginView.style.display='block';
     if(accountView)accountView.style.display='none';
@@ -2872,7 +2899,7 @@ async function verifyEmailCode(){
     if(isSignup){onUserSignedIn({id:authPendingEmail,userId:out.userId||null})}
     else{const u=getUserData();u.email=authPendingEmail;if(out.userId)u.userId=out.userId;if(out.tier&&['figurant','audition','payg','oscar','palme'].includes(out.tier))u.tier=out.tier;if(u.tier==='figurant')onUserSignedIn({id:authPendingEmail,userId:out.userId||null});else{saveUserData(u);dismissPaywall();updateTimerBadge();if(typeof updateChronoDisplay==='function')updateChronoDisplay()}}
   }catch(e){console.warn('[auth] post-login data:',e)}
-  try{fetchServerSession()}catch(_e){}
+  try{await fetchServerSession()}catch(_e){}
   try{var _ast=document.getElementById('authStatusText');if(_ast)_ast.textContent=t('authVerified')}catch(_e){}
   showToast(isSignup?t('authWelcomeNew'):t('authWelcomeBack'),isSignup?4200:3200);
   try{closeAuthModal()}catch(_e){}
@@ -2908,7 +2935,7 @@ async function handleGoogleCredential(response){
     if(isSignup){onUserSignedIn({id:out.email,userId:out.userId||null})}
     else{const u=getUserData();u.email=out.email;if(out.userId)u.userId=out.userId;if(out.tier&&['figurant','audition','payg','oscar','palme'].includes(out.tier))u.tier=out.tier;if(u.tier==='figurant')onUserSignedIn({id:out.email,userId:out.userId||null});else{saveUserData(u);dismissPaywall();updateTimerBadge();if(typeof updateChronoDisplay==='function')updateChronoDisplay()}}
   }catch(e){console.warn('[auth] google post-login data:',e)}
-  try{fetchServerSession()}catch(_e){}
+  try{await fetchServerSession()}catch(_e){}
   try{var st=document.getElementById('authStatusText');if(st)st.textContent=t('authVerified')}catch(_e){}
   showToast(isSignup?t('authWelcomeNew'):t('authWelcomeBack'),isSignup?4200:3200);
   try{closeAuthModal()}catch(_e){}
@@ -3604,7 +3631,8 @@ const ROUTE_TO_SCREEN=Object.fromEntries(Object.entries(SCREEN_ROUTES).map(([k,v
 function showScreen(id){
   gaEvent('screen_view',{screen_name:id});
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  const el=document.getElementById(id);if(!el){console.warn('[showScreen] unknown screen:',id);return}
+  el.classList.add('active');
   const bb=document.getElementById('homeBottomBar');if(bb)bb.style.display=id==='home'?'flex':'none';
   var hash=SCREEN_ROUTES[id];
   if(hash!==undefined){var target=hash?'#'+hash:'';if(location.hash!==target&&('#'+location.hash.slice(1))!==target)history.pushState(null,'',target||location.pathname+location.search)}
@@ -4519,7 +4547,7 @@ async function processPDF(n,file){
     void fillScriptInputProgressive(n,scriptRawText);
   }catch(e){
     console.error('PDF parse error:',e);
-    if(e&&e.message==='AUTH_REQUIRED'){showToast(t('loginRequired'),5000);showScreen('auth');return}
+    if(e&&e.message==='AUTH_REQUIRED'){showToast(t('loginRequired'),5000);return}
     showToast(t('analysisFailed')+': '+(e&&e.message?e.message:'check ANTHROPIC_API_KEY'),6500);
     pdfScript=[];
     syncPdfScriptDebugMirror();
@@ -6684,6 +6712,7 @@ function initCardTilt(){
 
 window.addEventListener('beforeunload',e=>{if(isRecording||__cwSessionActive){e.preventDefault();e.returnValue=''}});
 document.addEventListener('DOMContentLoaded',async ()=>{
+  document.querySelectorAll('#authBuildVersion,#profileBuildVersion').forEach(el=>{el.textContent='v'+APP_BUILD});
   const _ssb=document.getElementById('smartShareBtn');if(_ssb&&!navigator.share)_ssb.textContent='Copy session link';
   const pa=document.getElementById('prompterArea');
   if(pa)pa.addEventListener('scroll',()=>{
