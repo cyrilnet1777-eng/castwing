@@ -4932,6 +4932,8 @@ async function normalizeScreenplayWhitespaceAsync(text){
 const CW_IDB_NAME='citizentape-script-db';
 const CW_LEGACY_IDB_NAME='CastwingDB';
 const CW_IDB_STORE='kv';
+const CW_SNAPSHOT_MAX_AGE_MS=4*60*60*1000; // 4 hours
+const CW_RESTORE_SUPPRESS_KEY='cw_restore_suppress';
 let _cwIdb=null;
 
 // ── Recording History (IndexedDB) ──
@@ -5100,7 +5102,16 @@ function schedulePersistScriptSnapshot(){
   /* désactivé : pas de persistance IndexedDB du script */
 }
 async function persistScriptSnapshotNow(){
-  /* désactivé : classification et parse 100 % locales */
+  if(!pdfScript||!pdfScript.length||!scriptRawText)return;
+  try{
+    await cwIdbSet('cw.snapshot.v1',{
+      scriptRawText:scriptRawText,
+      pdfScript:pdfScript,
+      currentScriptName:currentScriptName||'Script',
+      lockedVoiceLocale:lockedVoiceLocale||'',
+      savedAt:Date.now()
+    });
+  }catch(_e){console.warn('[snapshot] save failed',_e)}
 }
 async function clearPersistedScriptMemory(){
   await cwIdbDel('cw.snapshot.v1');
@@ -5539,6 +5550,7 @@ function finishPdfSetupUi(n,rawText,validChars,detectedLang){
     if(orb)orb.style.display='block';
     if(detectedLang&&VOICE_LOCALES.some(l=>l.id===detectedLang)){lockedVoiceLocale=detectedLang;applyLocaleVoices(detectedLang,false);initVoiceCountrySelect();initVoiceGrid()}
     if(n===1)showToast(chars.length+' roles found — '+t('myCharacterLabel'),4200);
+    persistScriptSnapshotNow();
   }else{
     pdfScript=[];
     syncPdfScriptDebugMirror();
