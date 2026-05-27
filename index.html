@@ -943,7 +943,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-05-27j';
+const APP_BUILD='2026-05-27k';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -5348,15 +5348,19 @@ async function tryRestorePersistedScriptFromIdb(){
     const uo=document.getElementById('uploadOk1');
     if(uz)uz.style.display='none';
     if(uo)uo.style.display='flex';
-    if(!getChars().length)return false;
+    const chars=getChars();
+    if(!chars.length)return false;
     if(lockedVoiceLocale&&VOICE_LOCALES.some(l=>l.id===lockedVoiceLocale)){
       applyLocaleVoices(lockedVoiceLocale,false);
       initVoiceCountrySelect();
       initVoiceGrid();
     }
-    const boot=()=>{requestRehearsalStart({source:'restore',importScreenN:1}).catch(()=>{})};
-    if(typeof requestIdleCallback==='function')requestIdleCallback(boot,{timeout:350});
-    else setTimeout(boot,0);
+    // Restore to import screen — let user pick character and continue manually
+    const detectedLang=lockedVoiceLocale||detectTextLanguage(scriptRawText);
+    showScreen('importScene');
+    initDragDrop('uploadZone1');
+    finishPdfSetupUi(1,scriptRawText,chars.map(c=>c.char),detectedLang);
+    renderScriptHistory();
     return true;
   }catch(_e){return false}
 }
