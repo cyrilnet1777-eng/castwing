@@ -725,6 +725,11 @@ input[type="file"]{display:none}
 <div id="importScene" class="screen">
   <div class="screen-content">
   <div class="setup-header"><button class="back-btn" onclick="goHome()">←</button><h2 id="importSceneTitle">Import your scene</h2></div>
+  <div class="script-history" id="scriptHistorySection" style="display:none">
+    <div class="script-history-label" id="scriptHistoryLabel">Recent scripts</div>
+    <div id="scriptHistoryList"></div>
+    <div class="import-divider" id="historyOrLabel">or upload a new one</div>
+  </div>
   <p class="import-sub" id="importSceneSub">PDF, Final Draft, or plain text</p>
   <div class="setup-card">
     <div class="upload-zone" id="uploadZone1" onclick="openPdfPicker(1)"><div class="up-icon"><svg viewBox="0 0 24 24" style="width:2rem;height:2rem;fill:var(--text-muted)"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg></div><div class="up-label" id="uploadLabel1">Drop your file here or click</div><div class="up-sub" id="uploadSub1">PDF, FDX, or TXT</div></div>
@@ -741,10 +746,6 @@ input[type="file"]{display:none}
     <label id="pasteScriptLabel1">Paste text</label>
     <textarea id="scriptInput1" placeholder="ME: My line&#10;PARTNER: Their line"></textarea>
     <button type="button" class="btn btn-secondary btn-full" style="margin-top:.5rem;padding:.55rem" onclick="processTextImport(1)" id="importPastedBtn1">Import pasted text</button>
-  </div>
-  <div class="script-history" id="scriptHistorySection" style="display:none">
-    <div class="script-history-label" id="scriptHistoryLabel">Recent scripts</div>
-    <div id="scriptHistoryList"></div>
   </div>
   <button class="btn btn-primary btn-full" id="importContinueBtn" style="display:none;margin-top:1rem" onclick="goChooseMode()">Continue →</button>
   </div>
@@ -915,7 +916,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-05-27e';
+const APP_BUILD='2026-05-27f';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -5175,10 +5176,12 @@ async function restoreFromScriptHistory(idx){
 async function renderScriptHistory(){
   var sec=document.getElementById('scriptHistorySection');
   var list=document.getElementById('scriptHistoryList');
+  var sub=document.getElementById('importSceneSub');
   if(!sec||!list)return;
   var hist=await getScriptHistory();
-  if(!hist.length){sec.style.display='none';return}
+  if(!hist.length){sec.style.display='none';if(sub)sub.style.display='';return}
   sec.style.display='block';
+  if(sub)sub.style.display='none';
   list.innerHTML=hist.map(function(h,i){
     var dateStr=new Date(h.savedAt).toLocaleDateString()+' '+new Date(h.savedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     var chars=(h.characters||[]).slice(0,3).join(', ')+(h.characters&&h.characters.length>3?' +':'');
