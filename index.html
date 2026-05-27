@@ -943,7 +943,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-05-27l';
+const APP_BUILD='2026-05-27m';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -3688,6 +3688,7 @@ function showScreen(id){
 window.addEventListener('popstate',function(){
   var h=location.hash.slice(1);
   var screen=ROUTE_TO_SCREEN[h]||'home';
+  if(screen==='session')screen='home';
   if(screen==='importScene'){goImportScene();return}
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(screen).classList.add('active');
@@ -6925,6 +6926,8 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   updateSetupCameraButton();
   renderAllSpeedSliders();
   initCardTilt();
+  // Clear stale #session hash — session screen is never a valid entry point
+  if(location.hash==='#session')history.replaceState({},'',location.pathname+location.search);
   await fetchServerSession();
   if(isServerAdmin()){dismissPaywall();closePaywallModal();}
   // Handle payment return
