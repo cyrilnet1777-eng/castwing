@@ -18,14 +18,14 @@ binding = "AUTH_KV"
 id = "5b1939098b2b471eaa8e8155d4cae205"
 
 [vars]
-ADMIN_EMAILS = "sersoub.w@gmail.com"
+ADMIN_EMAILS = ""
 AUTH_FROM_EMAIL = "hello@citizentape.com"
 
 [env.staging]
 name = "citizentape-staging"
 
 [env.staging.vars]
-ADMIN_EMAILS = "sersoub.w@gmail.com"
+ADMIN_EMAILS = ""
 AUTH_FROM_EMAIL = "hello@citizentape.com"
 
 [[env.staging.d1_databases]]

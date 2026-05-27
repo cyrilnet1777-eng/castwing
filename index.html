@@ -943,7 +943,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-05-27n';
+const APP_BUILD='2026-05-27o';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -6278,15 +6278,18 @@ function togglePause(forceState){
     if(icon)icon.innerHTML='<polygon points="6,4 20,12 6,20" fill="currentColor"/>';
     if(mobBtn)mobBtn.classList.add('is-paused');
     if(recInd)recInd.style.display='none';
+    if(isRecording&&mediaRecorder&&mediaRecorder.state==='recording'){try{mediaRecorder.pause()}catch(_e){}}
     if(conn&&conn.open)conn.send({type:'pause'});
   }else{
     unfreezeTimer();
+    if(isRecording&&mediaRecorder&&mediaRecorder.state==='paused'){try{mediaRecorder.resume()}catch(_e){}}
     if(overlay)overlay.classList.remove('active');
     if(btn)btn.classList.remove('is-paused');
     if(icon)icon.innerHTML='<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>';
     if(mobBtn)mobBtn.classList.remove('is-paused');
     if(recInd&&isRecording)recInd.style.display='block';
     if(conn&&conn.open)conn.send({type:'resume'});
+    unavailableElevenVoiceIds.clear();
     lastAutoSpokenIndex=-1;
     handleCurrentLineAutomation();
   }
@@ -6822,7 +6825,10 @@ function endSession(){
   hideTimerBadge();
   lockedVoiceLocale='';userScrolledUp=false;
   const _pa=document.getElementById('prompterArea');if(_pa)_pa.classList.remove('rear-cam');
-  stopPeerKeepalive();hideOverlay();isMicOn=true;isCamOn=true;currentFacingMode='user';prompterLines=[];prompterIndex=0;lastAutoSpokenIndex=-1;activeSpeechToken=0;if(!wasRecording){recordedChunks=[];mediaRecorder=null;hideEndTakeModal();showScreen('home');}role='actor';sessionMode='ai';
+  stopPeerKeepalive();hideOverlay();isMicOn=true;isCamOn=true;currentFacingMode='user';prompterLines=[];prompterIndex=0;lastAutoSpokenIndex=-1;activeSpeechToken=0;
+  if(!wasRecording){recordedChunks=[];mediaRecorder=null;hideEndTakeModal();}
+  showScreen('home');
+  role='actor';sessionMode='ai';
 }
 function cancelConnection(){hideOverlay();if(!conn||!conn.open)endSession()}
 
