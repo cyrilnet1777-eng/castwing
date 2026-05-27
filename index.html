@@ -48,15 +48,15 @@
   --tf:all .15s ease;--ts:all .2s ease;
   --success:#22c55e;--danger:#ef4444;--warning:#f59e0b
 }
-html{height:100%;-webkit-text-size-adjust:100%}
+html{height:100%;-webkit-text-size-adjust:100%;overflow:hidden}
 body{
-  min-height:100vh;min-height:100dvh;font-family:'DM Sans',sans-serif;color:var(--text-dark);line-height:1.5;font-weight:500;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+  min-height:100vh;min-height:100dvh;font-family:'DM Sans',sans-serif;color:var(--text-dark);line-height:1.5;font-weight:500;-webkit-font-smoothing:antialiased;overflow:hidden;
   background:#1a1a1a
 }
 body::before{content:none}
 body::after{content:none}
 .screen{position:relative;z-index:1}
-.screen{display:none;flex-direction:column;min-height:100vh;min-height:100dvh}.screen.active{display:flex}
+.screen{display:none;flex-direction:column;min-height:100vh;min-height:100dvh;max-height:100vh;max-height:100dvh;overflow:hidden}.screen.active{display:flex}
 .screen-content{width:100%;max-width:560px;margin:0 auto;padding:1rem 1rem 2rem;box-sizing:border-box}
 
 /* HOME */
@@ -943,7 +943,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-05-27r';
+const APP_BUILD='2026-05-27s';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -2918,7 +2918,7 @@ async function requestEmailCode(){
     const resendLink=document.getElementById('authResendLink');
     if(resendLink)resendLink.style.display='block';
     document.getElementById('authStatusText').textContent=t('authCodeSent');
-  }catch(e){showToast('Connection failed');}
+  }catch(e){console.error('[auth] requestEmailCode error:',e.name,e.message);showToast(e.name==='TypeError'?'Network error — check your connection':'Connection failed — try again',5000);}
   finally{_authCodeSending=false;if(btn)btn.disabled=false;}
 }
 async function verifyEmailCode(){
@@ -2950,6 +2950,7 @@ async function verifyEmailCode(){
 }
 const GOOGLE_CLIENT_ID='580840125965-vrcb9nvptv4mj1ua0v66mq1asl5t6o51.apps.googleusercontent.com';
 function startGoogleSignIn(){
+  if(/OPR\/|Opera/i.test(navigator.userAgent)){showToast('Google login unavailable on this browser — use email',4000);return}
   if(typeof google==='undefined'||!google.accounts){showToast('Google non disponible, utilise ton email');return}
   google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:handleGoogleCredential,auto_prompt:false});
   google.accounts.id.prompt(n=>{
@@ -3129,8 +3130,11 @@ function scoreVoiceForPreset(v,p){
   if(region&&vLang.includes('-'+region))score+=30;
   if(v.localService)score+=10;
   const hints=voiceNameHints(v.name||'');
-  if((p&&p.gender)==='female'&&hints.female)score+=20;
-  if((p&&p.gender)==='male'&&hints.male)score+=20;
+  const wantGender=p&&p.gender;
+  if(wantGender==='female'&&hints.female)score+=50;
+  if(wantGender==='male'&&hints.male)score+=50;
+  if(wantGender==='female'&&hints.male)score-=40;
+  if(wantGender==='male'&&hints.female)score-=40;
   return score;
 }
 function getFilteredVoices(preset){
@@ -3221,8 +3225,8 @@ function numberToFrench(n){
 function normalizeTextForTTS(text,preset){
   const lang=normalizeLang((preset&&preset.languageCode)||getCurrentLanguageCode());
   let out=String(text||'');
-  // Strip parenthetical stage directions: (ironique), (en chuchotant), etc.
-  out=out.replace(/\((?:ironique|ironiquement|sarcastique|en\s+\w+|avec\s+\w+|riant|pleurant|murmurant|chuchotant|criant|hurlant|doucement|fort|bas|haut|pause|beat|a beat|sotto voce|whispering|shouting|laughing|crying|angry|sad|happy|excited|confused|nervous|hesitant|sarcastic|tenderly|coldly|warmly|quietly|loudly|softly|gently|firmly|V\.O\.|O\.S\.|O\.C\.|CONT'?D|CONTINUED|off|OFF)[^)]*\)/gi,'');
+  // Strip all parenthetical stage directions (up to 80 chars)
+  out=out.replace(/\([^)]{1,80}\)/g,'');
   out=out.replace(/\s{2,}/g,' ').trim();
   if(lang.startsWith('fr')){
     out=out.replace(/\b(\d{1,4})\s*%\b/g,(_,v)=>`${numberToFrench(Number(v))} pour cent`);
@@ -3354,7 +3358,7 @@ function initVoiceGrid(){
 }
 
 function previewVoice(v){
-  aiSpeak(getPreviewTextForVoice(v));
+  aiSpeak(getPreviewTextForVoice(v),null,{speedOverride:sliderToElevenLabs(SPEED_DEFAULT)});
 }
 
 function populateSessionVoiceSelect(){
@@ -3393,7 +3397,7 @@ async function warmAudioForMobile(){
     _audioUnlocked=true;
   }catch(e){}
 }
-async function speakWithElevenLabs(text,preset,token,cb){
+async function speakWithElevenLabs(text,preset,token,cb,speedOverride){
   try{
     if(!preset||!preset.voiceId)throw new Error('Missing ElevenLabs voiceId');
     if(!isServerAdmin()){
@@ -3424,7 +3428,7 @@ async function speakWithElevenLabs(text,preset,token,cb){
         }
       }
     }
-    const speed=getCurrentVoiceSpeed();
+    const speed=speedOverride!=null?speedOverride:getCurrentVoiceSpeed();
     console.info('[TTS] lang:',preset.languageCode,'locale:',selectedLocale,'locked:',lockedVoiceLocale,'voice:',preset.label);
     const voiceCandidates=[preset.voiceId,...(preset.fallbackVoiceIds||[])];
     let blob=null;
@@ -3522,7 +3526,9 @@ async function speakWithElevenLabs(text,preset,token,cb){
         var arrayBuf=await blob.arrayBuffer();
         var audioBuffer=await _recAudioCtx.decodeAudioData(arrayBuf);
         var _recDoneFired=false;
-        var recDone=function(){if(_recDoneFired)return;_recDoneFired=true;if(token===activeSpeechToken&&cb)cb();lastTTSEndTs=Date.now()};
+        var recDone=function(){if(_recDoneFired)return;_recDoneFired=true;if(_recMicGain)_recMicGain.gain.value=1.0;if(token===activeSpeechToken&&cb)cb();lastTTSEndTs=Date.now()};
+        // Mute mic during TTS to prevent echo in recording
+        if(_recMicGain)_recMicGain.gain.value=0;
         var src=_recAudioCtx.createBufferSource();
         src.buffer=audioBuffer;
         src.connect(_recDest);
@@ -3532,7 +3538,7 @@ async function speakWithElevenLabs(text,preset,token,cb){
         // Safety: onended can fail to fire on iOS Safari — use duration-based fallback
         var _safetyMs=Math.ceil((audioBuffer.duration||3)*1000)+500;
         var _safetyTimer=setTimeout(function(){console.warn('[TTS] onended safety timeout after '+_safetyMs+'ms');recDone()},_safetyMs);
-        ttsAudio={stop:function(){try{src.stop()}catch(e){}clearTimeout(_safetyTimer)}};
+        ttsAudio={stop:function(){try{src.stop()}catch(e){}clearTimeout(_safetyTimer);if(_recMicGain)_recMicGain.gain.value=1.0}};
         return true;
       }catch(e){console.warn('[TTS] AudioContext decode failed, falling back to element:',e.message)}
     }
@@ -3544,10 +3550,8 @@ async function speakWithElevenLabs(text,preset,token,cb){
     audio.onended=null;audio.onerror=null;
     audio.src=url;
     audio._revokeUrl=url;
-    const emo=getEmotionSettings();
-    const emoRate=Number(emo&&emo.playbackRate)||1;
-    audio.playbackRate=Math.max(0.58,Math.min(1.9,(speed||1)*emoRate));
-    audio.volume=selectedEmotion==='whisper'?0.55:selectedEmotion==='sad'?0.9:1;
+    audio.playbackRate=Math.max(0.58,Math.min(1.9,speed||1));
+    audio.volume=selectedEmotion==='whisper'?0.85:1;
     ttsAudio=audio;
     const done=()=>{URL.revokeObjectURL(url);if(audio._revokeUrl===url)audio._revokeUrl=null;if(token===activeSpeechToken&&cb)cb();lastTTSEndTs=Date.now();};
     audio.onended=done;
@@ -3575,15 +3579,16 @@ function speakWithBrowser(text,preset,style,token,cb){
   u.onerror=done;
   speechSynthesis.speak(u);
 }
-async function aiSpeak(text,cb){
+async function aiSpeak(text,cb,opts){
   if(!text){if(cb)cb();return}
+  opts=opts||{};
   const preset=selectedVoice||VOICE_PRESETS[0];
   console.info('[TTS] aiSpeak voiceId:',preset.voiceId,'label:',preset.label,'id:',preset.id,'slider:',voiceSpeed,'elevenSpeed:',getCurrentVoiceSpeed(),'emotion:',selectedEmotion);
   const spokenText=normalizeTextForTTS(text,preset);
   const token=++activeSpeechToken;
   cancelTTSPlayback();
   if(useElevenLabs&&!elevenLabsTemporarilyDisabled){
-    const ok=await speakWithElevenLabs(spokenText,preset,token,cb);
+    const ok=await speakWithElevenLabs(spokenText,preset,token,cb,opts.speedOverride);
     if(ok||token!==activeSpeechToken)return;
   }
   // If disabled due to credits, show pay popup instead of browser TTS
@@ -5305,6 +5310,7 @@ function requestRehearsalStart(opts){
       }catch(e){
         console.warn('[session] permission denied:',e.message);
         showToast(t('micDenied')||'Autorise le micro pour continuer',4000);
+        return false;
       }
       role='actor';sessionMode='ai';mode='ai';
       __cwPendingSessionTag='manual';
@@ -6293,9 +6299,11 @@ function togglePause(forceState){
     if(recInd&&isRecording)recInd.style.display='block';
     if(conn&&conn.open)conn.send({type:'resume'});
     unavailableElevenVoiceIds.clear();
-    if(_recAudioCtx&&_recAudioCtx.state==='suspended'){try{_recAudioCtx.resume()}catch(_e){}}
-    lastAutoSpokenIndex=-1;
-    handleCurrentLineAutomation();
+    (async()=>{
+      if(_recAudioCtx&&_recAudioCtx.state==='suspended'){try{await _recAudioCtx.resume()}catch(_e){console.warn('[resume] AudioContext resume failed:',_e)}}
+      lastAutoSpokenIndex=-1;
+      handleCurrentLineAutomation();
+    })();
   }
 }
 let _lastRecBlob=null,_lastRecFname='',_lastRecMime='';
@@ -6451,7 +6459,7 @@ function setPauseSpeed(v){setVoiceSpeed(v,false)}
 
 // ── Recording ──
 function toggleRecording(){if(isRecording)stopRecording();else startRecording()}
-var _recAudioCtx=null,_recDest=null,_recMicSource=null;
+var _recAudioCtx=null,_recDest=null,_recMicSource=null,_recMicGain=null;
 function _buildRecordingStream(){
   var combined=new MediaStream();
   // Use remote video for partner (they see the actor's camera), local video for actor
@@ -6465,10 +6473,13 @@ function _buildRecordingStream(){
   try{
     _recAudioCtx=new (window.AudioContext||window.webkitAudioContext)();
     _recDest=_recAudioCtx.createMediaStreamDestination();
-    // Mic audio
+    _recMicGain=_recAudioCtx.createGain();
+    _recMicGain.gain.value=1.0;
+    // Mic audio (routed through gain node so we can mute during TTS to prevent echo)
     if(localStream&&localStream.getAudioTracks().length>0){
       _recMicSource=_recAudioCtx.createMediaStreamSource(localStream);
-      _recMicSource.connect(_recDest);
+      _recMicSource.connect(_recMicGain);
+      _recMicGain.connect(_recDest);
     }
     // Remote audio (partner's voice for actor, actor's voice for partner)
     if(remoteStream&&remoteStream.getAudioTracks().length>0){
@@ -6519,7 +6530,7 @@ function startRecording(){
   isRecording=true;document.getElementById('btnRec').classList.add('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='flex';const _mr=document.getElementById('mobRecBtn');if(_mr)_mr.classList.add('recording');const _qb=document.getElementById('quitBtn');if(_qb){_qb.classList.add('has-recording');_qb.textContent='Save & Exit';}showToast('Recording…')}
   catch(e){showToast('Recording error')}
 }
-function stopRecording(){if(mediaRecorder&&mediaRecorder.state==='paused'){try{mediaRecorder.resume()}catch(_e){}}if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();if(_recAudioCtx){try{_recAudioCtx.close()}catch(e){}_recAudioCtx=null}_recDest=null;_recMicSource=null;isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='none';const _mr=document.getElementById('mobRecBtn');if(_mr)_mr.classList.remove('recording');const _qb=document.getElementById('quitBtn');if(_qb){_qb.classList.remove('has-recording');_qb.textContent='Done'}}
+function stopRecording(){if(mediaRecorder&&mediaRecorder.state==='paused'){try{mediaRecorder.resume()}catch(_e){}}if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();if(_recAudioCtx){try{_recAudioCtx.close()}catch(e){}_recAudioCtx=null}_recDest=null;_recMicSource=null;_recMicGain=null;isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='none';const _mr=document.getElementById('mobRecBtn');if(_mr)_mr.classList.remove('recording');const _qb=document.getElementById('quitBtn');if(_qb){_qb.classList.remove('has-recording');_qb.textContent='Done'}}
 
 // ── WebRTC ──
 function createPeer(id){return new Peer(id,{config:{iceServers:ICE_SERVERS}})}
@@ -6682,6 +6693,7 @@ async function enterRehearsalMode(importScreenN,pdfScriptSnapshot,selectedCharac
   }catch(e){
     console.warn('[rehearsal] permission:',e.message);
     showToast(t('micDenied')||'Autorise le micro pour continuer',4000);
+    return false;
   }
   role='actor';
   sessionMode='ai';
@@ -6811,11 +6823,32 @@ function endSession(){
     const savedChunks=recordedChunks;
     const savedRecorder=mediaRecorder;
     const origOnStop=savedRecorder.onstop;
+    let _onstopDone=false;
     savedRecorder.onstop=async function(){
+      if(_onstopDone)return;
+      _onstopDone=true;
+      clearTimeout(_onstopTimeout);
       recordedChunks=savedChunks;
       if(origOnStop)await origOnStop.call(this);
       teardownStreamsAndPeers();
     };
+    // iOS Safari: onstop may hang — force teardown after 5s
+    const _onstopTimeout=setTimeout(function(){
+      if(_onstopDone)return;
+      _onstopDone=true;
+      console.warn('[rec] onstop timeout — forcing teardown');
+      teardownStreamsAndPeers();
+      if(savedChunks.length>0){
+        try{
+          var isMP4=(savedRecorder.mimeType||'').startsWith('video/mp4');
+          var ext=isMP4?'mp4':'webm';var mime=isMP4?'video/mp4':'video/webm';
+          var blob=new Blob(savedChunks,{type:mime});
+          var fname='citizentape-'+Date.now()+'.'+ext;
+          saveRecToDB(blob,fname,mime).then(function(){renderRecordingsList()}).catch(function(){});
+          showRecSavedModal(blob,fname,mime);
+        }catch(e){console.error('[rec] timeout save:',e);showToast('Recording may not have saved',3000);hideEndTakeModal()}
+      }else{showToast('Recording could not be saved',3000);hideEndTakeModal()}
+    },5000);
     stopRecording();
   }else{
     teardownStreamsAndPeers();
