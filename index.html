@@ -943,7 +943,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-05-27i';
+const APP_BUILD='2026-05-27j';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -5172,6 +5172,7 @@ async function saveToScriptHistory(){
     hist.unshift({name:name,pdfScript:pdfScript,scriptRawText:scriptRawText,characters:chars,dialogueCount:dialogueCount,lockedVoiceLocale:lockedVoiceLocale||'',savedAt:Date.now()});
     if(hist.length>SCRIPT_HIST_MAX)hist=hist.slice(0,SCRIPT_HIST_MAX);
     await cwIdbSet(SCRIPT_HIST_KEY,hist);
+    renderScriptHistory();
   }catch(_e){console.warn('[history] save failed',_e)}
 }
 async function deleteFromScriptHistory(idx){
