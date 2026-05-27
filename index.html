@@ -916,7 +916,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-05-27f';
+const APP_BUILD='2026-05-27g';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -5168,9 +5168,9 @@ async function restoreFromScriptHistory(idx){
   currentScriptName=entry.name;
   if(entry.lockedVoiceLocale){lockedVoiceLocale=entry.lockedVoiceLocale;applyLocaleVoices(entry.lockedVoiceLocale,false);initVoiceCountrySelect();initVoiceGrid()}
   syncPdfScriptDebugMirror();
+  var ta=document.getElementById('scriptInput1');if(ta)ta.value='';
   var detectedLang=entry.lockedVoiceLocale||detectTextLanguage(scriptRawText);
   finishPdfSetupUi(1,scriptRawText,entry.characters||[],detectedLang);
-  void fillScriptInputProgressive(1,scriptRawText);
   showToast(entry.name+' restored',2500);
 }
 async function renderScriptHistory(){
@@ -5727,7 +5727,7 @@ function renderChars(n,chars){
   chars.forEach(({char,count})=>{const el=document.createElement('div');el.className='char-item';el.innerHTML=`${escHtml(char)}<span class="cc">(${count})</span>`;el.onclick=()=>{selectedChar=char;soloPartnerMode='all';soloPartnerChar=null;g.querySelectorAll('.char-item').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');showToast(char);if(n===1)renderPartnerAssignment(1);const cb=document.getElementById('importContinueBtn');if(cb)cb.style.display='block'};g.appendChild(el)});
   if(n===1)renderPartnerAssignment(1);
 }
-function clearPDF(n){__cwSessionActive=false;cwSessionStateClear('clearPDF');pdfScript=[];scriptRawText='';_bgRefinementToken++;_fastFullParseToken++;syncPdfScriptDebugMirror();clearPersistedScriptMemory().catch(()=>{});selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;lockedVoiceLocale='';initVoiceCountrySelect();document.getElementById('uploadZone'+n).style.display='block';document.getElementById('uploadOk'+n).style.display='none';document.getElementById('charSection'+n).style.display='none';if(n===1){const w=document.getElementById('partnerAssignWrap1');if(w)w.style.display='none'}document.getElementById('setupStatus'+n).textContent='';document.getElementById('pdfInput'+n).value='';const orb=document.getElementById('optionalReviewBtn'+n);if(orb)orb.style.display='none'}
+function clearPDF(n){__cwSessionActive=false;cwSessionStateClear('clearPDF');pdfScript=[];scriptRawText='';_bgRefinementToken++;_fastFullParseToken++;syncPdfScriptDebugMirror();clearPersistedScriptMemory().catch(()=>{});selectedChar=null;soloPartnerMode='all';soloPartnerChar=null;lockedVoiceLocale='';initVoiceCountrySelect();document.getElementById('uploadZone'+n).style.display='block';document.getElementById('uploadOk'+n).style.display='none';document.getElementById('charSection'+n).style.display='none';if(n===1){const w=document.getElementById('partnerAssignWrap1');if(w)w.style.display='none'}document.getElementById('setupStatus'+n).textContent='';document.getElementById('pdfInput'+n).value='';const orb=document.getElementById('optionalReviewBtn'+n);if(orb)orb.style.display='none';const ta=document.getElementById('scriptInput'+n);if(ta)ta.value='';const cb=document.getElementById('importContinueBtn');if(cb)cb.style.display='none';renderScriptHistory()}
 
 // ── Prompter ──
 function buildLines(n){
