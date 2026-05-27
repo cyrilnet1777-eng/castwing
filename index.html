@@ -4949,25 +4949,20 @@ function formatRecDate(ts){const d=new Date(ts);return d.toLocaleDateString()+' 
 async function downloadRecToDevice(rec){
   const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&'ontouchend' in document);
   if(isIOS){
-    // iOS: open video in new tab — Safari's native player shows a download button
-    // that reliably offers "Save Video" (saves to Photos). navigator.share doesn't
-    // always show that option, so we go straight to the native player approach.
+    // iOS: prefer share sheet (works in Safari + Brave + Chrome) — offers "Save Video" to Photos
+    try{
+      const file=new File([rec.blob],rec.fname,{type:rec.mime||'video/mp4'});
+      if(navigator.canShare&&navigator.canShare({files:[file]})){
+        showToast('Tap "Save Video" to save to Photos',4000);
+        await navigator.share({files:[file]});
+        return;
+      }
+    }catch(e){if(e.name==='AbortError')return;console.warn('[rec] iOS share:',e)}
+    // Fallback: open in new tab (Safari shows native download button)
     const u=URL.createObjectURL(new Blob([rec.blob],{type:'video/mp4'}));
     const w=window.open(u,'_blank');
-    if(w){
-      showToast('Tap the download arrow to save to Photos',5000);
-    }else{
-      // Popup blocked — fall back to share sheet
-      try{
-        const file=new File([rec.blob],rec.fname,{type:rec.mime||'video/mp4'});
-        if(navigator.canShare&&navigator.canShare({files:[file]})){
-          showToast('Tap "Save Video" to save to Photos',4000);
-          await navigator.share({files:[file]});
-          URL.revokeObjectURL(u);
-          return;
-        }
-      }catch(e){if(e.name==='AbortError'){URL.revokeObjectURL(u);return}console.warn('[rec] iOS share:',e)}
-      // Final fallback: download link (opens in-browser on iOS)
+    if(w){showToast('Tap the download arrow to save to Photos',5000)}
+    else{
       const a=document.createElement('a');a.href=u;a.download=rec.fname;a.style.display='none';
       document.body.appendChild(a);a.click();document.body.removeChild(a);
       showToast('Long-press the video to save it',4000);
@@ -5916,23 +5911,21 @@ function handleCurrentLineAutomation(){
   const line=prompterLines[prompterIndex];
   console.info('[auto] idx='+prompterIndex+' type='+line.type+' spoken='+line.isSpoken+' char='+line.char+' lastSpoken='+lastAutoSpokenIndex);
   if(line.isSpoken!==true){
-    const currentIndex=prompterIndex;
-    lastAutoSpokenIndex=currentIndex;
-    // If no spoken line has been reached yet, JUMP directly to the first one
-    const anySpokenBefore=prompterLines.slice(0,prompterIndex).some(l=>l.isSpoken);
-    if(!anySpokenBefore){
-      const firstSpokenIdx=prompterLines.findIndex(l=>l.isSpoken);
-      if(firstSpokenIdx>prompterIndex){
-        console.info('[auto] jumping from preface idx='+prompterIndex+' to first spoken idx='+firstSpokenIdx);
-        prompterIndex=firstSpokenIdx;
-        lastAutoSpokenIndex=firstSpokenIdx-1;
-        renderPrompter();syncPrompter();
-        forceScrollToActive();
-        handleCurrentLineAutomation();
-        return;
-      }
+    lastAutoSpokenIndex=prompterIndex;
+    // Skip past all consecutive non-spoken lines (stage directions) to the next spoken line
+    let nextSpokenIdx=-1;
+    for(let i=prompterIndex+1;i<prompterLines.length;i++){if(prompterLines[i].isSpoken){nextSpokenIdx=i;break;}}
+    if(nextSpokenIdx>prompterIndex){
+      console.info('[auto] skipping stage directions idx='+prompterIndex+' → next spoken idx='+nextSpokenIdx);
+      prompterIndex=nextSpokenIdx;
+      lastAutoSpokenIndex=nextSpokenIdx-1;
+      renderPrompter();syncPrompter();
+      forceScrollToActive();
+      handleCurrentLineAutomation();
+      return;
     }
-    scheduleAfterPartner(currentIndex);
+    // No more spoken lines — we're at the end
+    scheduleAfterPartner(prompterIndex);
     return;
   }
   if(line.type==='partner'&&(mode==='ai'||mode==='auto')){
