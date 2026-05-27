@@ -213,14 +213,21 @@ input[type="file"]{display:none}
 .mob-settings-gear{width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.6);font-size:.9rem;cursor:pointer;display:none;align-items:center;justify-content:center;transition:var(--tf)}
 .mob-settings-gear:hover{background:rgba(255,255,255,.1)}
 .end-take-modal{display:none;position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,.70);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center}.end-take-modal.active{display:flex}
-.end-take-card{background:var(--bg-2);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:1.5rem;width:min(320px,90vw);text-align:center;box-shadow:var(--shadow-lg)}
-.end-take-card h3{color:#fff;font-size:1.1rem;margin-bottom:1rem}
-.end-take-card .etm-btns{display:flex;gap:.6rem;justify-content:center}
-.end-take-card .etm-btn{flex:1;padding:.7rem;border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;border:1px solid var(--border);transition:var(--tf)}
-.end-take-card .etm-end{background:var(--danger);color:#fff;border-color:var(--danger)}
-.end-take-card .etm-end:hover{background:#dc2626}
-.end-take-card .etm-resume{background:var(--bg-1);color:var(--white);border-color:var(--border)}
-.end-take-card .etm-resume:hover{border-color:rgba(255,255,255,.25);background:var(--bg-3)}
+.end-take-card{background:var(--bg-2);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:1.5rem;width:min(340px,90vw);text-align:center;box-shadow:var(--shadow-lg)}
+.end-take-card h3{color:#fff;font-size:1.1rem;margin-bottom:.3rem}
+.end-take-card .etm-sub{font-size:.78rem;color:var(--text-muted);margin-bottom:1rem}
+.end-take-card .etm-btns{display:flex;flex-direction:column;gap:.5rem}
+.end-take-card .etm-btn{width:100%;padding:.75rem;border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;border:1px solid var(--border);transition:var(--tf);display:flex;align-items:center;justify-content:center;gap:.5rem}
+.end-take-card .etm-primary{background:var(--raspberry);color:#fff;border-color:var(--raspberry)}
+.end-take-card .etm-primary:hover{background:#b91c22}
+.end-take-card .etm-secondary{background:var(--bg-1);color:var(--white);border-color:var(--border)}
+.end-take-card .etm-secondary:hover{border-color:rgba(255,255,255,.25);background:var(--bg-3)}
+.end-take-card .etm-danger{background:transparent;color:var(--danger);border-color:var(--danger)}
+.end-take-card .etm-danger:hover{background:rgba(239,68,68,.1)}
+.end-take-card .etm-info{margin:.6rem 0;padding:.6rem;border-radius:var(--radius);background:rgba(255,255,255,.04);border:1px solid var(--border)}
+.end-take-card .etm-info-row{font-size:.75rem;color:var(--text-muted);display:flex;justify-content:space-between;padding:.15rem 0}
+.end-take-card .etm-info-val{color:var(--white);font-weight:600}
+.end-take-card .etm-close{position:absolute;top:.7rem;right:.8rem;background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer;padding:4px}.end-take-card .etm-close:hover{color:var(--white)}
 .italienne-badge{display:none;position:fixed;top:50px;left:50%;transform:translateX(-50%);z-index:62;font-size:.65rem;font-weight:800;letter-spacing:.25em;text-transform:uppercase;color:rgba(220,120,120,.7);pointer-events:none}
 .italienne-badge.active{display:block}
 .pause-settings-panel .ps-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-top:.5rem}
@@ -911,12 +918,32 @@ input[type="file"]{display:none}
 
 <div id="scriptReviewOverlay" class="script-review-overlay" aria-hidden="true"><div class="script-review-inner"><h3 id="scriptReviewTitle">Review script</h3><p class="sr-sub" id="scriptReviewHint">Edit lines if needed, then validate or use as-is to return to setup.</p><p class="sr-meta" id="scriptReviewMeta"></p><div id="scriptReviewList" class="script-review-list"></div><div class="script-review-actions"><button type="button" class="sr-btn-skip" onclick="closeScriptReview(false)">Use as-is</button><button type="button" class="sr-btn-ok" id="scriptReviewValidateBtn" onclick="closeScriptReview(true)">Validate and continue</button></div></div></div>
 
-<div class="end-take-modal" id="endTakeModal"><div class="end-take-card"><h3>End the take?</h3><div class="etm-btns"><button class="etm-btn etm-end" onclick="confirmEndTake()">End</button><button class="etm-btn etm-resume" onclick="hideEndTakeModal()">Resume</button></div></div></div>
+<div class="end-take-modal" id="endTakeModal"><div class="end-take-card" style="position:relative">
+  <div id="etmConfirmPhase">
+    <h3>Finish this take?</h3>
+    <div class="etm-sub">You can review and save afterwards.</div>
+    <div class="etm-btns">
+      <button class="etm-btn etm-secondary" onclick="hideEndTakeModal()">Continue Recording</button>
+      <button class="etm-btn etm-primary" onclick="confirmEndTake()">Finish Take</button>
+    </div>
+  </div>
+  <div id="etmSavedPhase" style="display:none">
+    <button class="etm-close" onclick="dismissRecModal()">&times;</button>
+    <h3>Take saved!</h3>
+    <div class="etm-sub">Your recording is stored on this device.</div>
+    <div class="etm-info" id="etmRecInfo"></div>
+    <div class="etm-btns">
+      <button class="etm-btn etm-primary" onclick="etmSaveToDevice()"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> Save to device</button>
+      <button class="etm-btn etm-secondary" onclick="etmShareRec()"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 1 0-3-3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 1 0 0 6c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65a2.88 2.88 0 0 0 5.84 0 2.88 2.88 0 0 0-2.92-2.88z"/></svg> Share</button>
+      <button class="etm-btn etm-danger" onclick="etmDeleteRec()"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> Delete</button>
+    </div>
+  </div>
+</div></div>
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-05-27g';
+const APP_BUILD='2026-05-27h';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -6264,16 +6291,64 @@ function togglePause(forceState){
     handleCurrentLineAutomation();
   }
 }
+let _lastRecBlob=null,_lastRecFname='',_lastRecMime='';
 function showEndTakeModal(){
-  const m=document.getElementById('endTakeModal');if(m)m.classList.add('active');
+  const m=document.getElementById('endTakeModal');if(!m)return;
+  document.getElementById('etmConfirmPhase').style.display='';
+  document.getElementById('etmSavedPhase').style.display='none';
+  m.classList.add('active');
 }
 function hideEndTakeModal(){
   const m=document.getElementById('endTakeModal');if(m)m.classList.remove('active');
 }
 function confirmEndTake(){
   gaEvent('end_take',{mode:sessionMode});
-  hideEndTakeModal();
+  document.getElementById('etmConfirmPhase').style.display='none';
   endSession();
+}
+function showRecSavedModal(blob,fname,mime){
+  _lastRecBlob=blob;_lastRecFname=fname;_lastRecMime=mime;
+  const m=document.getElementById('endTakeModal');
+  const info=document.getElementById('etmRecInfo');
+  if(!m)return;
+  document.getElementById('etmConfirmPhase').style.display='none';
+  const phase=document.getElementById('etmSavedPhase');phase.style.display='';
+  var sizeStr=blob.size<1048576?(blob.size/1024).toFixed(0)+' KB':(blob.size/1048576).toFixed(1)+' MB';
+  var ext=fname.split('.').pop().toUpperCase();
+  info.innerHTML='<div class="etm-info-row"><span>File</span><span class="etm-info-val">'+escHtml(fname)+'</span></div><div class="etm-info-row"><span>Format</span><span class="etm-info-val">'+ext+'</span></div><div class="etm-info-row"><span>Size</span><span class="etm-info-val">'+sizeStr+'</span></div>';
+  m.classList.add('active');
+}
+function dismissRecModal(){
+  _lastRecBlob=null;_lastRecFname='';_lastRecMime='';
+  hideEndTakeModal();
+  showScreen('home');
+}
+async function etmSaveToDevice(){
+  if(!_lastRecBlob)return;
+  await downloadRecToDevice({blob:_lastRecBlob,fname:_lastRecFname,mime:_lastRecMime});
+  showToast('Saving to device…',3000);
+}
+async function etmShareRec(){
+  if(!_lastRecBlob)return;
+  try{
+    var file=new File([_lastRecBlob],_lastRecFname,{type:_lastRecMime||'video/mp4'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      await navigator.share({title:'CitizenTape Take',files:[file]});return;
+    }
+  }catch(e){if(e.name==='AbortError')return;console.warn('[rec] share:',e)}
+  await downloadRecToDevice({blob:_lastRecBlob,fname:_lastRecFname,mime:_lastRecMime});
+  showToast('Saved to device (share not available)',3000);
+}
+async function etmDeleteRec(){
+  if(!confirm('Delete this recording?'))return;
+  var recs=await getRecsFromDB();
+  var last=recs.sort((a,b)=>b.date-a.date)[0];
+  if(last)await deleteRecFromDB(last.id);
+  _lastRecBlob=null;_lastRecFname='';_lastRecMime='';
+  renderRecordingsList();renderProfileRecordings();
+  showToast('Recording deleted');
+  hideEndTakeModal();
+  showScreen('home');
 }
 function toggleItalienne(){
   const tog=document.getElementById('psItalienneToggle');
@@ -6425,8 +6500,8 @@ function startRecording(){
   mediaRecorder.ondataavailable=e=>{if(e.data.size>0)recordedChunks.push(e.data)};
   mediaRecorder.onstop=async function(){var ext=isMP4?'mp4':'webm';var mime=isMP4?'video/mp4':'video/webm';var blob=new Blob(recordedChunks,{type:mime});var fname='citizentape-'+Date.now()+'.'+ext;
     await saveRecToDB(blob,fname,mime);
-    await downloadRecToDevice({blob,fname,mime});
-    showToast(t('recSaved')||'Recording saved to device!');renderRecordingsList()};
+    renderRecordingsList();
+    showRecSavedModal(blob,fname,mime)};
   // iOS: no timeslice to produce a proper non-fragmented MP4 (plays in all players)
   if(_isIOS)mediaRecorder.start();else mediaRecorder.start(1000);
   isRecording=true;document.getElementById('btnRec').classList.add('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='flex';const _mr=document.getElementById('mobRecBtn');if(_mr)_mr.classList.add('recording');const _qb=document.getElementById('quitBtn');if(_qb){_qb.classList.add('has-recording');_qb.textContent='Save & Exit';}showToast('Recording…')}
@@ -6717,7 +6792,6 @@ function endSession(){
   const _rp=document.getElementById('recPanel');if(_rp)_rp.classList.remove('active');
   const ib=document.getElementById('italienneBadge');if(ib)ib.classList.remove('active');
   if(_preItalienneVoice){selectedVoice=_preItalienneVoice;_preItalienneVoice=null}
-  hideEndTakeModal();
   if(connectionTimeout)clearTimeout(connectionTimeout);cancelSpeechFlow();
   // Stop recording and wait for save before tearing down streams
   const wasRecording=isRecording;
@@ -6748,7 +6822,7 @@ function endSession(){
   hideTimerBadge();
   lockedVoiceLocale='';userScrolledUp=false;
   const _pa=document.getElementById('prompterArea');if(_pa)_pa.classList.remove('rear-cam');
-  stopPeerKeepalive();hideOverlay();isMicOn=true;isCamOn=true;currentFacingMode='user';prompterLines=[];prompterIndex=0;lastAutoSpokenIndex=-1;activeSpeechToken=0;if(!wasRecording){recordedChunks=[];mediaRecorder=null;}role='actor';sessionMode='ai';showScreen('home');
+  stopPeerKeepalive();hideOverlay();isMicOn=true;isCamOn=true;currentFacingMode='user';prompterLines=[];prompterIndex=0;lastAutoSpokenIndex=-1;activeSpeechToken=0;if(!wasRecording){recordedChunks=[];mediaRecorder=null;hideEndTakeModal();showScreen('home');}role='actor';sessionMode='ai';
 }
 function cancelConnection(){hideOverlay();if(!conn||!conn.open)endSession()}
 
