@@ -943,7 +943,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-05-27k';
+const APP_BUILD='2026-05-27l';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -6968,6 +6968,8 @@ document.addEventListener('DOMContentLoaded',async ()=>{
       // Route from URL hash (e.g. #solo, #partner, #join)
       var initHash=location.hash.slice(1);
       var initScreen=ROUTE_TO_SCREEN[initHash]||'home';
+      // Never auto-navigate to session on page load — require going through the normal flow
+      if(initScreen==='session')initScreen='home';
       if(initScreen==='setupPartner')goSetupPartner();
       else if(initScreen==='setupAi')goSetupAi();
       else if(initScreen==='importScene')goImportScene();
