@@ -902,7 +902,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-05-27a';
+const APP_BUILD='2026-05-27b';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -3840,7 +3840,8 @@ function initDragDrop(zoneId){
 let _pendingFileAfterAuth=null;
 async function handlePDFInput(n,input){
   const f=input.files[0];if(!f)return;
-  // Auth gate: require login before analyzing
+  // Auth gate: ensure session is loaded, then require login before analyzing
+  if(!cwServerSession.email){try{await fetchServerSession()}catch(_e){}}
   const _isLoggedIn=!!(cwServerSession.email||(userAccess.verified&&userAccess.email));
   if(!_isLoggedIn){
     _pendingFileAfterAuth={n,file:f};
@@ -4414,6 +4415,7 @@ function buildNumberedText(lines){
   return lines.map(function(l,i){return(i+1)+': '+l}).join('\n');
 }
 async function fetchLabelScript(numberedText){
+  if(!cwServerSession.email){try{await fetchServerSession()}catch(_e){}}
   if(!cwServerSession.email){throw new Error('AUTH_REQUIRED')}
   var maxRetries=3;
   for(var attempt=0;attempt<maxRetries;attempt++){
