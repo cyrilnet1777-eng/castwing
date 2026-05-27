@@ -109,6 +109,15 @@ body::after{content:none}
 #importScene .screen-content{max-width:520px}
 .import-sub{font-size:.85rem;color:var(--text-muted);margin-bottom:1.5rem}
 .import-divider{text-align:center;font-size:.75rem;color:#666;margin:1rem 0;letter-spacing:.1em;text-transform:uppercase}
+.script-history{margin-top:1rem}.script-history-label{font-size:.75rem;font-weight:700;color:var(--raspberry);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem}
+.sh-card{display:flex;align-items:center;gap:.7rem;padding:.7rem .9rem;border:1px solid var(--border-light);border-radius:var(--radius);background:var(--bg-1);cursor:pointer;transition:var(--tf);margin-bottom:.45rem}
+.sh-card:hover{border-color:var(--raspberry-dim);background:rgba(217,32,39,.04)}
+.sh-icon{width:32px;height:32px;border-radius:6px;background:rgba(217,32,39,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sh-icon svg{width:16px;height:16px;fill:var(--raspberry)}
+.sh-info{flex:1;min-width:0}.sh-name{font-size:.82rem;font-weight:600;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sh-meta{font-size:.68rem;color:var(--text-muted);margin-top:.1rem}
+.sh-del{background:none;border:none;padding:4px;cursor:pointer;color:var(--text-muted);transition:var(--tf);flex-shrink:0}.sh-del:hover{color:var(--danger)}
+.sh-del svg{width:14px;height:14px;fill:currentColor}
 /* CHOOSE MODE */
 #chooseMode .screen-content{max-width:520px}
 .choose-sub{font-size:.85rem;color:var(--text-muted);margin-bottom:1.5rem}
@@ -733,6 +742,10 @@ input[type="file"]{display:none}
     <textarea id="scriptInput1" placeholder="ME: My line&#10;PARTNER: Their line"></textarea>
     <button type="button" class="btn btn-secondary btn-full" style="margin-top:.5rem;padding:.55rem" onclick="processTextImport(1)" id="importPastedBtn1">Import pasted text</button>
   </div>
+  <div class="script-history" id="scriptHistorySection" style="display:none">
+    <div class="script-history-label" id="scriptHistoryLabel">Recent scripts</div>
+    <div id="scriptHistoryList"></div>
+  </div>
   <button class="btn btn-primary btn-full" id="importContinueBtn" style="display:none;margin-top:1rem" onclick="goChooseMode()">Continue →</button>
   </div>
 </div>
@@ -902,7 +915,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-05-27c';
+const APP_BUILD='2026-05-27d';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -1694,7 +1707,7 @@ function getReferralCode(){return getReferralData().code||''}
 // ── Server Session / Admin / Tester ──
 async function fetchServerSession(){
   try{
-    const rsp=await fetch('/api/session',{method:'GET',credentials:'same-origin'});
+    const rsp=await fetch('/api/session',{method:'GET',credentials:'same-origin',cache:'no-store'});
     if(!rsp.ok){console.warn('[session] http',rsp.status);return}
     const data=await rsp.json().catch(()=>null);
     console.info('[session]',JSON.stringify(data));
@@ -3218,6 +3231,11 @@ function setVoiceSpeed(value,silent){
   persistSettings();
   renderAllSpeedSliders();
 }
+function internalSpeedToDisplay(v){
+  if(v<=4.5)return 0.5+(v/4.5)*0.5;
+  return 1.0+((v-4.5)/2.5)*1.0;
+}
+function formatDisplaySpeed(v){var d=internalSpeedToDisplay(v);return d<1?d.toFixed(1)+'x':d.toFixed(1)+'x'}
 function renderSpeedSlider(containerId,compact){
   var g=document.getElementById(containerId);
   if(!g)return;
@@ -3229,9 +3247,9 @@ function renderSpeedSlider(containerId,compact){
   slider.style.cssText='width:100%;accent-color:#FF3B30;cursor:pointer';
   var val=document.createElement('div');
   val.className='ps-slider-value';
-  val.textContent='x'+voiceSpeed.toFixed(1);
+  val.textContent=formatDisplaySpeed(voiceSpeed);
   if(compact){val.style.cssText='font-size:.65rem;font-weight:700;color:#C8CED0;text-align:center;margin-top:2px'}
-  slider.oninput=function(){var v=parseFloat(this.value);val.textContent='x'+v.toFixed(1);setVoiceSpeed(v,true)};
+  slider.oninput=function(){var v=parseFloat(this.value);val.textContent=formatDisplaySpeed(v);setVoiceSpeed(v,true)};
   g.appendChild(slider);
   g.appendChild(val);
 }
@@ -3665,7 +3683,7 @@ function trStatusLabel(key){
   return row[selectedUILanguage]||row.en;
 }
 function goHome(){endSession();showScreen('home')}
-function goImportScene(){showScreen('importScene');initDragDrop('uploadZone1')}
+function goImportScene(){showScreen('importScene');initDragDrop('uploadZone1');renderScriptHistory()}
 function homePickFile(){goImportScene();setTimeout(()=>openPdfPicker(1),100)}
 function goChooseMode(){showScreen('chooseMode')}
 function goPartnerChoice(){showScreen('partnerChoice')}
@@ -4416,7 +4434,7 @@ function buildNumberedText(lines){
 }
 async function fetchLabelScript(numberedText){
   if(!cwServerSession.email){try{await fetchServerSession()}catch(_e){}}
-  if(!cwServerSession.email){throw new Error('AUTH_REQUIRED')}
+  if(!cwServerSession.email&&!(userAccess.verified&&userAccess.email)){throw new Error('AUTH_REQUIRED')}
   var maxRetries=3;
   for(var attempt=0;attempt<maxRetries;attempt++){
     var ac=new AbortController();
@@ -5116,6 +5134,58 @@ async function clearPersistedScriptMemory(){
   await cwIdbDel('cw.snapshot.v1');
 }
 
+// ── Script History (persisted analyzed scripts) ──
+const SCRIPT_HIST_KEY='cw.scriptHistory.v1';
+const SCRIPT_HIST_MAX=10;
+async function getScriptHistory(){return(await cwIdbGet(SCRIPT_HIST_KEY))||[]}
+async function saveToScriptHistory(){
+  if(!pdfScript||!pdfScript.length||!scriptRawText)return;
+  try{
+    var hist=await getScriptHistory();
+    var name=currentScriptName||'Script';
+    // Dedupe by name — replace existing entry
+    hist=hist.filter(h=>h.name!==name);
+    var chars=getChars().map(c=>c.char);
+    var dialogueCount=pdfScript.filter(r=>r&&r.kind===LINE_TYPE.DIALOGUE).length;
+    hist.unshift({name:name,pdfScript:pdfScript,scriptRawText:scriptRawText,characters:chars,dialogueCount:dialogueCount,lockedVoiceLocale:lockedVoiceLocale||'',savedAt:Date.now()});
+    if(hist.length>SCRIPT_HIST_MAX)hist=hist.slice(0,SCRIPT_HIST_MAX);
+    await cwIdbSet(SCRIPT_HIST_KEY,hist);
+  }catch(_e){console.warn('[history] save failed',_e)}
+}
+async function deleteFromScriptHistory(idx){
+  var hist=await getScriptHistory();
+  hist.splice(idx,1);
+  await cwIdbSet(SCRIPT_HIST_KEY,hist);
+  renderScriptHistory();
+}
+async function restoreFromScriptHistory(idx){
+  var hist=await getScriptHistory();
+  var entry=hist[idx];
+  if(!entry)return;
+  pdfScript=entry.pdfScript;
+  scriptRawText=entry.scriptRawText;
+  currentScriptName=entry.name;
+  if(entry.lockedVoiceLocale){lockedVoiceLocale=entry.lockedVoiceLocale;applyLocaleVoices(entry.lockedVoiceLocale,false);initVoiceCountrySelect();initVoiceGrid()}
+  syncPdfScriptDebugMirror();
+  var detectedLang=entry.lockedVoiceLocale||detectTextLanguage(scriptRawText);
+  finishPdfSetupUi(1,scriptRawText,entry.characters||[],detectedLang);
+  void fillScriptInputProgressive(1,scriptRawText);
+  showToast(entry.name+' restored',2500);
+}
+async function renderScriptHistory(){
+  var sec=document.getElementById('scriptHistorySection');
+  var list=document.getElementById('scriptHistoryList');
+  if(!sec||!list)return;
+  var hist=await getScriptHistory();
+  if(!hist.length){sec.style.display='none';return}
+  sec.style.display='block';
+  list.innerHTML=hist.map(function(h,i){
+    var dateStr=new Date(h.savedAt).toLocaleDateString()+' '+new Date(h.savedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    var chars=(h.characters||[]).slice(0,3).join(', ')+(h.characters&&h.characters.length>3?' +':'');
+    return '<div class="sh-card" onclick="restoreFromScriptHistory('+i+')"><div class="sh-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg></div><div class="sh-info"><div class="sh-name">'+escHtml(h.name)+'</div><div class="sh-meta">'+(h.dialogueCount||'?')+' lines · '+chars+' · '+dateStr+'</div></div><button class="sh-del" onclick="event.stopPropagation();deleteFromScriptHistory('+i+')" title="Delete"><svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button></div>';
+  }).join('');
+}
+
 /** Live session gate: solo/partner UI has taken over; cleared only in endSession() / clearPDF(). Never toggled by OCR/refinement. */
 let __cwSessionActive=false;
 /** Tag set just before bootstrap/partner UI so window.__cwSessionState.source is deterministic. */
@@ -5550,6 +5620,7 @@ function finishPdfSetupUi(n,rawText,validChars,detectedLang){
     if(detectedLang&&VOICE_LOCALES.some(l=>l.id===detectedLang)){lockedVoiceLocale=detectedLang;applyLocaleVoices(detectedLang,false);initVoiceCountrySelect();initVoiceGrid()}
     if(n===1)showToast(chars.length+' roles found — '+t('myCharacterLabel'),4200);
     persistScriptSnapshotNow();
+    saveToScriptHistory();
   }else{
     pdfScript=[];
     syncPdfScriptDebugMirror();

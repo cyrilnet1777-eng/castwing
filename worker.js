@@ -1142,7 +1142,7 @@ async function handleAuth(request, env) {
 
 async function handleSession(request, env) {
   const state = await getSessionState(request, env);
-  return json({ ok: true, ...state });
+  return json({ ok: true, ...state }, 200, { "Cache-Control": "no-store" });
 }
 
 /* =========================================================
