@@ -4,10 +4,13 @@
            /api/parse-screenplay (multipart PDF or JSON text → Claude native PDF reading),
            /api/parse-script (multipart legacy), /api/auth, /api/auth/google,
            /api/geo, /api/session, /api/credits/consume,
+           /api/turn-credentials,
            /api/invite/redeem,
            /api/admin/create-invite, /api/admin/list-invites,
            /api/admin/revoke-invite
 ========================================================= */
+
+const CF_TURN_KEY_ID = "a11b92b9acd6aa82ef03a014442f24e5";
 
 // In-memory rate limiter (replaces KV-based rate limiting to avoid free-tier exhaustion)
 const _rateCounters = new Map();
@@ -2507,6 +2510,16 @@ export default {
       const country = (request.cf && request.cf.country) ? request.cf.country : "";
       const acceptLanguage = request.headers.get("Accept-Language") || "";
       return json({ country, acceptLanguage });
+    }
+
+    if (url.pathname === "/api/turn-credentials" && request.method === "GET") {
+      if (!env.CF_TURN_TOKEN) return json({ error: "TURN not configured" }, 500);
+      const r = await fetch(
+        `https://rtc.live.cloudflare.com/v1/turn/keys/${CF_TURN_KEY_ID}/credentials/generate-ice-servers`,
+        { method: "POST", headers: { "Authorization": `Bearer ${env.CF_TURN_TOKEN}`, "Content-Type": "application/json" }, body: JSON.stringify({ ttl: 86400 }) }
+      );
+      if (!r.ok) return json({ error: "TURN credential generation failed" }, 502);
+      return new Response(await r.text(), { status: 200, headers: { "Content-Type": "application/json" } });
     }
 
     if (url.pathname === "/api/tts" && request.method === "POST") return handleTTS(request, env, ctx);

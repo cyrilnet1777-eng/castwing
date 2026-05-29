@@ -943,7 +943,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-05-29a';
+const APP_BUILD='2026-05-29b';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -2089,7 +2089,22 @@ function setElevenLabsBackoff(ms,reason){
   },delay);
 }
 
-const ICE_SERVERS=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:'stun:stun2.l.google.com:19302'},{urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},{urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},{urls:'turn:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}];
+// Cloudflare TURN — credentials fetched on demand, cached for 12h
+var _cachedIceServers=null,_iceExpiry=0;
+async function getIceServers(){
+  if(_cachedIceServers&&Date.now()<_iceExpiry)return _cachedIceServers;
+  try{
+    const r=await fetch('/api/turn-credentials');
+    if(!r.ok)throw new Error('status '+r.status);
+    const d=await r.json();
+    _cachedIceServers=d.iceServers||d;
+    _iceExpiry=Date.now()+12*3600*1000;
+    return _cachedIceServers;
+  }catch(e){
+    console.warn('[TURN] credential fetch failed, using STUN only:',e.message);
+    return[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}];
+  }
+}
 var _peerKeepalive=null;
 function startPeerKeepalive(){stopPeerKeepalive();_peerKeepalive=setInterval(function(){if(peer&&!peer.disconnected&&!peer.destroyed){try{peer.socket.send({type:'heartbeat'})}catch(e){}}},25000)}
 function stopPeerKeepalive(){if(_peerKeepalive){clearInterval(_peerKeepalive);_peerKeepalive=null}}
@@ -6534,7 +6549,7 @@ function _closeRecAudioCtx(){if(_recAudioCtx){try{_recAudioCtx.close()}catch(e){
 function stopRecording(){if(mediaRecorder&&mediaRecorder.state==='paused'){try{mediaRecorder.resume()}catch(_e){}}if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='none';const _mr=document.getElementById('mobRecBtn');if(_mr)_mr.classList.remove('recording');const _qb=document.getElementById('quitBtn');if(_qb){_qb.classList.remove('has-recording');_qb.textContent='Done'}}
 
 // ── WebRTC ──
-function createPeer(id){return new Peer(id,{config:{iceServers:ICE_SERVERS}})}
+async function createPeer(id){var ice=await getIceServers();return new Peer(id,{config:{iceServers:ice}})}
 function setStatus(s,t){document.getElementById('statusDot').className='status-dot '+s;document.getElementById('statusText').textContent=t}
 function handleDataMessage(d){
   if(d.type==='end-session'){showToast('Partner ended the session');endSession();return}
@@ -6730,7 +6745,7 @@ async function startPartnerSession(){
     showToast('Share code: '+code,4500);
     await ensureSessionStream();
     if(canRecord()&&localStream&&!isRecording)startRecording();
-    const pid='citizentape-'+code;peer=createPeer(pid);
+    const pid='citizentape-'+code;peer=await createPeer(pid);
     peer.on('open',function(){startPeerKeepalive();});
     peer.on('connection',c=>setupDataConnection(c));
     peer.on('call',ic=>{if(localStream)ic.answer(localStream);else ic.answer();setupCallHandlers(ic)});
@@ -6771,12 +6786,12 @@ async function joinAsPartner(){
       if(lv){lv.style.display='none'}
     }catch(e){console.warn('[partner] mic denied:',e.message)}
     var attempts=0;var maxAttempts=30;var connected=false;
-    function tryConnect(){
+    async function tryConnect(){
       if(connected||_pdfParseCancelled)return;
       attempts++;
       if(peer&&!peer.destroyed){try{peer.destroy()}catch(e){}}
       var mid='citizentape-p-'+code+'-'+Math.random().toString(36).substr(2,4);
-      peer=createPeer(mid);
+      peer=await createPeer(mid);
       peer.on('open',function(){
         var c=peer.connect('citizentape-'+code,{reliable:true});
         c.on('open',function(){connected=true;startPeerKeepalive()});
