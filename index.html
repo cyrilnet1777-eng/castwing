@@ -288,6 +288,8 @@ input[type="file"]{display:none}
 .vctrl.recording{background:var(--danger);border-color:var(--danger);animation:pulse-rec 1.2s ease infinite}
 .vctrl .rec-dot{width:14px;height:14px;border-radius:50%;background:#c1121f;box-shadow:0 0 8px rgba(193,18,31,.6)}
 .vctrl.recording .rec-dot{width:16px;height:16px;border-radius:3px;background:#fff;box-shadow:none}
+.vctrl.rec-paused .rec-dot{background:#f59e0b;border-radius:50%;animation:none}
+.mob-rec-btn.rec-paused .mob-rec-dot{background:#f59e0b;border-radius:50%;animation:none}
 @keyframes pulse-rec{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}50%{box-shadow:0 0 0 10px rgba(239,68,68,0)}}
 .vctrl-pause{min-width:48px;min-height:48px;width:48px;height:48px}
 .vctrl-pause.is-paused{background:rgba(34,197,94,.25);border-color:rgba(34,197,94,.4)}
@@ -889,7 +891,7 @@ input[type="file"]{display:none}
         </div>
         <div class="ps-separator"></div>
         <div class="ps-section">
-          <div class="ps-section-label" style="font-size:.75rem;color:#888">DISPLAY</div>
+          <div class="ps-section-label" id="psDisplayLabel" style="font-size:.75rem;color:#888">DISPLAY</div>
           <div id="viewModePause"></div>
         </div>
         <div style="flex:1;min-height:24px"></div>
@@ -943,7 +945,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-05-29b';
+const APP_BUILD='2026-05-30a';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -2360,11 +2362,19 @@ const UI_FALLBACK_TRANSLATIONS={
   analysisFailed:{fr:'Échec analyse',en:'Analysis failed',es:'Análisis fallido',it:'Analisi fallita',zh:'分析失败',ko:'분석 실패',ja:'分析失敗',de:'Analyse fehlgeschlagen',pt:'Análise falhou'},
   loginRequired:{fr:'Connexion requise pour analyser un script',en:'Please log in to analyze a script',es:'Inicia sesión para analizar un guión',it:'Accedi per analizzare un copione',zh:'请登录以分析剧本',ko:'스크립트를 분석하려면 로그인하세요',ja:'スクリプトを分析するにはログインしてください',de:'Bitte einloggen um ein Skript zu analysieren',pt:'Faça login para analisar um roteiro'},
   loginToStart:{fr:'Connectez-vous pour lancer votre tape',en:'Log in to start your tape',es:'Inicia sesión para comenzar tu tape',it:'Accedi per iniziare il tuo tape',zh:'登录以开始您的tape',ko:'테이프를 시작하려면 로그인하세요',ja:'テープを開始するにはログインしてください',de:'Einloggen um dein Tape zu starten',pt:'Faça login para iniciar seu tape'},
-  uploadLabel:{ko:'PDF를 여기에 놓거나 클릭',hi:'अपना PDF यहां डालें या क्लिक करें'},
-  uploadSub:{ko:'표준 대본 형식',hi:'मानक स्क्रीनप्ले फॉर्मेट'},
-  pasteScriptLabel:{ko:'또는 텍스트 붙여넣기',hi:'या टेक्स्ट पेस्ट करें'},
-  modeHintAi:{ko:'AI가 상대 대사를 자동으로 읽습니다.',hi:'AI पार्टनर की लाइनें खुद पढ़ेगा।'},
-  modeHintManual:{ko:'버튼으로 수동 진행합니다.',hi:'बटन से मैन्युअल आगे बढ़ें।'},
+  uploadLabel:{ko:'PDF를 여기에 놓거나 클릭',hi:'अपना PDF यहां डालें या क्लिक करें',pt:'Solte o ficheiro aqui ou clique',fr:'Glissez votre fichier ici ou cliquez',en:'Drop your file here or click',es:'Suelta tu archivo aquí o haz clic',it:'Trascina il file qui o clicca',zh:'将文件拖到此处或点击',de:'Datei hier ablegen oder klicken',ja:'ファイルをここにドロップまたはクリック',ar:'اسحب الملف هنا أو انقر'},
+  uploadSub:{ko:'표준 대본 형식',hi:'मानक स्क्रीनप्ले फॉर्मेट',pt:'PDF, FDX ou TXT',fr:'PDF, FDX ou TXT',en:'PDF, FDX, or TXT',es:'PDF, FDX o TXT',it:'PDF, FDX o TXT',zh:'PDF、FDX 或 TXT',de:'PDF, FDX oder TXT',ja:'PDF、FDX、またはTXT',ar:'PDF أو FDX أو TXT'},
+  pasteScriptLabel:{ko:'또는 텍스트 붙여넣기',hi:'या टेक्स्ट पेस्ट करें',pt:'Colar texto',fr:'Coller le texte',en:'Paste text',es:'Pegar texto',it:'Incolla testo',zh:'粘贴文本',de:'Text einfügen',ja:'テキストを貼り付け',ar:'لصق النص'},
+  modeHintAi:{ko:'AI가 상대 대사를 자동으로 읽습니다.',hi:'AI पार्टनर की लाइनें खुद पढ़ेगा।',pt:'A IA lê as falas do parceiro automaticamente.',fr:'L\'IA lit les répliques du partenaire automatiquement.',en:'AI reads partner lines automatically.',es:'La IA lee las líneas del compañero automáticamente.',it:'L\'IA legge le battute del partner automaticamente.',zh:'AI自动朗读搭档台词。',de:'KI liest Partnerzeilen automatisch.',ja:'AIがパートナーのセリフを自動で読みます。',ar:'الذكاء الاصطناعي يقرأ سطور الشريك تلقائيًا.'},
+  modeHintManual:{ko:'버튼으로 수동 진행합니다.',hi:'बटन से मैन्युअल आगे बढ़ें।',pt:'Avance manualmente entre as falas.',fr:'Avancez manuellement entre les répliques.',en:'Navigate lines manually.',es:'Avanza manualmente entre las líneas.',it:'Avanza manualmente tra le battute.',zh:'手动切换台词。',de:'Zeilen manuell navigieren.',ja:'手動でセリフを進めます。',ar:'تنقل يدويًا بين السطور.'},
+  chooseYourRole:{fr:'Choisis ton rôle',en:'Choose your role',es:'Elige tu personaje',it:'Scegli il tuo ruolo',zh:'选择你的角色',ko:'역할을 선택하세요',ja:'役を選んでください',de:'Wähle deine Rolle',pt:'Escolha seu personagem',ar:'اختر دورك',hi:'अपनी भूमिका चुनें'},
+  aiPerformsOtherLines:{fr:'L\'IA joue les autres répliques.',en:'AI performs the other lines.',es:'La IA interpreta las demás líneas.',it:'L\'IA recita le altre battute.',zh:'AI朗读其他台词。',ko:'AI가 나머지 대사를 읽습니다.',ja:'AIが他のセリフを読みます。',de:'KI spricht die anderen Zeilen.',pt:'A IA faz as outras falas.',ar:'الذكاء الاصطناعي يقرأ السطور الأخرى.',hi:'AI अन्य संवाद पढ़ेगा।'},
+  orUploadNewOne:{fr:'ou uploadez un nouveau',en:'or upload a new one',es:'o sube uno nuevo',it:'o carica uno nuovo',zh:'或上传新文件',ko:'또는 새 파일 업로드',ja:'または新しいファイルをアップロード',de:'oder lade eine neue hoch',pt:'ou envie um novo',ar:'أو ارفع ملفًا جديدًا',hi:'या एक नया अपलोड करें'},
+  recentScripts:{fr:'Scripts récents',en:'Recent scripts',es:'Guiones recientes',it:'Copioni recenti',zh:'最近的剧本',ko:'최근 대본',ja:'最近の台本',de:'Letzte Skripte',pt:'Roteiros recentes',ar:'النصوص الأخيرة',hi:'हालिया स्क्रिप्ट'},
+  partnersPace:{fr:'RYTHME DU PARTENAIRE',en:'PARTNER\'S PACE',es:'RITMO DEL COMPAÑERO',it:'RITMO DEL PARTNER',zh:'搭档节奏',ko:'파트너 속도',ja:'パートナーのペース',de:'TEMPO DES PARTNERS',pt:'RITMO DO PARCEIRO',ar:'سرعة الشريك',hi:'साथी की गति'},
+  reactionTime:{fr:'TEMPS DE RÉACTION',en:'REACTION TIME',es:'TIEMPO DE REACCIÓN',it:'TEMPO DI REAZIONE',zh:'反应时间',ko:'반응 시간',ja:'リアクション時間',de:'REAKTIONSZEIT',pt:'TEMPO DE REAÇÃO',ar:'وقت الاستجابة',hi:'प्रतिक्रिया समय'},
+  displayLabel:{fr:'AFFICHAGE',en:'DISPLAY',es:'VISUALIZACIÓN',it:'VISUALIZZAZIONE',zh:'显示',ko:'디스플레이',ja:'表示',de:'ANZEIGE',pt:'EXIBIÇÃO',ar:'العرض',hi:'प्रदर्शन'},
+  iosSaveVideoHint:{fr:'Touchez "Enregistrer la vidéo" pour sauvegarder',en:'Tap "Save Video" to save to Photos',es:'Toca "Guardar vídeo" para guardar en Fotos',it:'Tocca "Salva video" per salvare nelle Foto',zh:'点按"保存视频"以保存到相册',ko:'"비디오 저장"을 눌러 사진에 저장',ja:'「ビデオを保存」をタップして写真に保存',de:'Tippe auf "Video sichern" um in Fotos zu speichern',pt:'Toque em "Salvar vídeo" para salvar nas Fotos',ar:'اضغط على "حفظ الفيديو" للحفظ في الصور',hi:'"वीडियो सहेजें" पर टैप करें'},
   authMiniBtn:{fr:'Se connecter',en:'Login / Sign up',es:'Entrar / Registro',it:'Accedi / Iscriviti',zh:'登录 / 注册',ko:'로그인 / 가입',ja:'ログイン / 登録',ar:'تسجيل الدخول / إنشاء حساب',de:'Login / Registrieren',pt:'Entrar / Cadastro',hi:'लॉगिन / साइन अप'},
   authTitle:{fr:'Connexion / Inscription',en:'Login / Sign up',es:'Iniciar sesión / Registro',it:'Accesso / Registrazione',zh:'登录 / 注册',ko:'로그인 / 가입',ja:'ログイン / 登録',ar:'تسجيل الدخول / إنشاء حساب',de:'Login / Registrieren',pt:'Entrar / Cadastro',hi:'लॉगिन / साइन अप'},
   authAccountTitle:{fr:'Mon compte',en:'My account',es:'Mi cuenta',it:'Il mio account',zh:'我的帐户',ko:'내 계정',ja:'マイアカウント',ar:'حسابي',de:'Mein Konto',pt:'Minha conta',hi:'मेरा खाता'},
@@ -2689,6 +2699,13 @@ function applyUILanguage(){
   setTextById('payCardBtn','payCardBtn');
   setTextById('paidConfirmBtn','paidConfirmBtn');
   setTextById('waitOneHourBtn','waitOneHourBtn');
+  setTextById('scriptHistoryLabel','recentScripts');
+  setTextById('historyOrLabel','orUploadNewOne');
+  setTextById('myCharacterLabel1','chooseYourRole');
+  setTextById('charSectionHint1','aiPerformsOtherLines');
+  setTextById('psSpeedLabel','partnersPace');
+  setTextById('psVadLabel','reactionTime');
+  setTextById('psDisplayLabel','displayLabel');
   const joinInput=document.getElementById('joinCodeInput');
   if(joinInput)joinInput.placeholder=t('joinCodePlaceholder');
   const ph=t('scriptPlaceholder');
@@ -5021,21 +5038,25 @@ function formatRecDate(ts){const d=new Date(ts);return d.toLocaleDateString()+' 
 async function downloadRecToDevice(rec){
   const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&'ontouchend' in document);
   if(isIOS){
-    // iOS: prefer share sheet (works in Safari + Brave + Chrome) — offers "Save Video" to Photos
+    // iOS: prefer share sheet — offers "Save Video" to Photos (only works with mp4)
+    var shareMime=rec.mime||'video/mp4';
+    var shareFname=rec.fname||('citizentape-'+Date.now()+'.mp4');
+    // Force mp4 extension+mime for iOS Photos compatibility
+    if(!shareMime.startsWith('video/mp4')){shareMime='video/mp4';shareFname=shareFname.replace(/\.\w+$/,'.mp4')}
     try{
-      const file=new File([rec.blob],rec.fname,{type:rec.mime||'video/mp4'});
+      const file=new File([rec.blob],shareFname,{type:shareMime});
       if(navigator.canShare&&navigator.canShare({files:[file]})){
-        showToast('Tap "Save Video" to save to Photos',4000);
+        showToast(t('iosSaveVideoHint')||'Tap "Save Video" to save to Photos',4000);
         await navigator.share({files:[file]});
         return;
       }
     }catch(e){if(e.name==='AbortError')return;console.warn('[rec] iOS share:',e)}
     // Fallback: open in new tab (Safari shows native download button)
-    const u=URL.createObjectURL(new Blob([rec.blob],{type:'video/mp4'}));
+    const u=URL.createObjectURL(new Blob([rec.blob],{type:shareMime}));
     const w=window.open(u,'_blank');
     if(w){showToast('Tap the download arrow to save to Photos',5000)}
     else{
-      const a=document.createElement('a');a.href=u;a.download=rec.fname;a.style.display='none';
+      const a=document.createElement('a');a.href=u;a.download=shareFname;a.style.display='none';
       document.body.appendChild(a);a.click();document.body.removeChild(a);
       showToast('Long-press the video to save it',4000);
     }
@@ -5513,7 +5534,7 @@ function buildScriptReviewRowEl(row,idx){
 function pdfScriptToReviewHtml(script){
   const frag=document.createDocumentFragment();
   if(!script||!script.length){
-    const d=document.createElement('div');d.className='sr-row';d.innerHTML='<span class="sr-kind">—</span><textarea class="sr-text" placeholder="Colle une ligne…"></textarea><span></span>';frag.appendChild(d);return frag;
+    const d=document.createElement('div');d.className='sr-row';d.innerHTML='<span class="sr-kind">—</span><textarea class="sr-text" placeholder="'+escHtml(t('pasteScriptLabel'))+'"></textarea><span></span>';frag.appendChild(d);return frag;
   }
   script.forEach((row,idx)=>frag.appendChild(buildScriptReviewRowEl(row,idx)));
   return frag;
@@ -6088,7 +6109,9 @@ function prompterNext(){
   if(prompterIndex>=prompterLines.length-1)return;
   userScrolledUp=false;
   cancelSpeechFlow();
-  prompterIndex++;
+  var next=prompterIndex+1;
+  while(next<prompterLines.length-1&&prompterLines[next]&&prompterLines[next].type==='context')next++;
+  prompterIndex=next;
   lastAutoSpokenIndex=-1;
   renderPrompter();
   syncPrompter();
@@ -6098,7 +6121,9 @@ function prompterPrev(){
   if(prompterIndex<=0)return;
   userScrolledUp=false;
   cancelSpeechFlow();
-  prompterIndex--;
+  var prev=prompterIndex-1;
+  while(prev>0&&prompterLines[prev]&&prompterLines[prev].type==='context')prev--;
+  prompterIndex=prev;
   lastAutoSpokenIndex=-1;
   renderPrompter();
   syncPrompter();
@@ -6130,13 +6155,17 @@ function onPrompterScrollSync(){
     if(!pa||!prompterLines.length)return;
     const centerY=pa.getBoundingClientRect().top+pa.clientHeight*0.3;
     let closest=-1,closestDist=Infinity;
+    var closestAny=-1,closestAnyDist=Infinity;
     pa.querySelectorAll('.prompter-line').forEach(el=>{
       const idx=parseInt(el.dataset.lineIndex);if(isNaN(idx))return;
       const r=el.getBoundingClientRect();
       const mid=r.top+r.height/2;
       const d=Math.abs(mid-centerY);
-      if(d<closestDist){closestDist=d;closest=idx}
+      if(d<closestAnyDist){closestAnyDist=d;closestAny=idx}
+      var line=prompterLines[idx];
+      if(line&&line.type!=='context'&&d<closestDist){closestDist=d;closest=idx}
     });
+    if(closest<0)closest=closestAny;
     if(closest>=0&&closest!==prompterIndex){
       prompterIndex=closest;
       // Re-highlight without re-rendering (to avoid scroll jump)
@@ -6364,8 +6393,12 @@ async function etmSaveToDevice(){
 }
 async function etmShareRec(){
   if(!_lastRecBlob)return;
+  var sMime=_lastRecMime||'video/mp4';
+  var sFname=_lastRecFname||('citizentape-'+Date.now()+'.mp4');
+  var _isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&'ontouchend' in document);
+  if(_isIOS&&!sMime.startsWith('video/mp4')){sMime='video/mp4';sFname=sFname.replace(/\.\w+$/,'.mp4')}
   try{
-    var file=new File([_lastRecBlob],_lastRecFname,{type:_lastRecMime||'video/mp4'});
+    var file=new File([_lastRecBlob],sFname,{type:sMime});
     if(navigator.canShare&&navigator.canShare({files:[file]})){
       await navigator.share({title:'CitizenTape Take',files:[file]});return;
     }
@@ -6473,7 +6506,44 @@ function changePauseVoice(){
 function setPauseSpeed(v){setVoiceSpeed(v,false)}
 
 // ── Recording ──
-function toggleRecording(){if(isRecording)stopRecording();else startRecording()}
+var _recPaused=false;
+function toggleRecording(){
+  if(!isRecording){startRecording();return}
+  if(_recPaused){resumeRecording();return}
+  pauseRecording();
+}
+function pauseRecording(){
+  if(!isRecording||!mediaRecorder)return;
+  _recPaused=true;
+  if(mediaRecorder.state==='recording')try{mediaRecorder.pause()}catch(e){}
+  // Update UI: show paused state + confirm bar
+  var btnRec=document.getElementById('btnRec');if(btnRec)btnRec.classList.add('rec-paused');
+  var mobRec=document.getElementById('mobRecBtn');if(mobRec)mobRec.classList.add('rec-paused');
+  var ri=document.getElementById('recIndicator');if(ri)ri.style.display='none';
+  _showRecPauseBar(true);
+}
+function resumeRecording(){
+  if(!isRecording||!mediaRecorder)return;
+  _recPaused=false;
+  if(mediaRecorder.state==='paused')try{mediaRecorder.resume()}catch(e){}
+  var btnRec=document.getElementById('btnRec');if(btnRec)btnRec.classList.remove('rec-paused');
+  var mobRec=document.getElementById('mobRecBtn');if(mobRec)mobRec.classList.remove('rec-paused');
+  var ri=document.getElementById('recIndicator');if(ri)ri.style.display='flex';
+  _showRecPauseBar(false);
+  showToast('Recording resumed');
+}
+function _showRecPauseBar(show){
+  var bar=document.getElementById('recPauseBar');
+  if(!bar){
+    bar=document.createElement('div');bar.id='recPauseBar';
+    bar.style.cssText='position:fixed;bottom:60px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:10002;background:rgba(0,0,0,.85);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:6px 12px;align-items:center;font-family:DM Sans,sans-serif;font-size:.82rem';
+    bar.innerHTML='<span style="color:#f59e0b;font-weight:600">Paused</span>'
+      +'<button onclick="resumeRecording()" style="background:#22c55e;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:.78rem;font-weight:600;cursor:pointer">Resume</button>'
+      +'<button onclick="stopRecording()" style="background:#c1121f;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:.78rem;font-weight:600;cursor:pointer">End Take</button>';
+    document.body.appendChild(bar);
+  }
+  bar.style.display=show?'flex':'none';
+}
 var _recAudioCtx=null,_recDest=null,_recMicSource=null,_recMicGain=null;
 function _buildRecordingStream(){
   var combined=new MediaStream();
@@ -6546,7 +6616,7 @@ function startRecording(){
   catch(e){showToast('Recording error')}
 }
 function _closeRecAudioCtx(){if(_recAudioCtx){try{_recAudioCtx.close()}catch(e){}_recAudioCtx=null}_recDest=null;_recMicSource=null;_recMicGain=null}
-function stopRecording(){if(mediaRecorder&&mediaRecorder.state==='paused'){try{mediaRecorder.resume()}catch(_e){}}if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='none';const _mr=document.getElementById('mobRecBtn');if(_mr)_mr.classList.remove('recording');const _qb=document.getElementById('quitBtn');if(_qb){_qb.classList.remove('has-recording');_qb.textContent='Done'}}
+function stopRecording(){_recPaused=false;_showRecPauseBar(false);if(mediaRecorder&&mediaRecorder.state==='paused'){try{mediaRecorder.resume()}catch(_e){}}if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').classList.remove('rec-paused');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='none';const _mr=document.getElementById('mobRecBtn');if(_mr){_mr.classList.remove('recording');_mr.classList.remove('rec-paused')}const _qb=document.getElementById('quitBtn');if(_qb){_qb.classList.remove('has-recording');_qb.textContent='Done'}}
 
 // ── WebRTC ──
 async function createPeer(id){var ice=await getIceServers();return new Peer(id,{config:{iceServers:ice}})}
@@ -6604,6 +6674,21 @@ function setupCallHandlers(c){
       lv.style.display='none';
       document.getElementById('noVideoMsg').style.display='none';
       try{rv.play().catch(()=>{})}catch(e){}
+    }
+    // Keep recording stream alive: re-add video track + mix remote audio
+    if(isRecording&&mediaRecorder&&mediaRecorder.state!=='inactive'){
+      if(_recAudioCtx&&_recDest&&s.getAudioTracks().length>0){
+        try{var remSrc=_recAudioCtx.createMediaStreamSource(s);remSrc.connect(_recDest)}catch(e){console.warn('[rec] remote audio mix:',e)}
+      }
+      var recStream=mediaRecorder.stream;
+      if(recStream){
+        var srcTracks=localStream?localStream.getVideoTracks():s.getVideoTracks();
+        var oldTracks=recStream.getVideoTracks();
+        if(srcTracks.length>0&&oldTracks.length>0&&oldTracks[0].readyState==='ended'){
+          recStream.removeTrack(oldTracks[0]);
+          recStream.addTrack(srcTracks[0]);
+        }
+      }
     }
   });
   call.on('close',()=>{

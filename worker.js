@@ -281,23 +281,28 @@ async function handleCreditsTopup(request, env) {
   const pack = POLAR_PACKS[packId];
   if (!pack) return json({ ok: false, error: "INVALID_PACK", valid: Object.keys(POLAR_PACKS) }, 400);
 
-  const origin = new URL(request.url).origin;
-  const rsp = await fetch("https://api.polar.sh/v1/checkouts/", {
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer " + polarKey,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      products: [pack.product_id],
-      customer_email: email,
-      success_url: origin + "/?payment=success",
-      metadata: { email, pack: packId, amount_cents: String(pack.amount_cents) },
-    }),
-  });
-  const session = await rsp.json().catch(() => ({}));
-  if (!rsp.ok || !session.url) return json({ ok: false, error: "POLAR_ERROR", detail: session.detail || "" }, 502);
-  return json({ ok: true, checkoutUrl: session.url, sessionId: session.id });
+  try {
+    const origin = new URL(request.url).origin;
+    const rsp = await fetch("https://api.polar.sh/v1/checkouts/", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + polarKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        products: [pack.product_id],
+        customer_email: email,
+        success_url: origin + "/?payment=success",
+        metadata: { email, pack: packId, amount_cents: String(pack.amount_cents) },
+      }),
+    });
+    const session = await rsp.json().catch(() => ({}));
+    if (!rsp.ok || !session.url) return json({ ok: false, error: "POLAR_ERROR", detail: session.detail || "" }, 502);
+    return json({ ok: true, checkoutUrl: session.url, sessionId: session.id });
+  } catch (e) {
+    console.error("[topup] Polar API error:", e.message || e);
+    return json({ ok: false, error: "POLAR_UNAVAILABLE" }, 502);
+  }
 }
 
 async function handlePolarReconcile(request, env) {

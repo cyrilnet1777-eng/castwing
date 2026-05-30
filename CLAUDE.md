@@ -5,7 +5,7 @@
 - GitHub Actions auto-deploys on push to main with `--keep-vars`
 - NEVER set API keys as plaintext vars in Cloudflare dashboard
 - ALL API keys MUST be set via `wrangler secret put` — secrets survive deploys
-- Current secrets: ANTHROPIC_API_KEY, ELEVENLABS_API_KEY, RESEND_API_KEY, POLAR_ACCESS_TOKEN, POLAR_WEBHOOK_SECRET, AUTH_CODE_SECRET
+- Current secrets: ANTHROPIC_API_KEY, ELEVENLABS_API_KEY, RESEND_API_KEY, POLAR_ACCESS_TOKEN, POLAR_WEBHOOK_SECRET, AUTH_CODE_SECRET, CF_TURN_TOKEN
 
 ## Architecture
 - Single-page app: index.html (frontend) + worker.js (Cloudflare Worker backend)
@@ -14,6 +14,7 @@
 - TTS: ElevenLabs API (proxied through worker)
 - PDF parsing: Anthropic Claude API (multi-key load balancing)
 - Payments: Polar (credit packs + metered/PAYG billing)
+- WebRTC: PeerJS + Cloudflare TURN relay (key ID: a11b92b9acd6aa82ef03a014442f24e5)
 - Auth: Email code + Google OAuth, session cookies (cw_session)
 
 ## Key conventions
