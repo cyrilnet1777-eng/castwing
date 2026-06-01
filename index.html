@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="version" content="2026.05.10a">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CitizenTape — Your Acting Partner</title>
 <meta name="description" content="Your acting partner, always available. Rehearse your scenes, record your auditions.">
 <meta property="og:title" content="CitizenTape — Join my session">
@@ -945,7 +945,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-05-30a';
+const APP_BUILD='2026-06-01a';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -6610,8 +6610,8 @@ function startRecording(){
     await saveRecToDB(blob,fname,mime);
     renderRecordingsList();
     showRecSavedModal(blob,fname,mime)}catch(e){console.error('[rec] onstop error:',e);showToast('Recording saved!',3000)}};
-  // iOS: no timeslice to produce a proper non-fragmented MP4 (plays in all players)
-  if(_isIOS)mediaRecorder.start();else mediaRecorder.start(1000);
+  // Use timeslice on all platforms to force periodic keyframes (fixes video freeze after pause/resume)
+  mediaRecorder.start(2000);
   isRecording=true;document.getElementById('btnRec').classList.add('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='flex';const _mr=document.getElementById('mobRecBtn');if(_mr)_mr.classList.add('recording');const _qb=document.getElementById('quitBtn');if(_qb){_qb.classList.add('has-recording');_qb.textContent='Save & Exit';}showToast('Recording…')}
   catch(e){showToast('Recording error')}
 }
