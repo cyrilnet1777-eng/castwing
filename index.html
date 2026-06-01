@@ -945,7 +945,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-06-01a';
+const APP_BUILD='2026-06-01b';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -3331,19 +3331,40 @@ function setViewMode(m){
   var vc=document.querySelector('.video-container');
   if(!va||!pa)return;
   // Reset all inline overrides — CSS media queries take over
-  va.style.display='';va.style.height='';va.style.overflow='';pa.style.display='';pa.style.height='';pa.style.marginTop='';pa.style.position='';pa.style.bottom='';pa.style.left='';pa.style.right='';pa.style.top='';pa.style.zIndex='';pa.style.fontSize='';
-  if(vc)vc.style.display='';
-  var isMobile=window.innerWidth<768;
+  va.style.cssText='';pa.style.cssText='';
+  if(vc)vc.style.cssText='';
+  var isLandscape=window.innerHeight<=600&&window.matchMedia('(orientation:landscape)').matches;
+  // Landscape overlay elements that need repositioning
+  var mobCtrl=document.querySelector('.mob-controls-row');
+  var mobAct=document.querySelector('.mob-action-col');
+  var sessTop=document.querySelector('.session-top');
+  if(mobCtrl)mobCtrl.style.cssText='';
+  if(mobAct)mobAct.style.cssText='';
+  if(sessTop)sessTop.style.cssText='';
   if(m==='prompt'){
     if(vc)vc.style.display='none';
-    va.style.height='0';va.style.overflow='hidden';
+    va.style.setProperty('width','0','important');va.style.setProperty('display','none','important');
+    pa.style.setProperty('left','0','important');pa.style.setProperty('width','100%','important');
     pa.style.height='100dvh';pa.style.top='0';pa.style.fontSize='1.3rem';
-    if(!isMobile){
+    if(isLandscape){
+      pa.style.setProperty('position','fixed','important');pa.style.setProperty('right','0','important');pa.style.setProperty('bottom','0','important');
+      if(mobCtrl)mobCtrl.style.setProperty('left','0','important');
+      if(mobCtrl)mobCtrl.style.setProperty('right','auto','important');
+      if(mobAct)mobAct.style.setProperty('left','auto','important');
+      if(mobAct)mobAct.style.setProperty('right','8px','important');
+      if(sessTop){sessTop.style.setProperty('left','0','important');sessTop.style.setProperty('right','0','important')}
+    }else if(window.innerWidth>=768){
       pa.style.marginTop='0';pa.style.position='fixed';pa.style.bottom='0';pa.style.left='0';pa.style.right='0';
     }
   }else if(m==='video'){
-    pa.style.display='none';
-    va.style.height='100vh';va.style.height='100dvh';
+    pa.style.setProperty('display','none','important');
+    va.style.setProperty('width','100%','important');va.style.setProperty('height','100dvh','important');
+    if(isLandscape){
+      va.style.setProperty('right','0','important');
+      if(mobCtrl){mobCtrl.style.setProperty('right','0','important');mobCtrl.style.setProperty('left','0','important')}
+      if(mobAct){mobAct.style.setProperty('left','auto','important');mobAct.style.setProperty('right','8px','important')}
+      if(sessTop){sessTop.style.setProperty('left','0','important');sessTop.style.setProperty('right','0','important')}
+    }
   }
   renderPrompter();
   updateViewModeButtons();
