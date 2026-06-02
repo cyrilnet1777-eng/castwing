@@ -945,7 +945,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-06-01b';
+const APP_BUILD='2026-06-02a';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -3281,17 +3281,7 @@ function setEmotion(key,silent){
 const ITALIENNE_VOICE_ID='tZssYepgGaQmegsMEXjK';
 function setVoiceSpeed(value,silent){
   var parsed=Number(value);
-  var prev=voiceSpeed;
   voiceSpeed=Math.max(SPEED_MIN,Math.min(SPEED_MAX,Number.isFinite(parsed)?parsed:SPEED_DEFAULT));
-  if(voiceSpeed>=4.5&&prev<4.5){
-    _preItalienneVoice=selectedVoice;
-    selectedVoice={id:'_italienne',label:'Italienne',tag:'Neutre',voiceId:ITALIENNE_VOICE_ID,fallbackVoiceIds:[],modelId:'eleven_multilingual_v2',languageCode:selectedVoice?.languageCode||'fr',gender:'female',pitch:1,rate:1};
-    populateSessionVoiceSelect();
-  }else if(voiceSpeed<4.5&&prev>=4.5&&_preItalienneVoice){
-    selectedVoice=_preItalienneVoice;
-    _preItalienneVoice=null;
-    populateSessionVoiceSelect();
-  }
   persistSettings();
   renderAllSpeedSliders();
 }
