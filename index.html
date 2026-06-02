@@ -945,7 +945,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-06-02b';
+const APP_BUILD='2026-06-02c';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -5967,23 +5967,11 @@ function onVadSliderChange(val){
     lbl.textContent=(r%1===0?r.toFixed(1):String(r))+'s';
   }
 }
-function computeSilenceMsForActorLine(line){
-  const words=((line&&line.text)||'').split(/\s+/).filter(Boolean).length;
-  let ms=Math.round(vadSilenceSeconds*1000);
-  if(words<=3)ms=Math.min(ms,450); // short lines: shorter trailing silence
-  try{if(window.matchMedia('(pointer:fine)').matches)ms=Math.max(300,ms-140)}catch(_e){}
-  return ms;
-}
-function estimateMinSpeechDuration(text){
-  const words=(text||'').split(/\s+/).filter(Boolean).length;
-  if(words<=3)return 120; // short lines: any burst of sound counts
-  const base=Math.floor(words*380*0.55);
-  let floor=400;
-  try{if(window.matchMedia('(pointer:fine)').matches)floor=300}catch(_e){}
-  return Math.min(14000,Math.max(floor,base));
+function computeSilenceMsForActorLine(){
+  return Math.round(vadSilenceSeconds*1000);
 }
 function getPostTtsArmDelayCapMs(){
-  try{return window.matchMedia('(pointer:fine)').matches?680:1500}catch(_e){return 1050;}
+  try{return window.matchMedia('(pointer:fine)').matches?400:700}catch(_e){return 600;}
 }
 function stopAutoVAD(){if(_vadArmTimer){clearTimeout(_vadArmTimer);_vadArmTimer=null;}if(vad)vad.stop()}
 function cancelSpeechFlow(){
@@ -6022,17 +6010,13 @@ async function armAutoVADForActorLine(){
   console.info('[VAD] audio track:',liveTracks[0].label,'enabled:',liveTracks[0].enabled,'readyState:',liveTracks[0].readyState);
   stopAutoVAD();
   if(_vadArmTimer){clearTimeout(_vadArmTimer);_vadArmTimer=null;}
-  const words=((line&&line.text)||'').split(/\s+/).filter(Boolean).length;
-  const armDelayCap=words<=3?Math.round(getPostTtsArmDelayCapMs()*0.45):getPostTtsArmDelayCapMs();
-  const postTtsDelay=Math.max(0,armDelayCap-(Date.now()-lastTTSEndTs));
+  const postTtsDelay=Math.max(0,getPostTtsArmDelayCapMs()-(Date.now()-lastTTSEndTs));
   const doArm=async()=>{
     _vadArmTimer=null;
     if((mode!=='auto'&&mode!=='ai')||sessionPaused)return;
-    const silenceMs=computeSilenceMsForActorLine(line);
-    const minSpeak=estimateMinSpeechDuration(line.text);
-    console.info('[VAD] arming: silence='+silenceMs+'ms, minSpeech='+minSpeak+'ms, postTtsDelay='+postTtsDelay+'ms');
-    var thresh=words<=3?0.010:0.015;
-    vad=new VoiceActivityDetector({speechThreshold:thresh,silenceDuration:silenceMs,minSpeechMs:minSpeak,onSpeechEnd:onAutoSpeechEnd});
+    const silenceMs=computeSilenceMsForActorLine();
+    console.info('[VAD] arming: silence='+silenceMs+'ms, postTtsDelay='+postTtsDelay+'ms');
+    vad=new VoiceActivityDetector({speechThreshold:0.010,silenceDuration:silenceMs,minSpeechMs:0,onSpeechEnd:onAutoSpeechEnd});
     await vad.start(new MediaStream(liveTracks));
   };
   if(postTtsDelay>100){
