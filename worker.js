@@ -2497,6 +2497,7 @@ ${numberedText}`;
 
 export default {
   async fetch(request, env, ctx) {
+   try {
     const url = new URL(request.url);
 
     let clientScheme = url.protocol.replace(":", "");
@@ -2579,5 +2580,13 @@ export default {
       return newResponse;
     }
     return assetResponse;
+   } catch (fatalErr) {
+    const msg = fatalErr && fatalErr.message ? fatalErr.message : String(fatalErr);
+    console.error("[WORKER FATAL]", msg, fatalErr && fatalErr.stack ? fatalErr.stack : "");
+    return new Response(JSON.stringify({ error: "internal_server_error", detail: msg }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://citizentape.com", "Access-Control-Allow-Credentials": "true" },
+    });
+   }
   },
 };
