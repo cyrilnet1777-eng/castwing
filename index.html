@@ -795,6 +795,7 @@ input[type="file"]{display:none}
   <div class="screen-content">
   <div class="setup-header"><button class="back-btn" onclick="goChooseMode()">←</button><h2 id="setupAiTitle">Solo + AI</h2></div>
   <div class="setup-card">
+    <div style="display:none">
     <label id="replyModeLabel">Reply mode</label>
     <div class="mode-toggle">
       <div class="mode-opt active" id="modeAiBtn" title="AI reads partner lines aloud" onclick="setMode('ai')">🦾 Voice AI</div>
@@ -802,6 +803,7 @@ input[type="file"]{display:none}
       <div class="mode-opt" id="modeAutoBtn" title="AI reads then listens for your silence to advance" onclick="setMode('auto')">🎤 Auto</div>
     </div>
     <div class="mode-hint" id="modeHint">AI reads partner lines automatically.</div>
+    </div>
     <div class="mode-toggle" style="margin-top:.6rem">
       <div class="mode-opt" id="setupCamBtn" onclick="toggleSetupCamera()"><svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;vertical-align:middle;margin-right:4px"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>Camera ON</div>
     </div>
@@ -812,7 +814,7 @@ input[type="file"]{display:none}
         <select id="voiceCountrySelect" onchange="changeVoiceCountry(this.value)"></select>
       </div>
       <div class="voice-grid" id="voiceGrid"></div>
-      <div style="margin-top:.6rem">
+      <div style="margin-top:.6rem;display:none">
         <label id="emotionLabel">Emotion</label>
         <select id="emotionSelect" onchange="setEmotion(this.value)">
           <option value="neutral">Neutral</option>
@@ -945,7 +947,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-06-02c';
+const APP_BUILD='2026-06-03a';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -7075,7 +7077,7 @@ document.addEventListener('DOMContentLoaded',async ()=>{
       if(sv<0||sv>7||!Number.isFinite(sv))sv=SPEED_DEFAULT;
       voiceSpeed=Math.max(SPEED_MIN,Math.min(SPEED_MAX,sv));
     }else voiceSpeed=SPEED_DEFAULT;
-    if(saved.mode&&['ai','manual','auto'].includes(saved.mode))mode=saved.mode;
+    mode='ai'; // Voice AI mode is the only mode now
   }
   if(!(saved&&saved.uiLang&&UI_LANGUAGES.some(l=>l.id===saved.uiLang))){
     const detected=await detectPreferredUILanguage();
