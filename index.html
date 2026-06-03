@@ -947,7 +947,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-06-03c';
+const APP_BUILD='2026-06-03d';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -5971,9 +5971,9 @@ function onVadSliderChange(val){
 function computeSilenceMsForActorLine(line){
   const base=Math.round(vadSilenceSeconds*1000);
   const words=((line&&line.text)||'').split(/\s+/).filter(Boolean).length;
-  if(words<=3)return Math.min(base,700);   // "Oui !" → snappy
-  if(words<=10)return Math.min(base,1200); // medium lines → patient
-  return Math.min(base,1800);              // long lines → very patient
+  if(words<=3)return Math.max(base,700);   // "Oui !" → snappy
+  if(words<=10)return Math.max(base,1200); // medium lines → patient
+  return Math.max(base,1800);              // long lines → very patient
 }
 function getPostTtsArmDelayCapMs(){
   try{return window.matchMedia('(pointer:fine)').matches?400:700}catch(_e){return 600;}
