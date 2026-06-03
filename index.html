@@ -947,7 +947,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-06-03e';
+const APP_BUILD='2026-06-03f';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -6310,6 +6310,11 @@ async function toggleCam(){
     if(call&&call.peerConnection){
       const sender=call.peerConnection.getSenders().find(s=>s.track&&s.track.kind==='video');
       if(sender)await sender.replaceTrack(newTrack);
+    }
+    // Update recording stream so video doesn't freeze
+    if(isRecording&&mediaRecorder&&mediaRecorder.state!=='inactive'){
+      const recStream=mediaRecorder.stream;
+      if(recStream){recStream.getVideoTracks().forEach(t=>recStream.removeTrack(t));recStream.addTrack(newTrack)}
     }
     document.getElementById('noVideoMsg').style.display='none';
     showToast(currentFacingMode==='user'?'Front camera':'Rear camera');
