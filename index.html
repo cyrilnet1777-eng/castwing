@@ -947,7 +947,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-06-03g';
+const APP_BUILD='2026-06-03h';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -4579,14 +4579,10 @@ function mergeLabelsWithText(lines,labelData){
 async function parseViaExtractAndLabel(file){
   console.log('Extracting text from PDF...');
   var lines=await extractPdfLines(file);
-  console.log('Extracted '+lines.length+' lines, sending for labeling...');
+  var fullBody=JSON.stringify({numberedText:buildNumberedText(lines)});
+  console.log('Extracted '+lines.length+' lines (body ~'+Math.round(fullBody.length/1024)+'KB / '+fullBody.length+' bytes), sending for labeling...');
   if(!lines.length)throw new Error('Could not extract text from PDF');
-  var numbered=buildNumberedText(lines);
-  var MAX_LINES=150;
-  if(lines.length<=MAX_LINES){
-    var labelData=await fetchLabelScript(numbered);
-    return mergeLabelsWithText(lines,labelData);
-  }
+  var MAX_LINES=80;
   var chunks=[];
   for(var start=0;start<lines.length;start+=MAX_LINES){
     var end=Math.min(start+MAX_LINES,lines.length);
