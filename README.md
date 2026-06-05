@@ -150,8 +150,8 @@ Google Sign-In requires a Google Cloud project with:
 - The Client ID is loaded via `<script src="https://accounts.google.com/gsi/client">` in index.html
 
 ### D1 Database tables
-- `users` — email, tier, admin flag, login timestamps
-- `invites` — admin-created invite tokens with credit grants
+- `users` — email, tier, login timestamps
+- `invites` — invite tokens with credit grants
 - `credit_transactions` — append-only ledger (topups, TTS debits, free grants)
 - `usage_events` — audit log for TTS usage
 

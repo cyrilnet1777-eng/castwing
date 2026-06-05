@@ -1158,8 +1158,8 @@ async function handleSession(request, env) {
 ========================================================= */
 
 async function handleMigrateMetered(request, env) {
-  const session = await getSessionState(request, env);
-  if (!session.isAdmin) return json({ ok: false, error: "Forbidden" }, 403);
+  const email = await resolveCurrentUser(request, env);
+  if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
   if (!env.DB) return json({ ok: false, error: "Database not configured" }, 500);
   const polarKey = String(env.POLAR_ACCESS_TOKEN || "").trim();
   if (!polarKey) return json({ ok: false, error: "POLAR_NOT_CONFIGURED" }, 500);
