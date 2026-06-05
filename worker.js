@@ -387,7 +387,7 @@ async function handlePolarWebhook(request, env) {
   if (event.type === "subscription.active" || event.type === "subscription.created") {
     const sub = event.data;
     const email = ((sub.metadata && sub.metadata.email) || (sub.customer && sub.customer.email) || "").toLowerCase();
-    const isMeteredSub = sub.product && sub.product.id === POLAR_METERED_PRODUCT_ID;
+    const isMeteredSub = sub.product && (sub.product.id === POLAR_METERED_PRODUCT_ID || sub.product.id === POLAR_METERED_PRODUCT_ID_OLD);
     if (email && isMeteredSub && env.DB) {
       const customerId = (sub.customer && sub.customer.id) || "";
       await activateMeteredBilling(env.DB, email, customerId, sub.id);
@@ -1154,6 +1154,40 @@ async function handleSession(request, env) {
 }
 
 /* =========================================================
+   ADMIN: MIGRATE METERED SUBSCRIPTIONS TO NEW PRODUCT
+========================================================= */
+
+async function handleMigrateMetered(request, env) {
+  const session = await getSessionState(request, env);
+  if (!session.isAdmin) return json({ ok: false, error: "Forbidden" }, 403);
+  if (!env.DB) return json({ ok: false, error: "Database not configured" }, 500);
+  const polarKey = String(env.POLAR_ACCESS_TOKEN || "").trim();
+  if (!polarKey) return json({ ok: false, error: "POLAR_NOT_CONFIGURED" }, 500);
+
+  const rows = await env.DB.prepare(
+    "SELECT email, polar_subscription_id FROM users WHERE billing_mode = 'metered' AND polar_subscription_id IS NOT NULL AND polar_subscription_id != ''"
+  ).all();
+  const users = rows.results || [];
+  const results = [];
+
+  for (const u of users) {
+    try {
+      const rsp = await fetch(`https://api.polar.sh/v1/subscriptions/${u.polar_subscription_id}`, {
+        method: "PATCH",
+        headers: { "Authorization": "Bearer " + polarKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ product_id: POLAR_METERED_PRODUCT_ID, proration_behavior: "invoice" }),
+      });
+      const body = await rsp.json().catch(() => ({}));
+      results.push({ email: u.email, subId: u.polar_subscription_id, ok: rsp.ok, status: rsp.status, newProductId: body.product_id || null });
+    } catch (e) {
+      results.push({ email: u.email, subId: u.polar_subscription_id, ok: false, error: e.message });
+    }
+  }
+
+  return json({ ok: true, migrated: results.length, results });
+}
+
+/* =========================================================
    INVITE ROUTES
 ========================================================= */
 
@@ -1353,7 +1387,8 @@ async function handleSetAutoTopup(request, env) {
   return json({ ok: true, autoTopupCents: cents });
 }
 
-const POLAR_METERED_PRODUCT_ID = "418d12be-cac3-4b87-a900-b80e07761392";
+const POLAR_METERED_PRODUCT_ID = "42e0d0b0-3921-43b9-84c9-d9173811c054";
+const POLAR_METERED_PRODUCT_ID_OLD = "418d12be-cac3-4b87-a900-b80e07761392";
 
 async function handleMeteredSubscribe(request, env) {
   const email = await resolveCurrentUser(request, env);
@@ -2560,6 +2595,7 @@ export default {
     if (url.pathname === "/api/admin/create-invite" && request.method === "POST") return handleCreateInvite(request, env);
     if (url.pathname === "/api/admin/list-invites" && request.method === "GET") return handleListInvites(request, env);
     if (url.pathname === "/api/admin/revoke-invite" && request.method === "POST") return handleRevokeInvite(request, env);
+    if (url.pathname === "/api/admin/migrate-metered" && request.method === "POST") return handleMigrateMetered(request, env);
     if (url.pathname === "/api/merge-characters" && request.method === "POST") return withAnthropicSlot(env, handleMergeCharacters, request);
 
     const apiPaths = ["/api/tts", "/api/claude-parse-script", "/api/label-script", "/api/parse-screenplay", "/api/parse-script", "/api/validate-characters", "/api/classify-lines", "/api/merge-characters", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/", "/api/polar-webhook", "/api/invite/redeem", "/api/admin/"];
