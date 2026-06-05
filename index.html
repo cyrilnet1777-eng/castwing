@@ -947,7 +947,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-06-05a';
+const APP_BUILD='2026-06-05b';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -1606,7 +1606,7 @@ async function handlePaygoToggle(){
     var rsp=await fetch('/api/credits/metered-subscribe',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}});
     var data=await rsp.json().catch(function(){return null});
     if(data&&data.already){cwServerSession.billingMode='metered';updatePaygoUI();showToast('Pay-As-You-Go activated!');return}
-    if(data&&data.ok&&data.checkoutUrl){
+    if(data&&data.ok&&data.checkoutUrl&&data.checkoutUrl.startsWith('https://polar.sh/')){
       window.location.href=data.checkoutUrl;
     }else{
       showToast('Could not start checkout: '+(data&&data.error||'error'),4000);
@@ -1666,7 +1666,7 @@ async function loadUsageHistory(){
         var sign=g.amount>=0?'+':'';
         var color=g.amount>=0?'#22c55e':'#D96F6F';
         return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee">'
-          +'<span style="color:#4B5563">'+g.date+' '+g.time+' — '+g.description+'</span>'
+          +'<span style="color:#4B5563">'+escHtml(g.date)+' '+escHtml(g.time)+' — '+escHtml(g.description)+'</span>'
           +'<span style="color:'+color+';font-weight:600">'+sign+'$'+(Math.abs(g.amount)/100).toFixed(2)+'</span>'
           +'</div>';
       }
@@ -1903,8 +1903,9 @@ async function adminLoadInvites(){
     if(!data.invites||!data.invites.length){list.innerHTML='<div style="color:rgba(245,239,224,.55);font-size:.78rem">No invites yet</div>';return;}
     list.innerHTML=data.invites.map(inv=>{
       const status=inv.revoked?'<span class="inv-revoked">REVOKED</span>':(inv.expiresAt&&new Date(inv.expiresAt)<new Date()?'<span style="color:#f59e0b">EXPIRED</span>':'<span style="color:#22c55e">ACTIVE</span>');
-      const revokeBtn=inv.revoked?'':`<button class="cw-admin-btn-danger" style="font-size:.68rem;padding:.2rem .5rem;margin-top:.3rem" onclick="adminRevokeInvite('${inv.id}')">Revoke</button>`;
-      return`<div class="cw-invite-item"><span class="inv-label">${inv.label||'—'}</span> · ${status}<br><span class="inv-credits">${inv.creditsUsed||0}/${inv.creditsGranted} credits used</span>${inv.emailRestriction?' · '+inv.emailRestriction:''}${inv.redemptionCount?' · '+inv.redemptionCount+' redeemed':''}<br>${revokeBtn}</div>`;
+      const safeId=escHtml(String(inv.id||''));
+      const revokeBtn=inv.revoked?'':`<button class="cw-admin-btn-danger" style="font-size:.68rem;padding:.2rem .5rem;margin-top:.3rem" onclick="adminRevokeInvite('${safeId}')">Revoke</button>`;
+      return`<div class="cw-invite-item"><span class="inv-label">${escHtml(inv.label||'—')}</span> · ${status}<br><span class="inv-credits">${inv.creditsUsed||0}/${inv.creditsGranted} credits used</span>${inv.emailRestriction?' · '+escHtml(inv.emailRestriction):''}${inv.redemptionCount?' · '+inv.redemptionCount+' redeemed':''}<br>${revokeBtn}</div>`;
     }).join('');
   }catch(e){}
 }
@@ -6490,7 +6491,7 @@ function populatePauseCharGrid(){
   chars.forEach(({char,count})=>{
     const el=document.createElement('div');
     el.className='char-item'+(selectedChar===char?' selected':'');
-    el.innerHTML=`${char}<span class="cc">(${count})</span>`;
+    el.innerHTML=`${escHtml(char)}<span class="cc">(${count})</span>`;
     el.onclick=()=>{
       selectedChar=char;
       g.querySelectorAll('.char-item').forEach(c=>c.classList.remove('selected'));
