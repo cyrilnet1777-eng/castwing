@@ -260,11 +260,18 @@ async function verifyPolarWebhook(body, headers, secret) {
       "raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
     );
     const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(signedContent));
-    const expected = btoa(String.fromCharCode(...new Uint8Array(sig)));
-    // Check each space-separated signature (supports key rotation)
+    const expectedBytes = new Uint8Array(sig);
+    // Constant-time comparison (prevents timing attacks)
     for (const s of signatures.split(" ")) {
       const val = s.startsWith("v1,") ? s.slice(3) : null;
-      if (val && val === expected) return true;
+      if (!val) continue;
+      try {
+        const valBin = Uint8Array.from(atob(val), c => c.charCodeAt(0));
+        if (valBin.length !== expectedBytes.length) continue;
+        let diff = 0;
+        for (let i = 0; i < expectedBytes.length; i++) diff |= valBin[i] ^ expectedBytes[i];
+        if (diff === 0) return true;
+      } catch (_) { continue; }
     }
     console.error("[polar-wh] signature mismatch. expected:", expected, "got:", signatures);
     return false;
@@ -333,7 +340,7 @@ async function handlePolarReconcile(request, env) {
       const pack = POLAR_PACKS[packId];
       try {
         await env.DB.prepare(
-          `INSERT INTO credit_transactions (id, email, amount_cents, type, description, stripe_session_id, created_at)
+          `INSERT OR IGNORE INTO credit_transactions (id, email, amount_cents, type, description, stripe_session_id, created_at)
            VALUES (?, ?, ?, 'topup', ?, ?, datetime('now'))`
         ).bind(generateId("ctx"), orderEmail, amountCents, pack ? pack.label : "$" + (amountCents / 100).toFixed(2) + " credit pack", order.id).run();
         credited++;
@@ -371,7 +378,7 @@ async function handlePolarWebhook(request, env) {
     const pack = POLAR_PACKS[packId];
     try {
       await env.DB.prepare(
-        `INSERT INTO credit_transactions (id, email, amount_cents, type, description, stripe_session_id, created_at)
+        `INSERT OR IGNORE INTO credit_transactions (id, email, amount_cents, type, description, stripe_session_id, created_at)
          VALUES (?, ?, ?, 'topup', ?, ?, datetime('now'))`
       ).bind(
         generateId("ctx"), email, amountCents,
@@ -596,7 +603,7 @@ async function handleTTS(request, env, ctx) {
     if (!apiKey) return json({ ok: false, error: "TTS_PROVIDER_ERROR", message: "Missing API key" }, 500);
 
     const payload = await request.json().catch(() => ({}));
-    const text = typeof payload.text === "string" ? payload.text.trim() : "";
+    const text = typeof payload.text === "string" ? payload.text.trim().slice(0, 5000) : "";
     const voiceId = typeof payload.voiceId === "string" ? payload.voiceId.trim() : "";
     const emotion = typeof payload.emotion === "string" ? payload.emotion.trim().toLowerCase() : "neutral";
     const speed = Number.isFinite(Number(payload.speed)) ? Number(payload.speed) : 1;
@@ -1080,7 +1087,9 @@ async function handleAuth(request, env) {
         if (attempts >= 3) return json({ ok: false, error: "Too many requests. Try again later." }, 429);
         await env.AUTH_KV.put(rateKey, String(attempts + 1), { expirationTtl: 900 });
       }
-      const code = String(Math.floor(100000 + Math.random() * 900000));
+      const buf = new Uint32Array(1);
+      crypto.getRandomValues(buf);
+      const code = String(100000 + (buf[0] % 900000));
       const lang = normalizeAuthEmailLang(payload.lang);
 
       if (env.AUTH_KV) {
@@ -2285,7 +2294,7 @@ async function ensureD1Tables(db) {
   // Performance indexes
   const indexes = [
     `CREATE INDEX IF NOT EXISTS idx_credit_email ON credit_transactions(email)`,
-    `CREATE INDEX IF NOT EXISTS idx_credit_stripe_id ON credit_transactions(stripe_session_id) WHERE stripe_session_id IS NOT NULL`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_credit_stripe_id ON credit_transactions(stripe_session_id) WHERE stripe_session_id IS NOT NULL`,
     `CREATE INDEX IF NOT EXISTS idx_credit_created ON credit_transactions(email, created_at DESC)`,
     `CREATE INDEX IF NOT EXISTS idx_invite_redemptions_email ON invite_redemptions(email)`,
     `CREATE INDEX IF NOT EXISTS idx_usage_events_email ON usage_events(email, created_at DESC)`,
