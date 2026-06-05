@@ -947,7 +947,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-06-03h';
+const APP_BUILD='2026-06-05a';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -6307,10 +6307,15 @@ async function toggleCam(){
       const sender=call.peerConnection.getSenders().find(s=>s.track&&s.track.kind==='video');
       if(sender)await sender.replaceTrack(newTrack);
     }
-    // Update recording stream so video doesn't freeze
+    // Restart MediaRecorder with new camera (track swap doesn't work after start)
     if(isRecording&&mediaRecorder&&mediaRecorder.state!=='inactive'){
-      const recStream=mediaRecorder.stream;
-      if(recStream){recStream.getVideoTracks().forEach(t=>recStream.removeTrack(t));recStream.addTrack(newTrack)}
+      mediaRecorder.onstop=()=>{};  // prevent finalize
+      try{mediaRecorder.stop()}catch(e){}
+      var rs=new MediaStream([newTrack]);
+      if(_recDest&&_recDest.stream)_recDest.stream.getAudioTracks().forEach(t=>rs.addTrack(t));
+      else if(localStream)localStream.getAudioTracks().forEach(t=>rs.addTrack(t));
+      mediaRecorder=_makeMediaRecorder(rs);
+      mediaRecorder.start(2000);
     }
     document.getElementById('noVideoMsg').style.display='none';
     showToast(currentFacingMode==='user'?'Front camera':'Rear camera');
@@ -6606,25 +6611,28 @@ function playTtsIntoRecording(audioBuffer){
   }catch(e){console.warn('[rec] playTtsIntoRecording error:',e.message)}
   return null;
 }
-function startRecording(){
-  if(!canRecord()){showToast(t('partnerGateTitle'));openAuthModal();return}
-  if(!localStream){showToast('No video stream');return}recordedChunks=[];
-  var recStream=_buildRecordingStream();
+function _makeMediaRecorder(stream){
   var _isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&'ontouchend' in document);
   var recMime='video/webm;codecs=vp9';
   if(_isIOS||MediaRecorder.isTypeSupported('video/mp4;codecs=avc1.42E01E,mp4a.40.2'))recMime='video/mp4;codecs=avc1.42E01E,mp4a.40.2';
   else if(MediaRecorder.isTypeSupported('video/mp4'))recMime='video/mp4';
   else if(!MediaRecorder.isTypeSupported(recMime))recMime='video/webm';
-  var recOpts={mimeType:recMime};
-  if(recMime.startsWith('video/mp4'))recOpts.videoBitsPerSecond=2500000;
-  try{mediaRecorder=new MediaRecorder(recStream,recOpts);
   var isMP4=recMime.startsWith('video/mp4');
-  mediaRecorder.ondataavailable=e=>{if(e.data.size>0)recordedChunks.push(e.data)};
-  mediaRecorder.onstop=async function(){_closeRecAudioCtx();try{var ext=isMP4?'mp4':'webm';var mime=isMP4?'video/mp4':'video/webm';var blob=new Blob(recordedChunks,{type:mime});var fname='citizentape-'+Date.now()+'.'+ext;
+  var recOpts={mimeType:recMime};
+  if(isMP4)recOpts.videoBitsPerSecond=2500000;
+  var rec=new MediaRecorder(stream,recOpts);
+  rec.ondataavailable=e=>{if(e.data.size>0)recordedChunks.push(e.data)};
+  rec.onstop=async function(){_closeRecAudioCtx();try{var ext=isMP4?'mp4':'webm';var mime=isMP4?'video/mp4':'video/webm';var blob=new Blob(recordedChunks,{type:mime});var fname='citizentape-'+Date.now()+'.'+ext;
     await saveRecToDB(blob,fname,mime);
     renderRecordingsList();
     showRecSavedModal(blob,fname,mime)}catch(e){console.error('[rec] onstop error:',e);showToast('Recording saved!',3000)}};
-  // Use timeslice on all platforms to force periodic keyframes (fixes video freeze after pause/resume)
+  return rec;
+}
+function startRecording(){
+  if(!canRecord()){showToast(t('partnerGateTitle'));openAuthModal();return}
+  if(!localStream){showToast('No video stream');return}recordedChunks=[];
+  var recStream=_buildRecordingStream();
+  try{mediaRecorder=_makeMediaRecorder(recStream);
   mediaRecorder.start(2000);
   isRecording=true;document.getElementById('btnRec').classList.add('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='flex';const _mr=document.getElementById('mobRecBtn');if(_mr)_mr.classList.add('recording');const _qb=document.getElementById('quitBtn');if(_qb){_qb.classList.add('has-recording');_qb.textContent='Save & Exit';}showToast('Recording…')}
   catch(e){showToast('Recording error')}
@@ -6696,18 +6704,21 @@ function setupCallHandlers(c){
       document.getElementById('noVideoMsg').style.display='none';
       try{rv.play().catch(()=>{})}catch(e){}
     }
-    // Keep recording stream alive: re-add video track + mix remote audio
+    // Keep recording stream alive: mix remote audio + restart recorder if video track died
     if(isRecording&&mediaRecorder&&mediaRecorder.state!=='inactive'){
       if(_recAudioCtx&&_recDest&&s.getAudioTracks().length>0){
         try{var remSrc=_recAudioCtx.createMediaStreamSource(s);remSrc.connect(_recDest)}catch(e){console.warn('[rec] remote audio mix:',e)}
       }
-      var recStream=mediaRecorder.stream;
-      if(recStream){
-        var srcTracks=localStream?localStream.getVideoTracks():s.getVideoTracks();
-        var oldTracks=recStream.getVideoTracks();
-        if(srcTracks.length>0&&oldTracks.length>0&&oldTracks[0].readyState==='ended'){
-          recStream.removeTrack(oldTracks[0]);
-          recStream.addTrack(srcTracks[0]);
+      var curVid=mediaRecorder.stream?mediaRecorder.stream.getVideoTracks()[0]:null;
+      if(curVid&&curVid.readyState==='ended'){
+        var freshVid=localStream?localStream.getVideoTracks():s.getVideoTracks();
+        if(freshVid.length>0){
+          mediaRecorder.onstop=()=>{};
+          try{mediaRecorder.stop()}catch(e){}
+          var rs=new MediaStream([freshVid[0]]);
+          if(_recDest&&_recDest.stream)_recDest.stream.getAudioTracks().forEach(t=>rs.addTrack(t));
+          mediaRecorder=_makeMediaRecorder(rs);
+          mediaRecorder.start(2000);
         }
       }
     }
@@ -6855,7 +6866,7 @@ async function startPartnerSession(){
     peer.on('open',function(){startPeerKeepalive();});
     peer.on('connection',c=>setupDataConnection(c));
     peer.on('call',ic=>{if(localStream)ic.answer(localStream);else ic.answer();setupCallHandlers(ic)});
-    peer.on('error',e=>{hideOverlay();showToast('Error: '+e.message,5000)});
+    peer.on('error',e=>{hideOverlay();console.warn('[peer] actor error:',e.type,e.message);if(e.type==='peer-unavailable'||e.type==='negotiation')showToast('Partner connection failed — ask them to rejoin',5000);else showToast('Connection error — try again',5000)});
     connectionTimeout=setTimeout(()=>{if(!conn||!conn.open){hideOverlay();setStatus('waiting','Waiting… (you can start solo)')}},15000);
     return true;
   });
