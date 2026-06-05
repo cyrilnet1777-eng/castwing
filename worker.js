@@ -608,6 +608,7 @@ async function handleTTS(request, env, ctx) {
 
     // Credit metering
     const email = await resolveCurrentUser(request, env);
+    if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
     const isAdmin = email && isAdminEmail(email, env);
     const charCount = text.length;
     const costCents = Math.max(1, Math.ceil((charCount / 1000) * CREDIT_PRICING.TTS_COST_PER_1K_CHARS_CENTS));
@@ -1226,9 +1227,12 @@ async function handleRevokeInvite(request, env) {
 async function handleRedeemInvite(request, env) {
   if (!env.DB) return json({ ok: false, error: "Database not configured" }, 500);
 
+  // Require an authenticated session — no session cookies issued from user-supplied email
+  const email = await resolveCurrentUser(request, env);
+  if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
+
   const payload = await request.json().catch(() => ({}));
   const rawToken = String(payload.token || "").trim();
-  const email = String(payload.email || "").trim().toLowerCase();
   if (!rawToken) return json({ ok: false, error: "Missing token" }, 400);
 
   const tokenHash = await sha256Hex(rawToken);
@@ -1241,40 +1245,31 @@ async function handleRedeemInvite(request, env) {
   if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
     return json({ ok: false, error: "Invite expired" }, 410);
   }
-  if (invite.email_restriction && email && invite.email_restriction !== email) {
+  if (invite.email_restriction && invite.email_restriction !== email) {
     return json({ ok: false, error: "Email does not match invite restriction" }, 403);
   }
 
-  let redemption = null;
-  if (email) {
-    redemption = await env.DB.prepare(
-      `SELECT * FROM invite_redemptions WHERE invite_id = ? AND email = ?`
-    ).bind(invite.id, email).first();
-  }
+  let redemption = await env.DB.prepare(
+    `SELECT * FROM invite_redemptions WHERE invite_id = ? AND email = ?`
+  ).bind(invite.id, email).first();
 
   if (!redemption) {
     const redemptionId = generateId("red");
-    const redeemEmail = email || null;
     await env.DB.prepare(
       `INSERT INTO invite_redemptions (id, invite_id, email, credits_used, redeemed_at, last_used_at)
        VALUES (?, ?, ?, 0, datetime('now'), datetime('now'))`
-    ).bind(redemptionId, invite.id, redeemEmail).run();
+    ).bind(redemptionId, invite.id, email).run();
     redemption = { id: redemptionId, credits_used: 0 };
   }
 
   const remaining = Math.max(0, (invite.credits_granted || 0) - (redemption.credits_used || 0));
-
-  const headers = {};
-  if (email) {
-    headers["Set-Cookie"] = await createSignedSessionCookie(email, env);
-  }
 
   return json({
     ok: true,
     creditsRemaining: remaining,
     inviteLabel: invite.label,
     expiresAt: invite.expires_at,
-  }, 200, headers);
+  });
 }
 
 /* =========================================================
@@ -1937,6 +1932,8 @@ async function callAnthropicParseText({ env, parseId, model, scriptText, fileNam
 const SPLIT_TEXT_THRESHOLD = 30000;
 
 async function handleParseScript(request, env) {
+  const email = await resolveCurrentUser(request, env);
+  if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
   const parseId = generateId("parse");
   const startedAt = Date.now();
   if (!getAnthropicKey(env)) {
@@ -2223,8 +2220,8 @@ async function handleMergeCharacters(request, env) {
   if (!getAnthropicKey(env)) return json({ error: "missing_anthropic_api_key" }, 500);
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: "invalid_json" }, 400); }
-  const candidates = body.candidates;
-  if (!Array.isArray(candidates) || !candidates.length) return json({ merges: [] });
+  const candidates = Array.isArray(body.candidates) ? body.candidates.slice(0, 100) : [];
+  if (!candidates.length) return json({ merges: [] });
   const prompt = `You are analyzing a screenplay's character list. Some character names may be typos, abbreviations, or variants of the same person. Others may be genuinely different roles.
 
 For each pair below, decide: are they the SAME character (merge) or DIFFERENT characters (keep separate)?
@@ -2419,7 +2416,7 @@ async function handleLabelScript(request, env) {
 
   try {
     const body = await request.json().catch(() => null);
-    const numberedText = body && typeof body.numberedText === "string" ? body.numberedText : "";
+    const numberedText = body && typeof body.numberedText === "string" ? body.numberedText.slice(0, 50000) : "";
     if (!numberedText.trim()) {
       return Response.json({ success: false, error: "Missing numberedText" }, { status: 400, headers: cors });
     }
@@ -2521,6 +2518,8 @@ export default {
     }
 
     if (url.pathname === "/api/turn-credentials" && request.method === "GET") {
+      const turnEmail = await resolveCurrentUser(request, env);
+      if (!turnEmail) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
       if (!env.CF_TURN_TOKEN) return json({ error: "TURN not configured" }, 500);
       const r = await fetch(
         `https://rtc.live.cloudflare.com/v1/turn/keys/${CF_TURN_KEY_ID}/credentials/generate-ice-servers`,
@@ -2585,7 +2584,7 @@ export default {
    } catch (fatalErr) {
     const msg = fatalErr && fatalErr.message ? fatalErr.message : String(fatalErr);
     console.error("[WORKER FATAL]", msg, fatalErr && fatalErr.stack ? fatalErr.stack : "");
-    return new Response(JSON.stringify({ error: "internal_server_error", detail: msg }), {
+    return new Response(JSON.stringify({ error: "internal_server_error" }), {
       status: 500,
       headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://citizentape.com", "Access-Control-Allow-Credentials": "true" },
     });
