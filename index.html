@@ -75,8 +75,10 @@ body::after{content:none}
 .home-burger span{display:block;width:22px;height:1.5px;background:var(--white);border-radius:1px}
 .auth-mini-btn{border:1px solid var(--border);background:var(--glass-bg);color:var(--white);border-radius:var(--radius);padding:.35rem .65rem;font-size:.82rem;font-weight:600;cursor:pointer;height:34px;box-sizing:border-box;display:inline-flex;align-items:center;transition:var(--tf)}
 .auth-mini-btn:hover{border-color:rgba(245,239,224,.25);background:var(--glass-bg-hover)}
-.hero-content{margin-top:auto;position:relative;z-index:3}
-.hero-title{font-family:'Playfair Display',serif;font-size:2.4rem;font-weight:400;color:var(--white);line-height:1.22;letter-spacing:-.01em;margin-bottom:2rem}
+.hero-content{position:relative;z-index:3;display:flex;flex-direction:column;flex:1}
+.hero-titles{margin-top:1rem}
+.hero-bottom{margin-top:auto}
+.hero-title{font-family:'Playfair Display',serif;font-size:2.4rem;font-weight:400;color:var(--white);line-height:1.22;letter-spacing:-.01em;margin-bottom:.6rem}
 .hero-dot{color:var(--raspberry);font-family:'Playfair Display',serif}
 .hero-ctas{display:flex;flex-direction:column;gap:.75rem;max-width:380px}
 .cta-btn{display:flex;align-items:center;justify-content:space-between;width:100%;padding:1.05rem 1.3rem;background:rgba(26,26,26,.55);border:1px solid rgba(245,239,224,.22);color:var(--white);font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:var(--tf);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
@@ -89,7 +91,7 @@ body::after{content:none}
 .home-privacy svg{width:.75rem;height:.75rem;fill:var(--raspberry);flex-shrink:0}
 .join-link{font-size:.78rem;color:var(--text-muted);text-align:center}
 .join-link a{color:var(--raspberry);cursor:pointer;text-decoration:underline;font-weight:700}
-.hero-subtitle-big{font-size:1.8rem;color:var(--text-muted);margin-bottom:.6rem;font-weight:300;letter-spacing:.02em;line-height:1.3}
+.hero-subtitle-big{font-size:1.8rem;color:var(--text-muted);margin-bottom:2.5rem;font-weight:300;letter-spacing:.02em;line-height:1.3}
 .hero-subtitle{font-size:.85rem;color:var(--text-muted);margin-bottom:2rem;font-weight:400;line-height:1.5}
 .hero-import-btn{display:flex;align-items:center;justify-content:center;gap:.6rem;width:100%;max-width:380px;padding:1.1rem 1.5rem;background:var(--raspberry);border:1px solid var(--raspberry);color:#fff;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:var(--tf);border-radius:var(--radius)}
 .hero-import-btn:hover{background:#b91c22;border-color:#b91c22}
@@ -102,6 +104,7 @@ body::after{content:none}
 #home.dragover .home-hero{outline:2px solid var(--raspberry);outline-offset:-2px}
 @media(min-width:768px){
   .home-hero{padding:4rem 5rem 2.5rem}
+  .hero-titles{margin-top:8rem}
   .home-hero-bg img{content:url('/background-image-desktop.jpg')}
   .hero-title{font-size:3.2rem}
   .hero-import-btn{max-width:420px}
@@ -640,8 +643,11 @@ input[type="file"]{display:none}
   <div class="home-hero">
     <div class="home-hero-bg"><img src="/background-image-mobile.jpg" alt="" loading="eager"></div>
     <div class="hero-content">
-      <h1 class="hero-title" id="homeHook">Your scene partner,<br>on demand<span class="hero-dot">.</span></h1>
-      <p class="hero-subtitle-big" id="homeSubtitle2">Ready when you are.</p>
+      <div class="hero-titles">
+        <h1 class="hero-title" id="homeHook">Your scene partner,<br>on demand<span class="hero-dot">.</span></h1>
+        <p class="hero-subtitle-big" id="homeSubtitle2">Ready when you are.</p>
+      </div>
+      <div class="hero-bottom">
       <button class="hero-import-btn" onclick="homePickFile()" id="homeImportBtn">
         <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
         <span id="homeImportLabel">IMPORT A SCENE</span>
@@ -649,6 +655,7 @@ input[type="file"]{display:none}
       <div class="hero-microcopy" id="homeImportMicro">PDF, Final Draft, or plain text — or drag & drop anywhere</div>
       <div class="hero-join-link"><a onclick="goJoin()" id="homeJoinLink">Join a session</a></div>
       <div class="home-privacy" id="ndaBadgeHome"><svg viewBox="0 0 24 24"><path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zM9 6a3 3 0 0 1 6 0v2H9V6zm9 14H6V10h12v10zm-6-3a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg><span id="ndaText">PRIVATE. SECURE. OFF RECORD.</span></div>
+      </div>
     </div>
   </div>
 </div>
@@ -948,7 +955,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-06-06k';
+const APP_BUILD='2026-06-06l';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
