@@ -947,7 +947,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-06-05b';
+const APP_BUILD='2026-06-06a';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -6120,7 +6120,7 @@ function prompterNext(){
   userScrolledUp=false;
   cancelSpeechFlow();
   var next=prompterIndex+1;
-  while(next<prompterLines.length-1&&prompterLines[next]&&prompterLines[next].type==='context')next++;
+  while(next<prompterLines.length-1&&prompterLines[next]&&prompterLines[next].type!=='actor')next++;
   prompterIndex=next;
   lastAutoSpokenIndex=-1;
   renderPrompter();
@@ -6132,7 +6132,7 @@ function prompterPrev(){
   userScrolledUp=false;
   cancelSpeechFlow();
   var prev=prompterIndex-1;
-  while(prev>0&&prompterLines[prev]&&prompterLines[prev].type==='context')prev--;
+  while(prev>0&&prompterLines[prev]&&prompterLines[prev].type!=='actor')prev--;
   prompterIndex=prev;
   lastAutoSpokenIndex=-1;
   renderPrompter();
