@@ -10,8 +10,8 @@ import { APP_BUILD } from './constants.js';
 // ── Utilities ───────────────────────────────────────────────────────────
 import { gaEvent, showToast, escHtml } from './utils.js';
 
-// ── SFX (imported for side-effects; individual exports used by other modules) ──
-import './sfx.js';
+// ── SFX ──────────────────────────────────────────────────────────────
+import { unlockAudio } from './sfx.js';
 
 // ── I18n ────────────────────────────────────────────────────────────────
 import {
@@ -53,6 +53,13 @@ import {
   hideTimerBadge,
   fmtTimer,
   startSessionTimer,
+  updateTimerBadge,
+  updateChronoDisplay,
+  freezeTimer,
+  unfreezeTimer,
+  canRecord,
+  createFreshUserData,
+  mergeUserDataDefaults,
 } from './plan-timer.js';
 
 // ── Paywall / Credits ───────────────────────────────────────────────────
@@ -114,13 +121,26 @@ import {
   renderScriptHistory,
   restoreFromScriptHistory,
   tryRestorePersistedScriptFromIdb,
+  clearPersistedScriptMemory,
+  saveRecToDB,
 } from './idb.js';
 
-// ── TTS (imported for module graph; exports used by other modules) ──
-import './tts.js';
+// ── TTS ──────────────────────────────────────────────────────────────
+import { aiSpeak, cancelTTSPlayback } from './tts.js';
 
 // ── PDF Parsing ─────────────────────────────────────────────────────────
-import { getChars } from './pdf-parse.js';
+import {
+  getChars,
+  mergeConsecutiveDialogues,
+  sanitizeDialogueVsAction,
+  normalizeScreenplayWhitespace,
+  syncPdfScriptDebugMirror,
+  isPdfDialogueRow,
+  cleanCharacterName,
+  normalizeScriptLine,
+  normCharKeyForWhitelist,
+  hasPastedDialogueStructure,
+} from './pdf-parse.js';
 
 // ── Script AI (import/parse pipeline) ───────────────────────────────────
 import {
@@ -133,6 +153,12 @@ import {
   closeScriptReview,
   cancelPdfParse,
   initDragDrop,
+  isPdfUploadFile,
+  processPDF,
+  finishPdfSetupUi,
+  renderChars,
+  renderPartnerAssignment,
+  buildLines,
 } from './script-ai.js';
 
 // ── Session ─────────────────────────────────────────────────────────────
@@ -172,6 +198,15 @@ import {
   showClapperboard,
   syncSessionModeButtons,
   setSessionSpeed,
+  modeHintText,
+  debugPrompterPdfScriptKinds,
+  setPrompterLinesForSession,
+  renderPrompter,
+  cancelSpeechFlow,
+  cwSessionStateClear,
+  cwEnqueueSessionBoot,
+  ensureSessionStream,
+  fallbackPrompterLinesFromPdfScript,
 } from './session.js';
 
 // ── Recording ───────────────────────────────────────────────────────────
@@ -185,6 +220,7 @@ import {
   etmShareRec,
   etmDeleteRec,
   showRecSavedModal,
+  renderProfileRecordings,
 } from './recording.js';
 
 // ── WebRTC ──────────────────────────────────────────────────────────────
@@ -553,6 +589,24 @@ Object.assign(window, {
   closeScriptReview,
   cancelPdfParse,
   restoreFromScriptHistory,
+  isPdfUploadFile,
+  processPDF,
+  finishPdfSetupUi,
+  renderChars,
+  renderPartnerAssignment,
+  buildLines,
+
+  // ── PDF parse (used via window.* by other modules) ──
+  mergeConsecutiveDialogues,
+  sanitizeDialogueVsAction,
+  normalizeScreenplayWhitespace,
+  syncPdfScriptDebugMirror,
+  isPdfDialogueRow,
+  cleanCharacterName,
+  normalizeScriptLine,
+  normCharKeyForWhitelist,
+  hasPastedDialogueStructure,
+  getChars,
 
   // ── I18n ──
   changeUILanguage,
@@ -561,6 +615,48 @@ Object.assign(window, {
   changeVoiceCountry,
   changeSessionVoice,
   setEmotion,
+
+  // ── TTS ──
+  aiSpeak,
+  cancelTTSPlayback,
+
+  // ── Session (used via window.* by other modules) ──
+  modeHintText,
+  debugPrompterPdfScriptKinds,
+  setPrompterLinesForSession,
+  renderPrompter,
+  cancelSpeechFlow,
+  cwSessionStateClear,
+  cwEnqueueSessionBoot,
+  ensureSessionStream,
+  fallbackPrompterLinesFromPdfScript,
+
+  // ── Plan/Timer (used via window.* by other modules) ──
+  updateTimerBadge,
+  updateChronoDisplay,
+  freezeTimer,
+  unfreezeTimer,
+  canRecord,
+  createFreshUserData,
+  mergeUserDataDefaults,
+
+  // ── IDB (used via window.* by other modules) ──
+  clearPersistedScriptMemory,
+  saveRecToDB,
+  renderScriptHistory,
+
+  // ── Recording ──
+  renderProfileRecordings,
+  renderRecordingsList,
+  startRecording,
+
+  // ── Auth (used via window.* by other modules) ──
+  updateAuthMiniButton,
+  persistSettings,
+  fetchServerSession,
+
+  // ── SFX ──
+  unlockAudio,
 
   // ── App routing ──
   goHome,
@@ -574,6 +670,7 @@ Object.assign(window, {
   homePickFile,
   showScreen,
   startAiSession,
+  endSession,
 
   // ── IDB / Recordings (JS-generated onclick) ──
   reDownloadRec,
@@ -582,4 +679,5 @@ Object.assign(window, {
 
   // ── Home drag-and-drop ──
   handleHomeDrop,
+  initDragDrop,
 });
