@@ -2825,6 +2825,33 @@ export default {
 
     if (env.DB) await ensureD1Tables(env.DB);
 
+    // ── One-time welcome email backfill (remove after it runs) ──
+    if (env.DB && env.AUTH_KV && ctx) {
+      const BACKFILL_KEY = "welcome_email_backfill_done_v1";
+      const done = await env.AUTH_KV.get(BACKFILL_KEY);
+      if (!done) {
+        await env.AUTH_KV.put(BACKFILL_KEY, "1", { expirationTtl: 86400 * 365 });
+        ctx.waitUntil((async () => {
+          try {
+            await ensureUserAuthColumns(env.DB);
+            const rows = await env.DB.prepare(
+              "SELECT email FROM users WHERE (welcome_email_sent IS NULL OR welcome_email_sent = 0) AND email IS NOT NULL"
+            ).all();
+            const emails = (rows.results || []).map(r => r.email).filter(Boolean);
+            let sent = 0;
+            for (const email of emails) {
+              try {
+                const ok = await sendWelcomeEmailOnce(env, email, "en");
+                if (ok) sent++;
+                await new Promise(r => setTimeout(r, 150));
+              } catch (e) { console.error("[welcome-backfill]", email, e); }
+            }
+            console.info(`[welcome-backfill] sent ${sent}/${emails.length} welcome emails`);
+          } catch (e) { console.error("[welcome-backfill] error:", e); }
+        })());
+      }
+    }
+
     if (url.pathname === "/api/geo" && request.method === "GET") {
       const country = (request.cf && request.cf.country) ? request.cf.country : "";
       const acceptLanguage = request.headers.get("Accept-Language") || "";
