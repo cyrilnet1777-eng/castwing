@@ -1501,8 +1501,12 @@ async function handleRevokeInvite(request, env) {
 }
 
 async function handleSendWelcomeEmails(request, env, ctx) {
+  // Auth: accept either admin session OR bearer token matching AUTH_CODE_SECRET
+  const authHeader = request.headers.get("Authorization") || "";
+  const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
+  const secret = String(env.AUTH_CODE_SECRET || "").trim();
   const session = await getSessionState(request, env);
-  if (!session.isAdmin) return json({ ok: false, error: "Forbidden" }, 403);
+  if (!session.isAdmin && !(secret && bearerToken === secret)) return json({ ok: false, error: "Forbidden" }, 403);
   if (!env.DB) return json({ ok: false, error: "Database not configured" }, 500);
 
   const payload = await request.json().catch(() => ({}));
