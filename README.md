@@ -121,13 +121,33 @@ Partners join directly via the "Join a session" link on the landing page (no imp
 - Staging: `npx wrangler deploy --env staging --keep-vars` (manual, preserves secrets).
 
 ### Versioning
-- `APP_BUILD` in index.html uses today's date: `YYYY-MM-DDa` (e.g. `2026-05-26a`)
+- `APP_BUILD` in `js/constants.js` uses today's date: `YYYY-MM-DDa` (e.g. `2026-05-26a`)
 - Increment the letter suffix (a->b->c) for multiple deploys on the same day
 - **Never** reuse or increment from a previous day's version — always use today's actual date
 
 ### File structure
 ```
-index.html                   Single-page app (HTML + inline CSS + JS)
+index.html                   Single-page app (HTML only — no inline CSS/JS)
+styles.css                   All CSS (extracted from index.html)
+js/                          ES modules (native, no build step)
+  app.js                     Entry point — DOMContentLoaded, routing, window.* registrations
+  constants.js               APP_BUILD, config, pure data
+  state.js                   Centralized mutable state object (S)
+  utils.js                   DOM utilities (showToast, escHtml, etc.)
+  sfx.js                     Sound effects
+  i18n.js                    25-language translations + t() + language detection
+  voices.js                  ElevenLabs voice data + voice grid UI
+  plan-timer.js              Plan/tier system + session timer
+  paywall.js                 Credit/paywall UI
+  auth.js                    Email/Google auth + session management
+  admin.js                   Admin panel + invite system
+  idb.js                     IndexedDB (recordings + script cache)
+  pdf-parse.js               PDF/FDX parsing + character merging
+  script-ai.js               Claude API calls + script pipeline
+  tts.js                     ElevenLabs TTS + browser fallback
+  recording.js               Canvas capture + MediaRecorder
+  webrtc.js                  PeerJS partner mode
+  session.js                 Session orchestration + prompter + VAD
 worker.js                    Cloudflare Worker (API routes)
 wrangler.toml                Cloudflare Workers configuration
 _headers                     Cache-control headers

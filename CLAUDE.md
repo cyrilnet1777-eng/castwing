@@ -18,12 +18,13 @@
 - Auth: Email code + Google OAuth, session cookies (cw_session)
 
 ## Key conventions
-- All code is in two files: index.html and worker.js
-- CSS is inline in index.html <style> tags
-- JavaScript is inline in index.html <script> tags
-- No build step, no bundler, no framework
+- Frontend: index.html (HTML only) + styles.css + js/ (ES modules) + worker.js (Cloudflare Worker backend)
+- No build step, no bundler, no framework — native ES modules (`<script type="module">`)
+- JS modules in js/: constants.js, state.js, utils.js, sfx.js, i18n.js, voices.js, plan-timer.js, paywall.js, auth.js, admin.js, idb.js, pdf-parse.js, script-ai.js, tts.js, recording.js, webrtc.js, session.js, app.js (entry point)
+- Shared mutable state lives in js/state.js as a centralized `S` object
+- HTML onclick handlers work via window.* registration in js/app.js
 
 ## Versioning
-- APP_BUILD in index.html MUST use today's actual date: `YYYY-MM-DDa` (e.g. `2026-05-26a`)
+- APP_BUILD in js/constants.js MUST use today's actual date: `YYYY-MM-DDa` (e.g. `2026-05-26a`)
 - Increment the letter suffix (a→b→c) for multiple deploys on the same day
 - NEVER reuse or increment from a previous day's version — always use today's date

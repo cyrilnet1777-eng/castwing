@@ -15,3 +15,9 @@
 
 /sounds/*
   Cache-Control: public, max-age=86400, immutable
+
+/styles.css
+  Cache-Control: public, max-age=300, must-revalidate
+
+/js/*.js
+  Cache-Control: public, max-age=300, must-revalidate
