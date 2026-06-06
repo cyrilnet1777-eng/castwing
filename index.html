@@ -89,6 +89,7 @@ body::after{content:none}
 .home-privacy svg{width:.75rem;height:.75rem;fill:var(--raspberry);flex-shrink:0}
 .join-link{font-size:.78rem;color:var(--text-muted);text-align:center}
 .join-link a{color:var(--raspberry);cursor:pointer;text-decoration:underline;font-weight:700}
+.hero-subtitle-big{font-size:1.15rem;color:var(--cream);margin-bottom:.5rem;font-weight:300;letter-spacing:.03em;line-height:1.4}
 .hero-subtitle{font-size:.85rem;color:var(--text-muted);margin-bottom:2rem;font-weight:400;line-height:1.5}
 .hero-import-btn{display:flex;align-items:center;justify-content:center;gap:.6rem;width:100%;max-width:380px;padding:1.1rem 1.5rem;background:var(--raspberry);border:1px solid var(--raspberry);color:#fff;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:var(--tf);border-radius:var(--radius)}
 .hero-import-btn:hover{background:#b91c22;border-color:#b91c22}
@@ -639,7 +640,8 @@ input[type="file"]{display:none}
   <div class="home-hero">
     <div class="home-hero-bg"><img src="/background-image-mobile.jpg" alt="" loading="eager"></div>
     <div class="hero-content">
-      <h1 class="hero-title" id="homeHook">Your scene partner,<br>always available<span class="hero-dot">.</span></h1>
+      <h1 class="hero-title" id="homeHook">Your scene partner,<br>on demand<span class="hero-dot">.</span></h1>
+      <p class="hero-subtitle hero-subtitle-big" id="homeSubtitle2">Ready when you are.</p>
       <p class="hero-subtitle" id="homeSubtitle">Rehearse your auditions alone, at your own pace.</p>
       <button class="hero-import-btn" onclick="homePickFile()" id="homeImportBtn">
         <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
@@ -947,7 +949,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-06-06b';
+const APP_BUILD='2026-06-06c';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -2432,7 +2434,8 @@ const UI_FALLBACK_TRANSLATIONS={
   partnerGateDesc:{fr:'Sign up for free to unlock partner mode.',en:'Sign up for free to unlock partner mode.',es:'Regístrate gratis para desbloquear el modo compañero.',it:'Iscriviti gratis per sbloccare la modalità partner.',zh:'免费注册以解锁搭档模式。',ko:'무료로 가입하여 파트너 모드를 잠금 해제하세요.',ja:'無料登録でパートナーモードを解除。',ar:'سجّل مجانًا لفتح وضع الشريك.',de:'Melde dich kostenlos an, um den Partnermodus freizuschalten.',pt:'Cadastre-se grátis para desbloquear o modo parceiro.',hi:'पार्टनर मोड अनलॉक करने के लिए मुफ़्त में साइन अप करें।',tr:'Partner modunu açmak için ücretsiz kaydolun.',ru:'Зарегистрируйтесь бесплатно, чтобы разблокировать режим партнёра.'},
   partnerGateSignup:{fr:'Créer un compte',en:'Create account',es:'Crear cuenta',it:'Crea account',zh:'创建帐户',ko:'계정 만들기',ja:'アカウント作成',ar:'إنشاء حساب',de:'Konto erstellen',pt:'Criar conta',hi:'अकाउंट बनाएं',tr:'Hesap oluştur',ru:'Создать аккаунт'},
   partnerGateSolo:{fr:'Continuer solo',en:'Continue solo',es:'Continuar solo',it:'Continua da solo',zh:'独自继续',ko:'혼자 계속',ja:'ソロで続ける',ar:'متابعة منفردًا',de:'Alleine fortfahren',pt:'Continuar sozinho',hi:'अकेले जारी रखें',tr:'Yalnız devam et',ru:'Продолжить одному'},
-  homeHook:{fr:'Ton partenaire de jeu, toujours disponible.',en:'Your scene partner, always available.',es:'Tu compañero de actuación, siempre disponible.',it:'Il tuo partner di scena, sempre disponibile.',zh:'你的表演搭档，随时待命。',ko:'당신의 연기 파트너, 언제나 준비.',ja:'あなたの演技パートナー、いつでも。',ar:'شريكك في التمثيل، متاح دائمًا.',de:'Dein Schauspielpartner, immer verfügbar.',pt:'Seu parceiro de cena, sempre disponível.',hi:'आपका एक्टिंग पार्टनर, हमेशा उपलब्ध।',tr:'Oyunculuk partnerin, her zaman hazır.',ru:'Ваш партнёр по сцене, всегда доступен.',he:'שותף המשחק שלך, תמיד זמין.',th:'คู่แสดงของคุณ, พร้อมเสมอ.',vi:'Bạn diễn của bạn, luôn sẵn sàng.',pl:'Twój partner sceniczny, zawsze dostępny.',nl:'Je acteerpartner, altijd beschikbaar.',sv:'Din skådespelarpartner, alltid tillgänglig.',no:'Din skuespillerpartner, alltid tilgjengelig.',el:'Ο συνεργάτης σου στη σκηνή, πάντα διαθέσιμος.',cs:'Váš herecký partner, vždy k dispozici.',id:'Partner akting Anda, selalu tersedia.',ms:'Rakan lakonan anda, sentiasa sedia.',ur:'آپ کا اداکاری کا ساتھی، ہمیشہ دستیاب۔'},
+  homeHook:{fr:'Ton partenaire de jeu, à la demande.',en:'Your scene partner, on demand.',es:'Tu compañero de escena, a demanda.',it:'Il tuo partner di scena, su richiesta.',zh:'你的表演搭档，随叫随到。',ko:'당신의 연기 파트너, 온디맨드.',ja:'あなたの演技パートナー、オンデマンド。',ar:'شريكك في التمثيل، عند الطلب.',de:'Dein Schauspielpartner, auf Abruf.',pt:'Seu parceiro de cena, sob demanda.',hi:'आपका एक्टिंग पार्टनर, ऑन डिमांड।',tr:'Oyunculuk partnerin, talep üzerine.',ru:'Ваш партнёр по сцене, по запросу.',he:'שותף המשחק שלך, לפי דרישה.',th:'คู่แสดงของคุณ, ตามต้องการ.',vi:'Bạn diễn của bạn, theo yêu cầu.',pl:'Twój partner sceniczny, na żądanie.',nl:'Je acteerpartner, op afroep.',sv:'Din skådespelarpartner, på begäran.',no:'Din skuespillerpartner, på forespørsel.',el:'Ο συνεργάτης σου στη σκηνή, κατ\' απαίτηση.',cs:'Váš herecký partner, na vyžádání.',id:'Partner akting Anda, sesuai permintaan.',ms:'Rakan lakonan anda, atas permintaan.',ur:'آپ کا اداکاری کا ساتھی، آن ڈیمانڈ۔'},
+  homeSubtitle2:{fr:'Prêt quand tu l\'es.',en:'Ready when you are.',es:'Listo cuando tú lo estés.',it:'Pronto quando lo sei tu.',zh:'你准备好了，我就准备好了。',ko:'당신이 준비되면, 저도 준비됩니다.',ja:'あなたの準備ができたら。',ar:'جاهز عندما تكون جاهزًا.',de:'Bereit, wenn du es bist.',pt:'Pronto quando você estiver.',hi:'आप तैयार हैं तो मैं तैयार हूँ।',tr:'Sen hazır olduğunda hazır.',ru:'Готов, когда вы готовы.',he:'מוכן כשאתה מוכן.',th:'พร้อมเมื่อคุณพร้อม.',vi:'Sẵn sàng khi bạn sẵn sàng.',pl:'Gotowy, kiedy ty.',nl:'Klaar wanneer jij het bent.',sv:'Redo när du är.',no:'Klar når du er.',el:'Έτοιμος όταν είσαι.',cs:'Připraven, když jste vy.',id:'Siap saat Anda siap.',ms:'Sedia apabila anda sedia.',ur:'جب آپ تیار ہوں، تیار ہے۔'},
   homeCastingReady:{fr:'Prêt à envoyer au casting.',en:'Ready to send to casting.',es:'Listo para enviar al casting.',it:'Pronto da inviare al casting.',zh:'准备发送给选角。',ko:'캐스팅에 보낼 준비 완료.',ja:'キャスティングに送る準備ができました。',ar:'جاهز للإرسال إلى الكاستينغ.',de:'Bereit zum Senden an das Casting.',pt:'Pronto para enviar ao casting.',hi:'कास्टिंग को भेजने के लिए तैयार।',tr:'Casting\'e göndermeye hazır.',ru:'Готово к отправке на кастинг.'},
   referralReward:{fr:'+30 min offertes ! Merci du partage.',en:'+30 min free! Thanks for sharing.',es:'+30 min gratis. ¡Gracias por compartir!',it:'+30 min gratis! Grazie per aver condiviso.',zh:'赠送30分钟！感谢分享。',ko:'+30분 무료! 공유해 주셔서 감사합니다.',ja:'+30分無料！シェアありがとうございます。',ar:'+30 دقيقة مجانية! شكرًا للمشاركة.',de:'+30 Min geschenkt! Danke fürs Teilen.',pt:'+30 min grátis! Obrigado por compartilhar.',hi:'+30 मिनट मुफ़्त! शेयर करने के लिए धन्यवाद।',tr:'+30 dk hediye! Paylaştığınız için teşekkürler.',ru:'+30 мин бесплатно! Спасибо за рекомендацию.'},
   speedSlow:{fr:'Lent',en:'Slow',es:'Lento',it:'Lento',zh:'慢',ko:'느림',ja:'遅い',ar:'بطيء',de:'Langsam',pt:'Lento',hi:'धीमा',tr:'Yavaş',ru:'Медленно'},
@@ -2635,6 +2638,7 @@ function applyUILanguage(){
   if(hookEl){const txt=t('homeHook')||'';hookEl.innerHTML=txt.replace(/,\s*/,'<br>').replace(/\.\s*$/,'<span class="hero-dot">.</span>');}
   setTextById('siteLanguageLabel','siteLanguageLabel');
   const ndaTxt=t('ndaText');if(ndaTxt){document.querySelectorAll('#ndaBadgeHome span').forEach(s=>s.textContent=ndaTxt);}
+  setTextById('homeSubtitle2','homeSubtitle2');
   setTextById('homeSubtitle','homeSubtitle');
   setTextById('homeImportLabel','homeCtaImport');
   setTextById('homeImportMicro','homeCtaMicrocopy');
