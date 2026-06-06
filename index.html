@@ -89,7 +89,7 @@ body::after{content:none}
 .home-privacy svg{width:.75rem;height:.75rem;fill:var(--raspberry);flex-shrink:0}
 .join-link{font-size:.78rem;color:var(--text-muted);text-align:center}
 .join-link a{color:var(--raspberry);cursor:pointer;text-decoration:underline;font-weight:700}
-.hero-subtitle-big{font-size:1.6rem;color:var(--cream);margin-bottom:.6rem;font-weight:300;letter-spacing:.02em;line-height:1.3}
+.hero-subtitle-big{font-size:2rem;color:var(--cream);margin-bottom:.6rem;font-weight:300;letter-spacing:.02em;line-height:1.3}
 .hero-subtitle{font-size:.85rem;color:var(--text-muted);margin-bottom:2rem;font-weight:400;line-height:1.5}
 .hero-import-btn{display:flex;align-items:center;justify-content:center;gap:.6rem;width:100%;max-width:380px;padding:1.1rem 1.5rem;background:var(--raspberry);border:1px solid var(--raspberry);color:#fff;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:var(--tf);border-radius:var(--radius)}
 .hero-import-btn:hover{background:#b91c22;border-color:#b91c22}
@@ -949,7 +949,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-06-06f';
+const APP_BUILD='2026-06-06g';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -6299,12 +6299,7 @@ async function toggleCam(){
       audio:false
     });
     const newTrack=newStream.getVideoTracks()[0];
-    // Swap recording stream track BEFORE stopping old track (prevents MediaRecorder onstop)
-    if(isRecording&&_recStream){
-      _recStream.getVideoTracks().forEach(t=>_recStream.removeTrack(t));
-      _recStream.addTrack(newTrack);
-    }
-    // Now safe to stop old tracks
+    // Recording uses canvas draw loop — no track swap needed, camera switch is transparent
     const oldTracks=localStream?localStream.getVideoTracks():[];
     if(localStream){
       localStream.getVideoTracks().forEach(t=>localStream.removeTrack(t));
@@ -6566,16 +6561,33 @@ function _showRecPauseBar(show){
   bar.style.display=show?'flex':'none';
 }
 var _recAudioCtx=null,_recDest=null,_recMicSource=null,_recMicGain=null,_recStream=null;
+var _recCanvas=null,_recCanvasCtx=null,_recDrawRaf=null;
+function _startRecCanvasDraw(){
+  if(_recDrawRaf)return;
+  function draw(){
+    if(!_recCanvas||!isRecording){_recDrawRaf=null;return}
+    var vid=document.getElementById('localVideo');
+    if(vid&&vid.videoWidth>0){
+      if(_recCanvas.width!==vid.videoWidth||_recCanvas.height!==vid.videoHeight){_recCanvas.width=vid.videoWidth;_recCanvas.height=vid.videoHeight}
+      _recCanvasCtx.drawImage(vid,0,0);
+    }
+    _recDrawRaf=requestAnimationFrame(draw);
+  }
+  _recDrawRaf=requestAnimationFrame(draw);
+}
+function _stopRecCanvasDraw(){if(_recDrawRaf){cancelAnimationFrame(_recDrawRaf);_recDrawRaf=null}_recCanvas=null;_recCanvasCtx=null}
 function _buildRecordingStream(){
   var combined=new MediaStream();
-  // Use remote video for partner (they see the actor's camera), local video for actor
+  // Use canvas capture for video (survives camera switches without stopping MediaRecorder)
+  var vid=document.getElementById('localVideo');
+  _recCanvas=document.createElement('canvas');
+  _recCanvas.width=vid&&vid.videoWidth>0?vid.videoWidth:1280;
+  _recCanvas.height=vid&&vid.videoHeight>0?vid.videoHeight:720;
+  _recCanvasCtx=_recCanvas.getContext('2d');
+  var canvasStream=_recCanvas.captureStream(30);
+  canvasStream.getVideoTracks().forEach(function(t){combined.addTrack(t)});
   var remoteVid=document.getElementById('remoteVideo');
   var remoteStream=remoteVid&&remoteVid.srcObject;
-  if(localStream&&localStream.getVideoTracks().length>0){
-    localStream.getVideoTracks().forEach(function(t){combined.addTrack(t)});
-  }else if(remoteStream&&remoteStream.getVideoTracks().length>0){
-    remoteStream.getVideoTracks().forEach(function(t){combined.addTrack(t)});
-  }
   try{
     _recAudioCtx=new (window.AudioContext||window.webkitAudioContext)();
     _recDest=_recAudioCtx.createMediaStreamDestination();
@@ -6635,11 +6647,11 @@ function startRecording(){
   if(!localStream){showToast('No video stream');return}recordedChunks=[];
   var recStream=_buildRecordingStream();_recStream=recStream;
   try{mediaRecorder=_makeMediaRecorder(recStream);
-  mediaRecorder.start(2000);
+  mediaRecorder.start(2000);_startRecCanvasDraw();
   isRecording=true;document.getElementById('btnRec').classList.add('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='flex';const _mr=document.getElementById('mobRecBtn');if(_mr)_mr.classList.add('recording');const _qb=document.getElementById('quitBtn');if(_qb){_qb.classList.add('has-recording');_qb.textContent='Save & Exit';}showToast('Recording…')}
   catch(e){showToast('Recording error')}
 }
-function _closeRecAudioCtx(){if(_recAudioCtx){try{_recAudioCtx.close()}catch(e){}_recAudioCtx=null}_recDest=null;_recMicSource=null;_recMicGain=null;_recStream=null}
+function _closeRecAudioCtx(){_stopRecCanvasDraw();if(_recAudioCtx){try{_recAudioCtx.close()}catch(e){}_recAudioCtx=null}_recDest=null;_recMicSource=null;_recMicGain=null;_recStream=null}
 function stopRecording(){_recPaused=false;_showRecPauseBar(false);if(mediaRecorder&&mediaRecorder.state==='paused'){try{mediaRecorder.resume()}catch(_e){}}if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').classList.remove('rec-paused');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='none';const _mr=document.getElementById('mobRecBtn');if(_mr){_mr.classList.remove('recording');_mr.classList.remove('rec-paused')}const _qb=document.getElementById('quitBtn');if(_qb){_qb.classList.remove('has-recording');_qb.textContent='Done'}}
 
 // ── WebRTC ──
@@ -6711,14 +6723,7 @@ function setupCallHandlers(c){
       if(_recAudioCtx&&_recDest&&s.getAudioTracks().length>0){
         try{var remSrc=_recAudioCtx.createMediaStreamSource(s);remSrc.connect(_recDest)}catch(e){console.warn('[rec] remote audio mix:',e)}
       }
-      var curVid=_recStream?_recStream.getVideoTracks()[0]:null;
-      if(curVid&&curVid.readyState==='ended'){
-        var freshVid=localStream?localStream.getVideoTracks():s.getVideoTracks();
-        if(freshVid.length>0&&_recStream){
-          _recStream.getVideoTracks().forEach(t=>_recStream.removeTrack(t));
-          _recStream.addTrack(freshVid[0]);
-        }
-      }
+      // Recording uses canvas draw loop — video track changes are transparent
     }
   });
   call.on('close',()=>{
