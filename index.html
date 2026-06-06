@@ -947,7 +947,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-06-06a';
+const APP_BUILD='2026-06-06b';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -6308,15 +6308,10 @@ async function toggleCam(){
       const sender=call.peerConnection.getSenders().find(s=>s.track&&s.track.kind==='video');
       if(sender)await sender.replaceTrack(newTrack);
     }
-    // Restart MediaRecorder with new camera (track swap doesn't work after start)
-    if(isRecording&&mediaRecorder&&mediaRecorder.state!=='inactive'){
-      mediaRecorder.onstop=()=>{};  // prevent finalize
-      try{mediaRecorder.stop()}catch(e){}
-      var rs=new MediaStream([newTrack]);
-      if(_recDest&&_recDest.stream)_recDest.stream.getAudioTracks().forEach(t=>rs.addTrack(t));
-      else if(localStream)localStream.getAudioTracks().forEach(t=>rs.addTrack(t));
-      mediaRecorder=_makeMediaRecorder(rs);
-      mediaRecorder.start(2000);
+    // Swap video track in the recording stream (keeps MediaRecorder running seamlessly)
+    if(isRecording&&_recStream){
+      _recStream.getVideoTracks().forEach(t=>_recStream.removeTrack(t));
+      _recStream.addTrack(newTrack);
     }
     document.getElementById('noVideoMsg').style.display='none';
     showToast(currentFacingMode==='user'?'Front camera':'Rear camera');
@@ -6564,7 +6559,7 @@ function _showRecPauseBar(show){
   }
   bar.style.display=show?'flex':'none';
 }
-var _recAudioCtx=null,_recDest=null,_recMicSource=null,_recMicGain=null;
+var _recAudioCtx=null,_recDest=null,_recMicSource=null,_recMicGain=null,_recStream=null;
 function _buildRecordingStream(){
   var combined=new MediaStream();
   // Use remote video for partner (they see the actor's camera), local video for actor
@@ -6632,13 +6627,13 @@ function _makeMediaRecorder(stream){
 function startRecording(){
   if(!canRecord()){showToast(t('partnerGateTitle'));openAuthModal();return}
   if(!localStream){showToast('No video stream');return}recordedChunks=[];
-  var recStream=_buildRecordingStream();
+  var recStream=_buildRecordingStream();_recStream=recStream;
   try{mediaRecorder=_makeMediaRecorder(recStream);
   mediaRecorder.start(2000);
   isRecording=true;document.getElementById('btnRec').classList.add('recording');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='flex';const _mr=document.getElementById('mobRecBtn');if(_mr)_mr.classList.add('recording');const _qb=document.getElementById('quitBtn');if(_qb){_qb.classList.add('has-recording');_qb.textContent='Save & Exit';}showToast('Recording…')}
   catch(e){showToast('Recording error')}
 }
-function _closeRecAudioCtx(){if(_recAudioCtx){try{_recAudioCtx.close()}catch(e){}_recAudioCtx=null}_recDest=null;_recMicSource=null;_recMicGain=null}
+function _closeRecAudioCtx(){if(_recAudioCtx){try{_recAudioCtx.close()}catch(e){}_recAudioCtx=null}_recDest=null;_recMicSource=null;_recMicGain=null;_recStream=null}
 function stopRecording(){_recPaused=false;_showRecPauseBar(false);if(mediaRecorder&&mediaRecorder.state==='paused'){try{mediaRecorder.resume()}catch(_e){}}if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').classList.remove('rec-paused');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='none';const _mr=document.getElementById('mobRecBtn');if(_mr){_mr.classList.remove('recording');_mr.classList.remove('rec-paused')}const _qb=document.getElementById('quitBtn');if(_qb){_qb.classList.remove('has-recording');_qb.textContent='Done'}}
 
 // ── WebRTC ──
@@ -6710,16 +6705,12 @@ function setupCallHandlers(c){
       if(_recAudioCtx&&_recDest&&s.getAudioTracks().length>0){
         try{var remSrc=_recAudioCtx.createMediaStreamSource(s);remSrc.connect(_recDest)}catch(e){console.warn('[rec] remote audio mix:',e)}
       }
-      var curVid=mediaRecorder.stream?mediaRecorder.stream.getVideoTracks()[0]:null;
+      var curVid=_recStream?_recStream.getVideoTracks()[0]:null;
       if(curVid&&curVid.readyState==='ended'){
         var freshVid=localStream?localStream.getVideoTracks():s.getVideoTracks();
-        if(freshVid.length>0){
-          mediaRecorder.onstop=()=>{};
-          try{mediaRecorder.stop()}catch(e){}
-          var rs=new MediaStream([freshVid[0]]);
-          if(_recDest&&_recDest.stream)_recDest.stream.getAudioTracks().forEach(t=>rs.addTrack(t));
-          mediaRecorder=_makeMediaRecorder(rs);
-          mediaRecorder.start(2000);
+        if(freshVid.length>0&&_recStream){
+          _recStream.getVideoTracks().forEach(t=>_recStream.removeTrack(t));
+          _recStream.addTrack(freshVid[0]);
         }
       }
     }
