@@ -123,6 +123,7 @@ import {
   tryRestorePersistedScriptFromIdb,
   clearPersistedScriptMemory,
   saveRecToDB,
+  renderProfileRecordings,
 } from './idb.js';
 
 // ── TTS ──────────────────────────────────────────────────────────────
@@ -220,7 +221,6 @@ import {
   etmShareRec,
   etmDeleteRec,
   showRecSavedModal,
-  renderProfileRecordings,
 } from './recording.js';
 
 // ── WebRTC ──────────────────────────────────────────────────────────────
