@@ -949,7 +949,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-06-06g';
+const APP_BUILD='2026-06-06h';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -6560,7 +6560,7 @@ function _showRecPauseBar(show){
   }
   bar.style.display=show?'flex':'none';
 }
-var _recAudioCtx=null,_recDest=null,_recMicSource=null,_recMicGain=null,_recStream=null;
+var _recAudioCtx=null,_recDest=null,_recMicSource=null,_recMicGain=null,_recStream=null,_recStopIntentional=false;
 var _recCanvas=null,_recCanvasCtx=null,_recDrawRaf=null;
 function _startRecCanvasDraw(){
   if(_recDrawRaf)return;
@@ -6636,7 +6636,13 @@ function _makeMediaRecorder(stream){
   if(isMP4)recOpts.videoBitsPerSecond=2500000;
   var rec=new MediaRecorder(stream,recOpts);
   rec.ondataavailable=e=>{if(e.data.size>0)recordedChunks.push(e.data)};
-  rec.onstop=async function(){_closeRecAudioCtx();try{var ext=isMP4?'mp4':'webm';var mime=isMP4?'video/mp4':'video/webm';var blob=new Blob(recordedChunks,{type:mime});var fname='citizentape-'+Date.now()+'.'+ext;
+  rec.onstop=async function(){
+    if(!_recStopIntentional&&isRecording&&_recStream){
+      // Accidental stop (camera switch, track glitch) — restart recorder
+      console.warn('[rec] unexpected onstop, restarting MediaRecorder');
+      try{mediaRecorder=_makeMediaRecorder(_recStream);mediaRecorder.start(2000);return}catch(e){console.error('[rec] restart failed:',e)}
+    }
+    _closeRecAudioCtx();try{var ext=isMP4?'mp4':'webm';var mime=isMP4?'video/mp4':'video/webm';var blob=new Blob(recordedChunks,{type:mime});var fname='citizentape-'+Date.now()+'.'+ext;
     await saveRecToDB(blob,fname,mime);
     renderRecordingsList();
     showRecSavedModal(blob,fname,mime)}catch(e){console.error('[rec] onstop error:',e);showToast('Recording saved!',3000)}};
@@ -6644,7 +6650,7 @@ function _makeMediaRecorder(stream){
 }
 function startRecording(){
   if(!canRecord()){showToast(t('partnerGateTitle'));openAuthModal();return}
-  if(!localStream){showToast('No video stream');return}recordedChunks=[];
+  if(!localStream){showToast('No video stream');return}recordedChunks=[];_recStopIntentional=false;
   var recStream=_buildRecordingStream();_recStream=recStream;
   try{mediaRecorder=_makeMediaRecorder(recStream);
   mediaRecorder.start(2000);_startRecCanvasDraw();
@@ -6652,7 +6658,7 @@ function startRecording(){
   catch(e){showToast('Recording error')}
 }
 function _closeRecAudioCtx(){_stopRecCanvasDraw();if(_recAudioCtx){try{_recAudioCtx.close()}catch(e){}_recAudioCtx=null}_recDest=null;_recMicSource=null;_recMicGain=null;_recStream=null}
-function stopRecording(){_recPaused=false;_showRecPauseBar(false);if(mediaRecorder&&mediaRecorder.state==='paused'){try{mediaRecorder.resume()}catch(_e){}}if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').classList.remove('rec-paused');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='none';const _mr=document.getElementById('mobRecBtn');if(_mr){_mr.classList.remove('recording');_mr.classList.remove('rec-paused')}const _qb=document.getElementById('quitBtn');if(_qb){_qb.classList.remove('has-recording');_qb.textContent='Done'}}
+function stopRecording(){_recPaused=false;_recStopIntentional=true;_showRecPauseBar(false);if(mediaRecorder&&mediaRecorder.state==='paused'){try{mediaRecorder.resume()}catch(_e){}}if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();isRecording=false;document.getElementById('btnRec').classList.remove('recording');document.getElementById('btnRec').classList.remove('rec-paused');document.getElementById('btnRec').innerHTML='<span class="rec-dot"></span>';const _ri=document.getElementById('recIndicator');if(_ri)_ri.style.display='none';const _mr=document.getElementById('mobRecBtn');if(_mr){_mr.classList.remove('recording');_mr.classList.remove('rec-paused')}const _qb=document.getElementById('quitBtn');if(_qb){_qb.classList.remove('has-recording');_qb.textContent='Done'}}
 
 // ── WebRTC ──
 async function createPeer(id){var ice=await getIceServers();return new Peer(id,{config:{iceServers:ice}})}
