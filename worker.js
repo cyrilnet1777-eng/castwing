@@ -984,6 +984,261 @@ async function sendResendEmail(apiKey, fromEmail, toEmail, code, lang) {
   return rsp.ok;
 }
 
+/* =========================================================
+   WELCOME EMAIL (sent once after signup)
+========================================================= */
+
+const WELCOME_EMAIL_TRANSLATIONS = {
+  fr: {
+    subject: "Bienvenue sur Citizen Tape 🎬",
+    greeting: "Salut",
+    welcome: "Bienvenue sur Citizen Tape.",
+    creditLine: "Pour commencer, on a ajouté {credit_amount_local} à ton compte.",
+    aiLine: "Utilise-les pour essayer le Mode IA et répéter tes scènes quand tu veux.",
+    partnerLine: "Tu préfères répéter avec un autre acteur\u00a0? Le Mode Partenaire est entièrement gratuit. Invite qui tu veux et travaillez ensemble sans frais.",
+    closing: "Bonne première répétition,",
+    team: "L\u2019équipe Citizen Tape",
+  },
+  en: {
+    subject: "Welcome to Citizen Tape 🎬",
+    greeting: "Hi",
+    welcome: "Welcome to Citizen Tape.",
+    creditLine: "To help you get started, we\u2019ve added {credit_amount_local} to your account.",
+    aiLine: "Use it to try AI Mode and rehearse your scenes whenever you want.",
+    partnerLine: "Prefer rehearsing with another actor? Partner Mode is completely free. Invite anyone and practice together at no cost.",
+    closing: "Enjoy your first rehearsal,",
+    team: "The Citizen Tape Team",
+  },
+  es: {
+    subject: "Bienvenido a Citizen Tape 🎬",
+    greeting: "Hola",
+    welcome: "Bienvenido a Citizen Tape.",
+    creditLine: "Para que empieces, hemos añadido {credit_amount_local} a tu cuenta.",
+    aiLine: "Úsalos para probar el Modo IA y ensayar tus escenas cuando quieras.",
+    partnerLine: "¿Prefieres ensayar con otro actor? El Modo Compañero es totalmente gratuito. Invita a quien quieras y ensayen juntos sin coste.",
+    closing: "Disfruta tu primer ensayo,",
+    team: "El equipo de Citizen Tape",
+  },
+  it: {
+    subject: "Benvenuto su Citizen Tape 🎬",
+    greeting: "Ciao",
+    welcome: "Benvenuto su Citizen Tape.",
+    creditLine: "Per iniziare, abbiamo aggiunto {credit_amount_local} al tuo account.",
+    aiLine: "Usali per provare la Modalità IA e fare le prove delle tue scene quando vuoi.",
+    partnerLine: "Preferisci provare con un altro attore? La Modalità Partner è completamente gratuita. Invita chi vuoi e lavorate insieme senza costi.",
+    closing: "Buona prima prova,",
+    team: "Il team di Citizen Tape",
+  },
+  de: {
+    subject: "Willkommen bei Citizen Tape 🎬",
+    greeting: "Hallo",
+    welcome: "Willkommen bei Citizen Tape.",
+    creditLine: "Zum Einstieg haben wir {credit_amount_local} auf dein Konto gutgeschrieben.",
+    aiLine: "Nutze sie, um den KI-Modus auszuprobieren und deine Szenen zu proben, wann immer du willst.",
+    partnerLine: "Lieber mit einem anderen Schauspieler proben? Der Partner-Modus ist komplett kostenlos. Lade jemanden ein und probt zusammen \u2014 ohne Kosten.",
+    closing: "Viel Spaß bei deiner ersten Probe,",
+    team: "Das Citizen Tape Team",
+  },
+  pt: {
+    subject: "Bem-vindo ao Citizen Tape 🎬",
+    greeting: "Olá",
+    welcome: "Bem-vindo ao Citizen Tape.",
+    creditLine: "Para começar, adicionamos {credit_amount_local} à sua conta.",
+    aiLine: "Use para experimentar o Modo IA e ensaiar suas cenas quando quiser.",
+    partnerLine: "Prefere ensaiar com outro ator? O Modo Parceiro é totalmente gratuito. Convide quem quiser e pratiquem juntos sem custo.",
+    closing: "Aproveite seu primeiro ensaio,",
+    team: "A equipe Citizen Tape",
+  },
+  ja: {
+    subject: "Citizen Tape へようこそ 🎬",
+    greeting: "こんにちは",
+    welcome: "Citizen Tape へようこそ。",
+    creditLine: "まずは {credit_amount_local} をアカウントに追加しました。",
+    aiLine: "AIモードでシーンの稽古をいつでも試せます。",
+    partnerLine: "他の俳優と稽古したいですか？パートナーモードは完全無料です。誰でも招待して、一緒に練習できます。",
+    closing: "初めての稽古を楽しんでください。",
+    team: "Citizen Tape チーム",
+  },
+  zh: {
+    subject: "欢迎来到 Citizen Tape 🎬",
+    greeting: "你好",
+    welcome: "欢迎来到 Citizen Tape。",
+    creditLine: "我们已为你的账户添加了 {credit_amount_local}，助你快速上手。",
+    aiLine: "用它来体验 AI 模式，随时排练你的场景。",
+    partnerLine: "更喜欢和另一位演员一起排练？搭档模式完全免费。邀请任何人，零成本一起练习。",
+    closing: "祝你第一次排练愉快，",
+    team: "Citizen Tape 团队",
+  },
+  ko: {
+    subject: "Citizen Tape에 오신 것을 환영합니다 🎬",
+    greeting: "안녕하세요",
+    welcome: "Citizen Tape에 오신 것을 환영합니다.",
+    creditLine: "시작을 돕기 위해 계정에 {credit_amount_local}을 추가했습니다.",
+    aiLine: "AI 모드를 체험하고 원할 때 장면을 연습해 보세요.",
+    partnerLine: "다른 배우와 연습하고 싶으세요? 파트너 모드는 완전 무료입니다. 누구든 초대해서 비용 없이 함께 연습하세요.",
+    closing: "첫 리허설을 즐기세요,",
+    team: "Citizen Tape 팀",
+  },
+  ar: {
+    subject: "🎬 مرحباً بك في Citizen Tape",
+    greeting: "مرحباً",
+    welcome: "مرحباً بك في Citizen Tape.",
+    creditLine: "لمساعدتك على البدء، أضفنا {credit_amount_local} إلى حسابك.",
+    aiLine: "استخدمه لتجربة وضع الذكاء الاصطناعي والتدرب على مشاهدك وقتما تشاء.",
+    partnerLine: "تفضل التدرب مع ممثل آخر؟ وضع الشريك مجاني تماماً. ادعُ من تشاء وتدربوا معاً بدون تكلفة.",
+    closing: "استمتع بأول بروفة لك،",
+    team: "فريق Citizen Tape",
+  },
+  he: {
+    subject: "🎬 ברוך הבא ל-Citizen Tape",
+    greeting: "שלום",
+    welcome: "ברוך הבא ל-Citizen Tape.",
+    creditLine: "כדי לעזור לך להתחיל, הוספנו {credit_amount_local} לחשבונך.",
+    aiLine: "השתמש בזה כדי לנסות מצב AI ולתרגל את הסצנות שלך מתי שתרצה.",
+    partnerLine: "מעדיף לתרגל עם שחקן אחר? מצב שותף הוא לגמרי חינם. הזמן את מי שתרצה ותתרגלו יחד ללא עלות.",
+    closing: "תהנה מהחזרה הראשונה שלך,",
+    team: "צוות Citizen Tape",
+  },
+  ru: {
+    subject: "Добро пожаловать в Citizen Tape 🎬",
+    greeting: "Привет",
+    welcome: "Добро пожаловать в Citizen Tape.",
+    creditLine: "Чтобы помочь вам начать, мы добавили {credit_amount_local} на ваш аккаунт.",
+    aiLine: "Используйте их, чтобы попробовать режим ИИ и репетировать сцены когда угодно.",
+    partnerLine: "Предпочитаете репетировать с другим актёром? Режим партнёра полностью бесплатный. Пригласите кого угодно и тренируйтесь вместе без затрат.",
+    closing: "Приятной первой репетиции,",
+    team: "Команда Citizen Tape",
+  },
+};
+
+function getLocalizedCreditAmount(lang) {
+  const cents = CREDIT_PRICING.FREE_SIGNUP_GRANT_CENTS;
+  const usd = (cents / 100).toFixed(2);
+  // Languages from regions that prefer local display
+  const map = { fr: `${usd}\u00a0$`, de: `${usd}\u00a0$`, es: `${usd}\u00a0$`, pt: `${usd}\u00a0$`, it: `${usd}\u00a0$`, ru: `${usd}\u00a0$` };
+  return map[lang] || `$${usd}`;
+}
+
+function getFirstName(email) {
+  const local = String(email || "").split("@")[0] || "";
+  // Try to extract a name from the local part (before dots, underscores, numbers)
+  const cleaned = local.split(/[._+0-9]/)[0] || local;
+  if (cleaned.length < 2) return "";
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+}
+
+function getWelcomeEmailHtml(lang, email) {
+  const safe = normalizeAuthEmailLang(lang);
+  const t = WELCOME_EMAIL_TRANSLATIONS[safe] || WELCOME_EMAIL_TRANSLATIONS.en;
+  const dir = (safe === "ar" || safe === "he") ? "rtl" : "ltr";
+  const firstName = getFirstName(email);
+  const creditAmount = getLocalizedCreditAmount(safe);
+  const creditLine = t.creditLine.replace("{credit_amount_local}", `<strong>${creditAmount}</strong>`);
+  const greetingLine = firstName ? `${t.greeting} ${firstName},` : `${t.greeting},`;
+
+  return `<!DOCTYPE html>
+<html lang="${safe}" dir="${dir}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>${t.subject}</title>
+</head>
+<body style="margin:0;padding:0;background:#1a1a1a;font-family:'Helvetica Neue','Segoe UI',system-ui,-apple-system,sans-serif;color:#f5efe0;-webkit-font-smoothing:antialiased;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#1a1a1a;padding:48px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#212121;border:1px solid rgba(245,239,224,0.12);">
+          <tr>
+            <td style="padding:40px 40px 32px;">
+              <span style="font-size:13px;font-weight:500;letter-spacing:0.22em;color:rgba(245,239,224,0.7);text-transform:uppercase;">CITIZENTAPE</span><span style="display:inline-block;width:5px;height:5px;background:#d92027;border-radius:50%;margin-left:6px;vertical-align:middle;"></span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 40px 24px;">
+              <p style="margin:0;font-size:15px;color:#f5efe0;line-height:1.6;">${greetingLine}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 40px 20px;">
+              <p style="margin:0;font-size:15px;color:#f5efe0;line-height:1.6;">${t.welcome}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 40px 20px;">
+              <p style="margin:0;font-size:15px;color:#f5efe0;line-height:1.6;">${creditLine}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 40px 20px;">
+              <p style="margin:0;font-size:15px;color:#f5efe0;line-height:1.6;">${t.aiLine}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 40px 28px;">
+              <p style="margin:0;font-size:15px;color:#f5efe0;line-height:1.6;">${t.partnerLine}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 40px;"><div style="height:1px;background:rgba(245,239,224,0.1);"></div></td>
+          </tr>
+          <tr>
+            <td style="padding:28px 40px 32px;">
+              <p style="margin:0 0 6px;font-size:14px;color:rgba(245,239,224,0.55);line-height:1.5;">${t.closing}</p>
+              <p style="margin:0;font-size:14px;color:#f5efe0;font-weight:500;">${t.team}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="border-top:1px solid rgba(245,239,224,0.1);padding:20px 40px;text-align:center;">
+              <p style="margin:0;font-size:10px;color:rgba(245,239,224,0.3);line-height:1.5;letter-spacing:0.12em;text-transform:uppercase;">
+                <a href="https://citizentape.com" style="color:rgba(245,239,224,0.4);text-decoration:none;">citizentape.com</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+async function sendWelcomeEmail(env, email, lang) {
+  const resendKey = String(env.RESEND_API_KEY || "").trim();
+  const fromEmail = String(env.AUTH_FROM_EMAIL || "").trim();
+  if (!resendKey || !fromEmail) return false;
+  const safeLang = normalizeAuthEmailLang(lang);
+  const t = WELCOME_EMAIL_TRANSLATIONS[safeLang] || WELCOME_EMAIL_TRANSLATIONS.en;
+  const html = getWelcomeEmailHtml(safeLang, email);
+  try {
+    const rsp = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
+      body: JSON.stringify({
+        from: `Citizen Tape <${fromEmail}>`,
+        to: [email],
+        subject: t.subject,
+        html,
+      }),
+    });
+    if (!rsp.ok) { try { console.error("[welcome-email] Resend error:", await rsp.text()); } catch (e) {} }
+    return rsp.ok;
+  } catch (e) { console.error("[welcome-email] send error:", e); return false; }
+}
+
+async function sendWelcomeEmailOnce(env, email, lang) {
+  if (!env.DB) { return sendWelcomeEmail(env, email, lang); }
+  try {
+    const row = await env.DB.prepare("SELECT welcome_email_sent FROM users WHERE lower(email) = ?").bind(email.toLowerCase()).first();
+    if (row && row.welcome_email_sent) return true; // already sent
+  } catch (e) { /* column may not exist yet, proceed anyway */ }
+  const ok = await sendWelcomeEmail(env, email, lang);
+  if (ok) {
+    try { await env.DB.prepare("UPDATE users SET welcome_email_sent = 1 WHERE lower(email) = ?").bind(email.toLowerCase()).run(); } catch (e) { /* best effort */ }
+  }
+  return ok;
+}
+
 async function ensureUserAuthColumns(db) {
   if (!db) return;
   try {
@@ -994,6 +1249,9 @@ async function ensureUserAuthColumns(db) {
     }
     if (!names.has("last_login_at")) {
       try { await db.prepare("ALTER TABLE users ADD COLUMN last_login_at INTEGER").run(); } catch (e) { /* ignore */ }
+    }
+    if (!names.has("welcome_email_sent")) {
+      try { await db.prepare("ALTER TABLE users ADD COLUMN welcome_email_sent INTEGER DEFAULT 0").run(); } catch (e) { /* ignore */ }
     }
   } catch (e) { /* ignore */ }
 }
@@ -1041,7 +1299,7 @@ async function upsertAuthUserRecord(env, email) {
 
 const GOOGLE_CLIENT_ID = "580840125965-vrcb9nvptv4mj1ua0v66mq1asl5t6o51.apps.googleusercontent.com";
 
-async function handleGoogleAuth(request, env) {
+async function handleGoogleAuth(request, env, ctx) {
   try {
     const payload = await request.json().catch(() => ({}));
     const idToken = String(payload.idToken || "").trim();
@@ -1064,13 +1322,17 @@ async function handleGoogleAuth(request, env) {
       body.userId = authMeta.userId;
       body.tier = authMeta.tier;
     }
+    // Send welcome email to new users (non-blocking)
+    if (authMeta.isNewUser && ctx) {
+      ctx.waitUntil(sendWelcomeEmailOnce(env, email, "en"));
+    }
     return json(body, 200, { "Set-Cookie": setCookie });
   } catch (error) {
     return json({ error: toText((error && error.message) || error) }, 500);
   }
 }
 
-async function handleAuth(request, env) {
+async function handleAuth(request, env, ctx) {
   try {
     const payload = await request.json().catch(() => ({}));
     const action = String(payload.action || "").trim().toLowerCase();
@@ -1147,6 +1409,11 @@ async function handleAuth(request, env) {
       extra.userId = authMeta.userId;
       extra.email = email;
       extra.tier = authMeta.tier;
+    }
+    // Send welcome email to new users (non-blocking)
+    const authLang = normalizeAuthEmailLang(payload.lang);
+    if (authMeta.isNewUser && ctx) {
+      ctx.waitUntil(sendWelcomeEmailOnce(env, email, authLang));
     }
     return json({ ok: true, ...extra }, 200, { "Set-Cookie": setCookie });
   } catch (error) {
@@ -1231,6 +1498,40 @@ async function handleRevokeInvite(request, env) {
 
   await env.DB.prepare(`UPDATE invites SET revoked = 1 WHERE id = ?`).bind(inviteId).run();
   return json({ ok: true });
+}
+
+async function handleSendWelcomeEmails(request, env, ctx) {
+  const session = await getSessionState(request, env);
+  if (!session.isAdmin) return json({ ok: false, error: "Forbidden" }, 403);
+  if (!env.DB) return json({ ok: false, error: "Database not configured" }, 500);
+
+  const payload = await request.json().catch(() => ({}));
+  const lang = normalizeAuthEmailLang(payload.lang || "en");
+
+  // Find all users who haven't received the welcome email yet
+  const rows = await env.DB.prepare(
+    "SELECT email FROM users WHERE (welcome_email_sent IS NULL OR welcome_email_sent = 0) AND email IS NOT NULL"
+  ).all();
+  const emails = (rows.results || []).map(r => r.email).filter(Boolean);
+
+  if (!emails.length) return json({ ok: true, sent: 0, message: "All users already received the welcome email" });
+
+  // Send emails in background (don't block the response)
+  let sentCount = 0;
+  const sendAll = async () => {
+    for (const email of emails) {
+      try {
+        const ok = await sendWelcomeEmailOnce(env, email, lang);
+        if (ok) sentCount++;
+        // Resend rate limit: pause 100ms between emails
+        await new Promise(r => setTimeout(r, 100));
+      } catch (e) { console.error("[welcome-backfill] error for", email, e); }
+    }
+    console.info(`[welcome-backfill] sent ${sentCount}/${emails.length} welcome emails`);
+  };
+  ctx.waitUntil(sendAll());
+
+  return json({ ok: true, queued: emails.length, message: `Sending welcome emails to ${emails.length} existing users` });
 }
 
 async function handleRedeemInvite(request, env) {
@@ -2549,8 +2850,8 @@ export default {
     if (url.pathname === "/api/parse-script" && request.method === "POST") return withAnthropicSlot(env, handleParseScript, request);
     if (url.pathname === "/api/validate-characters" && request.method === "POST") return withAnthropicSlot(env, handleValidateCharacters, request);
     if (url.pathname === "/api/classify-lines" && request.method === "POST") return withAnthropicSlot(env, handleClassifyLines, request);
-    if (url.pathname === "/api/auth" && request.method === "POST") return handleAuth(request, env);
-    if (url.pathname === "/api/auth/google" && request.method === "POST") return handleGoogleAuth(request, env);
+    if (url.pathname === "/api/auth" && request.method === "POST") return handleAuth(request, env, ctx);
+    if (url.pathname === "/api/auth/google" && request.method === "POST") return handleGoogleAuth(request, env, ctx);
     if (url.pathname === "/api/session" && request.method === "GET") return handleSession(request, env);
     if (url.pathname === "/api/logout" && request.method === "POST") {
       return json({ ok: true }, 200, { "Set-Cookie": `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0` });
@@ -2570,6 +2871,7 @@ export default {
     if (url.pathname === "/api/admin/create-invite" && request.method === "POST") return handleCreateInvite(request, env);
     if (url.pathname === "/api/admin/list-invites" && request.method === "GET") return handleListInvites(request, env);
     if (url.pathname === "/api/admin/revoke-invite" && request.method === "POST") return handleRevokeInvite(request, env);
+    if (url.pathname === "/api/admin/send-welcome-emails" && request.method === "POST") return handleSendWelcomeEmails(request, env, ctx);
     if (url.pathname === "/api/merge-characters" && request.method === "POST") return withAnthropicSlot(env, handleMergeCharacters, request);
 
     const apiPaths = ["/api/tts", "/api/claude-parse-script", "/api/label-script", "/api/parse-screenplay", "/api/parse-script", "/api/validate-characters", "/api/classify-lines", "/api/merge-characters", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/", "/api/polar-webhook", "/api/invite/redeem", "/api/admin/"];
