@@ -89,7 +89,7 @@ body::after{content:none}
 .home-privacy svg{width:.75rem;height:.75rem;fill:var(--raspberry);flex-shrink:0}
 .join-link{font-size:.78rem;color:var(--text-muted);text-align:center}
 .join-link a{color:var(--raspberry);cursor:pointer;text-decoration:underline;font-weight:700}
-.hero-subtitle-big{font-size:2rem;color:var(--cream);margin-bottom:.6rem;font-weight:300;letter-spacing:.02em;line-height:1.3}
+.hero-subtitle-big{font-size:1.8rem;color:var(--text-muted);margin-bottom:.6rem;font-weight:300;letter-spacing:.02em;line-height:1.3}
 .hero-subtitle{font-size:.85rem;color:var(--text-muted);margin-bottom:2rem;font-weight:400;line-height:1.5}
 .hero-import-btn{display:flex;align-items:center;justify-content:center;gap:.6rem;width:100%;max-width:380px;padding:1.1rem 1.5rem;background:var(--raspberry);border:1px solid var(--raspberry);color:#fff;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:var(--tf);border-radius:var(--radius)}
 .hero-import-btn:hover{background:#b91c22;border-color:#b91c22}
@@ -949,7 +949,7 @@ input[type="file"]{display:none}
 <audio id="ttsAudioEl" playsinline></audio>
 
 <script>
-const APP_BUILD='2026-06-06h';
+const APP_BUILD='2026-06-06i';
 console.info('[CitizenTape] build',APP_BUILD);
 const AUDITION_WINDOW_MS=24*60*60*1000;
 let role='actor',sessionMode='ai',mode='ai';
@@ -6564,12 +6564,18 @@ var _recAudioCtx=null,_recDest=null,_recMicSource=null,_recMicGain=null,_recStre
 var _recCanvas=null,_recCanvasCtx=null,_recDrawRaf=null;
 function _startRecCanvasDraw(){
   if(_recDrawRaf)return;
+  var cw=_recCanvas.width,ch=_recCanvas.height;
   function draw(){
     if(!_recCanvas||!isRecording){_recDrawRaf=null;return}
     var vid=document.getElementById('localVideo');
     if(vid&&vid.videoWidth>0){
-      if(_recCanvas.width!==vid.videoWidth||_recCanvas.height!==vid.videoHeight){_recCanvas.width=vid.videoWidth;_recCanvas.height=vid.videoHeight}
-      _recCanvasCtx.drawImage(vid,0,0);
+      // Scale video to fit locked canvas (letterbox/pillarbox on rotation)
+      var vw=vid.videoWidth,vh=vid.videoHeight;
+      var scale=Math.min(cw/vw,ch/vh);
+      var dw=vw*scale,dh=vh*scale;
+      var dx=(cw-dw)/2,dy=(ch-dh)/2;
+      if(dx>0||dy>0)_recCanvasCtx.clearRect(0,0,cw,ch);
+      _recCanvasCtx.drawImage(vid,dx,dy,dw,dh);
     }
     _recDrawRaf=requestAnimationFrame(draw);
   }
