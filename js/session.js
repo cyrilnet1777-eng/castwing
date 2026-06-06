@@ -566,6 +566,7 @@ function onAutoSpeechEnd() {
 function scheduleAfterPartner(lineIndex) {
   clearAutoTimer();
   S.autoAdvanceTimer = setTimeout(() => {
+    if (!__cwSessionActive) return;
     if (S.sessionPaused) return;
     if (S.prompterIndex !== lineIndex) return;
     if (S.mode === 'manual') return;
@@ -676,6 +677,7 @@ function renderPrompter() {
 function handleCurrentLineAutomation() {
   clearAutoTimer();
   stopAutoVAD();
+  if (!__cwSessionActive) { console.info('[auto] session ended, skip'); return; }
   if (S.sessionPaused) { console.info('[auto] paused, skip'); return; }
   if (S.sessionMode !== 'ai' || !S.prompterLines[S.prompterIndex]) { console.info('[auto] not ai or no line'); return; }
   const line = S.prompterLines[S.prompterIndex];
