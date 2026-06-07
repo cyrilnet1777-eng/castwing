@@ -673,7 +673,7 @@ function finishPdfSetupUi(n, rawText, validChars, detectedLang) {
   const chars = getChars();
   document.getElementById('uploadZone' + n).style.display = 'none';
   document.getElementById('uploadOk' + n).style.display = 'flex';
-  const fname = document.getElementById('fileName' + n); if (fname && (!fname.textContent || fname.textContent === 'PDF')) fname.textContent = S.currentScriptName || 'Script';
+  const fname = document.getElementById('fileName' + n); if (fname) fname.textContent = S.currentScriptName || 'Script';
   if (S.pdfScript.length > 0 && chars.length > 0) {
     renderChars(n, chars);
     document.getElementById('charSection' + n).style.display = 'block';
