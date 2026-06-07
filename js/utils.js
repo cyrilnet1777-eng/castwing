@@ -65,7 +65,7 @@ export function initPullToRefresh() {
     pulling = false;
     ind.style.top = '-48px';
     ind.style.opacity = '0';
-    if (wasReady) { location.href = location.pathname + '?_r=' + Date.now(); }
+    if (wasReady) { location.replace(location.pathname); }
   }, { passive: true });
 }
 
