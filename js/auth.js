@@ -98,7 +98,14 @@ export function openAuthModal() {
     var usageLabel = document.getElementById('profileUsageLabel');
     if (usageLabel) usageLabel.textContent = tt('recentActivity', 'Recent activity');
     loadUsageHistory();
-    refreshCreditBalance();
+    refreshCreditBalance().then(function() {
+      if (!S.cwServerSession.creditBalance && S.cwServerSession.email) {
+        fetchServerSession().then(function() {
+          var el = document.getElementById('profileBalanceAmount');
+          if (el) el.textContent = '$' + ((S.cwServerSession.creditBalance || 0) / 100).toFixed(2);
+        });
+      }
+    });
     updatePaygoUI();
     if (typeof window.renderProfileRecordings === 'function') window.renderProfileRecordings();
     var bv = document.getElementById('profileBuildVersion'); if (bv) bv.textContent = 'v' + APP_BUILD;

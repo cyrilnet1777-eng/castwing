@@ -7,10 +7,12 @@ A premium acting rehearsal studio. Import a screenplay, pick your role, and rehe
 **Legacy domain:** cast-wing.com (301 redirects to citizentape.com)
 
 ### Design
-- Luxury cinematic aesthetic: dark charcoal (#1a1a1a) / cream (#f5efe0) / raspberry (#d92027) palette
+- Luxury cinematic aesthetic: dark charcoal (#0d0d0d / #1a1a1a) / cream (#f5efe0) / raspberry (#d92027) palette
 - Playfair Display serif for headings, DM Sans for UI
 - Landing page: full-bleed studio photo with director's chair (responsive mobile/desktop images)
-- Inner pages: outlined buttons, square corners, editorial spacing
+- Setup screens (Import, Choose Mode, Voice, Partner): cinematic dark style with spotlight gradient, rounded cards, hidden scrollbars, serif titles with red dot accent
+- Voice selection: full-width cards with audio-wave icon + checkmark for selected state
+- Partner setup: prominent session code display with share/copy buttons
 - All toggles, selections, and active states use the same outlined highlight style
 
 ### Product flow
@@ -98,7 +100,7 @@ Partners join directly via the "Join a session" link on the landing page (no imp
 - Email verification codes via **Resend** (rate-limited: 3 codes/15min, 5 verify attempts/10min)
 - Auth codes generated with `crypto.getRandomValues()` (CSPRNG)
 - Google Sign-In (OAuth) — requires Google Cloud project with `citizentape.com` as authorized origin
-- Session cookies (HttpOnly, Secure, SameSite=Lax, 30-day expiry)
+- Session cookies (HttpOnly, Secure, SameSite=Lax, Domain=citizentape.com, 30-day expiry) — shared across production and beta/staging subdomains
 - All API endpoints require authentication (TTS, parsing, TURN credentials, script labeling)
 - CORS restricted to `https://citizentape.com`
 - TTS rate-limited: 30 calls/min per user + 500/min global (protects ElevenLabs API quota)
@@ -118,7 +120,7 @@ Partners join directly via the "Join a session" link on the landing page (no imp
 ### Repo workflow
 - `main` is the production branch. Push triggers GitHub Actions -> `wrangler deploy --keep-vars`.
 - **Always commit and push before deploying.** CI auto-deploys on push.
-- Staging: `npx wrangler deploy --env staging --keep-vars` (manual, preserves secrets).
+- Staging: `npx wrangler deploy --env staging --keep-vars` (manual, preserves secrets). **Never deploy directly to production with `wrangler deploy`** — always commit and push to let CI handle it.
 
 ### Versioning
 - `APP_BUILD` in `js/constants.js` uses today's date: `YYYY-MM-DDa` (e.g. `2026-05-26a`)
@@ -205,5 +207,5 @@ Google Sign-In requires a Google Cloud project with:
 - **ElevenLabs**: global 500 req/min cap prevents API quota exhaustion; upgrade plan or add keys to scale
 - **Anthropic**: max 50 concurrent requests via in-memory semaphore; increase limit as plan allows
 - **KV rate limiting**: eventually consistent (get->put race possible at extreme concurrency); migrate to Durable Objects at 10K+ daily active users
-- **CDN caching**: HTML cached 5min, images/sounds 24h immutable
+- **CDN caching**: HTML cached 5min, JS/CSS cached 5min with `?v=` cache-bust param on each deploy, images/sounds 24h immutable
 - **PeerJS**: uses default public signaling server; self-host on Fly.io when partner mode exceeds ~500 concurrent sessions
