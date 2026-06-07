@@ -8,7 +8,7 @@ import { S, initState, installWindowProperties } from './state.js';
 import { APP_BUILD } from './constants.js';
 
 // ── Utilities ───────────────────────────────────────────────────────────
-import { gaEvent, showToast, escHtml } from './utils.js';
+import { gaEvent, showToast, escHtml, initPullToRefresh } from './utils.js';
 
 // ── SFX ──────────────────────────────────────────────────────────────
 import { unlockAudio } from './sfx.js';
@@ -446,6 +446,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateSetupCameraButton();
   renderAllSpeedSliders();
   initCardTilt();
+  initPullToRefresh();
 
   // ── Clear stale #session hash ──
   if (location.hash === '#session') history.replaceState({}, '', location.pathname + location.search);

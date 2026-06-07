@@ -27,6 +27,48 @@ export function isMobileDevice(){
   return /Android|iPhone|iPad|iPod|Mobile|Opera Mini|IEMobile/i.test(navigator.userAgent||'');
 }
 
+/* ── Pull-to-refresh (home screen only) ── */
+export function initPullToRefresh() {
+  if (!('ontouchstart' in window)) return;
+  const ind = document.createElement('div');
+  ind.setAttribute('style',
+    'position:fixed;top:-48px;left:50%;transform:translateX(-50%);z-index:99999;' +
+    'background:var(--bg-2);color:var(--white);padding:6px 18px;border-radius:20px;' +
+    'font-size:13px;font-family:"DM Sans",sans-serif;opacity:0;transition:top .18s,opacity .18s;' +
+    'pointer-events:none;border:1px solid var(--border-light);');
+  ind.textContent = '\u2193 Pull to refresh';
+  document.body.appendChild(ind);
+
+  let startY = 0, pulling = false;
+  const THRESHOLD = 90;
+
+  document.addEventListener('touchstart', e => {
+    const home = document.getElementById('home');
+    if (!home || !home.classList.contains('active')) return;
+    startY = e.touches[0].clientY;
+    pulling = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!pulling) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy < 10) { ind.style.top = '-48px'; ind.style.opacity = '0'; return; }
+    const pct = Math.min(dy / THRESHOLD, 1);
+    ind.style.top = (-48 + 68 * pct) + 'px';
+    ind.style.opacity = String(pct);
+    ind.textContent = dy >= THRESHOLD ? '\u2191 Release to refresh' : '\u2193 Pull to refresh';
+  }, { passive: true });
+
+  document.addEventListener('touchend', () => {
+    if (!pulling) return;
+    const wasReady = ind.textContent.startsWith('\u2191');
+    pulling = false;
+    ind.style.top = '-48px';
+    ind.style.opacity = '0';
+    if (wasReady) location.reload();
+  }, { passive: true });
+}
+
 /* ── Email initials (for avatar badges) ── */
 export function emailInitials(email){
   if(!email)return'?';
