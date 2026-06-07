@@ -631,6 +631,9 @@ Object.assign(window, {
   cwEnqueueSessionBoot,
   ensureSessionStream,
   fallbackPrompterLinesFromPdfScript,
+  showClapperboard,
+  cwCommitSessionLive,
+  hideAiOnlyControls,
 
   // ── Plan/Timer (used via window.* by other modules) ──
   updateTimerBadge,
