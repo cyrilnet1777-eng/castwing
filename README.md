@@ -122,10 +122,12 @@ Partners join directly via the "Join a session" link on the landing page (no imp
 - **Always commit and push before deploying.** CI auto-deploys on push.
 - Staging: `npx wrangler deploy --env staging --keep-vars` (manual, preserves secrets). **Never deploy directly to production with `wrangler deploy`** — always commit and push to let CI handle it.
 
-### Versioning
-- `APP_BUILD` in `js/constants.js` uses today's date: `YYYY-MM-DDa` (e.g. `2026-05-26a`)
-- Increment the letter suffix (a->b->c) for multiple deploys on the same day
-- **Never** reuse or increment from a previous day's version — always use today's actual date
+### Versioning (automated)
+- **Automated** via pre-commit hook: `scripts/bump-version.sh`
+- On each commit, the hook bumps `APP_BUILD` in `js/constants.js` and `?v=` cache-bust params in `index.html`
+- Format: `YYYY-MM-DDx` (e.g. `2026-06-07a`), letter increments for same-day commits
+- Install hook on fresh clone: `ln -sf ../../scripts/bump-version.sh .git/hooks/pre-commit`
+- **Do not** bump versions manually — the hook handles it
 
 ### File structure
 ```
