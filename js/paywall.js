@@ -163,7 +163,7 @@ export async function openTopupModal(packId) {
 // ── Refresh credit balance from server ──────────────────────────────
 export async function refreshCreditBalance() {
   try {
-    var rsp = await fetch('/api/credits/balance', { credentials: 'same-origin' });
+    var rsp = await fetch('/api/credits/balance', { credentials: 'include' });
     var data = await rsp.json().catch(function() { return null; });
     if (data && data.ok) {
       S.cwServerSession.creditBalance = data.balance_cents || 0;

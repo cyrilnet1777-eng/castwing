@@ -1,8 +1,8 @@
 /
-  Cache-Control: public, max-age=300, must-revalidate
+  Cache-Control: no-cache, must-revalidate
 
 /index.html
-  Cache-Control: public, max-age=300, must-revalidate
+  Cache-Control: no-cache, must-revalidate
 
 /*.svg
   Cache-Control: public, max-age=86400, immutable
