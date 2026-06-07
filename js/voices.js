@@ -396,9 +396,14 @@ function renderAllSpeedSliders(){
 function initVoiceGrid(){
   const g=document.getElementById('voiceGrid');g.innerHTML='';
   if(!S.selectedVoice)S.selectedVoice=S.VOICE_PRESETS[0]||null;
+  const isCine=!!g.closest('.cine-screen');
   S.VOICE_PRESETS.forEach(v=>{
     const el=document.createElement('div');el.className='voice-item'+(S.selectedVoice&&S.selectedVoice.id===v.id?' selected':'');
-    el.innerHTML=`${v.label}<span class="vtag">${v.tag}</span>`;
+    if(isCine){
+      el.innerHTML=`<div class="voice-wave"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 12h2m3-4v8m3-10v12m3-8v4m3-6v8m2-4h0"/></svg></div><div class="voice-info"><span class="voice-name">${v.label}</span><span class="vtag">${v.tag}</span></div><div class="voice-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></div>`;
+    }else{
+      el.innerHTML=`${v.label}<span class="vtag">${v.tag}</span>`;
+    }
     el.onclick=()=>{S.selectedVoice=v;g.querySelectorAll('.voice-item').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');window.persistSettings();previewVoice(v)};
     g.appendChild(el);
   });

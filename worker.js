@@ -128,7 +128,7 @@ async function createSignedSessionCookie(email, env) {
   const payload = JSON.stringify({ email: email.toLowerCase(), exp });
   const sig = await sha256Hex(payload + "|" + secret);
   const value = b64urlEncode(payload) + "." + sig;
-  return `${SESSION_COOKIE_NAME}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${SESSION_MAX_AGE}`;
+  return `${SESSION_COOKIE_NAME}=${value}; Path=/; Domain=citizentape.com; HttpOnly; Secure; SameSite=Lax; Max-Age=${SESSION_MAX_AGE}`;
 }
 
 async function readSignedSessionCookie(request, env) {
@@ -1384,7 +1384,7 @@ async function handleAuth(request, env, ctx) {
     if (env.AUTH_KV) {
       const stored = await env.AUTH_KV.get(`auth_code:${email}`);
       if (!stored || stored !== code) {
-        return json({ ok: false, error: "Code invalide ou expiré" }, 401);
+        return json({ ok: false, error: "Invalid or expired code" }, 401);
       }
       await env.AUTH_KV.delete(`auth_code:${email}`);
     } else {
@@ -1960,7 +1960,7 @@ async function handleParseScreenplay(request, env) {
     }
 
     if (!parsed.characters || !Array.isArray(parsed.lines)) {
-      return json({ error: "JSON invalide : characters ou lines manquants" }, 502, PARSE_SCREENPLAY_CORS);
+      return json({ error: "Invalid JSON: missing characters or lines" }, 502, PARSE_SCREENPLAY_CORS);
     }
 
     return json({ characters: parsed.characters, lines: parsed.lines }, 200, PARSE_SCREENPLAY_CORS);
@@ -2854,7 +2854,7 @@ export default {
     if (url.pathname === "/api/auth/google" && request.method === "POST") return handleGoogleAuth(request, env, ctx);
     if (url.pathname === "/api/session" && request.method === "GET") return handleSession(request, env);
     if (url.pathname === "/api/logout" && request.method === "POST") {
-      return json({ ok: true }, 200, { "Set-Cookie": `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0` });
+      return json({ ok: true }, 200, { "Set-Cookie": `${SESSION_COOKIE_NAME}=; Path=/; Domain=citizentape.com; HttpOnly; Secure; SameSite=Lax; Max-Age=0` });
     }
     if (url.pathname === "/api/credits/consume" && request.method === "POST") return handleCreditsConsume(request, env);
     if (url.pathname === "/api/credits/balance" && request.method === "GET") return handleCreditsBalance(request, env);
