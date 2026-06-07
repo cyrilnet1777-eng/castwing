@@ -92,20 +92,19 @@ export function openAuthModal() {
     if (emailEl) emailEl.textContent = S.userAccess.email;
     // Populate credit balance and usage history
     var balEl = document.getElementById('profileBalanceAmount');
-    if (balEl) balEl.textContent = '$' + ((S.cwServerSession.creditBalance || 0) / 100).toFixed(2);
     var balLabel = document.getElementById('profileBalanceLabel');
     if (balLabel) balLabel.textContent = tt('creditBalance', 'Credit Balance');
     var usageLabel = document.getElementById('profileUsageLabel');
     if (usageLabel) usageLabel.textContent = tt('recentActivity', 'Recent activity');
-    loadUsageHistory();
-    refreshCreditBalance().then(function() {
-      if (!S.cwServerSession.creditBalance && S.cwServerSession.email) {
-        fetchServerSession().then(function() {
-          var el = document.getElementById('profileBalanceAmount');
-          if (el) el.textContent = '$' + ((S.cwServerSession.creditBalance || 0) / 100).toFixed(2);
-        });
-      }
+    // Always fetch fresh balance from server when profile opens
+    if (balEl) balEl.textContent = '...';
+    (S.cwServerSession.email ? Promise.resolve() : fetchServerSession()).then(function() {
+      return refreshCreditBalance();
+    }).then(function() {
+      var el = document.getElementById('profileBalanceAmount');
+      if (el) el.textContent = '$' + ((S.cwServerSession.creditBalance || 0) / 100).toFixed(2);
     });
+    loadUsageHistory();
     updatePaygoUI();
     if (typeof window.renderProfileRecordings === 'function') window.renderProfileRecordings();
     var bv = document.getElementById('profileBuildVersion'); if (bv) bv.textContent = 'v' + APP_BUILD;
