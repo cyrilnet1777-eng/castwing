@@ -92,12 +92,12 @@ export function openAuthModal() {
     if (emailEl) emailEl.textContent = S.userAccess.email;
     // Populate credit balance and usage history
     var balEl = document.getElementById('profileBalanceAmount');
+    if (balEl) balEl.textContent = '$' + ((S.cwServerSession.creditBalance || 0) / 100).toFixed(2);
     var balLabel = document.getElementById('profileBalanceLabel');
     if (balLabel) balLabel.textContent = tt('creditBalance', 'Credit Balance');
     var usageLabel = document.getElementById('profileUsageLabel');
     if (usageLabel) usageLabel.textContent = tt('recentActivity', 'Recent activity');
-    // Always fetch fresh balance from server when profile opens
-    if (balEl) balEl.textContent = '...';
+    // Fetch fresh balance from server
     (S.cwServerSession.email ? Promise.resolve() : fetchServerSession()).then(function() {
       return refreshCreditBalance();
     }).then(function() {

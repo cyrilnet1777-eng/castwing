@@ -133,23 +133,23 @@ async function createSignedSessionCookie(email, env) {
 
 async function readSignedSessionCookie(request, env) {
   const cookie = request.headers.get("Cookie") || "";
-  const match = cookie.match(new RegExp(`${SESSION_COOKIE_NAME}=([^;]+)`));
-  if (!match) { console.log("[session] no cookie found"); return null; }
-  const parts = match[1].split(".");
-  if (parts.length !== 2) { console.log("[session] cookie malformed"); return null; }
-  try {
-    const payload = b64urlDecode(parts[0]);
-    const secret = String(env.INVITE_SIGNING_SECRET || env.AUTH_CODE_SECRET || "");
-    const expected = await sha256Hex(payload + "|" + secret);
-    if (expected !== parts[1]) { console.log("[session] sig mismatch"); return null; }
-    const parsed = JSON.parse(payload);
-    if (!parsed.email) { console.log("[session] no email in payload"); return null; }
-    if (parsed.exp && parsed.exp < Date.now()) { console.log("[session] expired"); return null; }
-    return parsed.email.toLowerCase();
-  } catch (e) {
-    console.log("[session] parse error", e);
-    return null;
+  const re = new RegExp(`${SESSION_COOKIE_NAME}=([^;]+)`, "g");
+  let match;
+  const secret = String(env.INVITE_SIGNING_SECRET || env.AUTH_CODE_SECRET || "");
+  while ((match = re.exec(cookie)) !== null) {
+    const parts = match[1].split(".");
+    if (parts.length !== 2) continue;
+    try {
+      const payload = b64urlDecode(parts[0]);
+      const expected = await sha256Hex(payload + "|" + secret);
+      if (expected !== parts[1]) continue;
+      const parsed = JSON.parse(payload);
+      if (!parsed.email) continue;
+      if (parsed.exp && parsed.exp < Date.now()) continue;
+      return parsed.email.toLowerCase();
+    } catch (e) { continue; }
   }
+  return null;
 }
 
 async function resolveCurrentUser(request, env) {
