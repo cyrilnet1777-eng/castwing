@@ -31,12 +31,15 @@ async function fetchTTSFromBestEndpoint(payload) {
   const candidates = getTTSEndpointCandidates().filter(ep => !primary.includes(ep));
   const endpoints = [...primary, ...candidates];
   let lastResponse = null, lastEndpoint = '';
+  const ac = new AbortController();
+  S._ttsAbort = ac;
   for (const endpoint of endpoints) {
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
       credentials: 'same-origin',
+      signal: ac.signal,
     });
     lastResponse = response;
     lastEndpoint = endpoint;
@@ -128,6 +131,7 @@ function cancelTTSPlayback() {
   if (S.ttsAudio && typeof S.ttsAudio.stop === 'function') {
     try { S.ttsAudio.stop(); } catch (e) {}
   }
+  if (S._ttsAbort) { try { S._ttsAbort.abort(); } catch (e) {} S._ttsAbort = null; }
   const el = document.getElementById('ttsAudioEl');
   if (el) {
     el.pause();
@@ -375,6 +379,7 @@ function speakWithBrowser(text, preset, style, token, cb) {
 
 async function aiSpeak(text, cb, opts) {
   if (!text) { if (cb) cb(); return; }
+  if (typeof window !== 'undefined' && window.__cwSessionState && !window.__cwSessionState.active && S.sessionMode === 'ai') return;
   opts = opts || {};
   const preset = S.selectedVoice || S.VOICE_PRESETS[0];
   console.info('[TTS] aiSpeak voiceId:', preset.voiceId, 'label:', preset.label, 'id:', preset.id, 'slider:', S.voiceSpeed, 'elevenSpeed:', getCurrentVoiceSpeed(), 'emotion:', S.selectedEmotion);
