@@ -600,14 +600,13 @@ export async function extractPdfLines(file) {
   await loadPdfJs();
   var buf = await file.arrayBuffer();
   var pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
-  var allLines = [];
+  var rawRows = [];
   for (var i = 1; i <= pdf.numPages; i++) {
     if (S._pdfParseCancelled) break;
     var page = await pdf.getPage(i);
     var tc = await page.getTextContent();
     var items = (tc.items || []).filter(function (it) { return it.str && it.str.trim(); });
     if (!items.length) continue;
-    // Group text items by Y position (transform[5]) to reconstruct lines
     var yThreshold = 3;
     var rows = [];
     var curRow = [items[0]];
@@ -624,9 +623,7 @@ export async function extractPdfLines(file) {
     }
     rows.push(curRow);
     for (var r = 0; r < rows.length; r++) {
-      // Sort items in row by X position (transform[4]) for correct reading order
       rows[r].sort(function (a, b) { return (a.transform ? a.transform[4] : 0) - (b.transform ? b.transform[4] : 0); });
-      // Join items: add space only when there's a real gap between items (not individual chars)
       var parts = rows[r];
       var lineText = '';
       for (var p = 0; p < parts.length; p++) {
@@ -635,15 +632,45 @@ export async function extractPdfLines(file) {
         var curStart = parts[p].transform ? parts[p].transform[4] : 0;
         var fontSize = parts[p].transform ? Math.abs(parts[p].transform[0]) : 12;
         var gap = curStart - prevEnd;
-        // If gap > 30% of font size, insert space; otherwise concatenate directly
         if (gap > fontSize * 0.3) lineText += ' ' + parts[p].str;
         else lineText += parts[p].str;
       }
       lineText = lineText.replace(/\s+/g, ' ').trim();
-      if (lineText) allLines.push(lineText);
+      if (!lineText) continue;
+      var rowY = parts[0].transform ? parts[0].transform[5] : 0;
+      var rowX = parts[0].transform ? parts[0].transform[4] : 0;
+      var rowFontSize = parts[0].transform ? Math.abs(parts[0].transform[0]) : 12;
+      rawRows.push({ text: lineText, y: rowY, x: rowX, fontSize: rowFontSize, page: i });
     }
   }
   try { if (pdf && typeof pdf.destroy === 'function') pdf.destroy(); } catch (e) {}
+  var capsRx = /^[A-ZÀ-ÖØ-Þ\s\-'.()]+$/;
+  var slugRx = /^(INT|EXT|INT\.|EXT\.|INTÉRIEUR|EXTÉRIEUR|SCENE|SCÈNE|SEQ)\b/i;
+  var paranRx = /^\s*\(/;
+  var allLines = [];
+  for (var k = 0; k < rawRows.length; k++) {
+    var row = rawRows[k];
+    var prev = k > 0 ? rawRows[k - 1] : null;
+    var isNewParagraph = true;
+    if (prev && prev.page === row.page) {
+      var yGap = Math.abs(prev.y - row.y);
+      var lineHeight = Math.max(row.fontSize, prev.fontSize) * 1.45;
+      var xDiff = Math.abs(row.x - prev.x);
+      var sameIndent = xDiff < row.fontSize * 1.5;
+      var isCharCue = capsRx.test(row.text) && row.text.length <= 40 && !slugRx.test(row.text);
+      var isSlug = slugRx.test(row.text);
+      var isParenthetical = paranRx.test(row.text);
+      var prevIsCharCue = capsRx.test(prev.text) && prev.text.length <= 40 && !slugRx.test(prev.text);
+      if (!isCharCue && !isSlug && !isParenthetical && !prevIsCharCue && sameIndent && yGap < lineHeight) {
+        isNewParagraph = false;
+      }
+    }
+    if (isNewParagraph) {
+      allLines.push(row.text);
+    } else {
+      allLines[allLines.length - 1] += ' ' + row.text;
+    }
+  }
   return allLines;
 }
 
