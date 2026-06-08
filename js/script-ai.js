@@ -252,12 +252,19 @@ async function parseViaExtractAndLabel(file) {
   console.log('Extracted ' + lines.length + ' lines (body ~' + Math.round(fullBody.length / 1024) + 'KB / ' + fullBody.length + ' bytes), sending for labeling...');
   if (!lines.length) throw new Error('Could not extract text from PDF');
   var MAX_LINES = 80;
+  var OVERLAP = 8;
   var chunks = [];
+  var chunkRanges = [];
   for (var start = 0; start < lines.length; start += MAX_LINES) {
     var end = Math.min(start + MAX_LINES, lines.length);
+    var contextStart = Math.max(0, start - OVERLAP);
+    var contextLines = start > 0 ? lines.slice(contextStart, start) : [];
     var chunkLines = lines.slice(start, end);
+    var contextNumbered = contextLines.map(function (l, i) { return 'CONTEXT ' + (contextStart + i + 1) + ': ' + l; }).join('\n');
     var chunkNumbered = chunkLines.map(function (l, i) { return (start + i + 1) + ': ' + l; }).join('\n');
-    chunks.push(chunkNumbered);
+    var fullChunk = contextNumbered ? contextNumbered + '\n' + chunkNumbered : chunkNumbered;
+    chunks.push(fullChunk);
+    chunkRanges.push([start + 1, start + chunkLines.length]);
   }
   console.log('Labeling ' + chunks.length + ' chunks (2 at a time)...');
   if (_fakeProgressTimer) { clearInterval(_fakeProgressTimer); _fakeProgressTimer = null; }
@@ -269,10 +276,15 @@ async function parseViaExtractAndLabel(file) {
   for (var ci = 0; ci < chunks.length; ci += CONCURRENT) {
     if (S._pdfParseCancelled) throw new Error('Cancelled');
     var batch = chunks.slice(ci, ci + CONCURRENT);
+    var batchRanges = chunkRanges.slice(ci, ci + CONCURRENT);
     var results = await Promise.all(batch.map(function (c) { return fetchLabelScript(c); }));
     for (var i = 0; i < results.length; i++) {
       var labs = Array.isArray(results[i].labels) ? results[i].labels : [];
-      allLabels = allLabels.concat(labs);
+      var range = batchRanges[i];
+      for (var li = 0; li < labs.length; li++) {
+        var lab = labs[li];
+        if (Array.isArray(lab) && lab[0] >= range[0] && lab[0] <= range[1]) allLabels.push(lab);
+      }
       var chars = Array.isArray(results[i].characters) ? results[i].characters : [];
       chars.forEach(function (c) { if (allChars.indexOf(c) === -1) allChars.push(c); });
     }

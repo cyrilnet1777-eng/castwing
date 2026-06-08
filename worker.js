@@ -2744,11 +2744,13 @@ CRITICAL RULES:
 - Descriptive/narrative lines between dialogue (e.g. "L'homme entre dans la piece." or "Georges se retourne :") are ALWAYS "action", even if they appear between two dialogue lines.
 - Parenthetical directions like "(criant)" or "(se raidissant soudain)" at the start of a dialogue line do NOT make it action — it is still "dialogue".
 - Only lines that contain actual spoken words are "dialogue". If a line describes what happens or what someone does, it is "action".
+- Lines prefixed with "CONTEXT" are from the previous chunk for continuity. Use them to understand who is speaking but do NOT label them — only label lines with plain numbers.
+- If the first real line continues a dialogue from the CONTEXT lines, attribute it to the same character.
 
 Return ONLY a JSON object, no markdown, no prose:
 {"characters":["NAME1","NAME2"],"labels":[[1,"slug",null],[2,"action",null],[3,"dialogue","JUVE"],...]}
 
-IMPORTANT: Do NOT reproduce the line text. Only return line numbers and labels. Be concise.
+IMPORTANT: Do NOT reproduce the line text. Only return line numbers and labels. Be concise. Do NOT include CONTEXT line numbers in labels.
 
 NUMBERED LINES:
 ${numberedText}`;
