@@ -473,7 +473,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(async function () {
       await fetchServerSession();
       S.cwServerSession.billingMode = 'metered';
-      showToast('Pay-As-You-Go activated! You\'ll be billed monthly for usage.', 5000);
+      showToast('Pay-As-You-Go activated! You\'ll be billed daily for usage.', 5000);
       history.replaceState({}, '', '/');
     }, 2000);
   } else if (paymentParam === 'cancel') {

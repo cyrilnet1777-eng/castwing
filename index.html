@@ -30,7 +30,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<link rel="stylesheet" href="/styles.css?v=20260608c">
+<link rel="stylesheet" href="/styles.css?v=20260608d">
 </head>
 <body>
 <div id="toast" class="toast"></div>
@@ -169,11 +169,11 @@
         <div style="display:flex;align-items:center;justify-content:space-between">
           <div>
             <div style="font-weight:600;color:var(--white)">Pay As You Go</div>
-            <div style="font-size:.72rem;color:var(--text-muted)" id="paygoDesc">Billed monthly for actual usage — no pre-purchase needed</div>
+            <div style="font-size:.72rem;color:var(--text-muted)" id="paygoDesc">Billed daily for actual usage — no pre-purchase needed</div>
           </div>
           <button class="ps-toggle" id="paygoToggle" onclick="handlePaygoToggle()" style="flex-shrink:0"></button>
         </div>
-        <div id="paygoActiveInfo" style="display:none;margin-top:8px;font-size:.72rem;color:#34C759">Active · billed monthly</div>
+        <div id="paygoActiveInfo" style="display:none;margin-top:8px;font-size:.72rem;color:#34C759">Active · billed daily</div>
         <div style="margin-top:6px;font-size:.72rem;color:var(--text-muted)">$0.30 / 1,000 characters</div>
       </div>
       <div id="profileRecordings" style="margin:8px 0;border:1px solid var(--border)">
@@ -429,6 +429,6 @@
 </div></div>
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ttsAudioEl" playsinline></audio>
-<script type="module" src="/js/app.js?v=20260608c"></script>
+<script type="module" src="/js/app.js?v=20260608d"></script>
 </body>
 </html>
