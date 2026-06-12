@@ -57,6 +57,7 @@ export const S = {
   /** Annule le parse « fin de script » lance apres un parse tete (gros PDF) */
   _fastFullParseToken: 0,
   takeNumber:       0,
+  currentTake:      null,
   currentScriptName: '',
 
   // ── Voice / TTS ────────────────────────────────────────────────────

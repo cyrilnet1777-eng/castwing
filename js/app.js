@@ -209,7 +209,17 @@ import {
   cwEnqueueSessionBoot,
   ensureSessionStream,
   fallbackPrompterLinesFromPdfScript,
+  updateTakeInfo,
 } from './session.js';
+
+// ── Takes ───────────────────────────────────────────────────────────────
+import {
+  getSceneId,
+  initTakeCounter,
+  beginTake,
+  takeDurationMs,
+  markTakePaused,
+} from './takes.js';
 
 // ── Recording ───────────────────────────────────────────────────────────
 import {
@@ -655,6 +665,14 @@ Object.assign(window, {
   showClapperboard,
   cwCommitSessionLive,
   hideAiOnlyControls,
+  updateTakeInfo,
+
+  // ── Takes (used via window.* by other modules) ──
+  getSceneId,
+  initTakeCounter,
+  beginTake,
+  takeDurationMs,
+  markTakePaused,
 
   // ── Plan/Timer (used via window.* by other modules) ──
   updateTimerBadge,

@@ -14,6 +14,7 @@ import {
 } from './idb.js';
 import { canRecord } from './plan-timer.js';
 import { openAuthModal } from './auth.js';
+import { getSceneId, takeDurationMs } from './takes.js';
 
 // ── Module-level state (not on S — internal to recording) ───────────
 let _recPaused    = false;
@@ -25,6 +26,7 @@ let _lastRecFname = '';
 let _lastRecMime  = '';
 let _recStartTs   = 0;
 let _recWasPaused = false;
+let _lastThumb    = null;
 
 // ══════════════════════════════════════════════════════════════════════
 //  End-Take Modal
@@ -313,7 +315,17 @@ function _makeMediaRecorder(stream) {
       var mime = isMP4 ? 'video/mp4' : 'video/webm';
       var blob = new Blob(S.recordedChunks, { type: mime });
       var fname = 'citizentape-' + Date.now() + '.' + ext;
-      await saveRecToDB(blob, fname, mime);
+      var tk = S.currentTake || {};
+      await saveRecToDB(blob, fname, mime, {
+        sceneId: tk.sceneId || getSceneId(),
+        sceneName: tk.sceneName || S.currentScriptName || '',
+        takeNumber: Number.isFinite(tk.takeNumber) ? tk.takeNumber : S.takeNumber,
+        status: 'saved',
+        wasPaused: !!(tk.wasPaused || _recWasPaused),
+        duration: takeDurationMs() || (_recStartTs ? Date.now() - _recStartTs : null),
+        thumb: _lastThumb,
+      });
+      _lastThumb = null;
       track('recording_save', { target: 'idb', size_mb: Math.round(blob.size / 1048576 * 10) / 10 });
       renderRecordingsList();
       showRecSavedModal(blob, fname, mime);
@@ -370,6 +382,8 @@ function _closeRecAudioCtx() {
 function stopRecording() {
   _recPaused = false;
   S._recStopIntentional = true;
+  // Thumbnail for the takes list (canvas still holds the last drawn frame)
+  try { if (_recCanvas) _lastThumb = _recCanvas.toDataURL('image/jpeg', 0.6); } catch (_e) { _lastThumb = null; }
   _showRecPauseBar(false);
   if (S.mediaRecorder && S.mediaRecorder.state === 'paused') {
     try { S.mediaRecorder.resume(); } catch (_e) {}

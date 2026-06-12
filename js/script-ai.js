@@ -700,6 +700,7 @@ function finishPdfSetupUi(n, rawText, validChars, detectedLang) {
     if (n === 1) showToast(chars.length + ' roles found \u2014 ' + t('myCharacterLabel'), 4200);
     persistScriptSnapshotNow();
     saveToScriptHistory();
+    if (typeof window.initTakeCounter === 'function') void window.initTakeCounter();
   } else {
     S.pdfScript = [];
     syncPdfScriptDebugMirror();

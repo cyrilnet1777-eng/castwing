@@ -35,24 +35,54 @@ S._cwIdb = null;
 
 function openRecDB() {
   return new Promise((res, rej) => {
-    const r = indexedDB.open(REC_DB, 1);
+    const r = indexedDB.open(REC_DB, 2);
     r.onupgradeneeded = e => {
       const db = e.target.result;
-      if (!db.objectStoreNames.contains(REC_STORE))
-        db.createObjectStore(REC_STORE, { keyPath: 'id', autoIncrement: true });
+      const tx = e.target.transaction;
+      let store;
+      if (!db.objectStoreNames.contains(REC_STORE)) {
+        store = db.createObjectStore(REC_STORE, { keyPath: 'id', autoIncrement: true });
+      } else {
+        store = tx.objectStore(REC_STORE);
+      }
+      if (!store.indexNames.contains('sceneId')) store.createIndex('sceneId', 'sceneId', { unique: false });
+      if (e.oldVersion > 0 && e.oldVersion < 2) {
+        // v1 → v2: stamp legacy recordings with takes-system defaults
+        store.openCursor().onsuccess = ev => {
+          const c = ev.target.result;
+          if (!c) return;
+          const v = c.value;
+          if (v.sceneId === undefined) {
+            c.update(Object.assign(v, {
+              sceneId: 'legacy', sceneName: v.fname || '', takeNumber: 0,
+              status: 'saved', wasPaused: false, duration: null, thumb: null,
+            }));
+          }
+          c.continue();
+        };
+      }
     };
+    r.onblocked = () => console.warn('[idb] recordings DB upgrade blocked by another tab');
     r.onsuccess = () => res(r.result);
     r.onerror   = () => rej(r.error);
   });
 }
 
-async function saveRecToDB(blob, fname, mime) {
+async function saveRecToDB(blob, fname, mime, meta) {
   try {
     const db = await openRecDB();
     return new Promise((res, rej) => {
       const tx = db.transaction(REC_STORE, 'readwrite');
+      const m = meta || {};
       tx.objectStore(REC_STORE).add({
         blob, fname, mime, date: Date.now(), size: blob.size,
+        sceneId: m.sceneId || 'legacy',
+        sceneName: m.sceneName || (S.currentScriptName || ''),
+        takeNumber: Number.isFinite(m.takeNumber) ? m.takeNumber : (S.takeNumber || 0),
+        status: m.status || 'saved',
+        wasPaused: !!m.wasPaused,
+        duration: Number.isFinite(m.duration) ? m.duration : null,
+        thumb: m.thumb || null,
       });
       tx.oncomplete = () => res();
       tx.onerror    = () => rej(tx.error);

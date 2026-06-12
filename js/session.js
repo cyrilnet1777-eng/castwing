@@ -194,7 +194,8 @@ function updateTakeInfo() {
 function showClapperboard(onComplete) {
   const existing = document.getElementById('clapOverlay');
   if (existing) existing.remove();
-  S.takeNumber++;
+  if (typeof window.beginTake === 'function') window.beginTake();
+  else S.takeNumber++;
   const overlay = document.createElement('div');
   overlay.id = 'clapOverlay';
   overlay.className = 'clap-overlay';
@@ -1006,6 +1007,7 @@ function togglePause(forceState) {
   if (S.sessionPaused) {
     const _ss = (typeof window !== 'undefined' && window.__cwSessionState) || {};
     track('pause_menu_open', { take_elapsed_s: _ss.startedAt ? Math.round((Date.now() - _ss.startedAt) / 1000) : 0 });
+    if (typeof window.markTakePaused === 'function') window.markTakePaused(true);
     cancelSpeechFlow();
     freezeTimer();
     updateTakeInfo();
@@ -1025,6 +1027,7 @@ function togglePause(forceState) {
     }
     if (S.conn && S.conn.open) S.conn.send({ type: 'pause' });
   } else {
+    if (typeof window.markTakePaused === 'function') window.markTakePaused(false);
     unfreezeTimer();
     if (S.isRecording && S.mediaRecorder && S.mediaRecorder.state === 'paused') {
       try { S.mediaRecorder.resume(); } catch (_e) {}
