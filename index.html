@@ -30,7 +30,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<link rel="stylesheet" href="/styles.css?v=20260612s">
+<link rel="stylesheet" href="/styles.css?v=20260612t">
 </head>
 <body>
 <div id="toast" class="toast"></div>
@@ -351,7 +351,11 @@
   <div class="cine-cam-toggle">
     <div class="mode-opt" id="setupCamBtn" onclick="toggleSetupCamera()"><svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;vertical-align:middle;margin-right:4px"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>Camera ON</div>
   </div>
-  <div class="cine-view-mode" id="viewModeSetup" style="margin-top:.6rem"></div>
+  <div style="margin-top:.9rem">
+    <label id="viewModeSetupLabel" style="font-size:.75rem;font-weight:700;color:var(--raspberry);text-transform:uppercase;letter-spacing:.08em">Screen layout while recording</label>
+    <div class="mode-hint" id="viewModeSetupHint" style="margin:.15rem 0 .45rem">Text only, split screen, or camera only — also changeable from the pause menu.</div>
+    <div class="cine-view-mode" id="viewModeSetup"></div>
+  </div>
   <div class="voice-section active" id="voiceSection">
     <label id="voiceSectionLabel" style="display:none">AI voice</label>
     <div class="cine-voice-lang">
@@ -370,7 +374,9 @@
       </select>
     </div>
   </div>
-  <button class="cine-cta" onclick="startAiSession()" id="launchAiBtn" title="Begin rehearsal with AI partner">START SCENE 🎬</button>
+  <div class="cine-sticky-cta">
+    <button class="cine-cta" style="margin-top:0" onclick="startAiSession()" id="launchAiBtn" title="Begin rehearsal with AI partner">START SCENE 🎬</button>
+  </div>
   </div>
 </div>
 
@@ -392,7 +398,9 @@
       <button class="cine-share-btn cine-share-secondary" onclick="copyPartnerLink()" id="copyLinkBtn"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7a5 5 0 0 0 0 10h4v-1.9H7A3.1 3.1 0 0 1 3.9 12zM8 13h8v-2H8v2zm9-6h-4v1.9h4a3.1 3.1 0 0 1 0 6.2h-4V17h4a5 5 0 0 0 0-10z"/></svg> COPY LINK</button>
     </div>
   </div>
-  <button class="cine-cta" onclick="startPartnerSession()" id="launchPartnerBtn" title="Start session and wait for partner to connect">START SCENE 🎬</button>
+  <div class="cine-sticky-cta">
+    <button class="cine-cta" style="margin-top:0" onclick="startPartnerSession()" id="launchPartnerBtn" title="Start session and wait for partner to connect">START SCENE 🎬</button>
+  </div>
   <div class="cine-privacy"><svg viewBox="0 0 24 24" width="12" height="12"><path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zM9 6a3 3 0 0 1 6 0v2H9V6zm9 14H6V10h12v10zm-6-3a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor"/></svg><span>PRIVATE. SECURE. OFF RECORD.</span></div>
   </div>
 </div>
@@ -536,6 +544,6 @@
 </div></div>
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ttsAudioEl" playsinline></audio>
-<script type="module" src="/js/app.js?v=20260612s"></script>
+<script type="module" src="/js/app.js?v=20260612t"></script>
 </body>
 </html>

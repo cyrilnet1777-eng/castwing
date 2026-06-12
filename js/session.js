@@ -284,6 +284,11 @@ function setViewMode(m) {
   }
   renderPrompter();
   updateViewModeButtons();
+  // Refresh every rendered toggle so the selection is visible from the
+  // setup screen and the pause menu too
+  ['viewModeSetup', 'viewModePause', 'viewModeSession'].forEach(id => {
+    if (document.getElementById(id) && document.getElementById(id).childElementCount) renderViewModeToggle(id);
+  });
 }
 
 function cycleViewMode() {
@@ -1245,7 +1250,7 @@ function hideEndTakeModal() {
 
 function confirmEndTake() {
   track('end_take', { mode: S.sessionMode });
-  document.getElementById('etmConfirmPhase').style.display = 'none';
+  hideEndTakeModal(); // close the confirm shell — the review modal takes over
   endSession();
 }
 

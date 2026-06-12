@@ -179,10 +179,10 @@ function playTtsIntoRecording(audioBuffer) {
 
 // ── ElevenLabs TTS ─────────────────────────────────────────────────
 
-async function speakWithElevenLabs(text, preset, token, cb, speedOverride) {
+async function speakWithElevenLabs(text, preset, token, cb, speedOverride, demoFree) {
   try {
     if (!preset || !preset.voiceId) throw new Error('Missing ElevenLabs voiceId');
-    if (!isServerAdmin()) {
+    if (!isServerAdmin() && !demoFree) {
       var isLoggedIn = !!(S.cwServerSession.email || (S.userAccess.verified && S.userAccess.email));
       // If not logged in but localStorage shows previous login, try re-fetching session
       if (!isLoggedIn && S.userAccess.email) {
@@ -241,8 +241,8 @@ async function speakWithElevenLabs(text, preset, token, cb, speedOverride) {
             showToast(t('lowCredits') + ': $' + (S.cwServerSession.creditBalance / 100).toFixed(2), 3000);
           }
         }
-        // Track free lines for visitors
-        if (!S.cwServerSession.email) {
+        // Track free lines for visitors (the onboarding demo doesn't count)
+        if (!S.cwServerSession.email && !demoFree) {
           var fl = parseInt(localStorage.getItem('cw_free_lines') || '0');
           localStorage.setItem('cw_free_lines', String(fl + 1));
         }
@@ -379,19 +379,22 @@ function speakWithBrowser(text, preset, style, token, cb) {
 
 async function aiSpeak(text, cb, opts) {
   if (!text) { if (cb) cb(); return; }
-  if (typeof window !== 'undefined' && window.__cwSessionState && !window.__cwSessionState.active && S.sessionMode === 'ai') return;
   opts = opts || {};
+  // Don't speak into a dead session — except the onboarding demo, which runs outside any session
+  if (!opts.demoFree && typeof window !== 'undefined' && window.__cwSessionState && !window.__cwSessionState.active && S.sessionMode === 'ai') return;
   const preset = S.selectedVoice || S.VOICE_PRESETS[0];
+  if (!preset) { console.warn('[TTS] no voice preset available'); if (cb) cb(); return; }
   console.info('[TTS] aiSpeak voiceId:', preset.voiceId, 'label:', preset.label, 'id:', preset.id, 'slider:', S.voiceSpeed, 'elevenSpeed:', getCurrentVoiceSpeed(), 'emotion:', S.selectedEmotion);
   const spokenText = normalizeTextForTTS(text, preset);
   const token = ++S.activeSpeechToken;
   cancelTTSPlayback();
   if (useElevenLabs && !S.elevenLabsTemporarilyDisabled) {
-    const ok = await speakWithElevenLabs(spokenText, preset, token, cb, opts.speedOverride);
+    const ok = await speakWithElevenLabs(spokenText, preset, token, cb, opts.speedOverride, opts.demoFree);
     if (ok || token !== S.activeSpeechToken) return;
   }
   // If disabled due to credits, show pay popup instead of browser TTS
-  if (useElevenLabs && S.elevenLabsTemporarilyDisabled && (S.elevenLabsDisableReason === 'quota' || S.elevenLabsDisableReason === 'visitor')) {
+  // (never during the onboarding demo — it silently falls back to browser TTS)
+  if (!opts.demoFree && useElevenLabs && S.elevenLabsTemporarilyDisabled && (S.elevenLabsDisableReason === 'quota' || S.elevenLabsDisableReason === 'visitor')) {
     var isLoggedIn = !!(S.cwServerSession.email || (S.userAccess.verified && S.userAccess.email));
     if (isLoggedIn) showCreditDepletedModal();
     else if (S.userAccess.email) { showToast(t('ttsSessionExpired')); openAuthModal(); }

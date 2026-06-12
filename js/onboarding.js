@@ -9,8 +9,8 @@ import { S } from './state.js';
 import { showToast, track } from './utils.js';
 import { t } from './i18n.js';
 import { getUserData, saveUserData } from './plan-timer.js';
-import { speakWithBrowser, cancelTTSPlayback } from './tts.js';
-import { getSpeechStyle, getBestVoice } from './voices.js';
+import { aiSpeak, cancelTTSPlayback } from './tts.js';
+import { applyLocaleVoices } from './voices.js';
 
 let _obStream = null;
 let _obRecorder = null;
@@ -113,20 +113,24 @@ export async function obStartDemo() {
     console.warn('[onboarding] recorder failed, demo without recording:', e);
     _obRecorder = null;
   }
-  // Walk through the 4 demo lines: AI lines spoken by free browser TTS,
-  // user lines get a generous read-aloud window
+  // Walk through the 4 demo lines: AI lines use the real ElevenLabs
+  // voice (free — demoFree skips all metering; browser TTS only as
+  // technical fallback), user lines get a generous read-aloud window
+  if (!S.VOICE_PRESETS || !S.VOICE_PRESETS.length) {
+    try { applyLocaleVoices(S.selectedLocale, true); } catch (_e) { /* browser TTS fallback will cover */ }
+  }
   const lines = demoLines();
-  const preset = S.selectedVoice || (S.VOICE_PRESETS && S.VOICE_PRESETS[0]) || {};
   for (let i = 0; i < lines.length; i++) {
     if (!_obRunning) return; // skipped mid-demo
     _renderDemoPrompter(i);
     const l = lines[i];
     if (l.who === 'ai') {
       await new Promise(resolve => {
-        const token = ++S.activeSpeechToken;
-        try { speakWithBrowser(l.text, preset, getSpeechStyle(preset), token, resolve); }
-        catch (_e) { resolve(); }
-        setTimeout(resolve, 6000); // safety: never hang the demo
+        let done = false;
+        const finish = () => { if (!done) { done = true; resolve(); } };
+        try { aiSpeak(l.text, finish, { demoFree: true }); }
+        catch (_e) { finish(); }
+        setTimeout(finish, 9000); // safety: never hang the demo
       });
     } else {
       await new Promise(r => setTimeout(r, 3500));
