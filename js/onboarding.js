@@ -94,6 +94,46 @@ function _renderDemoPrompter(activeIdx) {
   });
 }
 
+/** Wait for the user to speak their line: advance ~1.2s after their
+    voice stops. Safety cap so a silent room never hangs the demo. */
+function _waitForUserSpeech(maxMs) {
+  return new Promise(resolve => {
+    let ctx = null, raf = null, done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      if (raf) { try { cancelAnimationFrame(raf); } catch (_e) {} }
+      if (ctx) { try { ctx.close(); } catch (_e) {} }
+      resolve();
+    };
+    const stream = _obStream;
+    if (!stream || !stream.getAudioTracks().length) { setTimeout(finish, 3500); return; }
+    try {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const src = ctx.createMediaStreamSource(new MediaStream(stream.getAudioTracks()));
+      const an = ctx.createAnalyser();
+      an.fftSize = 512;
+      src.connect(an);
+      const buf = new Uint8Array(an.frequencyBinCount);
+      let spoke = false, lastVoice = 0;
+      const t0 = Date.now();
+      const loop = () => {
+        if (done || !_obRunning) return finish();
+        an.getByteTimeDomainData(buf);
+        let sum = 0;
+        for (let i = 0; i < buf.length; i++) { const d = (buf[i] - 128) / 128; sum += d * d; }
+        const rms = Math.sqrt(sum / buf.length);
+        const now = Date.now();
+        if (rms > 0.025) { spoke = true; lastVoice = now; }
+        if (spoke && now - lastVoice > 1200) return finish(); // user finished their line
+        if (now - t0 > maxMs) return finish();                // safety cap
+        raf = requestAnimationFrame(loop);
+      };
+      raf = requestAnimationFrame(loop);
+    } catch (_e) { setTimeout(finish, 3500); }
+  });
+}
+
 export async function obStartDemo() {
   if (_obRunning || !_obStream) return;
   _obRunning = true;
@@ -133,7 +173,8 @@ export async function obStartDemo() {
         setTimeout(finish, 9000); // safety: never hang the demo
       });
     } else {
-      await new Promise(r => setTimeout(r, 3500));
+      // Wait until the actor actually says the line (don't steamroll them)
+      await _waitForUserSpeech(20000);
     }
   }
   _renderDemoPrompter(-1);
