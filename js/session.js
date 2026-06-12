@@ -147,6 +147,18 @@ function setPrompterLinesForSession(n, tag) {
   S.prompterLines = buildLines(num);
   if (!S.prompterLines.length && S.pdfScript.length > 0)
     S.prompterLines = fallbackPrompterLinesFromPdfScript();
+  // Monologue detection: stamp lines inside blocks so automation can
+  // switch to paced continuous advance (no VAD, no AI wait)
+  try {
+    const blocksFn = window.computeMonologueBlocks;
+    S.monologueBlocks = typeof blocksFn === 'function' ? blocksFn(S.prompterLines) : [];
+    for (const b of S.monologueBlocks) {
+      for (let i = b.start; i <= b.end && i < S.prompterLines.length; i++) {
+        if (S.prompterLines[i]) S.prompterLines[i].inMonologue = true;
+      }
+    }
+    if (S.monologueBlocks.length) console.info('[monologue] blocks:', JSON.stringify(S.monologueBlocks));
+  } catch (e) { S.monologueBlocks = []; }
   debugPrompterPdfScriptKinds(tag);
 }
 
@@ -771,8 +783,32 @@ function handleCurrentLineAutomation() {
     S.userScrolledUp = false;
     if (S._scrollResumeTimer) { clearTimeout(S._scrollResumeTimer); S._scrollResumeTimer = null; }
     forceScrollToActive(true);
+    if (line.inMonologue) { scheduleMonologueAdvance(); return; }
     armAutoVADForActorLine();
   }
+}
+
+/** Monologue blocks: paced timed advance (~160 wpm), no VAD wait.
+    Each advance smooth-centers, reading as a continuous slow crawl. */
+function scheduleMonologueAdvance() {
+  clearAutoTimer();
+  const lineIndex = S.prompterIndex;
+  const line = S.prompterLines[lineIndex];
+  if (!line) return;
+  if (lineIndex >= S.prompterLines.length - 1) return;
+  const words = ((line.text || '').split(/\s+/).filter(Boolean)).length;
+  const paceMult = S.prompterPace === 'slow' ? 1.5 : (S.prompterPace === 'fast' ? 0.6 : 1.0);
+  const ms = Math.max(1800, Math.round(words * 380 * paceMult));
+  S.autoAdvanceTimer = setTimeout(() => {
+    if (!__cwSessionActive || S.sessionPaused) return;
+    if (S.prompterIndex !== lineIndex) return;
+    if (S.mode === 'manual') return;
+    S.prompterIndex++;
+    S.lastAutoSpokenIndex = -1;
+    refreshPrompterAfterAdvance();
+    syncPrompter();
+    handleCurrentLineAutomation();
+  }, ms);
 }
 
 // =====================================================================

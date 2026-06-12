@@ -161,6 +161,7 @@ import {
   renderChars,
   renderPartnerAssignment,
   buildLines,
+  computeMonologueBlocks,
 } from './script-ai.js';
 
 // ── Session ─────────────────────────────────────────────────────────────
@@ -614,6 +615,7 @@ Object.assign(window, {
   renderChars,
   renderPartnerAssignment,
   buildLines,
+  computeMonologueBlocks,
 
   // ── PDF parse (used via window.* by other modules) ──
   mergeConsecutiveDialogues,

@@ -966,6 +966,35 @@ function groupConsecutiveLines(scriptLines) {
   return grouped;
 }
 
+// ── Monologue detection ─────────────────────────────────────────────
+
+/**
+ * Detect monologue blocks in prompter lines: a single-character script is
+ * one whole-script block; otherwise any run of 10+ consecutive dialogue
+ * lines by the same character. Returns [{start, end}] (inclusive indices).
+ */
+function computeMonologueBlocks(lines) {
+  if (!lines || !lines.length) return [];
+  const dialogue = lines.filter(l => l && l.kind === LINE_TYPE.DIALOGUE && l.char);
+  const distinctChars = new Set(dialogue.map(l => normalizeCharacterNameForGroup(l.char)));
+  if (distinctChars.size === 1 && dialogue.length > 0) return [{ start: 0, end: lines.length - 1 }];
+  const blocks = [];
+  let runStart = -1, runChar = null, runCount = 0;
+  const flush = endIdx => { if (runCount >= 10) blocks.push({ start: runStart, end: endIdx }); };
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    const isDial = l && l.kind === LINE_TYPE.DIALOGUE && l.char;
+    const ch = isDial ? normalizeCharacterNameForGroup(l.char) : null;
+    if (isDial && ch === runChar) { runCount++; continue; }
+    flush(i - 1);
+    runStart = isDial ? i : -1;
+    runChar = ch;
+    runCount = isDial ? 1 : 0;
+  }
+  flush(lines.length - 1);
+  return blocks;
+}
+
 // ── Exports ─────────────────────────────────────────────────────────
 
 export {
@@ -1033,4 +1062,5 @@ export {
   buildLines,
   normalizeCharacterNameForGroup,
   groupConsecutiveLines,
+  computeMonologueBlocks,
 };
