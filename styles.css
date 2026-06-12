@@ -11,6 +11,7 @@
   --radius:8px;--radius-lg:12px;
   --text-dark:#f5efe0;--text-muted:rgba(245,239,224,.50);
   --raspberry:#d92027;--raspberry-dim:rgba(217,32,39,.6);
+  --actor-gold:#E8C547;--partner-blue:#5B9BD5;
   --accent:#888;--accent-hover:#aaa;
   --tf:all .15s ease;--ts:all .2s ease;
   --success:#22c55e;--danger:#ef4444;--warning:#f59e0b
@@ -425,7 +426,8 @@ input[type="file"]{display:none}
 .prompter-area{flex:1;background:rgba(0,0,0,.85);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.25rem 1rem 6rem;margin-top:35vh;max-width:720px;margin-left:auto;margin-right:auto;color:rgba(255,255,255,.92)}
 .prompter-group{margin-bottom:1.5rem}
 .prompter-character{font-size:.72rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:#fff;margin-bottom:.45rem;padding-left:.25rem;font-style:normal}
-.prompter-group-user .prompter-character{color:var(--white)}
+.prompter-group-user .prompter-character{color:var(--actor-gold)}
+.prompter-group-partner .prompter-character{color:var(--partner-blue)}
 .prompter-segments{padding-left:.5rem;border-left:none}
 .prompter-group-user .prompter-segments{}
 .prompter-slug{font-size:.68rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#888;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);padding:8px 14px;border-radius:0;margin:20px 0 12px;font-style:italic}
@@ -437,10 +439,15 @@ input[type="file"]{display:none}
 .prompter-line:active{background:rgba(255,255,255,.04)}
 .prompter-line.active{color:#FFFFFF;font-weight:700;font-size:1.35rem;background:rgba(255,255,255,.05);border-left:3px solid var(--raspberry);padding:14px 16px 14px 20px;position:relative}
 .prompter-group-user .prompter-line{color:#f0f0f0}
-.prompter-group-user .prompter-line.active{color:#FFFFFF}
+.prompter-group-user .prompter-line.active{color:#FFFFFF;border-left-color:var(--actor-gold)}
+.prompter-group-partner .prompter-line.active{border-left-color:var(--partner-blue)}
+.prompter-line.past,.prompter-action.past,.prompter-slug.past,.prompter-parenthetical.past{opacity:.3}
+.prompter-line.future,.prompter-action.future,.prompter-slug.future,.prompter-parenthetical.future{opacity:.5}
+.prompter-line.active{opacity:1}
+.prompter-action,.prompter-slug,.prompter-parenthetical{transition:opacity .25s ease}
 .prompter-line::before,.prompter-character::before{content:none!important;display:none!important}
 .turn-dot{display:none;width:8px;height:8px;border-radius:50%;position:absolute;right:10px;top:50%;transform:translateY(-50%);flex-shrink:0}
-.turn-actor{display:block;background:#ef4444}
+.turn-actor{display:block;background:var(--actor-gold)}
 .turn-partner{display:none}
 .prompter-empty{text-align:center;color:rgba(255,255,255,.3);font-size:.85rem;padding:2rem 0}
 .ai-panel{display:none;flex-shrink:0;padding:.5rem 1rem;background:#1a1a1a;border-top:1px solid rgba(255,255,255,.06);align-items:center;gap:.5rem;font-size:.75rem}

@@ -209,6 +209,7 @@ import {
   ensureSessionStream,
   fallbackPrompterLinesFromPdfScript,
   updateTakeInfo,
+  updatePrompterProgress,
 } from './session.js';
 
 // ── Takes ───────────────────────────────────────────────────────────────
@@ -652,6 +653,7 @@ Object.assign(window, {
   cwCommitSessionLive,
   hideAiOnlyControls,
   updateTakeInfo,
+  updatePrompterProgress,
 
   // ── Takes (used via window.* by other modules) ──
   getSceneId,

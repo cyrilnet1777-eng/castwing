@@ -74,20 +74,8 @@ export function handleDataMessage(d) {
   if (d.type === 'prompter' || d.type === 'jump') {
     if (window._scrollOwner === 'local') return; // last-touch-wins: local user is scrolling
     S.prompterIndex = d.index;
-    // Lightweight update: move active class without full DOM rebuild
-    const pa = document.getElementById('prompterArea');
-    const target = pa && pa.querySelector('[data-line-index="' + d.index + '"]');
-    if (target) {
-      pa.querySelectorAll('.prompter-line.active').forEach(el => el.classList.remove('active'));
-      target.classList.add('active');
-      // Use instant scroll for remote sync
-      window._scrollSyncProgrammatic = true;
-      requestAnimationFrame(() => {
-        const targetY = pa.scrollTop + target.getBoundingClientRect().top - pa.getBoundingClientRect().top - pa.clientHeight * 0.3;
-        pa.scrollTo({ top: Math.max(0, targetY), behavior: 'instant' });
-        setTimeout(() => { window._scrollSyncProgrammatic = false; }, 100);
-      });
-    } else {
+    // Lightweight update: toggle active/past/future without full DOM rebuild
+    if (typeof window.updatePrompterProgress !== 'function' || !window.updatePrompterProgress()) {
       window.renderPrompter();
     }
   } else if (d.type === 'script') {

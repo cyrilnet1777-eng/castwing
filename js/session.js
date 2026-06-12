@@ -544,7 +544,7 @@ function onAutoSpeechEnd() {
     if (S.prompterIndex !== lineIndex) return; // manual nav during the delay
     S.prompterIndex++;
     S.lastAutoSpokenIndex = -1;
-    renderPrompter();
+    refreshPrompterAfterAdvance();
     syncPrompter();
     handleCurrentLineAutomation();
   };
@@ -569,9 +569,8 @@ function scheduleAfterPartner(lineIndex) {
     if (S.prompterIndex >= S.prompterLines.length - 1) return;
     S.prompterIndex++;
     S.lastAutoSpokenIndex = -1;
-    renderPrompter();
+    refreshPrompterAfterAdvance();
     syncPrompter();
-    forceScrollToActive();
     handleCurrentLineAutomation();
   }, computeLineDelayMs(S.prompterLines[lineIndex], S.prompterLines[lineIndex + 1]));
 }
@@ -580,9 +579,51 @@ function scheduleAfterPartner(lineIndex) {
 //  Prompter rendering & scroll
 // =====================================================================
 
-function scrollActiveLineTo30(pa, el) {
-  const targetY = pa.scrollTop + el.getBoundingClientRect().top - pa.getBoundingClientRect().top - pa.clientHeight * 0.3;
+function scrollActiveLineToCenter(pa, el) {
+  const targetY = pa.scrollTop + el.getBoundingClientRect().top - pa.getBoundingClientRect().top - pa.clientHeight * 0.5 + el.offsetHeight / 2;
   pa.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
+}
+
+/** Lightweight per-advance update: toggle active/past/future classes and
+    move the turn dot without rebuilding the prompter DOM. */
+function updatePrompterProgress() {
+  const pa = document.getElementById('prompterArea');
+  if (!pa) return false;
+  const els = pa.querySelectorAll('[data-line-index]');
+  if (!els.length) return false;
+  let found = false;
+  els.forEach(el => {
+    const idx = parseInt(el.dataset.lineIndex, 10);
+    const isLine = el.classList.contains('prompter-line');
+    const isActive = isLine && idx === S.prompterIndex;
+    if (isActive) found = true;
+    el.classList.toggle('active', isActive);
+    el.classList.toggle('past', idx < S.prompterIndex);
+    el.classList.toggle('future', idx > S.prompterIndex);
+  });
+  if (!found) return false; // active line not in DOM — caller should full-render
+  pa.querySelectorAll('.turn-dot').forEach(d => d.remove());
+  const act = pa.querySelector('.prompter-line.active');
+  const flat = S.prompterLines[S.prompterIndex];
+  if (act && flat && flat.type === 'actor') {
+    const dot = document.createElement('span');
+    dot.className = 'turn-dot turn-actor';
+    act.appendChild(dot);
+  }
+  if (!S.userScrolledUp && act) {
+    _scrollSyncProgrammatic = true;
+    requestAnimationFrame(() => {
+      scrollActiveLineToCenter(pa, act);
+      setTimeout(() => { _scrollSyncProgrammatic = false; }, 800);
+    });
+  }
+  return true;
+}
+
+/** Update the prompter after an index advance: lightweight path with a
+    full-render fallback. */
+function refreshPrompterAfterAdvance() {
+  if (!updatePrompterProgress()) renderPrompter();
 }
 
 function forceScrollToActive(force) {
@@ -593,7 +634,7 @@ function forceScrollToActive(force) {
   S.userScrolledUp = false;
   _scrollSyncProgrammatic = true;
   requestAnimationFrame(() => {
-    scrollActiveLineTo30(pa, act);
+    scrollActiveLineToCenter(pa, act);
     setTimeout(() => { _scrollSyncProgrammatic = false; }, 800);
   });
 }
@@ -612,7 +653,10 @@ function renderPrompter() {
   for (const g of grouped) {
     if (g.kind === LINE_TYPE.SLUG || g.kind === LINE_TYPE.ACTION) {
       const block = document.createElement('div');
-      block.className = g.kind === LINE_TYPE.SLUG ? 'prompter-slug' : 'prompter-action';
+      let bcls = g.kind === LINE_TYPE.SLUG ? 'prompter-slug' : 'prompter-action';
+      if (g.originalIndex < S.prompterIndex) bcls += ' past';
+      else if (g.originalIndex > S.prompterIndex) bcls += ' future';
+      block.className = bcls;
       block.dataset.lineIndex = String(g.originalIndex);
       block.textContent = g.text;
       a.appendChild(block);
@@ -629,15 +673,18 @@ function renderPrompter() {
     segWrap.className = 'prompter-segments';
     for (const seg of g.segments) {
       const flat = S.prompterLines[seg.originalIndex];
+      const tense = seg.originalIndex < S.prompterIndex ? ' past' : (seg.originalIndex > S.prompterIndex ? ' future' : '');
       if (seg.parenthetical) {
         const parEl = document.createElement('div');
-        parEl.className = 'prompter-parenthetical';
+        parEl.className = 'prompter-parenthetical' + tense;
+        parEl.dataset.lineIndex = String(seg.originalIndex);
         parEl.textContent = '(' + normalizeContParenDisplay(seg.parenthetical) + ')';
         segWrap.appendChild(parEl);
       }
       const lineEl = document.createElement('div');
       let cls = 'prompter-line';
       if (seg.originalIndex === S.prompterIndex) cls += ' active';
+      else cls += tense;
       if (flat && flat.type === 'partner') cls += ' prompter-line-partner';
       if (seg.isStageDirection) cls += ' is-stage-direction';
       lineEl.className = cls;
@@ -659,7 +706,7 @@ function renderPrompter() {
     if (act) {
       _scrollSyncProgrammatic = true;
       requestAnimationFrame(() => {
-        scrollActiveLineTo30(a, act);
+        scrollActiveLineToCenter(a, act);
         setTimeout(() => { _scrollSyncProgrammatic = false; }, 800);
       });
     }
@@ -740,7 +787,7 @@ function prompterNext() {
   while (next < S.prompterLines.length - 1 && S.prompterLines[next] && S.prompterLines[next].type !== 'actor') next++;
   S.prompterIndex = next;
   S.lastAutoSpokenIndex = -1;
-  renderPrompter();
+  refreshPrompterAfterAdvance();
   syncPrompter();
   handleCurrentLineAutomation();
 }
@@ -753,7 +800,7 @@ function prompterPrev() {
   while (prev > 0 && S.prompterLines[prev] && S.prompterLines[prev].type !== 'actor') prev--;
   S.prompterIndex = prev;
   S.lastAutoSpokenIndex = -1;
-  renderPrompter();
+  refreshPrompterAfterAdvance();
   syncPrompter();
   handleCurrentLineAutomation();
 }
@@ -1705,5 +1752,6 @@ export {
   // Scroll
   onPrompterScrollSync,
   setupPrompterScrollListeners,
-  scrollActiveLineTo30,
+  scrollActiveLineToCenter,
+  updatePrompterProgress,
 };
