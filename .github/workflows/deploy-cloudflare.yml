@@ -28,6 +28,9 @@ jobs:
         with:
           node-version: '22'
 
+      - name: i18n check (report mode)
+        run: node scripts/check-i18n.js
+
       - name: Bust asset cache
         run: |
           # Inject deploy timestamp into actual JS so wrangler sees a
