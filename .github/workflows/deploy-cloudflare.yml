@@ -28,8 +28,8 @@ jobs:
         with:
           node-version: '22'
 
-      - name: i18n check (report mode)
-        run: node scripts/check-i18n.js
+      - name: i18n check
+        run: node scripts/check-i18n.js --enforce
 
       - name: Bust asset cache
         run: |
