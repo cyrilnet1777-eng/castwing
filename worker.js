@@ -1490,7 +1490,7 @@ function load(days){
     if(!d.ok){document.getElementById('gateErr').style.display='';return}
     sessionStorage.setItem('cwAdminKey',KEY);
     document.getElementById('gate').style.display='none';
-    document.getElementById('dash').style.display='';
+    document.getElementById('dash').style.display='block';
     document.querySelectorAll('#range button').forEach(function(b){b.classList.toggle('active',+b.dataset.d===days)});
     var dur=d.avgSessionDurationS?(d.avgSessionDurationS/60).toFixed(1)+' min':'\u2014';
     document.getElementById('stats').innerHTML=
