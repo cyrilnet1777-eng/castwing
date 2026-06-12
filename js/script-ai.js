@@ -706,12 +706,26 @@ function finishPdfSetupUi(n, rawText, validChars, detectedLang) {
     if (orb) orb.style.display = 'block';
     if (detectedLang && VOICE_LOCALES.some(l => l.id === detectedLang)) { S.lockedVoiceLocale = detectedLang; applyLocaleVoices(detectedLang, false); initVoiceCountrySelect(); initVoiceGrid(); }
     if (n === 1) showToast(chars.length + ' roles found \u2014 ' + t('myCharacterLabel'), 4200);
+    // Auto-select the top character so the continue CTA is immediately actionable
+    if (!S.selectedChar && chars.length) {
+      S.selectedChar = pickDefaultRehearsalCharacter();
+      const grid = document.getElementById('charGrid' + n);
+      if (grid) {
+        const items = grid.querySelectorAll('.char-item');
+        if (items.length) items[0].classList.add('selected');
+      }
+      if (n === 1) renderPartnerAssignment(1);
+    }
+    renderScriptPreview(n);
+    showImportContinueCta(true);
     persistScriptSnapshotNow();
     saveToScriptHistory();
     if (typeof window.initTakeCounter === 'function') void window.initTakeCounter();
   } else {
     S.pdfScript = [];
     syncPdfScriptDebugMirror();
+    showImportContinueCta(false);
+    const _sp = document.getElementById('scriptPreview' + n); if (_sp) _sp.style.display = 'none';
     document.getElementById('charSection' + n).style.display = 'none';
     document.getElementById('scriptInput' + n).value = rawText || '';
     document.getElementById('setupStatus' + n).textContent = t('pdfImportedRaw');
@@ -828,7 +842,8 @@ function renderChars(n, chars) {
       g.querySelectorAll('.char-item').forEach(c => c.classList.remove('selected')); el.classList.add('selected');
       showToast(char);
       if (n === 1) renderPartnerAssignment(1);
-      const cb = document.getElementById('importContinueBtn'); if (cb) cb.style.display = 'block';
+      renderScriptPreview(n);
+      showImportContinueCta(true);
     };
     g.appendChild(el);
   });
@@ -863,6 +878,68 @@ function renderPartnerAssignment(n) {
   hint.textContent = S.soloPartnerMode === 'all' ? t('partnerHintAll') : t('partnerHintDuo');
 }
 
+// ── Scene preview (import screen) ───────────────────────────────────
+
+const SCRIPT_PREVIEW_MAX_ROWS = 40;
+
+function renderScriptPreview(n) {
+  const wrap = document.getElementById('scriptPreview' + n);
+  const countsEl = document.getElementById('scriptPreviewCounts' + n);
+  const linesEl = document.getElementById('scriptPreviewLines' + n);
+  if (!wrap || !countsEl || !linesEl) return;
+  if (!S.pdfScript || !S.pdfScript.length) { wrap.style.display = 'none'; return; }
+  const selNorm = normalizeCharacterNameForGroup(S.selectedChar || '');
+  // Per-character line counts, colored by role
+  countsEl.innerHTML = '';
+  for (const { char, count } of getChars()) {
+    const chip = document.createElement('span');
+    const isActor = selNorm && normalizeCharacterNameForGroup(char) === selNorm;
+    chip.className = 'preview-count-chip ' + (isActor ? 'actor' : 'partner');
+    chip.textContent = char + ' · ' + count;
+    countsEl.appendChild(chip);
+  }
+  // First rows of the script, colored like the prompter
+  linesEl.innerHTML = '';
+  const rows = S.pdfScript.slice(0, SCRIPT_PREVIEW_MAX_ROWS);
+  for (const row of rows) {
+    if (!row || !row.line) continue;
+    const div = document.createElement('div');
+    if (row.kind === LINE_TYPE.DIALOGUE && row.char) {
+      div.className = 'preview-line';
+      const nameEl = document.createElement('span');
+      const isActor = selNorm && normalizeCharacterNameForGroup(row.char) === selNorm;
+      nameEl.className = 'pl-char ' + (isActor ? 'actor' : 'partner');
+      nameEl.textContent = row.char;
+      div.appendChild(nameEl);
+      div.appendChild(document.createTextNode(row.line));
+    } else {
+      div.className = 'preview-line pl-action';
+      div.textContent = row.line;
+    }
+    linesEl.appendChild(div);
+  }
+  if (S.pdfScript.length > SCRIPT_PREVIEW_MAX_ROWS) {
+    const more = document.createElement('div');
+    more.className = 'preview-more';
+    more.textContent = '… +' + (S.pdfScript.length - SCRIPT_PREVIEW_MAX_ROWS) + ' lines';
+    linesEl.appendChild(more);
+  }
+  // Monologue badge
+  const badge = document.getElementById('monologueBadge' + n);
+  if (badge) {
+    let isMono = false;
+    try { isMono = computeMonologueBlocks(S.pdfScript.map(r => ({ kind: r.kind, char: r.char }))).length > 0; } catch (_e) {}
+    badge.style.display = isMono ? '' : 'none';
+    badge.textContent = t('monologueDetected');
+  }
+  wrap.style.display = '';
+}
+
+function showImportContinueCta(show) {
+  const sticky = document.getElementById('importStickyCta');
+  if (sticky) sticky.style.display = show ? '' : 'none';
+}
+
 // ── Clear PDF / reset ───────────────────────────────────────────────
 
 function clearPDF(n) {
@@ -884,7 +961,8 @@ function clearPDF(n) {
   document.getElementById('pdfInput' + n).value = '';
   const orb = document.getElementById('optionalReviewBtn' + n); if (orb) orb.style.display = 'none';
   const ta = document.getElementById('scriptInput' + n); if (ta) ta.value = '';
-  const cb = document.getElementById('importContinueBtn'); if (cb) cb.style.display = 'none';
+  showImportContinueCta(false);
+  const sp = document.getElementById('scriptPreview' + n); if (sp) sp.style.display = 'none';
   renderHistFn();
 }
 

@@ -253,7 +253,10 @@ import {
 function goHome() { endSession(); showScreen('home'); }
 function goImportScene() { showScreen('importScene'); initDragDrop('uploadZone1'); renderScriptHistory(); }
 function homePickFile() { goImportScene(); }
-function goChooseMode() { showScreen('chooseMode'); }
+function goChooseMode() {
+  if (S.pdfScript.length > 0 && !S.selectedChar) { showToast(t('pickCharacterFirst')); return; }
+  showScreen('chooseMode');
+}
 function goPartnerChoice() { showScreen('partnerChoice'); }
 function goConfigAi() {
   showScreen('setupAi');

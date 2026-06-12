@@ -174,6 +174,19 @@ body::after{content:none}
 .cine-import-card label{display:block}
 #scriptInput1{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 .cine-divider{text-align:center;font-size:.72rem;color:rgba(255,255,255,.25);margin:1rem 0;letter-spacing:.12em;text-transform:uppercase}
+.cine-sticky-cta{position:sticky;bottom:0;z-index:5;margin-top:auto;padding:.75rem 0 calc(.5rem + env(safe-area-inset-bottom,0px));background:linear-gradient(to top,#0d0d0d 70%,transparent)}
+.script-preview{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:1rem 1.1rem;margin-top:1.1rem;max-height:300px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.script-preview-header{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:.6rem}
+.preview-monologue-badge{background:rgba(217,32,39,.15);border:1px solid var(--raspberry-dim);color:#ff6b70;font-size:.62rem;padding:.15rem .5rem;border-radius:999px;letter-spacing:.08em;text-transform:none}
+.script-preview-counts{display:flex;flex-wrap:wrap;gap:.4rem .9rem;margin-bottom:.7rem;font-size:.72rem;font-weight:700}
+.preview-count-chip.actor{color:var(--actor-gold)}
+.preview-count-chip.partner{color:var(--partner-blue)}
+.preview-line{font-size:.82rem;line-height:1.5;color:#ccc;margin-bottom:.35rem}
+.preview-line .pl-char{font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-right:.4rem}
+.preview-line .pl-char.actor{color:var(--actor-gold)}
+.preview-line .pl-char.partner{color:var(--partner-blue)}
+.preview-line.pl-action{font-style:italic;color:#777}
+.preview-more{font-size:.72rem;color:rgba(255,255,255,.35);font-style:italic;margin-top:.3rem}
 .cine-screen .script-history{margin-top:0;margin-bottom:.5rem}
 .cine-screen .sh-card{border-radius:10px;background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.10)}
 .cine-screen .sh-card:hover{background:rgba(217,32,39,.04);border-color:var(--raspberry-dim)}
