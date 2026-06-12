@@ -4,8 +4,9 @@
 // alongside the recording blob in IndexedDB (see idb.js saveRecToDB).
 
 import { S } from './state.js';
-import { track } from './utils.js';
-import { getRecsFromDB, scriptContentHash } from './idb.js';
+import { track, escHtml, showToast } from './utils.js';
+import { t } from './i18n.js';
+import { getRecsFromDB, scriptContentHash, deleteRecFromDB, formatRecDate, formatRecSize } from './idb.js';
 
 // ── Scene identity ───────────────────────────────────────────────────
 
@@ -73,4 +74,74 @@ export function markTakePaused(paused) {
     tk.pausedAccumMs = (tk.pausedAccumMs || 0) + (Date.now() - tk.pauseStartedAt);
     tk.pauseStartedAt = null;
   }
+}
+
+// ── "Mes Takes" screen ───────────────────────────────────────────────
+
+function _fmtDuration(ms) {
+  if (!Number.isFinite(ms) || ms <= 0) return '';
+  const s = Math.round(ms / 1000);
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+
+export async function renderMyTakes() {
+  const list = document.getElementById('myTakesList');
+  if (!list) return;
+  const recs = await getRecsFromDB();
+  track('takes_list_view', { count: recs.length });
+  list.innerHTML = '';
+  if (!recs.length) {
+    list.innerHTML = '<div class="mt-empty" id="myTakesEmpty"></div>';
+    const e = list.querySelector('.mt-empty');
+    if (e) e.textContent = t('myTakesEmpty');
+    return;
+  }
+  // Group by scene, newest scene first (legacy recordings grouped last)
+  const groups = new Map();
+  for (const r of recs.sort((a, b) => b.date - a.date)) {
+    const key = r.sceneId || 'legacy';
+    if (!groups.has(key)) groups.set(key, { name: r.sceneId === 'legacy' ? t('legacyRecsGroup') : (r.sceneName || t('legacyRecsGroup')), recs: [] });
+    groups.get(key).recs.push(r);
+  }
+  for (const [, g] of groups) {
+    const header = document.createElement('div');
+    header.className = 'mt-scene-header';
+    header.textContent = g.name.replace(/\.(pdf|fdx|txt)$/i, '');
+    list.appendChild(header);
+    for (const r of g.recs) {
+      const card = document.createElement('div');
+      card.className = 'mt-card';
+      const thumbHtml = r.thumb
+        ? `<img class="mt-thumb" src="${r.thumb}" alt="">`
+        : '<div class="mt-thumb mt-thumb-empty">🎬</div>';
+      const takeLabel = r.takeNumber > 0 ? (t('takeLabel') + ' ' + r.takeNumber) : (r.fname || '');
+      const durStr = _fmtDuration(r.duration);
+      card.innerHTML = thumbHtml +
+        '<div class="mt-meta">' +
+        '<div class="mt-title">' + escHtml(takeLabel) + '</div>' +
+        '<div class="mt-sub">' + (durStr ? escHtml(durStr) + ' · ' : '') + escHtml(formatRecSize(r.size || 0)) + ' · ' + escHtml(formatRecDate(r.date)) + '</div>' +
+        '</div>' +
+        '<div class="mt-actions">' +
+        `<button class="mt-btn" onclick="reShareRec(${r.id})" title="Share">📤</button>` +
+        `<button class="mt-btn" onclick="reDownloadRec(${r.id})" title="Download">⬇️</button>` +
+        `<button class="mt-btn mt-btn-danger" onclick="deleteTake(${r.id})" title="Delete">🗑️</button>` +
+        '</div>';
+      list.appendChild(card);
+    }
+  }
+}
+
+export async function deleteTake(id) {
+  if (!confirm(t('deleteTakeConfirm'))) return;
+  track('take_delete', { rec_id: id });
+  await deleteRecFromDB(id);
+  showToast(t('takeDeleted'));
+  await renderMyTakes();
+  if (typeof window.renderRecordingsList === 'function') window.renderRecordingsList();
+  if (typeof window.renderProfileRecordings === 'function') window.renderProfileRecordings();
+}
+
+export function goMyTakes() {
+  void renderMyTakes();
+  window.showScreen('myTakes');
 }

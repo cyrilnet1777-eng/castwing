@@ -610,6 +610,20 @@ input[type="file"]{display:none}
 .clap-countdown{font-size:7rem;font-weight:900;color:#fff;text-align:center;font-family:'DM Sans',sans-serif;animation:countPop .4s ease;text-shadow:0 4px 30px rgba(0,0,0,.8)}
 @keyframes countPop{from{opacity:0;transform:scale(1.5)}to{opacity:1;transform:scale(1)}}
 
+/* ── Mes Takes ── */
+.mt-scene-header{font-size:.72rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);margin:1.2rem 0 .5rem}
+.mt-card{display:flex;align-items:center;gap:.8rem;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:.7rem .8rem;margin-bottom:.55rem}
+.mt-thumb{width:72px;height:48px;object-fit:cover;border-radius:8px;background:#111;flex-shrink:0}
+.mt-thumb-empty{display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:rgba(255,255,255,.3)}
+.mt-meta{flex:1;min-width:0}
+.mt-title{font-size:.88rem;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mt-sub{font-size:.7rem;color:rgba(255,255,255,.45);margin-top:2px}
+.mt-actions{display:flex;gap:.3rem;flex-shrink:0}
+.mt-btn{width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center}
+.mt-btn:hover{background:rgba(255,255,255,.09)}
+.mt-btn-danger:hover{border-color:var(--danger);background:rgba(239,68,68,.1)}
+.mt-empty{text-align:center;color:rgba(255,255,255,.35);font-size:.9rem;padding:3rem 0}
+
 /* ── Camera preview screen ── */
 .preview-stage{position:fixed;inset:0;background:#000;overflow:hidden;display:flex;align-items:center;justify-content:center}
 #previewVideo{width:100%;height:100%;object-fit:cover}

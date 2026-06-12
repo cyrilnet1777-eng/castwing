@@ -30,7 +30,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<link rel="stylesheet" href="/styles.css?v=20260612k">
+<link rel="stylesheet" href="/styles.css?v=20260612l">
 </head>
 <body>
 <div id="toast" class="toast"></div>
@@ -176,6 +176,7 @@
         <div id="paygoActiveInfo" style="display:none;margin-top:8px;font-size:.72rem;color:#34C759">Active · billed daily</div>
         <div style="margin-top:6px;font-size:.72rem;color:var(--text-muted)">$0.30 / 1,000 characters</div>
       </div>
+      <button type="button" class="btn btn-secondary btn-full" id="myTakesBtn" style="margin:8px 0;padding:.6rem" onclick="closeAuthModal();goMyTakes()">🎬 My takes</button>
       <div id="profileRecordings" style="margin:8px 0;border:1px solid var(--border)">
         <div onclick="toggleProfileSection('profileRecList','profileRecToggle')" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;cursor:pointer;user-select:none">
           <div style="font-size:0.7rem;color:var(--text-muted);letter-spacing:.1em;text-transform:uppercase">Recordings <span id="profileRecCount" style="color:var(--white)"></span></div>
@@ -372,6 +373,15 @@
   </div>
 </div>
 
+<!-- ═══ MES TAKES ═══ -->
+<div id="myTakes" class="screen cine-screen">
+  <div class="cine-content cine-content-scroll">
+  <button class="cine-back" onclick="goHome()">←</button>
+  <h1 class="cine-title" id="myTakesTitle">My takes<span class="cine-dot">.</span></h1>
+  <div id="myTakesList"></div>
+  </div>
+</div>
+
 <!-- ═══ SESSION ═══ -->
 <div id="session" class="screen">
   <div id="sessionTimeRail" class="session-time-rail" aria-hidden="true"><span id="sessionTimeRailFill" class="session-time-rail-fill"></span></div>
@@ -475,6 +485,6 @@
 </div></div>
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ttsAudioEl" playsinline></audio>
-<script type="module" src="/js/app.js?v=20260612k"></script>
+<script type="module" src="/js/app.js?v=20260612l"></script>
 </body>
 </html>

@@ -119,6 +119,13 @@ export const UI_FALLBACK_TRANSLATIONS={
   trvSavedTitle:{fr:'Prise sauvegardée ✓',en:'Take saved ✓',es:'Toma guardada ✓',it:'Ripresa salvata ✓',zh:'已保存 ✓',ko:'저장됨 ✓',ja:'保存済み ✓',de:'Take gespeichert ✓',pt:'Take salvo ✓',ar:'تم حفظ اللقطة ✓',hi:'टेक सहेजा गया ✓',tr:'Çekim kaydedildi ✓',ru:'Дубль сохранён ✓'},
   trvNewTake:{fr:'🎬 Nouvelle prise',en:'🎬 New take',es:'🎬 Nueva toma',it:'🎬 Nuova ripresa',zh:'🎬 新拍摄',ko:'🎬 새 테이크',ja:'🎬 新しいテイク',de:'🎬 Neuer Take',pt:'🎬 Novo take',ar:'🎬 لقطة جديدة',hi:'🎬 नया टेक',tr:'🎬 Yeni çekim',ru:'🎬 Новый дубль'},
   trvFinish:{fr:'Terminer',en:'Finish',es:'Terminar',it:'Termina',zh:'完成',ko:'완료',ja:'終了',de:'Fertig',pt:'Concluir',ar:'إنهاء',hi:'समाप्त',tr:'Bitir',ru:'Готово'},
+  myTakesTitle:{fr:'Mes takes',en:'My takes',es:'Mis tomas',it:'Le mie riprese',zh:'我的拍摄',ko:'내 테이크',ja:'マイテイク',de:'Meine Takes',pt:'Meus takes',ar:'لقطاتي',hi:'मेरे टेक',tr:'Çekimlerim',ru:'Мои дубли'},
+  myTakesEmpty:{fr:'Aucune prise sauvegardée pour le moment',en:'No saved takes yet',es:'Aún no hay tomas guardadas',it:'Nessuna ripresa salvata',zh:'还没有保存的拍摄',ko:'저장된 테이크가 없습니다',ja:'保存されたテイクはまだありません',de:'Noch keine gespeicherten Takes',pt:'Nenhum take salvo ainda',ar:'لا توجد لقطات محفوظة بعد',hi:'अभी कोई सहेजा गया टेक नहीं',tr:'Henüz kayıtlı çekim yok',ru:'Сохранённых дублей пока нет'},
+  takeLabel:{fr:'Take',en:'Take',es:'Toma',it:'Ripresa',zh:'拍摄',ko:'테이크',ja:'テイク',de:'Take',pt:'Take',ar:'لقطة',hi:'टेक',tr:'Çekim',ru:'Дубль'},
+  legacyRecsGroup:{fr:'Anciens enregistrements',en:'Older recordings',es:'Grabaciones antiguas',it:'Registrazioni precedenti',zh:'较早的录制',ko:'이전 녹화',ja:'以前の録画',de:'Ältere Aufnahmen',pt:'Gravações antigas',ar:'تسجيلات سابقة',hi:'पुरानी रिकॉर्डिंग',tr:'Eski kayıtlar',ru:'Старые записи'},
+  deleteTakeConfirm:{fr:'Supprimer cette prise définitivement ?',en:'Delete this take permanently?',es:'¿Eliminar esta toma definitivamente?',it:'Eliminare definitivamente questa ripresa?',zh:'永久删除这条拍摄？',ko:'이 테이크를 영구 삭제할까요?',ja:'このテイクを完全に削除しますか？',de:'Diesen Take endgültig löschen?',pt:'Excluir este take permanentemente?',ar:'حذف هذه اللقطة نهائيًا؟',hi:'इस टेक को स्थायी रूप से हटाएँ?',tr:'Bu çekimi kalıcı olarak sil?',ru:'Удалить дубль навсегда?'},
+  takeDeleted:{fr:'Prise supprimée',en:'Take deleted',es:'Toma eliminada',it:'Ripresa eliminata',zh:'已删除',ko:'테이크 삭제됨',ja:'テイクを削除しました',de:'Take gelöscht',pt:'Take excluído',ar:'تم حذف اللقطة',hi:'टेक हटाया गया',tr:'Çekim silindi',ru:'Дубль удалён'},
+  myTakesBtn:{fr:'🎬 Mes takes',en:'🎬 My takes',es:'🎬 Mis tomas',it:'🎬 Le mie riprese',zh:'🎬 我的拍摄',ko:'🎬 내 테이크',ja:'🎬 マイテイク',de:'🎬 Meine Takes',pt:'🎬 Meus takes',ar:'🎬 لقطاتي',hi:'🎬 मेरे टेक',tr:'🎬 Çekimlerim',ru:'🎬 Мои дубли'},
   modeHintAi:{ko:'AI가 상대 대사를 자동으로 읽습니다.',hi:'AI पार्टनर की लाइनें खुद पढ़ेगा।',pt:'A IA lê as falas do parceiro automaticamente.',fr:'L\'IA lit les répliques du partenaire automatiquement.',en:'AI reads partner lines automatically.',es:'La IA lee las líneas del compañero automáticamente.',it:'L\'IA legge le battute del partner automaticamente.',zh:'AI自动朗读搭档台词。',de:'KI liest Partnerzeilen automatisch.',ja:'AIがパートナーのセリフを自動で読みます。',ar:'الذكاء الاصطناعي يقرأ سطور الشريك تلقائيًا.'},
   modeHintManual:{ko:'버튼으로 수동 진행합니다.',hi:'बटन से मैन्युअल आगे बढ़ें।',pt:'Avance manualmente entre as falas.',fr:'Avancez manuellement entre les répliques.',en:'Navigate lines manually.',es:'Avanza manualmente entre las líneas.',it:'Avanza manualmente tra le battute.',zh:'手动切换台词。',de:'Zeilen manuell navigieren.',ja:'手動でセリフを進めます。',ar:'تنقل يدويًا بين السطور.'},
   chooseYourRole:{fr:'Choisis ton rôle',en:'Choose your role',es:'Elige tu personaje',it:'Scegli il tuo ruolo',zh:'选择你的角色',ko:'역할을 선택하세요',ja:'役を選んでください',de:'Wähle deine Rolle',pt:'Escolha seu personagem',ar:'اختر دورك',hi:'अपनी भूमिका चुनें'},
@@ -356,6 +363,7 @@ export function applyUILanguage(){
   setTextById('speedLabel','speedLabel');
   setTextById('launchAiBtn','launchAiBtn');
   setCineTitleById('setupPartnerTitle','setupPartnerTitle');
+  setCineTitleById('myTakesTitle','myTakesTitle');
   setTextById('setupPartnerSub','setupPartnerSub');
   setTextById('sessionCodeLabel','sessionCodeLabel');
   setTextById('sessionCodeHint','sessionCodeHint');
@@ -429,6 +437,7 @@ export function applyUILanguage(){
   const _tst=document.getElementById('trvSavedTitle');if(_tst)_tst.textContent=t('trvSavedTitle');
   const _tnt=document.getElementById('trvNewTakeBtn');if(_tnt)_tnt.textContent=t('trvNewTake');
   const _tft=document.getElementById('trvFinishBtn');if(_tft)_tft.textContent=t('trvFinish');
+  const _mtb=document.getElementById('myTakesBtn');if(_mtb)_mtb.textContent=t('myTakesBtn');
   const _arl=document.getElementById('authResendLink');if(_arl)_arl.textContent=t('resendCodeBtn');
   const _orb=document.getElementById('optionalReviewBtn1');if(_orb)_orb.textContent=t('reviewScriptBtn');
   const _priv=document.querySelector('.choose-privacy');if(_priv)_priv.textContent=t('privacyNote');
