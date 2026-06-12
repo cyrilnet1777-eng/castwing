@@ -5,7 +5,7 @@
 
 import { S } from './state.js';
 import { SETTINGS_KEY, ACCESS_KEY, GOOGLE_CLIENT_ID, APP_BUILD } from './constants.js';
-import { showToast, escHtml, gaEvent, emailInitials } from './utils.js';
+import { showToast, escHtml, track, emailInitials } from './utils.js';
 import { t } from './i18n.js';
 import { getUserData, saveUserData, getUserTier, isSignedUp, isServerAdmin, checkAndApplyResets, createFreshUserData, getPlan } from './plan-timer.js';
 import { refreshCreditBalance, onUserSignedIn, updateCreditBadge, tt, dismissPaywall, updatePaygoUI, loadUsageHistory } from './paywall.js';
@@ -137,7 +137,7 @@ export function toggleProfileSection(listId, toggleId) {
 // ── Logout ──────────────────────────────────────────────────────────
 
 export async function logoutUser() {
-  gaEvent('logout');
+  track('logout');
   S.userAccess = { email: '', verified: false, provider: '', paid: false, usageMs: 0, cooldownUntil: 0, lastTick: 0 };
   persistAccess();
   saveUserData(createFreshUserData('figurant'));
@@ -173,7 +173,7 @@ export async function requestEmailCode() {
   S._authCodeSending = true;
   const btn = document.getElementById('authSendCodeBtn');
   if (btn) btn.disabled = true;
-  gaEvent('auth_request_code');
+  track('auth_request_code');
   const email = (document.getElementById('authEmailInput').value || '').trim().toLowerCase();
   if (!email || !/@/.test(email)) { showToast('Email invalide'); S._authCodeSending = false; if (btn) btn.disabled = false; return; }
   S.authPendingEmail = email;
@@ -212,7 +212,7 @@ export async function verifyEmailCode() {
   try { isSignup = getPlan().tier === 'visitor'; } catch (_e) {}
   if (out.isNewUser === true) isSignup = true; else if (out.isNewUser === false) isSignup = false;
   S.userAccess.email = S.authPendingEmail; S.userAccess.verified = true; S.userAccess.provider = 'email';
-  gaEvent(isSignup ? 'sign_up' : 'login', { method: 'email' });
+  track(isSignup ? 'sign_up' : 'login', { method: 'email' });
   try { persistAccess(); } catch (_e) {}
   try { updateAuthMiniButton(); } catch (_e) {}
   try {
@@ -260,7 +260,7 @@ export async function handleGoogleCredential(response) {
   try { isSignup = getPlan().tier === 'visitor'; } catch (_e) {}
   if (out.isNewUser === true) isSignup = true; else if (out.isNewUser === false) isSignup = false;
   S.userAccess.email = out.email; S.userAccess.verified = true; S.userAccess.provider = 'google';
-  gaEvent(isSignup ? 'sign_up' : 'login', { method: 'google' });
+  track(isSignup ? 'sign_up' : 'login', { method: 'google' });
   try { persistAccess(); } catch (_e) {}
   try { updateAuthMiniButton(); } catch (_e) {}
   try {

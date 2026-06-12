@@ -4,7 +4,7 @@
 // sharing, and partner session bootstrapping.
 
 import { S } from './state.js';
-import { showToast, showOverlay, hideOverlay, escHtml, gaEvent, genCode, isMobileDevice } from './utils.js';
+import { showToast, showOverlay, hideOverlay, escHtml, track, genCode, isMobileDevice } from './utils.js';
 import { t } from './i18n.js';
 import { playSfx } from './sfx.js';
 
@@ -238,7 +238,7 @@ export async function shareVia(channel) {
 }
 
 export async function smartShare() {
-  gaEvent('share_session');
+  track('share_session');
   const link = getJoinLink();
   if (!link) { showToast(t('codeUnavailable')); return; }
   const isMobile = window.matchMedia('(max-width:767px)').matches;
@@ -268,7 +268,7 @@ export function applyJoinCodeFromURL() {
 // ── Start partner session (host / actor) ────────────────────────────
 
 export async function startPartnerSession() {
-  gaEvent('start_session', { mode: 'partner_host' });
+  track('start_session', { mode: 'partner_host' });
   await window.cwEnqueueSessionBoot(async () => {
     if (window.__cwSessionActive) return false;
     window.unlockAudio();
@@ -318,7 +318,7 @@ export async function startPartnerSession() {
 // ── Join as partner ─────────────────────────────────────────────────
 
 export async function joinAsPartner() {
-  gaEvent('start_session', { mode: 'partner_join' });
+  track('start_session', { mode: 'partner_join' });
   await window.cwEnqueueSessionBoot(async () => {
     if (window.__cwSessionActive) return false;
     S.role = 'partner'; S.sessionMode = 'partner';

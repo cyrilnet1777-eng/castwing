@@ -5,7 +5,7 @@
 // post-recording save/share/delete flows.
 
 import { S } from './state.js';
-import { showToast, gaEvent, escHtml } from './utils.js';
+import { showToast, track, escHtml } from './utils.js';
 import { t } from './i18n.js';
 import {
   saveRecToDB, getRecsFromDB, deleteRecFromDB,
@@ -23,6 +23,8 @@ let _recDrawRaf   = null;
 let _lastRecBlob  = null;
 let _lastRecFname = '';
 let _lastRecMime  = '';
+let _recStartTs   = 0;
+let _recWasPaused = false;
 
 // ══════════════════════════════════════════════════════════════════════
 //  End-Take Modal
@@ -44,7 +46,7 @@ function hideEndTakeModal() {
 }
 
 function confirmEndTake() {
-  gaEvent('end_take', { mode: S.sessionMode });
+  track('end_take', { mode: S.sessionMode });
   document.getElementById('etmConfirmPhase').style.display = 'none';
   // endSession lives in the monolith — late-bind via window
   if (typeof window.endSession === 'function') window.endSession();
@@ -90,6 +92,7 @@ function dismissRecModal() {
 
 async function etmSaveToDevice() {
   if (!_lastRecBlob) return;
+  track('recording_save', { target: 'device' });
   await downloadRecToDevice({ blob: _lastRecBlob, fname: _lastRecFname, mime: _lastRecMime });
   showToast('Saving to device\u2026', 3000);
 }
@@ -120,6 +123,7 @@ async function etmShareRec() {
 
 async function etmDeleteRec() {
   if (!confirm('Delete this recording?')) return;
+  track('recording_delete', { take_number: S.takeNumber });
   var recs = await getRecsFromDB();
   var last = recs.sort((a, b) => b.date - a.date)[0];
   if (last) await deleteRecFromDB(last.id);
@@ -148,6 +152,7 @@ function toggleRecording() {
 function pauseRecording() {
   if (!S.isRecording || !S.mediaRecorder) return;
   _recPaused = true;
+  _recWasPaused = true;
   if (S.mediaRecorder.state === 'recording') try { S.mediaRecorder.pause(); } catch (e) {}
   // Update UI: show paused state + confirm bar
   var btnRec = document.getElementById('btnRec');
@@ -298,12 +303,18 @@ function _makeMediaRecorder(stream) {
       } catch (e) { console.error('[rec] restart failed:', e); }
     }
     _closeRecAudioCtx();
+    track('recording_complete', {
+      duration_s: _recStartTs ? Math.round((Date.now() - _recStartTs) / 1000) : 0,
+      was_paused: _recWasPaused,
+      mode: S.sessionMode,
+    });
     try {
       var ext = isMP4 ? 'mp4' : 'webm';
       var mime = isMP4 ? 'video/mp4' : 'video/webm';
       var blob = new Blob(S.recordedChunks, { type: mime });
       var fname = 'citizentape-' + Date.now() + '.' + ext;
       await saveRecToDB(blob, fname, mime);
+      track('recording_save', { target: 'idb', size_mb: Math.round(blob.size / 1048576 * 10) / 10 });
       renderRecordingsList();
       showRecSavedModal(blob, fname, mime);
     } catch (e) {
@@ -330,6 +341,9 @@ function startRecording() {
     S.mediaRecorder.start(2000);
     _startRecCanvasDraw();
     S.isRecording = true;
+    _recStartTs = Date.now();
+    _recWasPaused = false;
+    track('recording_start', { mode: S.sessionMode, take_number: S.takeNumber });
     document.getElementById('btnRec').classList.add('recording');
     document.getElementById('btnRec').innerHTML = '<span class="rec-dot"></span>';
     const _ri = document.getElementById('recIndicator');

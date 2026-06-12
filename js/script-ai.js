@@ -4,7 +4,7 @@
 
 import { S } from './state.js';
 import { LINE_TYPE } from './constants.js';
-import { showToast, escHtml, gaEvent, yieldToBrowser } from './utils.js';
+import { showToast, escHtml, track, yieldToBrowser } from './utils.js';
 import { t, detectTextLanguage } from './i18n.js';
 import { extractPdfLines, parsePDFScript, mergeCharacterVariants, sanitizeCharacterNames, mergeLabelsWithText, buildNumberedText, parseFdxFile, parsePastedScript, isPdfDialogueRow, autoAssignVoiceByGender, normalizeScreenplayWhitespace } from './pdf-parse.js';
 import { initVoiceCountrySelect, applyLocaleVoices, initVoiceGrid, VOICE_LOCALES } from './voices.js';
@@ -366,6 +366,7 @@ async function processPDF(n, file) {
     if (!S.pdfScript || !S.pdfScript.length) {
       S.pdfScript = [];
       syncPdfScriptDebugMirror();
+      track('import_fail', { type: 'pdf', reason: 'empty_analysis' });
       showToast(t('analysisEmpty'), 5000);
       finishPdfSetupUi(n, S.scriptRawText, typeof window !== 'undefined' && window.__lastValidatedChars ? window.__lastValidatedChars : [], detectedLang);
       void fillScriptInputProgressive(n, S.scriptRawText);
@@ -378,10 +379,12 @@ async function processPDF(n, file) {
       initVoiceCountrySelect();
       initVoiceGrid();
     }
+    track('import_success', { type: 'pdf', char_count: getChars().length, line_count: S.pdfScript.length });
     finishPdfSetupUi(n, S.scriptRawText, typeof window !== 'undefined' && window.__lastValidatedChars ? window.__lastValidatedChars : [], detectedLang);
     void fillScriptInputProgressive(n, S.scriptRawText);
   } catch (e) {
     console.error('PDF parse error:', e);
+    track('import_fail', { type: 'pdf', reason: (e && e.message ? String(e.message).slice(0, 80) : 'unknown') });
     if (e && e.message === 'AUTH_REQUIRED') { showToast(t('loginRequired'), 5000); return; }
     showToast(t('analysisFailed') + ': ' + (e && e.message ? e.message : 'check ANTHROPIC_API_KEY'), 6500);
     S.pdfScript = [];
@@ -404,7 +407,7 @@ async function handlePDFInput(n, input) {
     input.value = '';
     return;
   }
-  gaEvent('import_script', { method: 'file', file_type: f.name.split('.').pop() });
+  track('import_script', { method: 'file', file_type: f.name.split('.').pop() });
   if (!isPdfUploadFile(f)) { showToast('Unsupported file format', 4000); input.value = ''; return; }
   const name = String(f.name || '').toLowerCase();
   if (name.endsWith('.fdx')) {
@@ -754,7 +757,7 @@ async function runImportedScriptPipeline(n, normText, displayName) {
 // ── Text import (paste) ─────────────────────────────────────────────
 
 async function processTextImport(n) {
-  gaEvent('import_script', { method: 'paste' });
+  track('import_script', { method: 'paste' });
   const raw = document.getElementById('scriptInput' + n).value;
   S.scriptRawText = raw;
   const norm = await normalizeScreenplayWhitespaceAsync(raw);
@@ -763,9 +766,11 @@ async function processTextImport(n) {
   S.currentScriptName = 'Texte coll\u00e9';
   try {
     await runImportedScriptPipeline(n, norm, 'Texte coll\u00e9');
+    track('import_success', { type: 'paste', char_count: getChars().length, line_count: (S.pdfScript || []).length });
     void fillScriptInputProgressive(n, S.scriptRawText || norm);
   } catch (e) {
     console.error(e);
+    track('import_fail', { type: 'paste', reason: (e && e.message ? String(e.message).slice(0, 80) : 'unknown') });
     showToast('Text import error', 4000);
   }
 }

@@ -1,5 +1,5 @@
 import { S } from './state.js';
-import { showToast, gaEvent } from './utils.js';
+import { showToast, track } from './utils.js';
 
 // ── UI Languages list ────────────────────────────────────────────────
 export const UI_LANGUAGES=[
@@ -407,7 +407,7 @@ export function applyUILanguage(){
 }
 export function changeUILanguage(languageId,silent){
   const safe=UI_LANGUAGES.some(l=>l.id===languageId)?languageId:'fr';
-  if(!silent)gaEvent('change_language',{language:safe});
+  if(!silent)track('change_language',{language:safe});
   S.selectedUILanguage=safe;
   const select=document.getElementById('siteLanguageSelect');
   if(select)select.value=safe;

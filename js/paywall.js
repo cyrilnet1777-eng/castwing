@@ -3,7 +3,7 @@
 // topup flow, usage history, partner gate, sign-in handler).
 
 import { S } from './state.js';
-import { showToast, escHtml, gaEvent } from './utils.js';
+import { showToast, escHtml, track } from './utils.js';
 import { t } from './i18n.js';
 import { getUserData, saveUserData, getUserTier, getPlan, savePlan, fmtTimer, isServerAdmin, isServerTester } from './plan-timer.js';
 import { playSfx } from './sfx.js';
@@ -143,7 +143,7 @@ export function showVisitorSignupPrompt() {
 
 // ── Top-up modal (Polar checkout) ───────────────────────────────────
 export async function openTopupModal(packId) {
-  gaEvent('begin_checkout', { item_id: packId });
+  track('begin_checkout', { item_id: packId });
   dismissPaywall();
   showToast(t('redirectingToPayment'), 3000);
   try {

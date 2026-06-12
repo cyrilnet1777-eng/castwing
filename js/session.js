@@ -6,7 +6,7 @@
 
 import { S } from './state.js';
 import { LINE_TYPE } from './constants.js';
-import { showToast, escHtml, gaEvent, isMobileDevice } from './utils.js';
+import { showToast, escHtml, track, isMobileDevice } from './utils.js';
 import { t } from './i18n.js';
 import {
   EMOTION_PRESETS, getEmotionSettings, getCurrentVoiceSpeed,
@@ -104,7 +104,7 @@ const ROUTE_TO_SCREEN = Object.fromEntries(
 );
 
 function showScreen(id) {
-  gaEvent('screen_view', { screen_name: id });
+  track('screen_view', { screen_name: id });
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById(id);
   if (!el) { console.warn('[showScreen] unknown screen:', id); return; }
@@ -1004,6 +1004,8 @@ function togglePause(forceState) {
   const mobBtn = document.getElementById('mobMainBtn');
   const recInd = document.getElementById('recIndicator');
   if (S.sessionPaused) {
+    const _ss = (typeof window !== 'undefined' && window.__cwSessionState) || {};
+    track('pause_menu_open', { take_elapsed_s: _ss.startedAt ? Math.round((Date.now() - _ss.startedAt) / 1000) : 0 });
     cancelSpeechFlow();
     freezeTimer();
     updateTakeInfo();
@@ -1135,7 +1137,7 @@ function hideEndTakeModal() {
 }
 
 function confirmEndTake() {
-  gaEvent('end_take', { mode: S.sessionMode });
+  track('end_take', { mode: S.sessionMode });
   document.getElementById('etmConfirmPhase').style.display = 'none';
   endSession();
 }
@@ -1397,14 +1399,24 @@ async function enterRehearsalMode(importScreenN, pdfScriptSnapshot, selectedChar
 }
 
 async function startAiSession() {
-  gaEvent('start_session', { mode: 'ai' });
+  track('start_session', { mode: 'ai' });
   await requestRehearsalStart({ source: 'manual' });
 }
 
 function endSession() {
+  const _wasLive = __cwSessionActive;
+  const _ssPrev = (typeof window !== 'undefined' && window.__cwSessionState) || {};
   __cwSessionActive = false;
   cwSessionStateClear('endSession');
   stopSessionTimer();
+  if (_wasLive && !S.isRecording) {
+    // Session ended without an active recording → nothing was captured this take
+    track('session_abandon', {
+      screen: 'session',
+      had_recording: false,
+      elapsed_s: _ssPrev.startedAt ? Math.round((Date.now() - _ssPrev.startedAt) / 1000) : 0,
+    });
+  }
   S.sessionPaused = false;
   closePauseSettings();
   const po = document.getElementById('pauseOverlay'); if (po) po.classList.remove('active');

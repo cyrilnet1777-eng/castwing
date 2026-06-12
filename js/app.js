@@ -8,7 +8,7 @@ import { S, initState, installWindowProperties } from './state.js';
 import { APP_BUILD } from './constants.js';
 
 // ── Utilities ───────────────────────────────────────────────────────────
-import { gaEvent, showToast, escHtml, initPullToRefresh } from './utils.js';
+import { track, showToast, escHtml, initPullToRefresh } from './utils.js';
 
 // ── SFX ──────────────────────────────────────────────────────────────
 import { unlockAudio } from './sfx.js';
@@ -360,6 +360,19 @@ window.addEventListener('beforeunload', e => {
   if (S.isRecording || window.__cwSessionActive) { e.preventDefault(); e.returnValue = ''; }
 });
 
+// Abandon tracking: tab closed/hidden mid-session (sendBeacon survives unload)
+window.addEventListener('pagehide', () => {
+  const ss = window.__cwSessionState || {};
+  if (!ss.active && !S.isRecording) return;
+  const active = document.querySelector('.screen.active');
+  track('session_abandon', {
+    screen: active ? active.id : 'unknown',
+    had_recording: !!S.isRecording,
+    elapsed_s: ss.startedAt ? Math.round((Date.now() - ss.startedAt) / 1000) : 0,
+    via: 'pagehide',
+  });
+});
+
 // =====================================================================
 //  DOMContentLoaded
 // =====================================================================
@@ -468,7 +481,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const cardSaved = urlParams.get('card_saved');
 
   if (paymentParam === 'success') {
-    gaEvent('purchase', { currency: 'USD' });
+    track('purchase', { currency: 'USD' });
     setTimeout(async function () {
       try { await fetch('/api/credits/reconcile', { method: 'POST', credentials: 'same-origin' }); } catch (e) {}
       await refreshCreditBalance();
@@ -476,7 +489,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       history.replaceState({}, '', '/');
     }, 2000);
   } else if (paymentParam === 'metered-active') {
-    gaEvent('purchase', { currency: 'USD', type: 'metered_subscribe' });
+    track('purchase', { currency: 'USD', type: 'metered_subscribe' });
     setTimeout(async function () {
       await fetchServerSession();
       S.cwServerSession.billingMode = 'metered';
@@ -484,7 +497,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       history.replaceState({}, '', '/');
     }, 2000);
   } else if (paymentParam === 'cancel') {
-    gaEvent('checkout_cancel');
+    track('checkout_cancel');
     showToast(tt('paymentCancelled', 'Payment cancelled.'), 3000);
     history.replaceState({}, '', '/');
   } else if (cardSaved === 'success') {
