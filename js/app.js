@@ -94,22 +94,11 @@ import {
   startGoogleSignIn,
   fetchServerSession,
   applyServerSessionUI,
-  syncAdminPlanSelect,
-  toggleBurgerDrawer,
-  closeBurgerDrawer,
   resumePendingFileAfterAuth,
 } from './auth.js';
 
 // ── Admin ───────────────────────────────────────────────────────────────
 import {
-  openAdminPanel,
-  closeAdminPanel,
-  adminCreateInvite,
-  adminLoadInvites,
-  adminRevokeInvite,
-  adminApplyTestPlan,
-  cwAdminTab,
-  adminLoadAnalytics,
   redeemInviteFromURL,
 } from './admin.js';
 
@@ -572,12 +561,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // ── Escape key closes burger drawer ──
-  document.addEventListener('keydown', e => {
-    if (e.key !== 'Escape') return;
-    const d = document.getElementById('cwBurgerDrawer');
-    if (d && d.classList.contains('open')) closeBurgerDrawer();
-  });
 });
 
 // =====================================================================
@@ -596,16 +579,6 @@ Object.assign(window, {
   logoutUser,
   startChangeEmail,
   toggleProfileSection,
-  toggleBurgerDrawer,
-  closeBurgerDrawer,
-  openAdminPanel,
-  closeAdminPanel,
-  adminCreateInvite,
-  adminLoadInvites,
-  adminRevokeInvite,
-  adminApplyTestPlan,
-  cwAdminTab,
-  adminLoadAnalytics,
 
   // ── Paywall / Credits ──
   openTopupModal,

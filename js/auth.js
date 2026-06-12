@@ -305,61 +305,7 @@ export async function fetchServerSession() {
 }
 
 export function applyServerSessionUI() {
-  const badge = document.getElementById('cwSessionBadge');
-  if (!badge) return;
-  const burger  = document.getElementById('cwBurgerRoot');
-  const admPlan = document.getElementById('cwBurgerAdminPlan');
-  const admLink = document.getElementById('cwBurgerAdminLink');
-  if (S.cwServerSession.isAdmin) {
-    badge.className = 'cw-session-badge cw-badge-admin';
-    badge.textContent = 'ADMIN';
-    badge.style.display = '';
-    badge.style.cursor = 'pointer';
-    badge.onclick = () => { if (typeof window.openAdminPanel === 'function') window.openAdminPanel(); };
-    if (burger) burger.style.display = '';
-    if (admPlan) admPlan.style.display = 'block';
-    if (admLink) admLink.style.display = 'block';
-    syncAdminPlanSelect();
-  } else {
-    badge.style.display = 'none';
-    if (burger) burger.style.display = 'none';
-    if (admPlan) admPlan.style.display = 'none';
-    if (admLink) admLink.style.display = 'none';
-    closeBurgerDrawer();
-  }
   updateCreditBadge();
-}
-
-// ── Admin plan selector sync ────────────────────────────────────────
-
-export function syncAdminPlanSelect() {
-  const sel = document.getElementById('cwAdminPlanSelect');
-  if (!sel) return;
-  const tier = getUserData().tier || 'figurant';
-  if ([...sel.options].some(o => o.value === tier)) sel.value = tier;
-}
-
-// ── Burger drawer ───────────────────────────────────────────────────
-
-export function toggleBurgerDrawer() {
-  const d   = document.getElementById('cwBurgerDrawer');
-  const o   = document.getElementById('cwBurgerOverlay');
-  const btn = document.getElementById('cwBurgerBtn');
-  if (!d || !o) return;
-  const open = !d.classList.contains('open');
-  d.classList.toggle('open', open);
-  o.classList.toggle('open', open);
-  if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-  if (open) syncAdminPlanSelect();
-}
-
-export function closeBurgerDrawer() {
-  const d   = document.getElementById('cwBurgerDrawer');
-  const o   = document.getElementById('cwBurgerOverlay');
-  const btn = document.getElementById('cwBurgerBtn');
-  if (d) d.classList.remove('open');
-  if (o) o.classList.remove('open');
-  if (btn) btn.setAttribute('aria-expanded', 'false');
 }
 
 // ── Resume pending file after auth ──────────────────────────────────

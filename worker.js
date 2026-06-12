@@ -1435,37 +1435,76 @@ async function handleSession(request, env) {
    INVITE ROUTES
 ========================================================= */
 
-async function handleCreateInvite(request, env) {
-  const session = await getSessionState(request, env);
-  if (!session.isAdmin) return json({ ok: false, error: "Forbidden" }, 403);
-  if (!env.DB) return json({ ok: false, error: "Database not configured" }, 500);
-
-  const payload = await request.json().catch(() => ({}));
-  const label = String(payload.label || "").trim() || "Invite";
-  const emailRestriction = payload.emailRestriction ? String(payload.emailRestriction).trim().toLowerCase() : null;
-  const creditsGranted = Math.max(1, Math.min(9999, parseInt(payload.creditsGranted) || 25));
-  const expiresAt = payload.expiresAt ? String(payload.expiresAt) : null;
-
-  const rawToken = generateRandomToken();
-  const tokenHash = await sha256Hex(rawToken);
-  const inviteId = generateId("inv");
-
-  await env.DB.prepare(
-    `INSERT INTO invites (id, token_hash, label, email_restriction, credits_granted, expires_at, created_by, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`
-  ).bind(inviteId, tokenHash, label, emailRestriction, creditsGranted, expiresAt, session.email).run();
-
-  return json({
-    ok: true,
-    inviteId,
-    inviteUrl: `https://citizentape.com/?invite=${rawToken}`,
-    inviteCode: rawToken,
-  });
+const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CitizenTape · Analytics</title>
+<style>
+body{margin:0;background:#1a1a1a;color:#f5efe0;font-family:'DM Sans',-apple-system,sans-serif;padding:24px;max-width:680px;margin:0 auto}
+h1{font-size:1.3rem;margin:0 0 1rem}
+input{background:#161616;border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#f5efe0;padding:.7rem .9rem;font-size:16px;width:200px}
+button{background:#d92027;color:#fff;border:none;border-radius:10px;padding:.7rem 1.2rem;font-weight:700;cursor:pointer;font-size:.9rem}
+.range button{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:#aaa;margin-right:6px;padding:.4rem .9rem}
+.range button.active{background:#d92027;border-color:#d92027;color:#fff}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:1rem 0}
+.card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:.8rem;text-align:center}
+.card b{display:block;font-size:1.4rem}
+.card span{font-size:.65rem;color:#888;text-transform:uppercase;letter-spacing:.08em}
+.title{font-size:.7rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#888;margin:1.2rem 0 .4rem}
+.row{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:.75rem}
+.key{width:150px;flex-shrink:0;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.barw{flex:1;height:10px;background:rgba(255,255,255,.06);border-radius:5px;overflow:hidden}
+.bar{display:block;height:100%;background:#d92027;border-radius:5px}
+.n{width:46px;text-align:right;font-weight:700}
+.err{color:#ff6b70;margin-top:1rem}
+#dash{display:none}
+</style></head><body>
+<h1>CitizenTape · Analytics</h1>
+<div id="gate"><input id="pw" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')unlock()"> <button onclick="unlock()">Enter</button><div id="gateErr" class="err" style="display:none">Wrong password</div></div>
+<div id="dash">
+  <div class="range" id="range">
+    <button data-d="7" onclick="load(7)">7d</button>
+    <button data-d="30" class="active" onclick="load(30)">30d</button>
+    <button data-d="90" onclick="load(90)">90d</button>
+  </div>
+  <div class="stats" id="stats"></div>
+  <div id="funnel"></div><div id="abandon"></div><div id="byday"></div>
+</div>
+<script>
+var KEY='';
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function unlock(){KEY=document.getElementById('pw').value;load(30)}
+function bars(title,rows){if(!rows.length)return '';var max=Math.max.apply(null,[1].concat(rows.map(function(r){return r.n})));var h='<div class="title">'+esc(title)+'</div>';rows.forEach(function(r){h+='<div class="row"><span class="key">'+esc(r.k)+'</span><span class="barw"><span class="bar" style="width:'+Math.round(r.n/max*100)+'%"></span></span><span class="n">'+r.n+'</span></div>'});return h}
+function load(days){
+  fetch('/api/admin/analytics?days='+days,{headers:{'X-Admin-Key':KEY}}).then(function(r){return r.json()}).then(function(d){
+    if(!d.ok){document.getElementById('gateErr').style.display='';return}
+    sessionStorage.setItem('cwAdminKey',KEY);
+    document.getElementById('gate').style.display='none';
+    document.getElementById('dash').style.display='';
+    document.querySelectorAll('#range button').forEach(function(b){b.classList.toggle('active',+b.dataset.d===days)});
+    var dur=d.avgSessionDurationS?(d.avgSessionDurationS/60).toFixed(1)+' min':'\u2014';
+    document.getElementById('stats').innerHTML=
+      '<div class="card"><b>'+(d.completionRate!==null?d.completionRate+'%':'\u2014')+'</b><span>Completion</span></div>'+
+      '<div class="card"><b>'+(d.redoRate!==null?d.redoRate+'%':'\u2014')+'</b><span>Redo rate</span></div>'+
+      '<div class="card"><b>'+(d.avgTakesPerSession?Number(d.avgTakesPerSession).toFixed(1):'\u2014')+'</b><span>Avg takes/session</span></div>'+
+      '<div class="card"><b>'+dur+'</b><span>Avg session</span></div>';
+    var order=['start_session','import_success','import_fail','recording_start','recording_complete','recording_save','take_saved','recording_redo','session_abandon','onboarding_start','onboarding_complete'];
+    document.getElementById('funnel').innerHTML=bars('Funnel ('+d.days+'d)',order.filter(function(k){return d.funnel[k]}).map(function(k){return{k:k,n:d.funnel[k]}}));
+    document.getElementById('abandon').innerHTML=bars('Abandons by screen',(d.abandonByScreen||[]).map(function(r){return{k:r.s,n:r.n}}));
+    var days_={};(d.byDay||[]).forEach(function(r){days_[r.d]=(days_[r.d]||0)+r.n});
+    document.getElementById('byday').innerHTML=bars('Events per day',Object.keys(days_).map(function(k){return{k:k,n:days_[k]}}));
+  }).catch(function(){document.getElementById('gateErr').style.display=''});
 }
+var saved=sessionStorage.getItem('cwAdminKey');
+if(saved){KEY=saved;load(30)}
+</script></body></html>`;
+
+const ADMIN_DASHBOARD_KEY = "film";
 
 async function handleAdminAnalytics(request, env) {
-  const session = await getSessionState(request, env);
-  if (!session.isAdmin) return json({ ok: false, error: "Forbidden" }, 403);
+  if ((request.headers.get("X-Admin-Key") || "") !== ADMIN_DASHBOARD_KEY) {
+    return json({ ok: false, error: "Forbidden" }, 403);
+  }
   if (!env.DB) return json({ ok: false, error: "Database not configured" }, 500);
 
   const url = new URL(request.url);
@@ -1520,125 +1559,6 @@ async function handleAdminAnalytics(request, env) {
     avgSessionDurationS: durations.results && durations.results[0] ? (durations.results[0].avg_s || 0) : 0,
     completionRate: starts ? Math.round(saves / starts * 100) : null,
     redoRate: starts ? Math.round(redos / starts * 100) : null,
-  });
-}
-
-async function handleListInvites(request, env) {
-  const session = await getSessionState(request, env);
-  if (!session.isAdmin) return json({ ok: false, error: "Forbidden" }, 403);
-  if (!env.DB) return json({ ok: false, error: "Database not configured" }, 500);
-
-  const rows = await env.DB.prepare(
-    `SELECT i.id, i.label, i.email_restriction, i.credits_granted, i.revoked, i.expires_at, i.created_at,
-            COALESCE(SUM(r.credits_used), 0) as credits_used,
-            COUNT(r.id) as redemption_count
-     FROM invites i LEFT JOIN invite_redemptions r ON r.invite_id = i.id
-     GROUP BY i.id ORDER BY i.created_at DESC LIMIT 100`
-  ).all();
-
-  return json({
-    ok: true,
-    invites: (rows.results || []).map(r => ({
-      id: r.id, label: r.label, emailRestriction: r.email_restriction,
-      creditsGranted: r.credits_granted, creditsUsed: r.credits_used,
-      revoked: !!r.revoked, expiresAt: r.expires_at, createdAt: r.created_at,
-      redemptionCount: r.redemption_count,
-    })),
-  });
-}
-
-async function handleRevokeInvite(request, env) {
-  const session = await getSessionState(request, env);
-  if (!session.isAdmin) return json({ ok: false, error: "Forbidden" }, 403);
-  if (!env.DB) return json({ ok: false, error: "Database not configured" }, 500);
-
-  const payload = await request.json().catch(() => ({}));
-  const inviteId = String(payload.inviteId || "").trim();
-  if (!inviteId) return json({ ok: false, error: "Missing inviteId" }, 400);
-
-  await env.DB.prepare(`UPDATE invites SET revoked = 1 WHERE id = ?`).bind(inviteId).run();
-  return json({ ok: true });
-}
-
-async function handleSendWelcomeEmails(request, env, ctx) {
-  const session = await getSessionState(request, env);
-  if (!session.isAdmin) return json({ ok: false, error: "Forbidden" }, 403);
-  if (!env.DB) return json({ ok: false, error: "Database not configured" }, 500);
-
-  const payload = await request.json().catch(() => ({}));
-  const lang = normalizeAuthEmailLang(payload.lang || "en");
-
-  // Find all users who haven't received the welcome email yet
-  const rows = await env.DB.prepare(
-    "SELECT email FROM users WHERE (welcome_email_sent IS NULL OR welcome_email_sent = 0) AND email IS NOT NULL"
-  ).all();
-  const emails = (rows.results || []).map(r => r.email).filter(Boolean);
-
-  if (!emails.length) return json({ ok: true, sent: 0, message: "All users already received the welcome email" });
-
-  // Send emails in background (don't block the response)
-  let sentCount = 0;
-  const sendAll = async () => {
-    for (const email of emails) {
-      try {
-        const ok = await sendWelcomeEmailOnce(env, email, lang);
-        if (ok) sentCount++;
-        // Resend rate limit: pause 100ms between emails
-        await new Promise(r => setTimeout(r, 100));
-      } catch (e) { console.error("[welcome-backfill] error for", email, e); }
-    }
-    console.info(`[welcome-backfill] sent ${sentCount}/${emails.length} welcome emails`);
-  };
-  ctx.waitUntil(sendAll());
-
-  return json({ ok: true, queued: emails.length, message: `Sending welcome emails to ${emails.length} existing users` });
-}
-
-async function handleRedeemInvite(request, env) {
-  if (!env.DB) return json({ ok: false, error: "Database not configured" }, 500);
-
-  // Require an authenticated session — no session cookies issued from user-supplied email
-  const email = await resolveCurrentUser(request, env);
-  if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
-
-  const payload = await request.json().catch(() => ({}));
-  const rawToken = String(payload.token || "").trim();
-  if (!rawToken) return json({ ok: false, error: "Missing token" }, 400);
-
-  const tokenHash = await sha256Hex(rawToken);
-  const invite = await env.DB.prepare(
-    `SELECT * FROM invites WHERE token_hash = ?`
-  ).bind(tokenHash).first();
-
-  if (!invite) return json({ ok: false, error: "Invalid invite" }, 404);
-  if (invite.revoked) return json({ ok: false, error: "Invite revoked" }, 410);
-  if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
-    return json({ ok: false, error: "Invite expired" }, 410);
-  }
-  if (invite.email_restriction && invite.email_restriction !== email) {
-    return json({ ok: false, error: "Email does not match invite restriction" }, 403);
-  }
-
-  let redemption = await env.DB.prepare(
-    `SELECT * FROM invite_redemptions WHERE invite_id = ? AND email = ?`
-  ).bind(invite.id, email).first();
-
-  if (!redemption) {
-    const redemptionId = generateId("red");
-    await env.DB.prepare(
-      `INSERT INTO invite_redemptions (id, invite_id, email, credits_used, redeemed_at, last_used_at)
-       VALUES (?, ?, ?, 0, datetime('now'), datetime('now'))`
-    ).bind(redemptionId, invite.id, email).run();
-    redemption = { id: redemptionId, credits_used: 0 };
-  }
-
-  const remaining = Math.max(0, (invite.credits_granted || 0) - (redemption.credits_used || 0));
-
-  return json({
-    ok: true,
-    creditsRemaining: remaining,
-    inviteLabel: invite.label,
-    expiresAt: invite.expires_at,
   });
 }
 
@@ -2982,11 +2902,10 @@ export default {
     // if (url.pathname === "/api/credits/setup-card" && request.method === "POST") return handleSetupCard(request, env);
     // if (url.pathname === "/api/credits/auto-charge" && request.method === "POST") return handleAutoCharge(request, env);
     if (url.pathname === "/api/invite/redeem" && request.method === "POST") return handleRedeemInvite(request, env);
-    if (url.pathname === "/api/admin/create-invite" && request.method === "POST") return handleCreateInvite(request, env);
-    if (url.pathname === "/api/admin/list-invites" && request.method === "GET") return handleListInvites(request, env);
     if (url.pathname === "/api/admin/analytics" && request.method === "GET") return handleAdminAnalytics(request, env);
-    if (url.pathname === "/api/admin/revoke-invite" && request.method === "POST") return handleRevokeInvite(request, env);
-    if (url.pathname === "/api/admin/send-welcome-emails" && request.method === "POST") return handleSendWelcomeEmails(request, env, ctx);
+    if (url.pathname === "/admin" && request.method === "GET") {
+      return new Response(ADMIN_DASHBOARD_HTML, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+    }
     if (url.pathname === "/api/merge-characters" && request.method === "POST") return withAnthropicSlot(env, handleMergeCharacters, request);
 
     const apiPaths = ["/api/tts", "/api/claude-parse-script", "/api/label-script", "/api/parse-screenplay", "/api/parse-script", "/api/validate-characters", "/api/classify-lines", "/api/merge-characters", "/api/geo", "/api/auth", "/api/auth/google", "/api/session", "/api/credits/", "/api/polar-webhook", "/api/invite/redeem", "/api/admin/"];

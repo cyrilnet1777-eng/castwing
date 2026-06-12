@@ -30,79 +30,17 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<link rel="stylesheet" href="/styles.css?v=20260612v">
+<link rel="stylesheet" href="/styles.css?v=20260612w">
 </head>
 <body>
 <div id="toast" class="toast"></div>
 <div id="versionBanner" style="display:none;position:fixed;top:12px;left:50%;transform:translateX(-50%);background:rgba(245,239,224,.6);color:#101010;padding:.5rem 1rem;border-radius:999px;font-size:.78rem;font-weight:600;cursor:pointer;z-index:99999;box-shadow:0 4px 14px rgba(0,0,0,.3);user-select:none" onclick="location.reload()" title="A new version is available — tap to update">🔄 New version available — tap to update</div>
-<div id="cwSessionBadge" class="cw-session-badge" style="display:none"></div>
-<div id="cwBurgerRoot" class="cw-burger-root" style="display:none" aria-hidden="true">
-  <button type="button" id="cwBurgerBtn" class="cw-burger-btn" aria-label="Menu" aria-expanded="false" onclick="toggleBurgerDrawer()">
-    <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M4 6H18M4 11H18M4 16H18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-  </button>
-  <div id="cwBurgerOverlay" class="cw-burger-overlay" onclick="closeBurgerDrawer()"></div>
-  <aside id="cwBurgerDrawer" class="cw-burger-drawer" aria-label="Menu">
-    <div class="cw-burger-head">
-      <h2>Menu</h2>
-      <button type="button" class="cw-burger-close" onclick="closeBurgerDrawer()" aria-label="Close"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 4L14 14M14 4L4 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
-    </div>
-    <div id="cwBurgerAdminPlan" class="cw-burger-section" style="display:none">
-      <h3>Admin</h3>
-      <label for="cwAdminPlanSelect">Plan de test</label>
-      <select id="cwAdminPlanSelect" onchange="adminApplyTestPlan(this.value)">
-        <option value="figurant">Figurant (30 min)</option>
-        <option value="audition">Audition (2 h / 3 h)</option>
-        <option value="payg">Pay-as-you-go</option>
-        <option value="oscar">Oscar (5 h / mois)</option>
-        <option value="palme">Palme d’Or (20 h / mois)</option>
-      </select>
-    </div>
-    <div class="cw-burger-section" id="cwBurgerAdminLink" style="display:none">
-      <button type="button" class="cw-burger-link" onclick="closeBurgerDrawer();openAdminPanel()">Admin · Invites &amp; Analytics</button>
-    </div>
-  </aside>
-</div>
 <div id="zelda-chrono" aria-hidden="true">
   <svg width="56" height="56" viewBox="0 0 56 56">
     <circle cx="28" cy="28" r="24" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3"/>
     <circle id="zelda-chrono-progress" cx="28" cy="28" r="24" fill="none" stroke="#7FE3A3" stroke-width="3" stroke-linecap="round" stroke-dasharray="150.796" stroke-dashoffset="0" transform="rotate(-90 28 28)" style="transition:stroke-dashoffset .3s linear,stroke .45s ease"/>
     <text id="zelda-chrono-text" x="28" y="32" text-anchor="middle" fill="#fff" font-family="'DM Sans',-apple-system,sans-serif" font-size="11" font-weight="600" letter-spacing="-0.02em">0:00</text>
   </svg>
-</div>
-<div id="cwAdminPanel" class="cw-admin-panel" onclick="if(event.target===this)closeAdminPanel()">
-  <div class="cw-admin-inner">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem">
-      <h3 style="margin:0">Admin</h3>
-      <button class="cw-admin-btn-secondary" onclick="closeAdminPanel()" style="padding:.3rem .7rem">✕</button>
-    </div>
-    <div class="cw-admin-tabs">
-      <button class="cw-admin-tab active" id="cwTabInvites" onclick="cwAdminTab('invites')">Invites</button>
-      <button class="cw-admin-tab" id="cwTabAnalytics" onclick="cwAdminTab('analytics')">Analytics</button>
-    </div>
-    <div id="cwInvitesSection">
-      <div id="cwInviteForm">
-        <label>Label</label><input id="invLabel" value="Beta tester" placeholder="Johan beta">
-        <label>Email restriction (optional)</label><input id="invEmail" placeholder="friend@email.com">
-        <label>Credits</label><input id="invCredits" type="number" value="25" min="1" max="9999">
-        <label>Expires at</label><input id="invExpires" type="datetime-local">
-        <button class="cw-admin-btn-primary" onclick="adminCreateInvite()" style="width:100%;margin-bottom:.5rem">Create Invite</button>
-      </div>
-      <div id="cwInviteResult" style="display:none;margin-bottom:.8rem;padding:.6rem;background:rgba(217,32,39,.08);border-radius:10px;font-size:.78rem;word-break:break-all"></div>
-      <button class="cw-admin-btn-secondary" onclick="adminLoadInvites()" style="width:100%;margin-bottom:.5rem">Refresh Invites</button>
-      <div id="cwInviteList" class="cw-invite-list"></div>
-    </div>
-    <div id="cwAnalyticsSection" style="display:none">
-      <div class="cw-an-range" id="cwAnRange">
-        <button class="cw-admin-tab" data-days="7" onclick="adminLoadAnalytics(7)">7d</button>
-        <button class="cw-admin-tab active" data-days="30" onclick="adminLoadAnalytics(30)">30d</button>
-        <button class="cw-admin-tab" data-days="90" onclick="adminLoadAnalytics(90)">90d</button>
-      </div>
-      <div id="cwAnStats" class="cw-an-stats"></div>
-      <div id="cwAnFunnel"></div>
-      <div id="cwAnAbandon"></div>
-      <div id="cwAnByDay"></div>
-    </div>
-  </div>
 </div>
 <div id="loadingOverlay" class="loading-overlay"><div id="loadingSpinner" class="spinner"></div><div id="loadingRing" class="progress-ring" style="display:none"><svg width="64" height="64"><circle class="ring-bg" cx="32" cy="32" r="28"/><circle id="ringFg" class="ring-fg" cx="32" cy="32" r="28" stroke-dasharray="175.93" stroke-dashoffset="175.93"/></svg><span id="ringPct" class="ring-pct">0%</span></div><p id="loadingMsg">Loading…</p><button id="loadingCancelBtn" class="loading-cancel-btn" onclick="cancelPdfParse()">✕ Cancel</button></div>
 <div id="connectOverlay" class="overlay"><div class="spinner"></div><h3 id="overlayTitle">Connecting…</h3><p id="overlayMsg"></p><button class="btn btn-secondary" onclick="cancelConnection()" style="margin-top:.5rem">Cancel</button></div>
@@ -539,6 +477,6 @@
 </div></div>
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ttsAudioEl" playsinline></audio>
-<script type="module" src="/js/app.js?v=20260612v"></script>
+<script type="module" src="/js/app.js?v=20260612w"></script>
 </body>
 </html>
