@@ -673,6 +673,21 @@ input[type="file"]{display:none}
 .cw-admin-btn-secondary{background:rgba(255,255,255,.06);color:#E8E8E8;border:1px solid rgba(255,255,255,.12)!important}
 .cw-admin-btn-danger{background:rgba(255,75,75,.15);color:#ff6b6b;border:1px solid rgba(255,75,75,.2)!important}
 .cw-invite-list{margin-top:.8rem}.cw-invite-item{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.6rem;margin-bottom:.5rem;font-size:.78rem}
+.cw-admin-tabs{display:flex;gap:.4rem;margin-bottom:.8rem}
+.cw-admin-tab{flex:1;padding:.45rem .6rem;border-radius:9px;border:1px solid rgba(255,255,255,.12)!important;background:rgba(255,255,255,.04);color:#aaa;font-size:.78rem;font-weight:700;cursor:pointer}
+.cw-admin-tab.active{background:var(--raspberry);border-color:var(--raspberry)!important;color:#fff}
+.cw-an-range{display:flex;gap:.4rem;margin-bottom:.8rem}
+.cw-an-range .cw-admin-tab{flex:0 0 auto;padding:.3rem .8rem}
+.cw-an-stats{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1rem}
+.cw-stat-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:.7rem;text-align:center}
+.cw-stat-value{font-size:1.3rem;font-weight:800;color:var(--white)}
+.cw-stat-label{font-size:.65rem;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+.cw-an-title{font-size:.7rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#888;margin:1rem 0 .4rem}
+.cw-an-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.72rem}
+.cw-an-key{width:140px;flex-shrink:0;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cw-bar-wrap{flex:1;height:10px;background:rgba(255,255,255,.06);border-radius:5px;overflow:hidden}
+.cw-bar{display:block;height:100%;background:var(--raspberry);border-radius:5px}
+.cw-an-n{width:44px;text-align:right;color:#fff;font-weight:700}
 .cw-invite-item .inv-label{font-weight:700;color:rgba(245,239,224,.6)}.cw-invite-item .inv-credits{color:#ffc66d}.cw-invite-item .inv-revoked{color:#ff6b6b;font-weight:700}
 .ocr-progress-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(7,18,18,.92);color:#E8E8E8;padding:8px 16px;border-radius:10px;font-size:.78rem;font-weight:600;z-index:9500;border:1px solid rgba(217,32,39,.2);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
 .cw-burger-root{position:fixed;top:12px;left:12px;z-index:1050}

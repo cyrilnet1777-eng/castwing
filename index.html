@@ -30,7 +30,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<link rel="stylesheet" href="/styles.css?v=20260612m">
+<link rel="stylesheet" href="/styles.css?v=20260612n">
 </head>
 <body>
 <div id="toast" class="toast"></div>
@@ -72,19 +72,36 @@
 <div id="cwAdminPanel" class="cw-admin-panel" onclick="if(event.target===this)closeAdminPanel()">
   <div class="cw-admin-inner">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem">
-      <h3 style="margin:0">Admin · Invites</h3>
+      <h3 style="margin:0">Admin</h3>
       <button class="cw-admin-btn-secondary" onclick="closeAdminPanel()" style="padding:.3rem .7rem">✕</button>
     </div>
-    <div id="cwInviteForm">
-      <label>Label</label><input id="invLabel" value="Beta tester" placeholder="Johan beta">
-      <label>Email restriction (optional)</label><input id="invEmail" placeholder="friend@email.com">
-      <label>Credits</label><input id="invCredits" type="number" value="25" min="1" max="9999">
-      <label>Expires at</label><input id="invExpires" type="datetime-local">
-      <button class="cw-admin-btn-primary" onclick="adminCreateInvite()" style="width:100%;margin-bottom:.5rem">Create Invite</button>
+    <div class="cw-admin-tabs">
+      <button class="cw-admin-tab active" id="cwTabInvites" onclick="cwAdminTab('invites')">Invites</button>
+      <button class="cw-admin-tab" id="cwTabAnalytics" onclick="cwAdminTab('analytics')">Analytics</button>
     </div>
-    <div id="cwInviteResult" style="display:none;margin-bottom:.8rem;padding:.6rem;background:rgba(217,32,39,.08);border-radius:10px;font-size:.78rem;word-break:break-all"></div>
-    <button class="cw-admin-btn-secondary" onclick="adminLoadInvites()" style="width:100%;margin-bottom:.5rem">Refresh Invites</button>
-    <div id="cwInviteList" class="cw-invite-list"></div>
+    <div id="cwInvitesSection">
+      <div id="cwInviteForm">
+        <label>Label</label><input id="invLabel" value="Beta tester" placeholder="Johan beta">
+        <label>Email restriction (optional)</label><input id="invEmail" placeholder="friend@email.com">
+        <label>Credits</label><input id="invCredits" type="number" value="25" min="1" max="9999">
+        <label>Expires at</label><input id="invExpires" type="datetime-local">
+        <button class="cw-admin-btn-primary" onclick="adminCreateInvite()" style="width:100%;margin-bottom:.5rem">Create Invite</button>
+      </div>
+      <div id="cwInviteResult" style="display:none;margin-bottom:.8rem;padding:.6rem;background:rgba(217,32,39,.08);border-radius:10px;font-size:.78rem;word-break:break-all"></div>
+      <button class="cw-admin-btn-secondary" onclick="adminLoadInvites()" style="width:100%;margin-bottom:.5rem">Refresh Invites</button>
+      <div id="cwInviteList" class="cw-invite-list"></div>
+    </div>
+    <div id="cwAnalyticsSection" style="display:none">
+      <div class="cw-an-range" id="cwAnRange">
+        <button class="cw-admin-tab" data-days="7" onclick="adminLoadAnalytics(7)">7d</button>
+        <button class="cw-admin-tab active" data-days="30" onclick="adminLoadAnalytics(30)">30d</button>
+        <button class="cw-admin-tab" data-days="90" onclick="adminLoadAnalytics(90)">90d</button>
+      </div>
+      <div id="cwAnStats" class="cw-an-stats"></div>
+      <div id="cwAnFunnel"></div>
+      <div id="cwAnAbandon"></div>
+      <div id="cwAnByDay"></div>
+    </div>
   </div>
 </div>
 <div id="loadingOverlay" class="loading-overlay"><div id="loadingSpinner" class="spinner"></div><div id="loadingRing" class="progress-ring" style="display:none"><svg width="64" height="64"><circle class="ring-bg" cx="32" cy="32" r="28"/><circle id="ringFg" class="ring-fg" cx="32" cy="32" r="28" stroke-dasharray="175.93" stroke-dashoffset="175.93"/></svg><span id="ringPct" class="ring-pct">0%</span></div><p id="loadingMsg">Loading…</p><button id="loadingCancelBtn" class="loading-cancel-btn" onclick="cancelPdfParse()">✕ Cancel</button></div>
@@ -485,6 +502,6 @@
 </div></div>
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ttsAudioEl" playsinline></audio>
-<script type="module" src="/js/app.js?v=20260612m"></script>
+<script type="module" src="/js/app.js?v=20260612n"></script>
 </body>
 </html>

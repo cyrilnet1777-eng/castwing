@@ -159,6 +159,73 @@ export function closeAdminPanel() {
   if (panel) panel.classList.remove('active');
 }
 
+// ── Analytics dashboard ──────────────────────────────────────────────
+
+export function cwAdminTab(name) {
+  const inv = document.getElementById('cwInvitesSection');
+  const an = document.getElementById('cwAnalyticsSection');
+  const tabInv = document.getElementById('cwTabInvites');
+  const tabAn = document.getElementById('cwTabAnalytics');
+  const isAn = name === 'analytics';
+  if (inv) inv.style.display = isAn ? 'none' : '';
+  if (an) an.style.display = isAn ? '' : 'none';
+  if (tabInv) tabInv.classList.toggle('active', !isAn);
+  if (tabAn) tabAn.classList.toggle('active', isAn);
+  if (isAn) void adminLoadAnalytics(30);
+}
+
+function _anStatCard(label, value) {
+  return `<div class="cw-stat-card"><div class="cw-stat-value">${escHtml(String(value))}</div><div class="cw-stat-label">${escHtml(label)}</div></div>`;
+}
+
+function _anBarTable(title, rows, max) {
+  if (!rows.length) return '';
+  let html = `<div class="cw-an-title">${escHtml(title)}</div><div class="cw-an-table">`;
+  for (const r of rows) {
+    const pct = max > 0 ? Math.round(r.n / max * 100) : 0;
+    html += `<div class="cw-an-row"><span class="cw-an-key">${escHtml(r.key)}</span><span class="cw-bar-wrap"><span class="cw-bar" style="width:${pct}%"></span></span><span class="cw-an-n">${r.n}</span></div>`;
+  }
+  return html + '</div>';
+}
+
+export async function adminLoadAnalytics(days) {
+  const range = document.getElementById('cwAnRange');
+  if (range) range.querySelectorAll('.cw-admin-tab').forEach(b => b.classList.toggle('active', parseInt(b.dataset.days, 10) === days));
+  const stats = document.getElementById('cwAnStats');
+  if (stats) stats.innerHTML = '<div style="color:#888;font-size:.8rem;padding:.5rem">Loading…</div>';
+  let data;
+  try {
+    const rsp = await fetch('/api/admin/analytics?days=' + days, { credentials: 'include' });
+    data = await rsp.json();
+    if (!rsp.ok || !data.ok) throw new Error(data.error || 'HTTP ' + rsp.status);
+  } catch (e) {
+    if (stats) stats.innerHTML = '<div style="color:#ff6b70;font-size:.8rem;padding:.5rem">Analytics unavailable: ' + escHtml(String(e.message || e)) + '</div>';
+    return;
+  }
+  if (stats) {
+    const durMin = data.avgSessionDurationS ? (data.avgSessionDurationS / 60).toFixed(1) + ' min' : '—';
+    stats.innerHTML =
+      _anStatCard('Completion', data.completionRate !== null ? data.completionRate + '%' : '—') +
+      _anStatCard('Redo rate', data.redoRate !== null ? data.redoRate + '%' : '—') +
+      _anStatCard('Avg takes/session', data.avgTakesPerSession ? Number(data.avgTakesPerSession).toFixed(1) : '—') +
+      _anStatCard('Avg session', durMin);
+  }
+  const funnelOrder = ['start_session', 'import_success', 'import_fail', 'recording_start', 'recording_complete', 'recording_save', 'take_saved', 'recording_redo', 'session_abandon', 'onboarding_start', 'onboarding_complete'];
+  const funnelRows = funnelOrder.filter(k => data.funnel[k]).map(k => ({ key: k, n: data.funnel[k] }));
+  const fMax = Math.max(1, ...funnelRows.map(r => r.n));
+  const fEl = document.getElementById('cwAnFunnel');
+  if (fEl) fEl.innerHTML = _anBarTable('Funnel (' + data.days + 'd)', funnelRows, fMax);
+  const aRows = (data.abandonByScreen || []).map(r => ({ key: r.s, n: r.n }));
+  const aEl = document.getElementById('cwAnAbandon');
+  if (aEl) aEl.innerHTML = _anBarTable('Abandons by screen', aRows, Math.max(1, ...aRows.map(r => r.n)));
+  // Events per day (total across types)
+  const dayTotals = new Map();
+  for (const r of (data.byDay || [])) dayTotals.set(r.d, (dayTotals.get(r.d) || 0) + r.n);
+  const dRows = [...dayTotals.entries()].map(([d, n]) => ({ key: d, n }));
+  const dEl = document.getElementById('cwAnByDay');
+  if (dEl) dEl.innerHTML = _anBarTable('Events per day', dRows, Math.max(1, ...dRows.map(r => r.n)));
+}
+
 export async function adminCreateInvite() {
   const label = document.getElementById('invLabel').value.trim() || 'Invite';
   const email = document.getElementById('invEmail').value.trim() || undefined;

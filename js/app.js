@@ -108,6 +108,8 @@ import {
   adminLoadInvites,
   adminRevokeInvite,
   adminApplyTestPlan,
+  cwAdminTab,
+  adminLoadAnalytics,
   redeemInviteFromURL,
 } from './admin.js';
 
@@ -589,6 +591,8 @@ Object.assign(window, {
   adminLoadInvites,
   adminRevokeInvite,
   adminApplyTestPlan,
+  cwAdminTab,
+  adminLoadAnalytics,
 
   // ── Paywall / Credits ──
   openTopupModal,

@@ -1463,6 +1463,66 @@ async function handleCreateInvite(request, env) {
   });
 }
 
+async function handleAdminAnalytics(request, env) {
+  const session = await getSessionState(request, env);
+  if (!session.isAdmin) return json({ ok: false, error: "Forbidden" }, 403);
+  if (!env.DB) return json({ ok: false, error: "Database not configured" }, 500);
+
+  const url = new URL(request.url);
+  const daysRaw = parseInt(url.searchParams.get("days") || "30", 10);
+  const days = [7, 30, 90].includes(daysRaw) ? daysRaw : 30;
+  const since = `-${days} days`;
+
+  const FUNNEL_EVENTS = "'import_success','import_fail','recording_start','recording_complete','recording_save','recording_redo','session_abandon','onboarding_start','onboarding_complete','start_session','take_saved'";
+
+  const [byDay, funnel, abandonByScreen, takesPerSession, durations] = await env.DB.batch([
+    env.DB.prepare(
+      `SELECT date(created_at) d, event_type, COUNT(*) n FROM usage_events
+       WHERE created_at >= datetime('now', ?1) GROUP BY d, event_type ORDER BY d`
+    ).bind(since),
+    env.DB.prepare(
+      `SELECT event_type, COUNT(*) n FROM usage_events
+       WHERE created_at >= datetime('now', ?1) AND event_type IN (${FUNNEL_EVENTS})
+       GROUP BY event_type`
+    ).bind(since),
+    env.DB.prepare(
+      `SELECT COALESCE(json_extract(meta_json,'$.screen'),'unknown') s, COUNT(*) n FROM usage_events
+       WHERE event_type='session_abandon' AND created_at >= datetime('now', ?1)
+       GROUP BY s ORDER BY n DESC LIMIT 12`
+    ).bind(since),
+    env.DB.prepare(
+      `SELECT AVG(c) avg_takes FROM (
+         SELECT COUNT(*) c FROM usage_events
+         WHERE event_type='recording_start' AND created_at >= datetime('now', ?1)
+           AND json_extract(meta_json,'$.sid') IS NOT NULL
+         GROUP BY json_extract(meta_json,'$.sid'))`
+    ).bind(since),
+    env.DB.prepare(
+      `SELECT AVG(CAST(json_extract(meta_json,'$.elapsed_s') AS REAL)) avg_s FROM usage_events
+       WHERE event_type='session_abandon' AND created_at >= datetime('now', ?1)
+         AND json_extract(meta_json,'$.elapsed_s') IS NOT NULL`
+    ).bind(since),
+  ]);
+
+  const funnelMap = {};
+  for (const r of (funnel.results || [])) funnelMap[r.event_type] = r.n;
+  const starts = funnelMap.recording_start || 0;
+  const saves = (funnelMap.recording_save || 0) + (funnelMap.take_saved || 0);
+  const redos = funnelMap.recording_redo || 0;
+
+  return json({
+    ok: true,
+    days,
+    byDay: byDay.results || [],
+    funnel: funnelMap,
+    abandonByScreen: abandonByScreen.results || [],
+    avgTakesPerSession: takesPerSession.results && takesPerSession.results[0] ? (takesPerSession.results[0].avg_takes || 0) : 0,
+    avgSessionDurationS: durations.results && durations.results[0] ? (durations.results[0].avg_s || 0) : 0,
+    completionRate: starts ? Math.round(saves / starts * 100) : null,
+    redoRate: starts ? Math.round(redos / starts * 100) : null,
+  });
+}
+
 async function handleListInvites(request, env) {
   const session = await getSessionState(request, env);
   if (!session.isAdmin) return json({ ok: false, error: "Forbidden" }, 403);
@@ -2924,6 +2984,7 @@ export default {
     if (url.pathname === "/api/invite/redeem" && request.method === "POST") return handleRedeemInvite(request, env);
     if (url.pathname === "/api/admin/create-invite" && request.method === "POST") return handleCreateInvite(request, env);
     if (url.pathname === "/api/admin/list-invites" && request.method === "GET") return handleListInvites(request, env);
+    if (url.pathname === "/api/admin/analytics" && request.method === "GET") return handleAdminAnalytics(request, env);
     if (url.pathname === "/api/admin/revoke-invite" && request.method === "POST") return handleRevokeInvite(request, env);
     if (url.pathname === "/api/admin/send-welcome-emails" && request.method === "POST") return handleSendWelcomeEmails(request, env, ctx);
     if (url.pathname === "/api/merge-characters" && request.method === "POST") return withAnthropicSlot(env, handleMergeCharacters, request);
