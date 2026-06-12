@@ -43,11 +43,17 @@ const TIMING_CUES = [
   { rx: /\b(beat|battement)\b/i,                                           ms: 500  },
 ];
 
-const PROMPTER_PACE_MULT = { slow: 1.5, normal: 1.0, fast: 0.6 };
+/** The prompter follows the voice: faster AI voice → tighter line gaps.
+    voiceSpeed 0→0.5x voice (gaps ×2), 4.5→1x (×1), 7→2x (×0.5). */
+export function voicePaceMultiplier() {
+  const v = Number.isFinite(S.voiceSpeed) ? S.voiceSpeed : 4.5;
+  const display = v <= 4.5 ? 0.5 + (v / 4.5) * 0.5 : 1.0 + ((v - 4.5) / 2.5) * 1.0;
+  return 1 / Math.max(0.5, Math.min(2, display));
+}
 
 export function computeLineDelayMs(prevLine, nextLine) {
-  const pace = PROMPTER_PACE_MULT[S.prompterPace] || 1.0;
-  if (S.voiceSpeed >= 4.5) return Math.round(150 * pace); // italienne speed-run
+  const pace = voicePaceMultiplier();
+  if (S.voiceSpeed > 6.5) return 75; // italienne speed-run: minimal gaps, ignore cues
   // Explicit cue on the upcoming line: "(un temps) Je sais."
   const paren = nextLine && nextLine.parenthetical;
   if (paren) { for (const c of TIMING_CUES) if (c.rx.test(paren)) return Math.round(c.ms * pace); }

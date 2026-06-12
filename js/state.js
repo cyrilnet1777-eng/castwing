@@ -58,7 +58,6 @@ export const S = {
   _fastFullParseToken: 0,
   takeNumber:       0,
   currentTake:      null,
-  prompterPace:     'normal',
   monologueBlocks:  [],
   recCropFactor:    1,
   _recDiscard:      false,
@@ -141,8 +140,7 @@ export const S = {
  */
 export function initState() {
   S.sessionViewMode = localStorage.getItem('cw_viewMode') || '50-50';
-  const pace = localStorage.getItem('cw_prompterPace');
-  if (pace === 'slow' || pace === 'normal' || pace === 'fast') S.prompterPace = pace;
+  try { localStorage.removeItem('cw_prompterPace'); } catch (_e) {}
   try { S._analyticsSid = crypto.randomUUID(); } catch (_e) { S._analyticsSid = 'sid-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10); }
 }
 

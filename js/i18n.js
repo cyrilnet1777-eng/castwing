@@ -477,7 +477,6 @@ export function applyUILanguage(){
   const _mbg=document.getElementById('monologueBadge1');if(_mbg)_mbg.textContent=t('monologueDetected');
   const _pvh=document.getElementById('previewHint');if(_pvh)_pvh.textContent=t('previewHint');
   const _pvs=document.getElementById('previewStartBtn');if(_pvs)_pvs.textContent=t('previewStartBtn');
-  const _ppl=document.getElementById('psPaceLabel');if(_ppl)_ppl.textContent=t('psPaceLabel');
   const _pvl=document.getElementById('psVoiceSpeedLabel');if(_pvl)_pvl.textContent=t('psVoiceSpeedLabel');
   const _prb=document.getElementById('psResumeBtn');if(_prb)_prb.textContent=t('psResumeBtn');
   const _prs=document.getElementById('psRestartBtn');if(_prs)_prs.textContent=t('psRestartBtn');

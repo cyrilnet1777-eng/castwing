@@ -225,7 +225,7 @@ async function speakWithElevenLabs(text, preset, token, cb, speedOverride, demoF
         text,
         voiceId,
         modelId: preset.modelId || 'eleven_multilingual_v2',
-        emotion: S.voiceSpeed >= 4.5 ? 'neutral' : S.selectedEmotion,
+        emotion: S.voiceSpeed > 6.5 ? 'neutral' : S.selectedEmotion,
         speed,
         languageCode: effectiveLang,
       });

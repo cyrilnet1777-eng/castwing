@@ -21,7 +21,7 @@ import {
   getUserData, saveUserData, getUserTier, getPlan,
   checkAndApplyResets, getRemainingSessionMs, consumeMs,
   startSessionTimer, stopSessionTimer, freezeTimer, unfreezeTimer,
-  fmtTimer, isServerAdmin, updateChronoDisplay, computeLineDelayMs,
+  fmtTimer, isServerAdmin, updateChronoDisplay, computeLineDelayMs, voicePaceMultiplier,
   updateTimerBadge, hideTimerBadge, getSpecTier,
   canUseElevenLabs, canUseEmotions, canRecord,
 } from './plan-timer.js';
@@ -805,8 +805,8 @@ function scheduleMonologueAdvance() {
   if (!line) return;
   if (lineIndex >= S.prompterLines.length - 1) return;
   const words = ((line.text || '').split(/\s+/).filter(Boolean)).length;
-  const paceMult = S.prompterPace === 'slow' ? 1.5 : (S.prompterPace === 'fast' ? 0.6 : 1.0);
-  const ms = Math.max(1800, Math.round(words * 380 * paceMult));
+  const paceMult = voicePaceMultiplier(); // crawl speed follows the voice speed setting
+  const ms = Math.max(1200, Math.round(words * 380 * paceMult));
   S.autoAdvanceTimer = setTimeout(() => {
     if (!__cwSessionActive || S.sessionPaused) return;
     if (S.prompterIndex !== lineIndex) return;
