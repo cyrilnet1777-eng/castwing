@@ -2903,7 +2903,7 @@ export default {
     // if (url.pathname === "/api/credits/auto-charge" && request.method === "POST") return handleAutoCharge(request, env);
     if (url.pathname === "/api/invite/redeem" && request.method === "POST") return handleRedeemInvite(request, env);
     if (url.pathname === "/api/admin/analytics" && request.method === "GET") return handleAdminAnalytics(request, env);
-    if (url.pathname === "/admin" && request.method === "GET") {
+    if ((url.pathname === "/admin" || url.pathname === "/admin/") && request.method === "GET") {
       return new Response(ADMIN_DASHBOARD_HTML, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
     }
     if (url.pathname === "/api/merge-characters" && request.method === "POST") return withAnthropicSlot(env, handleMergeCharacters, request);
