@@ -244,8 +244,14 @@ function _buildRecordingStream() {
   // Use canvas capture for video (survives camera switches without stopping MediaRecorder)
   var vid = document.getElementById('localVideo');
   _recCanvas = document.createElement('canvas');
-  _recCanvas.width = vid && vid.videoWidth > 0 ? vid.videoWidth : 1280;
-  _recCanvas.height = vid && vid.videoHeight > 0 ? vid.videoHeight : 720;
+  // Target 1080p: scale source dims so the long edge is 1920 (casting spec)
+  var srcW = vid && vid.videoWidth > 0 ? vid.videoWidth : 1280;
+  var srcH = vid && vid.videoHeight > 0 ? vid.videoHeight : 720;
+  var longEdge = Math.max(srcW, srcH);
+  var upscale = longEdge < 1920 ? 1 : 1920 / longEdge; // never upscale beyond source
+  if (longEdge > 1920) { srcW = Math.round(srcW * upscale); srcH = Math.round(srcH * upscale); }
+  _recCanvas.width = srcW - (srcW % 2);   // H.264 needs even dimensions
+  _recCanvas.height = srcH - (srcH % 2);
   _recCanvasCtx = _recCanvas.getContext('2d');
   var canvasStream = _recCanvas.captureStream(30);
   canvasStream.getVideoTracks().forEach(function (t) { combined.addTrack(t); });
@@ -253,7 +259,9 @@ function _buildRecordingStream() {
   var remoteVid = document.getElementById('remoteVideo');
   var remoteStream = remoteVid && remoteVid.srcObject;
   try {
-    S._recAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // 48 kHz per casting export spec (AAC-LC 48kHz downstream)
+    try { S._recAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 }); }
+    catch (_e) { S._recAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
     S._recDest = S._recAudioCtx.createMediaStreamDestination();
     S._recMicGain = S._recAudioCtx.createGain();
     S._recMicGain.gain.value = 1.0;
@@ -293,8 +301,8 @@ function _makeMediaRecorder(stream) {
     recMime = 'video/webm';
 
   var isMP4 = recMime.startsWith('video/mp4');
-  var recOpts = { mimeType: recMime };
-  if (isMP4) recOpts.videoBitsPerSecond = 2500000;
+  // Casting export spec: 5 Mbps video, 128 kbps audio (all codecs)
+  var recOpts = { mimeType: recMime, videoBitsPerSecond: 5000000, audioBitsPerSecond: 128000 };
 
   var rec = new MediaRecorder(stream, recOpts);
   rec.ondataavailable = function (e) {

@@ -127,7 +127,68 @@ function formatRecDate(ts) {
   return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+async function updateRecInDB(id, fields) {
+  try {
+    const db = await openRecDB();
+    return new Promise((res, rej) => {
+      const tx = db.transaction(REC_STORE, 'readwrite');
+      const store = tx.objectStore(REC_STORE);
+      const req = store.get(id);
+      req.onsuccess = () => {
+        const v = req.result;
+        if (v) store.put(Object.assign(v, fields));
+      };
+      tx.oncomplete = () => res();
+      tx.onerror = () => rej(tx.error);
+    });
+  } catch (e) { /* cache update is best-effort */ }
+}
+
+function _transcodeProgress(show, pct) {
+  const ov = document.getElementById('loadingOverlay');
+  const spinner = document.getElementById('loadingSpinner');
+  const ring = document.getElementById('loadingRing');
+  const fg = document.getElementById('ringFg');
+  const label = document.getElementById('ringPct');
+  const msg = document.getElementById('loadingMsg');
+  if (!ov) return;
+  if (!show) { ov.classList.remove('active'); if (spinner) spinner.style.display = ''; if (ring) ring.style.display = 'none'; return; }
+  ov.classList.add('active');
+  if (spinner) spinner.style.display = 'none';
+  if (ring) ring.style.display = '';
+  if (msg) msg.textContent = t('exportingMp4');
+  if (fg && label) {
+    const circ = 2 * Math.PI * 28;
+    const p = Math.round((pct || 0) * 100);
+    fg.setAttribute('stroke-dashoffset', String(circ - (circ * p / 100)));
+    label.textContent = p + '%';
+  }
+}
+
+/** Casting spec: exports must be H.264/AAC MP4. WebM recordings
+    (Firefox/older Chromium) get transcoded lazily here; the MP4 result
+    is cached on the IDB record so it only happens once per take. */
+async function ensureMp4Rec(rec) {
+  if (!rec || !rec.mime || rec.mime.startsWith('video/mp4')) return rec;
+  const mp4Fname = (rec.fname || 'citizentape').replace(/\.\w+$/, '') + '.mp4';
+  if (rec.mp4Blob) return { ...rec, blob: rec.mp4Blob, mime: 'video/mp4', fname: mp4Fname };
+  try {
+    _transcodeProgress(true, 0);
+    const { transcodeToMp4 } = await import('./transcode.js');
+    const mp4 = await transcodeToMp4(rec.blob, p => _transcodeProgress(true, p));
+    _transcodeProgress(false);
+    if (rec.id !== undefined) void updateRecInDB(rec.id, { mp4Blob: mp4 });
+    return { ...rec, blob: mp4, mime: 'video/mp4', fname: mp4Fname };
+  } catch (e) {
+    _transcodeProgress(false);
+    console.warn('[transcode] failed, exporting original WebM:', e);
+    showToast(t('exportMp4Failed'), 4000);
+    return rec;
+  }
+}
+
 async function downloadRecToDevice(rec) {
+  rec = await ensureMp4Rec(rec);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
     || (/Macintosh/.test(navigator.userAgent) && 'ontouchend' in document);
   if (isIOS) {
@@ -169,6 +230,7 @@ async function downloadRecToDevice(rec) {
 }
 
 async function shareOrDownloadRec(rec) {
+  rec = await ensureMp4Rec(rec);
   const file = new File([rec.blob], rec.fname, { type: rec.mime });
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try { await navigator.share({ title: 'CitizenTape Audition', files: [file] }); return; }
