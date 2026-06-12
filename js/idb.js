@@ -212,12 +212,12 @@ async function downloadRecToDevice(rec) {
     const u = URL.createObjectURL(new Blob([rec.blob], { type: shareMime }));
     const w = window.open(u, '_blank');
     if (w) {
-      showToast('Tap the download arrow to save to Photos', 5000);
+      showToast(t('idbSaveToPhotosHint'), 5000);
     } else {
       const a = document.createElement('a');
       a.href = u; a.download = shareFname; a.style.display = 'none';
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      showToast('Long-press the video to save it', 4000);
+      showToast(t('idbLongPressSaveHint'), 4000);
     }
     setTimeout(() => URL.revokeObjectURL(u), 120000);
     return;
@@ -237,7 +237,7 @@ async function shareOrDownloadRec(rec) {
     catch (e) { if (e.name === 'AbortError') return; }
   }
   downloadRecToDevice(rec);
-  showToast('Recording saved!');
+  showToast(t('idbRecordingSaved'));
 }
 
 function toggleRecPanel() {
@@ -287,7 +287,7 @@ async function deleteRec(id) {
   await deleteRecFromDB(id);
   renderRecordingsList();
   renderProfileRecordings();
-  showToast('Recording deleted');
+  showToast(t('recDeleted'));
 }
 
 async function renderProfileRecordings() {

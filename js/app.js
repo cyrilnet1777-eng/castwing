@@ -524,7 +524,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(async function () {
       await fetchServerSession();
       S.cwServerSession.billingMode = 'metered';
-      showToast('Pay-As-You-Go activated! You\'ll be billed daily for usage.', 5000);
+      showToast(t('pwPaygoActivatedDaily'), 5000);
       history.replaceState({}, '', '/');
     }, 2000);
   } else if (paymentParam === 'cancel') {
@@ -532,11 +532,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     showToast(tt('paymentCancelled', 'Payment cancelled.'), 3000);
     history.replaceState({}, '', '/');
   } else if (cardSaved === 'success') {
-    showToast('Card saved!', 5000);
+    showToast(t('pwCardSaved'), 5000);
     history.replaceState({}, '', '/');
   } else if (cardSaved === 'cancel') {
     localStorage.removeItem('cw_autoTopup');
-    showToast('Card setup cancelled.', 3000);
+    showToast(t('pwCardSetupCancelled'), 3000);
     history.replaceState({}, '', '/');
   }
 

@@ -96,7 +96,7 @@ async function etmSaveToDevice() {
   if (!_lastRecBlob) return;
   track('recording_save', { target: 'device' });
   await downloadRecToDevice({ blob: _lastRecBlob, fname: _lastRecFname, mime: _lastRecMime });
-  showToast('Saving to device\u2026', 3000);
+  showToast(t('recSavingToDevice'), 3000);
 }
 
 async function etmShareRec() {
@@ -120,7 +120,7 @@ async function etmShareRec() {
     console.warn('[rec] share:', e);
   }
   await downloadRecToDevice({ blob: _lastRecBlob, fname: _lastRecFname, mime: _lastRecMime });
-  showToast('Saved to device (share not available)', 3000);
+  showToast(t('recSavedNoShare'), 3000);
 }
 
 async function etmDeleteRec() {
@@ -134,7 +134,7 @@ async function etmDeleteRec() {
   _lastRecMime = '';
   renderRecordingsList();
   renderProfileRecordings();
-  showToast('Recording deleted');
+  showToast(t('recDeleted'));
   var home = document.getElementById('home');
   if (home) home.style.pointerEvents = '';
   hideEndTakeModal();
@@ -177,7 +177,7 @@ function resumeRecording() {
   var ri = document.getElementById('recIndicator');
   if (ri) ri.style.display = 'flex';
   _showRecPauseBar(false);
-  showToast('Recording resumed');
+  showToast(t('recResumed'));
 }
 
 function _showRecPauseBar(show) {
@@ -352,7 +352,7 @@ function _makeMediaRecorder(stream) {
       window.showTakeReviewModal(blob, meta);
     } catch (e) {
       console.error('[rec] onstop error:', e);
-      showToast('Recording error — take may be lost', 4000);
+      showToast(t('recErrorTakeLost'), 4000);
     }
   };
   return rec;
@@ -364,7 +364,7 @@ function _makeMediaRecorder(stream) {
 
 function startRecording() {
   if (!canRecord()) { showToast(t('partnerGateTitle')); openAuthModal(); return; }
-  if (!S.localStream) { showToast('No video stream'); return; }
+  if (!S.localStream) { showToast(t('recNoVideoStream')); return; }
   S.recordedChunks = [];
   S._recStopIntentional = false;
   var recStream = _buildRecordingStream();
@@ -389,9 +389,9 @@ function startRecording() {
     if (_mr) _mr.classList.add('recording');
     const _qb = document.getElementById('quitBtn');
     if (_qb) { _qb.classList.add('has-recording'); _qb.textContent = 'Save & Exit'; }
-    showToast('Recording\u2026');
+    showToast(t('recRecording'));
   } catch (e) {
-    showToast('Recording error');
+    showToast(t('recError'));
   }
 }
 

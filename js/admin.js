@@ -121,7 +121,7 @@ export function adminApplyTestPlan(tier) {
     oscar: 'Oscar',
     palme: 'Palme d\u2019Or',
   };
-  showToast('Plan\u00a0: ' + (lab[tier] || tier), 2500);
+  showToast(t('admPlanLabel', { plan: lab[tier] || tier }), 2500);
 }
 
 // ── Burger Drawer ───────────────────────────────────────────────────
@@ -239,7 +239,7 @@ export async function adminCreateInvite() {
       body: JSON.stringify({ label, emailRestriction: email, creditsGranted: credits, expiresAt }),
     });
     const data = await rsp.json().catch(() => null);
-    if (!data || !data.ok) { showToast('Error: ' + (data && data.error || 'unknown')); return; }
+    if (!data || !data.ok) { showToast(t('admErrorPrefix', { msg: (data && data.error || 'unknown') })); return; }
     const res = document.getElementById('cwInviteResult');
     res.style.display = 'block';
     res.innerHTML =
@@ -247,9 +247,9 @@ export async function adminCreateInvite() {
       `URL: <a href="${escHtml(data.inviteUrl)}" style="color:rgba(245,239,224,.6);word-break:break-all">${escHtml(data.inviteUrl)}</a><br>` +
       `Code: <code>${escHtml(data.inviteCode)}</code><br>` +
       `<button class="cw-admin-btn-secondary" style="margin-top:.4rem;font-size:.72rem" ` +
-      `onclick="navigator.clipboard.writeText('${escHtml(data.inviteUrl)}');showToast('Copied!')">Copy URL</button>`;
+      `onclick="navigator.clipboard.writeText('${escHtml(data.inviteUrl)}');showToast('Copied!')">Copy URL</button>`; // i18n-ok (inline HTML onclick, admin-only UI)
     adminLoadInvites();
-  } catch (e) { showToast('Network error'); }
+  } catch (e) { showToast(t('admNetworkError')); }
 }
 
 export async function adminLoadInvites() {
@@ -312,12 +312,12 @@ export async function redeemInviteFromURL() {
     if (data && data.ok) {
       S.cwServerSession.plan = 'tester';
       S.cwServerSession.creditsRemaining = data.creditsRemaining;
-      if (data.inviteLabel) showToast('Invite redeemed: ' + data.inviteLabel + ' (' + data.creditsRemaining + ' credits)', 5000);
+      if (data.inviteLabel) showToast(t('admInviteRedeemed', { label: data.inviteLabel, credits: data.creditsRemaining }), 5000);
       applyServerSessionUI();
       history.replaceState(null, '', window.location.pathname);
       return true;
     } else {
-      showToast('Invite error: ' + (data && data.error || 'invalid'), 4000);
+      showToast(t('admInviteError', { msg: (data && data.error || 'invalid') }), 4000);
       history.replaceState(null, '', window.location.pathname);
     }
   } catch (e) { console.info('[invite] redeem failed', e); }

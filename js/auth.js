@@ -146,7 +146,7 @@ export async function logoutUser() {
   applyServerSessionUI();
   updateAuthMiniButton();
   closeAuthModal();
-  showToast('Logged out', 2000);
+  showToast(t('authLoggedOut'), 2000);
 }
 
 // ── Change email ────────────────────────────────────────────────────
@@ -175,7 +175,7 @@ export async function requestEmailCode() {
   if (btn) btn.disabled = true;
   track('auth_request_code');
   const email = (document.getElementById('authEmailInput').value || '').trim().toLowerCase();
-  if (!email || !/@/.test(email)) { showToast('Email invalide'); S._authCodeSending = false; if (btn) btn.disabled = false; return; }
+  if (!email || !/@/.test(email)) { showToast(t('authInvalidEmail')); S._authCodeSending = false; if (btn) btn.disabled = false; return; }
   S.authPendingEmail = email;
   try {
     const rsp = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'request_code', email, lang: authEmailLangFromUI() }), credentials: 'same-origin' });
@@ -205,7 +205,7 @@ export async function verifyEmailCode() {
   try {
     rsp = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'verify_code', email: S.authPendingEmail, code }), credentials: 'same-origin' });
     out = await rsp.json().catch(() => null);
-  } catch (e) { console.error('[auth] network error:', e); showToast('Connection error. Check your internet and try again.', 5000); return; }
+  } catch (e) { console.error('[auth] network error:', e); showToast(t('authConnectionError'), 5000); return; }
   if (!rsp.ok || !(out && out.ok)) { showToast((out && out.error) || t('authInvalidCode')); return; }
   // Auth succeeded
   var isSignup = false;
@@ -237,24 +237,24 @@ export async function verifyEmailCode() {
 // ── Google Sign-In ──────────────────────────────────────────────────
 
 export function startGoogleSignIn() {
-  if (/OPR\/|Opera/i.test(navigator.userAgent)) { showToast('Google login unavailable on this browser \u2014 use email', 4000); return; }
-  if (typeof google === 'undefined' || !google.accounts) { showToast('Google non disponible, utilise ton email'); return; }
+  if (/OPR\/|Opera/i.test(navigator.userAgent)) { showToast(t('authGoogleOpera'), 4000); return; }
+  if (typeof google === 'undefined' || !google.accounts) { showToast(t('authGoogleUnavailable')); return; }
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential, auto_prompt: false });
   google.accounts.id.prompt(n => {
     if (n.isNotDisplayed() || n.isSkippedMoment()) {
       google.accounts.id.renderButton(document.getElementById('googleSignInBtn'), { theme: 'outline', size: 'large', width: 320 });
-      showToast('Clique \u00e0 nouveau sur le bouton Google');
+      showToast(t('authGoogleClickAgain'));
     }
   });
 }
 
 export async function handleGoogleCredential(response) {
-  if (!response || !response.credential) { showToast('Google error'); return; }
+  if (!response || !response.credential) { showToast(t('authGoogleError')); return; }
   var rsp, out;
   try {
     rsp = await fetch('/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: response.credential }), credentials: 'same-origin' });
     out = await rsp.json().catch(() => null);
-  } catch (e) { console.error('[auth] google network error:', e); showToast('Connection error. Check your internet and try again.', 5000); return; }
+  } catch (e) { console.error('[auth] google network error:', e); showToast(t('authConnectionError'), 5000); return; }
   if (!rsp.ok || !(out && out.ok)) { showToast(out && out.error ? out.error : 'Google error'); return; }
   var isSignup = false;
   try { isSignup = getPlan().tier === 'visitor'; } catch (_e) {}
@@ -374,7 +374,7 @@ export function resumePendingFileAfterAuth() {
     if (typeof window.isPdfUploadFile === 'function' && window.isPdfUploadFile(file)) {
       if (typeof window.processPDF === 'function') window.processPDF(n, file);
     } else {
-      showToast('Unsupported file format', 4000);
+      showToast(t('saiUnsupportedFormat'), 4000);
     }
   }, 300);
 }

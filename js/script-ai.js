@@ -117,9 +117,9 @@ function initDragDrop(zoneId) {
   ['dragleave', 'drop'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); zone.classList.remove('dragover'); }));
   zone.addEventListener('drop', e => {
     const f = e.dataTransfer.files;
-    if (!f || !f.length) { showToast('Seuls les PDF sont accept\u00e9s'); return; }
+    if (!f || !f.length) { showToast(t('saiPdfOnly')); return; }
     const file = f[0];
-    if (!isPdfUploadFile(file)) { showToast('Seuls les PDF sont accept\u00e9s'); return; }
+    if (!isPdfUploadFile(file)) { showToast(t('saiPdfOnly')); return; }
     const _isLoggedIn = !!(S.cwServerSession.email || (S.userAccess.verified && S.userAccess.email));
     if (!_isLoggedIn) {
       S._pendingFileAfterAuth = { n, file };
@@ -416,13 +416,13 @@ async function handlePDFInput(n, input) {
     return;
   }
   track('import_script', { method: 'file', file_type: f.name.split('.').pop() });
-  if (!isPdfUploadFile(f)) { showToast('Unsupported file format', 4000); input.value = ''; return; }
+  if (!isPdfUploadFile(f)) { showToast(t('saiUnsupportedFormat'), 4000); input.value = ''; return; }
   const name = String(f.name || '').toLowerCase();
   if (name.endsWith('.fdx')) {
     try {
       const text = await f.text();
       const parsed = parseFdxFile(text);
-      if (!parsed.lines.length) { showToast('No dialogue found in FDX file'); return; }
+      if (!parsed.lines.length) { showToast(t('saiNoDialogueFdx')); return; }
       S.scriptRawText = parsed.lines.map(l => l.character ? (l.character + ': ' + l.text) : l.text).join('\n');
       S.pdfScript = parsed.lines.map(l => ({
         kind: l.type === 'dialogue' ? 'dialogue' : (l.type === 'slug' ? 'slug' : 'action'),
@@ -433,7 +433,7 @@ async function handlePDFInput(n, input) {
       const detectedLang = detectTextLanguage(S.scriptRawText);
       S.currentScriptName = f.name;
       finishPdfSetupUi(n, S.scriptRawText, parsed.characters, detectedLang);
-    } catch (e) { showToast('Error reading FDX: ' + e.message); }
+    } catch (e) { showToast(t('saiFdxReadError', { msg: e.message })); }
     return;
   }
   if (name.endsWith('.txt')) {
@@ -443,7 +443,7 @@ async function handlePDFInput(n, input) {
       if (si) { si.value = text; si.style.display = 'block'; }
       S.currentScriptName = f.name;
       processTextImport(n);
-    } catch (e) { showToast('Error reading file'); }
+    } catch (e) { showToast(t('saiFileReadError')); }
     return;
   }
   await processPDF(n, f);
@@ -613,7 +613,7 @@ function closeScriptReview(applyEdits) {
       collected = collectPdfScriptFromReviewDom();
     } catch (err) {
       console.warn('[review] collect failed', err);
-      showToast('Form read error \u2014 try again', 3800);
+      showToast(t('saiFormReadError'), 3800);
       return;
     }
     const sanitizeDVA = window.sanitizeDialogueVsAction || (x => x);
@@ -624,7 +624,7 @@ function closeScriptReview(applyEdits) {
     if (isPdfScriptValidationBroken(merged, reviewSnapshot)) {
       S.pdfScript = reviewSnapshot;
       syncPdfScriptDebugMirror();
-      showToast('R\u00e9sultat invalide \u2014 script restaur\u00e9', 4200);
+      showToast(t('saiInvalidRestored'), 4200);
       return;
     }
     S.pdfScript = merged;
@@ -684,7 +684,7 @@ async function aiMergeCharacters(n) {
     console.info('[aiMerge] merged ' + merged + ' lines, renames:', renameMap);
     syncPdfScriptDebugMirror();
     renderChars(n, getChars());
-    showToast('Merged ' + Object.keys(renameMap).length + ' character variants', 3000);
+    showToast(t('saiMergedVariants', { n: Object.keys(renameMap).length }), 3000);
   } catch (e) { console.warn('[aiMerge] failed', e); }
 }
 
@@ -732,7 +732,7 @@ function finishPdfSetupUi(n, rawText, validChars, detectedLang) {
     const orb0 = document.getElementById('optionalReviewBtn' + n);
     if (orb0) orb0.style.display = 'none';
     if (detectedLang && VOICE_LOCALES.some(l => l.id === detectedLang)) { S.lockedVoiceLocale = detectedLang; applyLocaleVoices(detectedLang, false); initVoiceCountrySelect(); initVoiceGrid(); }
-    showToast('Peu de dialogue d\u00e9tect\u00e9 \u2014 v\u00e9rifie ou colle un autre fichier', 4500);
+    showToast(t('saiLittleDialogue'), 4500);
   }
 }
 
@@ -784,7 +784,7 @@ async function processTextImport(n) {
   const raw = document.getElementById('scriptInput' + n).value;
   S.scriptRawText = raw;
   const norm = await normalizeScreenplayWhitespaceAsync(raw);
-  if (norm.length < 24) { showToast('Colle au moins quelques lignes de sc\u00e9nario', 3500); return; }
+  if (norm.length < 24) { showToast(t('saiPasteMoreLines'), 3500); return; }
   S.takeNumber = 0;
   S.currentScriptName = 'Texte coll\u00e9';
   try {
@@ -794,7 +794,7 @@ async function processTextImport(n) {
   } catch (e) {
     console.error(e);
     track('import_fail', { type: 'paste', reason: (e && e.message ? String(e.message).slice(0, 80) : 'unknown') });
-    showToast('Text import error', 4000);
+    showToast(t('saiTextImportError'), 4000);
   }
 }
 

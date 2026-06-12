@@ -68,7 +68,7 @@ function tt(key, fallback) {
 }
 
 export function handleDataMessage(d) {
-  if (d.type === 'end-session') { showToast('Partner ended the session'); window.endSession(); return; }
+  if (d.type === 'end-session') { showToast(t('rtcPartnerEnded')); window.endSession(); return; }
   if (d.type === 'pause') { window.togglePause(true); return; }
   if (d.type === 'resume') { window.togglePause(false); return; }
   if (d.type === 'prompter' || d.type === 'jump') {
@@ -98,7 +98,7 @@ export function setupDataConnection(c) {
   S.conn.on('open', () => {
     setStatus('', 'Connected');
     hideOverlay();
-    showToast('Partner connected!');
+    showToast(t('rtcPartnerConnected'));
     playSfx('swoosh', 0.45);
     if (S.role === 'actor' && S.prompterLines.length > 0)
       S.conn.send({ type: 'script', lines: S.prompterLines, index: S.prompterIndex });
@@ -291,7 +291,7 @@ export async function startPartnerSession() {
       // Recording starts only after the 5s countdown
       if (window.canRecord() && S.localStream && !S.isRecording) window.startRecording();
     });
-    showToast('Share code: ' + code, 4500);
+    showToast(t('rtcShareCode', { code: code }), 4500);
     const pid = 'citizentape-' + code;
     S.peer = await createPeer(pid);
     S.peer.on('open', function () { startPeerKeepalive(); });
@@ -304,8 +304,8 @@ export async function startPartnerSession() {
       hideOverlay();
       console.warn('[peer] actor error:', e.type, e.message);
       if (e.type === 'peer-unavailable' || e.type === 'negotiation')
-        showToast('Partner connection failed \u2014 ask them to rejoin', 5000);
-      else showToast('Connection error \u2014 try again', 5000);
+        showToast(t('rtcPartnerConnectFailed'), 5000);
+      else showToast(t('rtcConnectionError'), 5000);
     });
     S.connectionTimeout = setTimeout(() => {
       if (!S.conn || !S.conn.open) { hideOverlay(); setStatus('waiting', 'Waiting\u2026 (you can start solo)'); }
@@ -323,11 +323,11 @@ export async function joinAsPartner() {
     S.role = 'partner'; S.sessionMode = 'partner';
     window.cancelSpeechFlow();
     const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
-    if (!code) { showToast('Enter a code'); return false; }
+    if (!code) { showToast(t('joinCodeMissing')); return false; }
     window.__cwPendingSessionTag = 'partner_join';
     window.showScreen('session');
     setStatus('waiting', 'Connecting\u2026');
-    showOverlay('Connecting\u2026', 'Looking for ' + code + '\u2026');
+    showOverlay(t('connection'), t('rtcLookingFor', { code: code }));
     window.hideAiOnlyControls();
     window.renderRecordingsList();
     // Partner: hide recording, end session, and done button
@@ -368,11 +368,11 @@ export async function joinAsPartner() {
       });
       S.peer.on('error', function (e) {
         if (!connected && attempts < maxAttempts) {
-          showOverlay('Waiting for actor\u2026', 'The actor hasn\'t started yet. Retrying\u2026 (' + attempts + '/' + maxAttempts + ')');
+          showOverlay(t('rtcWaitingActorTitle'), t('rtcWaitingActorMsg', { attempts: attempts, max: maxAttempts }));
           setTimeout(tryConnect, 3000);
         } else if (!connected) {
           hideOverlay();
-          showToast('Could not connect. Ask the actor to start the session first.', 6000);
+          showToast(t('rtcCouldNotConnect'), 6000);
           setStatus('disconnected', 'Not found');
         }
       });

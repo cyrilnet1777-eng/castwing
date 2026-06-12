@@ -523,7 +523,7 @@ async function armAutoVADForActorLine() {
       console.info('[VAD] new mic stream acquired, tracks:', liveTracks.map(t => t.readyState));
     } catch (err) {
       console.error('[VAD] cannot get mic:', err);
-      showToast("Autorise le micro pour que l'IA d\u00e9tecte quand tu as fini de parler", 5000);
+      showToast(t('sesMicForVad'), 5000);
       return;
     }
   }
@@ -967,10 +967,10 @@ async function startCamera() {
   const noVideoEl = document.getElementById('noVideoMsg');
   if (lastErr && (lastErr.name === 'NotAllowedError' || lastErr.name === 'PermissionDeniedError')) {
     noVideoEl.style.display = 'flex'; noVideoEl.textContent = '\uD83D\uDCF7 Camera denied \u2014 check permissions';
-    showToast('Camera denied \u2014 check permissions', 5000);
+    showToast(t('cameraDenied'), 5000);
   } else {
     noVideoEl.style.display = 'flex'; noVideoEl.textContent = '\uD83D\uDCF7 Camera unavailable';
-    showToast('Camera unavailable: ' + (lastErr && lastErr.message || ''), 5000);
+    showToast(t('sesCameraUnavailableMsg', { msg: (lastErr && lastErr.message || '') }), 5000);
   }
   return null;
 }
@@ -994,7 +994,7 @@ async function _ensureSeparateAudio() {
     return audioStream;
   } catch (e) {
     console.error('[Audio] cannot get mic:', e);
-    showToast('Micro refus\u00e9 \u2014 v\u00e9rifie les permissions', 5000);
+    showToast(t('micDenied'), 5000);
     return null;
   }
 }
@@ -1011,7 +1011,7 @@ async function ensureSessionStream() {
       document.getElementById('noVideoMsg').textContent = 'Camera off';
       return S.localStream;
     } catch (e) {
-      showToast('Mic unavailable', 4000);
+      showToast(t('sesMicUnavailable'), 4000);
       return null;
     }
   }
@@ -1023,7 +1023,7 @@ async function ensureSessionStream() {
     document.getElementById('localVideo').srcObject = null;
     document.getElementById('noVideoMsg').style.display = 'flex';
     document.getElementById('noVideoMsg').textContent = 'Camera unavailable, audio only';
-    showToast('Camera unavailable, audio only', 4000);
+    showToast(t('sesCameraAudioOnly'), 4000);
     return S.localStream;
   }
   return cam || null;
@@ -1076,7 +1076,7 @@ async function toggleCam() {
     showToast(S.currentFacingMode === 'user' ? 'Front camera' : 'Rear camera');
   } catch (e) {
     S.currentFacingMode = S.currentFacingMode === 'user' ? 'environment' : 'user';
-    showToast('Camera switch unavailable', 3500);
+    showToast(t('sesCameraSwitchUnavailable'), 3500);
   }
 }
 
@@ -1198,7 +1198,7 @@ function populatePauseCharGrid() {
       setPrompterLinesForSession(1, 'pauseCharChange');
       S.prompterIndex = 0;
       renderPrompter();
-      showToast('Tu joues ' + char);
+      showToast(t('sesYouPlay', { name: char }));
     };
     g.appendChild(el);
   });
@@ -1220,7 +1220,7 @@ function changePauseVoice() {
   const s = document.getElementById('pauseVoiceSelect');
   if (!s) return;
   S.selectedVoice = S.VOICE_PRESETS.find(v => v.id === s.value) || S.VOICE_PRESETS[0] || null;
-  if (S.selectedVoice) showToast('Voix : ' + S.selectedVoice.label);
+  if (S.selectedVoice) showToast(t('sesVoiceLabel', { name: S.selectedVoice.label }));
   persistSettings();
   populateSessionVoiceSelect();
 }
@@ -1605,8 +1605,8 @@ function endTake() {
             takeNumber: tk.takeNumber || S.takeNumber,
             wasPaused: !!tk.wasPaused, duration: null, thumb: null,
           });
-        } catch (e) { console.error('[rec] timeout review:', e); showToast('Recording could not be recovered', 3000); teardownSession(); showScreen('home'); }
-      } else { showToast('Recording could not be saved', 3000); teardownSession(); showScreen('home'); }
+        } catch (e) { console.error('[rec] timeout review:', e); showToast(t('sesRecNotRecovered'), 3000); teardownSession(); showScreen('home'); }
+      } else { showToast(t('sesRecNotSaved'), 3000); teardownSession(); showScreen('home'); }
     }, 5000);
     stopRecording();
   } else {

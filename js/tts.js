@@ -201,7 +201,7 @@ async function speakWithElevenLabs(text, preset, token, cb, speedOverride) {
         if (usedLines >= 2) {
           // If user previously had an account, prompt re-login instead of signup
           if (S.userAccess.email) {
-            showToast('Session expired \u2014 please log in again');
+            showToast(t('ttsSessionExpired'));
             openAuthModal();
           } else {
             showVisitorSignupPrompt();
@@ -394,7 +394,7 @@ async function aiSpeak(text, cb, opts) {
   if (useElevenLabs && S.elevenLabsTemporarilyDisabled && (S.elevenLabsDisableReason === 'quota' || S.elevenLabsDisableReason === 'visitor')) {
     var isLoggedIn = !!(S.cwServerSession.email || (S.userAccess.verified && S.userAccess.email));
     if (isLoggedIn) showCreditDepletedModal();
-    else if (S.userAccess.email) { showToast('Session expired \u2014 please log in again'); openAuthModal(); }
+    else if (S.userAccess.email) { showToast(t('ttsSessionExpired')); openAuthModal(); }
     else showVisitorSignupPrompt();
     if (cb) cb();
     return;

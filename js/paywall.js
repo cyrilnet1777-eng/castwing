@@ -150,14 +150,14 @@ export async function openTopupModal(packId) {
     var rsp = await fetch('/api/credits/topup', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pack: packId }) });
     var data = await rsp.json().catch(function() { return null; });
     if (data && data.ok && data.checkoutUrl) {
-      if (data.checkoutUrl && data.checkoutUrl.startsWith('https://polar.sh/')) window.location.href = data.checkoutUrl; else showToast('Invalid checkout URL', 3000);
+      if (data.checkoutUrl && data.checkoutUrl.startsWith('https://polar.sh/')) window.location.href = data.checkoutUrl; else showToast(t('pwInvalidCheckoutUrl'), 3000);
     } else if (rsp.status === 401 || ((data && data.error) === 'AUTH_REQUIRED')) {
-      showToast('Please log in first', 2000);
+      showToast(t('pwLoginFirst'), 2000);
       setTimeout(function() { window.openAuthModal(); }, 500);
     } else {
-      showToast((data && data.error) || 'Payment error', 3000);
+      showToast((data && data.error) || t('pwPaymentError'), 3000);
     }
-  } catch (e) { showToast('Payment error', 3000); }
+  } catch (e) { showToast(t('pwPaymentError'), 3000); }
 }
 
 // ── Refresh credit balance from server ──────────────────────────────
@@ -192,21 +192,21 @@ export async function handlePaygoToggle() {
       await fetch('/api/credits/auto-topup', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ billing_mode: 'credits' }) });
       S.cwServerSession.billingMode = 'credits';
       updatePaygoUI();
-      showToast('Pay-As-You-Go disabled. Using credit packs.', 3000);
-    } catch (e) { showToast('Error', 3000); }
+      showToast(t('pwPaygoDisabled'), 3000);
+    } catch (e) { showToast(t('error'), 3000); }
     return;
   }
   // Turning on -- subscribe via Polar
   try {
     var rsp = await fetch('/api/credits/metered-subscribe', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } });
     var data = await rsp.json().catch(function() { return null; });
-    if (data && data.already) { S.cwServerSession.billingMode = 'metered'; updatePaygoUI(); showToast('Pay-As-You-Go activated!'); return; }
+    if (data && data.already) { S.cwServerSession.billingMode = 'metered'; updatePaygoUI(); showToast(t('pwPaygoActivated')); return; }
     if (data && data.ok && data.checkoutUrl && data.checkoutUrl.startsWith('https://polar.sh/')) {
       window.location.href = data.checkoutUrl;
     } else {
-      showToast('Could not start checkout: ' + (data && data.error || 'error'), 4000);
+      showToast(t('pwCheckoutStartError', { msg: (data && data.error || 'error') }), 4000);
     }
-  } catch (e) { showToast('Error enabling Pay-As-You-Go', 3000); }
+  } catch (e) { showToast(t('pwPaygoEnableError'), 3000); }
 }
 
 // ── Usage history (profile panel) ───────────────────────────────────
