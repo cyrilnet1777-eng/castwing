@@ -199,6 +199,7 @@ function updateTakeInfo() {
 function showClapperboard(onComplete) {
   const existing = document.getElementById('clapOverlay');
   if (existing) existing.remove();
+  track('take_countdown_start', { mode: S.sessionMode });
   if (typeof window.beginTake === 'function') window.beginTake();
   else S.takeNumber++;
   const overlay = document.createElement('div');
@@ -209,8 +210,9 @@ function showClapperboard(onComplete) {
   overlay.appendChild(cdEl);
   document.body.appendChild(overlay);
   warmAudioForMobile();
-  const steps = [3, 2, 1];
-  const freqs = [800, 800, 1200];
+  // Fixed 5-second countdown (not configurable)
+  const steps = [5, 4, 3, 2, 1];
+  const freqs = [800, 800, 800, 800, 1200];
   let i = 0;
   function tick() {
     if (i >= steps.length) {
@@ -900,6 +902,28 @@ function onPrompterScrollSync() {
 //  Camera / Mic
 // =====================================================================
 
+/** iPad front cameras are ultra-wide (Center Stage) and getUserMedia
+    ignores zoom constraints on Safari — applyConstraints after
+    acquisition is the path that works. If zoom can't be normalised,
+    fall back to a centered 70% canvas crop (S.recCropFactor). */
+async function applyCameraFieldOfViewFix(track) {
+  S.recCropFactor = 1;
+  const isIPad = /iPad/.test(navigator.userAgent) ||
+    (/Macintosh/.test(navigator.userAgent) && 'ontouchend' in document);
+  let zoomNormalised = false;
+  try {
+    const caps = track.getCapabilities ? track.getCapabilities() : {};
+    if (caps.zoom) {
+      await track.applyConstraints({ advanced: [{ zoom: 1 }] });
+      zoomNormalised = true;
+    }
+  } catch (_e) { /* constraint not honored */ }
+  if (isIPad && S.currentFacingMode === 'user' && !zoomNormalised) {
+    S.recCropFactor = 0.7;
+    console.info('[camera] iPad front cam: zoom constraint unavailable → 0.7 centered crop');
+  }
+}
+
 async function startCamera() {
   const localVideo = document.getElementById('localVideo');
   const hasLiveVideo = () => S.localStream && S.localStream.getVideoTracks().some(t => t.readyState === 'live');
@@ -916,8 +940,8 @@ async function startCamera() {
     S.localStream.getVideoTracks().forEach(t => S.localStream.removeTrack(t));
   }
   const videoAttempts = [
-    { video: { facingMode: { ideal: S.currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
-    { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+    { video: { facingMode: { ideal: S.currentFacingMode }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false },
+    { video: { width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false },
     { video: true, audio: false },
   ];
   let lastErr = null;
@@ -927,6 +951,7 @@ async function startCamera() {
       const vt = vs.getVideoTracks()[0];
       if (vt) {
         vt.enabled = S.isCamOn;
+        await applyCameraFieldOfViewFix(vt);
         if (!S.localStream) S.localStream = new MediaStream();
         S.localStream.addTrack(vt);
       }
@@ -1027,10 +1052,11 @@ async function toggleCam() {
   S.currentFacingMode = S.currentFacingMode === 'user' ? 'environment' : 'user';
   try {
     const newStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { exact: S.currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      video: { facingMode: { exact: S.currentFacingMode }, width: { ideal: 1920 }, height: { ideal: 1080 } },
       audio: false,
     });
     const newTrack = newStream.getVideoTracks()[0];
+    await applyCameraFieldOfViewFix(newTrack);
     const oldTracks = S.localStream ? S.localStream.getVideoTracks() : [];
     if (S.localStream) {
       S.localStream.getVideoTracks().forEach(t => S.localStream.removeTrack(t));
@@ -1416,6 +1442,17 @@ async function bootstrapAiSessionFromCurrentScript(importScreenN) {
     'mode:', S.mode, 'sessionMode:', S.sessionMode);
   if (!_pCounts.partner) console.error('[session] ZERO partner lines \u2014 AI has nothing to speak!');
   if (!_pCounts.actor) console.warn('[session] ZERO actor lines \u2014 VAD will never arm');
+  // Acquire camera/mic first, then let the actor frame the shot before
+  // anything records (camera preview screen)
+  await ensureSessionStream();
+  const proceed = await window.openCameraPreview({ flow: 'ai' });
+  if (!proceed) {
+    cwSessionStateClear('preview_cancel');
+    if (window._cwMicStream) { window._cwMicStream.getTracks().forEach(t => t.stop()); window._cwMicStream = null; }
+    if (S.localStream) { S.localStream.getTracks().forEach(t => t.stop()); S.localStream = null; }
+    showScreen('setupAi');
+    return false;
+  }
   showScreen('session');
   renderRecordingsList();
   showAiControls();
@@ -1426,11 +1463,12 @@ async function bootstrapAiSessionFromCurrentScript(importScreenN) {
     populateSessionVoiceSelect();
   }
   setStatus('', S.sessionMode === 'ai' ? t('sessionReadyLabel') : '');
-  await ensureSessionStream();
-  if (canRecord() && S.localStream && !S.isRecording) startRecording();
   renderViewModeToggle('viewModeSession');
   renderAllSpeedSliders();
   showClapperboard(() => {
+    // Recording starts only after the countdown — the take never
+    // contains the countdown itself
+    if (canRecord() && S.localStream && !S.isRecording) startRecording();
     if (tier !== 'visitor' || getSpecTier() === 'figurant') startSessionTimer();
     else hideTimerBadge();
     setViewMode(S.sessionViewMode);

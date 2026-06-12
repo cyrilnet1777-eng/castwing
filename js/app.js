@@ -222,6 +222,14 @@ import {
   markTakePaused,
 } from './takes.js';
 
+// ── Camera preview ──────────────────────────────────────────────────────
+import {
+  openCameraPreview,
+  previewStartTake,
+  previewFlipCamera,
+  cancelCameraPreview,
+} from './preview.js';
+
 // ── Recording ───────────────────────────────────────────────────────────
 import {
   toggleRecording,
@@ -666,6 +674,12 @@ Object.assign(window, {
   beginTake,
   takeDurationMs,
   markTakePaused,
+
+  // ── Camera preview ──
+  openCameraPreview,
+  previewStartTake,
+  previewFlipCamera,
+  cancelCameraPreview,
 
   // ── Plan/Timer (used via window.* by other modules) ──
   updateTimerBadge,

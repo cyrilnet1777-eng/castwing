@@ -60,6 +60,7 @@ export const S = {
   currentTake:      null,
   prompterPace:     'normal',
   monologueBlocks:  [],
+  recCropFactor:    1,
   currentScriptName: '',
 
   // ── Voice / TTS ────────────────────────────────────────────────────

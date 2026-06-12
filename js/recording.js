@@ -210,13 +210,19 @@ function _startRecCanvasDraw() {
     if (!_recCanvas || !S.isRecording) { _recDrawRaf = null; return; }
     var vid = document.getElementById('localVideo');
     if (vid && vid.videoWidth > 0) {
-      // Scale video to fit locked canvas (letterbox/pillarbox on rotation)
+      // Scale video to fit locked canvas (letterbox/pillarbox on rotation).
+      // Centered source crop (recCropFactor < 1) counters ultra-wide iPad
+      // front cameras — recomputed every frame as dimensions can change
+      // mid-take on camera flips. Only centered crops are mirror-safe.
       var vw = vid.videoWidth, vh = vid.videoHeight;
-      var scale = Math.min(cw / vw, ch / vh);
-      var dw = vw * scale, dh = vh * scale;
+      var crop = (S.recCropFactor > 0 && S.recCropFactor < 1) ? S.recCropFactor : 1;
+      var sw = vw * crop, sh = vh * crop;
+      var sx = (vw - sw) / 2, sy = (vh - sh) / 2;
+      var scale = Math.min(cw / sw, ch / sh);
+      var dw = sw * scale, dh = sh * scale;
       var dx = (cw - dw) / 2, dy = (ch - dh) / 2;
       if (dx > 0 || dy > 0) _recCanvasCtx.clearRect(0, 0, cw, ch);
-      _recCanvasCtx.drawImage(vid, dx, dy, dw, dh);
+      _recCanvasCtx.drawImage(vid, sx, sy, sw, sh, dx, dy, dw, dh);
     }
     _recDrawRaf = requestAnimationFrame(draw);
   }

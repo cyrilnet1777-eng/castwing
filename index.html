@@ -30,7 +30,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<link rel="stylesheet" href="/styles.css?v=20260612h">
+<link rel="stylesheet" href="/styles.css?v=20260612i">
 </head>
 <body>
 <div id="toast" class="toast"></div>
@@ -344,6 +344,24 @@
   </div>
 </div>
 
+<!-- ═══ CAMERA PREVIEW ═══ -->
+<div id="cameraPreview" class="screen">
+  <div class="preview-stage">
+    <video id="previewVideo" autoplay playsinline muted></video>
+    <div class="preview-cam-off" id="previewCamOff" style="display:none">🎥 Camera off — audio only</div>
+    <button class="preview-back" id="previewBackBtn" onclick="cancelCameraPreview()" aria-label="Back">←</button>
+    <button class="preview-flip" id="previewFlipBtn" onclick="previewFlipCamera()" aria-label="Flip camera"><svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z" fill="currentColor"/></svg></button>
+    <div class="preview-mic" id="previewMicWrap">
+      <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z" fill="currentColor"/></svg>
+      <div class="preview-mic-meter"><span id="previewMicBar"></span></div>
+    </div>
+    <div class="preview-bottom">
+      <div class="preview-hint" id="previewHint">Frame yourself, then start the take</div>
+      <button class="cine-cta preview-start-btn" id="previewStartBtn" onclick="previewStartTake()">START 🎬</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ JOIN (PARTENAIRE) ═══ -->
 <div id="joinScreen" class="screen">
   <div class="screen-content">
@@ -429,6 +447,6 @@
 </div></div>
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ttsAudioEl" playsinline></audio>
-<script type="module" src="/js/app.js?v=20260612h"></script>
+<script type="module" src="/js/app.js?v=20260612i"></script>
 </body>
 </html>

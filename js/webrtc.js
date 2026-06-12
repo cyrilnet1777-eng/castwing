@@ -268,6 +268,16 @@ export async function startPartnerSession() {
     window.setPrompterLinesForSession(2, 'startPartnerSession');
     S.prompterIndex = 0;
     window.__cwPendingSessionTag = 'partner';
+    // Camera preview before anything records (Bug #1)
+    await window.ensureSessionStream();
+    const proceed = await window.openCameraPreview({ flow: 'partner' });
+    if (!proceed) {
+      window.cwSessionStateClear('preview_cancel');
+      if (window._cwMicStream) { window._cwMicStream.getTracks().forEach(t => t.stop()); window._cwMicStream = null; }
+      if (S.localStream) { S.localStream.getTracks().forEach(t => t.stop()); S.localStream = null; }
+      window.showScreen('setupPartner');
+      return false;
+    }
     window.showScreen('session');
     window.renderPrompter();
     setStatus('waiting', 'Waiting for partner\u2026');
@@ -277,10 +287,11 @@ export async function startPartnerSession() {
     const msb = document.getElementById('mobShareBtn'); if (msb) msb.style.display = 'flex';
     window.renderRecordingsList();
     window.cwCommitSessionLive();
-    window.showClapperboard();
+    window.showClapperboard(() => {
+      // Recording starts only after the 5s countdown
+      if (window.canRecord() && S.localStream && !S.isRecording) window.startRecording();
+    });
     showToast('Share code: ' + code, 4500);
-    await window.ensureSessionStream();
-    if (window.canRecord() && S.localStream && !S.isRecording) window.startRecording();
     const pid = 'citizentape-' + code;
     S.peer = await createPeer(pid);
     S.peer.on('open', function () { startPeerKeepalive(); });
