@@ -610,6 +610,24 @@ input[type="file"]{display:none}
 .clap-countdown{font-size:7rem;font-weight:900;color:#fff;text-align:center;font-family:'DM Sans',sans-serif;animation:countPop .4s ease;text-shadow:0 4px 30px rgba(0,0,0,.8)}
 @keyframes countPop{from{opacity:0;transform:scale(1.5)}to{opacity:1;transform:scale(1)}}
 
+/* ── Onboarding ── */
+.ob-overlay{display:none;position:fixed;inset:0;z-index:10060;background:#0d0d0d;align-items:center;justify-content:center;padding:max(20px,env(safe-area-inset-top)) 20px max(20px,env(safe-area-inset-bottom));overflow-y:auto}
+.ob-overlay.active{display:flex}
+.ob-card{width:min(94vw,440px);max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.ob-title{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:500;color:var(--white);margin:0 0 .6rem;line-height:1.2}
+.ob-body{font-size:.95rem;color:rgba(255,255,255,.65);line-height:1.55;margin:0 0 1.4rem}
+.ob-denied{font-size:.85rem;color:#ff8a8e;line-height:1.5;margin:1rem 0 .8rem;padding:.8rem;background:rgba(217,32,39,.08);border:1px solid var(--raspberry-dim);border-radius:10px}
+.ob-video{width:100%;max-height:32vh;border-radius:12px;background:#000;margin-bottom:.8rem;object-fit:cover}
+#obPreview{transform:scaleX(-1)}
+.ob-prompter{margin-bottom:1rem}
+.ob-line{font-size:.88rem;line-height:1.5;color:rgba(255,255,255,.45);padding:.35rem .6rem;border-left:3px solid transparent;transition:all .2s}
+.ob-line.active{color:#fff;background:rgba(255,255,255,.05);border-left-color:var(--partner-blue)}
+.ob-line-you.active{border-left-color:var(--actor-gold)}
+.ob-char{font-weight:800;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;margin-right:.5rem;color:var(--partner-blue)}
+.ob-line-you .ob-char{color:var(--actor-gold)}
+.ob-skip{display:block;margin:0.9rem auto 0;background:none;border:none;color:rgba(255,255,255,.35);font-size:.8rem;cursor:pointer;text-decoration:underline}
+.ob-card .cine-cta{margin-top:.4rem}
+
 /* ── Mes Takes ── */
 .mt-scene-header{font-size:.72rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);margin:1.2rem 0 .5rem}
 .mt-card{display:flex;align-items:center;gap:.8rem;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:.7rem .8rem;margin-bottom:.55rem}

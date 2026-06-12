@@ -250,6 +250,16 @@ import {
   trvFinish,
 } from './take-review.js';
 
+// ── Onboarding ──────────────────────────────────────────────────────────
+import {
+  maybeStartOnboarding,
+  obStart,
+  obRequestPermissions,
+  obStartDemo,
+  obSkip,
+  obFinish,
+} from './onboarding.js';
+
 // ── Recording ───────────────────────────────────────────────────────────
 import {
   toggleRecording,
@@ -556,6 +566,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       else if (initScreen === 'importScene') goImportScene();
       else showScreen(initScreen);
       if (isUsageBlocked()) openPaywallModal(t('usageBlocked'));
+      // First launch: guided onboarding (overlay, skips itself when
+      // onboardingDone or any deep-link/checkout param is present)
+      else if (initScreen === 'home') maybeStartOnboarding();
     }
   }
 
@@ -718,6 +731,14 @@ Object.assign(window, {
   trvDiscard,
   trvNewTake,
   trvFinish,
+
+  // ── Onboarding ──
+  maybeStartOnboarding,
+  obStart,
+  obRequestPermissions,
+  obStartDemo,
+  obSkip,
+  obFinish,
 
   // ── Plan/Timer (used via window.* by other modules) ──
   updateTimerBadge,
