@@ -413,6 +413,16 @@ input[type="file"]{display:none}
 #session.take-active .ai-panel{display:none!important}
 #session.take-active #speedTriTake{display:flex}
 #speedTriTake{display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:58;width:min(60vw,240px)}
+/* Mobile portrait: prompter owns the bottom half — keep the speed
+   buttons in the video half, never over the script text */
+@media(max-width:767px){
+  #speedTriTake{bottom:auto;top:calc(50dvh - 124px);width:min(56vw,210px)}
+}
+/* Short landscape: video is the left 40% — center the buttons over it,
+   above the bottom-left transport controls */
+@media(max-height:600px) and (orientation:landscape){
+  #speedTriTake{bottom:56px;top:auto;left:20%;width:min(30vw,200px)}
+}
 #speedTriTake .speed-tri-btn{background:rgba(0,0,0,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
 #speedTriTake .speed-tri-btn.selected{background:var(--actor-gold)}
 .pause-controls input[type="range"]{width:100%;accent-color:rgba(245,239,224,.6)}

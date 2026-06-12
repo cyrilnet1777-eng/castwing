@@ -604,6 +604,20 @@ function scrollActiveLineToCenter(pa, el) {
   pa.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
 }
 
+// Programmatic-scroll guard: smooth animations emit scroll events for
+// longer than any fixed timeout, and stray events were being misread as
+// USER scrolling (suppressing auto-follow for 15s). The guard now stays
+// armed until scroll events stop for 350ms.
+let _scrollGuardTimer = null;
+function _beginProgrammaticScroll() {
+  _scrollSyncProgrammatic = true;
+  _extendScrollGuard();
+}
+function _extendScrollGuard() {
+  if (_scrollGuardTimer) clearTimeout(_scrollGuardTimer);
+  _scrollGuardTimer = setTimeout(() => { _scrollSyncProgrammatic = false; _scrollGuardTimer = null; }, 350);
+}
+
 /** Lightweight per-advance update: toggle active/past/future classes and
     move the turn dot without rebuilding the prompter DOM. */
 function updatePrompterProgress() {
@@ -631,10 +645,9 @@ function updatePrompterProgress() {
     act.appendChild(dot);
   }
   if (!S.userScrolledUp && act) {
-    _scrollSyncProgrammatic = true;
+    _beginProgrammaticScroll();
     requestAnimationFrame(() => {
       scrollActiveLineToCenter(pa, act);
-      setTimeout(() => { _scrollSyncProgrammatic = false; }, 800);
     });
   }
   return true;
@@ -652,10 +665,9 @@ function forceScrollToActive(force) {
   const act = pa.querySelector('.prompter-line.active') || pa.querySelector('[data-line-index="' + S.prompterIndex + '"]');
   if (!act) return;
   S.userScrolledUp = false;
-  _scrollSyncProgrammatic = true;
+  _beginProgrammaticScroll();
   requestAnimationFrame(() => {
     scrollActiveLineToCenter(pa, act);
-    setTimeout(() => { _scrollSyncProgrammatic = false; }, 800);
   });
 }
 
@@ -724,10 +736,9 @@ function renderPrompter() {
   if (!S.userScrolledUp) {
     const act = a.querySelector('.prompter-line.active') || a.querySelector('[data-line-index="' + S.prompterIndex + '"]');
     if (act) {
-      _scrollSyncProgrammatic = true;
+      _beginProgrammaticScroll();
       requestAnimationFrame(() => {
         scrollActiveLineToCenter(a, act);
-        setTimeout(() => { _scrollSyncProgrammatic = false; }, 800);
       });
     }
   }
@@ -1774,7 +1785,7 @@ function setupPrompterScrollListeners() {
   const pa = document.getElementById('prompterArea');
   if (!pa) return;
   pa.addEventListener('scroll', () => {
-    if (_scrollSyncProgrammatic) { S._lastPrompterScrollTop = pa.scrollTop; return; }
+    if (_scrollSyncProgrammatic) { _extendScrollGuard(); S._lastPrompterScrollTop = pa.scrollTop; return; }
     const st = pa.scrollTop;
     if (Math.abs(st - S._lastPrompterScrollTop) > 2) {
       S.userScrolledUp = true;
