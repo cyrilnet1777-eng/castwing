@@ -420,13 +420,6 @@ window.addEventListener('pagehide', () => {
 // =====================================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // /admin is served by the worker, not the SPA. If a stale cached
-  // index.html loads here, force a cache-busted reload so the browser
-  // fetches the real dashboard.
-  if (location.pathname === '/admin' || location.pathname === '/admin/') {
-    location.replace('/admin?r=' + Date.now());
-    return;
-  }
   // ── Bootstrap state ──
   initState();
   installWindowProperties();
