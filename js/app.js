@@ -147,6 +147,7 @@ import {
 import {
   handlePDFInput,
   processTextImport,
+  pasteFromClipboard,
   openOptionalScriptReview,
   clearPDF,
   newScriptReset,
@@ -381,6 +382,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ── Prompter scroll listeners (from session.js) ──
   setupPrompterScrollListeners();
 
+  // ── iPad: keep the paste textarea visible above the keyboard ──
+  const _scriptTa = document.getElementById('scriptInput1');
+  if (_scriptTa) _scriptTa.addEventListener('focus', () => {
+    setTimeout(() => { try { _scriptTa.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_e) {} }, 250);
+  });
+
   // ── Load persisted settings & access ──
   loadAccess();
   checkAndApplyResets();
@@ -583,6 +590,7 @@ Object.assign(window, {
   // ── Script import ──
   handlePDFInput,
   processTextImport,
+  pasteFromClipboard,
   openOptionalScriptReview,
   clearPDF,
   newScriptReset,

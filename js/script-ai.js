@@ -770,6 +770,25 @@ async function processTextImport(n) {
   }
 }
 
+// ── Clipboard paste (iPad Safari fallback) ──────────────────────────
+
+async function pasteFromClipboard(n) {
+  try {
+    const txt = await navigator.clipboard.readText();
+    if (txt && txt.trim()) {
+      const ta = document.getElementById('scriptInput' + n);
+      if (ta) ta.value = txt;
+      await processTextImport(n);
+      return;
+    }
+    showToast(t('clipboardEmpty'), 3000);
+  } catch (_e) {
+    const ta = document.getElementById('scriptInput' + n);
+    if (ta) ta.focus();
+    showToast(t('pasteFallbackHint'), 4000);
+  }
+}
+
 // ── Character helpers ───────────────────────────────────────────────
 
 function getChars() {
@@ -969,6 +988,7 @@ export {
   openPdfPicker,
   newScriptReset,
   processTextImport,
+  pasteFromClipboard,
   runImportedScriptPipeline,
 
   // Script review overlay

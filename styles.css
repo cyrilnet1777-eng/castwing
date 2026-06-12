@@ -171,6 +171,7 @@ body::after{content:none}
 .cine-import-card .upload-zone .up-sub{font-size:.75rem;color:rgba(255,255,255,.35);margin-top:.2rem}
 .cine-import-card .btn-secondary{border-radius:10px;border-color:rgba(255,255,255,.10)}
 .cine-import-card label{display:block}
+#scriptInput1{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 .cine-divider{text-align:center;font-size:.72rem;color:rgba(255,255,255,.25);margin:1rem 0;letter-spacing:.12em;text-transform:uppercase}
 .cine-screen .script-history{margin-top:0;margin-bottom:.5rem}
 .cine-screen .sh-card{border-radius:10px;background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.10)}
