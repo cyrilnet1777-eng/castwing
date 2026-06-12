@@ -178,7 +178,6 @@ import {
   switchSessionMode,
   setMode,
   cycleViewMode,
-  onVadSliderChange,
   toggleMic,
   toggleCam,
   toggleSetupCamera,
@@ -458,20 +457,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateEmotionLock();
   setMode(S.mode);
 
-  // ── VAD slider sync from storage ──
-  // vadSilenceSeconds is local to session.js; read same localStorage source
-  (function syncVadSliderFromStorage() {
-    const raw = localStorage.getItem('cw_vadSilence');
-    const vadVal = (raw !== null && raw !== '') ? parseFloat(raw) : 0.75;
-    const vad = Number.isFinite(vadVal) ? Math.min(5, Math.max(0.10, vadVal)) : 0.75;
-    const slider = document.getElementById('vadSilenceSlider');
-    const slbl = document.getElementById('vadSilenceLabel');
-    if (slider) slider.value = String(vad);
-    if (slbl) {
-      const r = Math.round(vad * 100) / 100;
-      slbl.textContent = (r % 1 === 0 ? r.toFixed(1) : String(r)) + 's';
-    }
-  })();
+  // Reaction-time slider removed: timing now derives from the script itself
+  try { localStorage.removeItem('cw_vadSilence'); } catch (_e) {}
 
   updateSetupCameraButton();
   renderAllSpeedSliders();
@@ -589,7 +576,6 @@ Object.assign(window, {
   setMode,
   cycleViewMode,
   toggleSetupCamera,
-  onVadSliderChange,
   toggleMic,
   toggleCam,
 

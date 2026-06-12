@@ -186,7 +186,15 @@ function mapClaudeScriptToPdfScript(parsed) {
     const character = item.character != null && String(item.character).trim() !== '' ? String(item.character).trim() : null;
     const spoken = item.isSpoken !== false;
     if (typ === 'dialogue' && character) {
-      out.push({ kind: LINE_TYPE.DIALOGUE, char: character, line: text, isStageDirection: false, isSpoken: spoken, parenthetical: null });
+      // Prefer the parenthetical captured upstream; else extract a leading "(...)"
+      let paren = item.parenthetical ? String(item.parenthetical).trim() : null;
+      let line = text;
+      if (!paren) {
+        const pm = text.match(/^\s*\(([^)]*)\)\s*/);
+        if (pm) { paren = pm[1].trim(); line = text.slice(pm[0].length).trim(); }
+      }
+      if (!line) continue;
+      out.push({ kind: LINE_TYPE.DIALOGUE, char: character, line: line, isStageDirection: false, isSpoken: spoken, parenthetical: paren });
       continue;
     }
     if (typ === 'slug') {
@@ -418,7 +426,7 @@ async function handlePDFInput(n, input) {
       S.scriptRawText = parsed.lines.map(l => l.character ? (l.character + ': ' + l.text) : l.text).join('\n');
       S.pdfScript = parsed.lines.map(l => ({
         kind: l.type === 'dialogue' ? 'dialogue' : (l.type === 'slug' ? 'slug' : 'action'),
-        char: l.character || '', line: l.text, isStageDirection: l.type !== 'dialogue', isSpoken: l.type === 'dialogue', parenthetical: null
+        char: l.character || '', line: l.text, isStageDirection: l.type !== 'dialogue', isSpoken: l.type === 'dialogue', parenthetical: l.parenthetical || null
       }));
       S.pdfScript = mergeCharacterVariants(S.pdfScript);
       applyValidatedCharactersFromParsed(parsed);

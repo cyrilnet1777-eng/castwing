@@ -21,7 +21,7 @@ import {
   getUserData, saveUserData, getUserTier, getPlan,
   checkAndApplyResets, getRemainingSessionMs, consumeMs,
   startSessionTimer, stopSessionTimer, freezeTimer, unfreezeTimer,
-  fmtTimer, isServerAdmin, updateChronoDisplay, getPauseBetweenLines,
+  fmtTimer, isServerAdmin, updateChronoDisplay, computeLineDelayMs,
   updateTimerBadge, hideTimerBadge, getSpecTier,
   canUseElevenLabs, canUseEmotions, canRecord,
 } from './plan-timer.js';
@@ -53,13 +53,6 @@ import { showOverlay, hideOverlay } from './utils.js';
 // =====================================================================
 //  Module-level state (not in S — local to session orchestration)
 // =====================================================================
-
-let vadSilenceSeconds = (() => {
-  const raw = localStorage.getItem('cw_vadSilence');
-  if (raw === null || raw === '') return 0.75;
-  const v = parseFloat(raw);
-  return Number.isFinite(v) ? Math.min(5, Math.max(0.10, v)) : 0.75;
-})();
 
 let _vadArmTimer = null;
 let _scrollSyncTimer = null;
@@ -463,24 +456,12 @@ class VoiceActivityDetector {
 //  VAD helpers
 // =====================================================================
 
-function onVadSliderChange(val) {
-  vadSilenceSeconds = parseFloat(val);
-  if (!Number.isFinite(vadSilenceSeconds)) vadSilenceSeconds = 0.75;
-  vadSilenceSeconds = Math.min(5, Math.max(0.10, vadSilenceSeconds));
-  localStorage.setItem('cw_vadSilence', String(vadSilenceSeconds));
-  const lbl = document.getElementById('vadSilenceLabel');
-  if (lbl) {
-    const r = Math.round(vadSilenceSeconds * 100) / 100;
-    lbl.textContent = (r % 1 === 0 ? r.toFixed(1) : String(r)) + 's';
-  }
-}
-
 function computeSilenceMsForActorLine(line) {
-  const base = Math.round(vadSilenceSeconds * 1000);
+  // Fixed VAD floors by line length — speech-end detection, not dramatic pauses
   const words = ((line && line.text) || '').split(/\s+/).filter(Boolean).length;
-  if (words <= 3) return Math.max(base, 700);
-  if (words <= 10) return Math.max(base, 1200);
-  return Math.max(base, 1800);
+  if (words <= 3) return 700;
+  if (words <= 10) return 1200;
+  return 1800;
 }
 
 function getPostTtsArmDelayCapMs() {
@@ -557,11 +538,25 @@ function onAutoSpeechEnd() {
   const line = S.prompterLines[S.prompterIndex];
   if (!line || line.type !== 'actor') return;
   if (S.prompterIndex >= S.prompterLines.length - 1) return;
-  S.prompterIndex++;
-  S.lastAutoSpokenIndex = -1;
-  renderPrompter();
-  syncPrompter();
-  handleCurrentLineAutomation();
+  const lineIndex = S.prompterIndex;
+  const advance = () => {
+    if (!__cwSessionActive || S.sessionPaused) return;
+    if (S.prompterIndex !== lineIndex) return; // manual nav during the delay
+    S.prompterIndex++;
+    S.lastAutoSpokenIndex = -1;
+    renderPrompter();
+    syncPrompter();
+    handleCurrentLineAutomation();
+  };
+  // VAD's silence window already gave a natural gap \u2014 only honor *explicit*
+  // script cues ((un temps), (silence), \u2026) beyond the 300ms baseline.
+  const extra = Math.max(0, computeLineDelayMs(line, S.prompterLines[lineIndex + 1]) - 300);
+  if (extra > 0) {
+    clearAutoTimer();
+    S.autoAdvanceTimer = setTimeout(advance, extra);
+  } else {
+    advance();
+  }
 }
 
 function scheduleAfterPartner(lineIndex) {
@@ -578,7 +573,7 @@ function scheduleAfterPartner(lineIndex) {
     syncPrompter();
     forceScrollToActive();
     handleCurrentLineAutomation();
-  }, getPauseBetweenLines());
+  }, computeLineDelayMs(S.prompterLines[lineIndex], S.prompterLines[lineIndex + 1]));
 }
 
 // =====================================================================
@@ -1013,10 +1008,6 @@ function togglePause(forceState) {
     updateTakeInfo();
     renderSpeedSlider('speedBtnsPause', false);
     renderViewModeToggle('viewModePause');
-    const slider = document.getElementById('vadSilenceSlider');
-    const slbl = document.getElementById('vadSilenceLabel');
-    if (slider) slider.value = vadSilenceSeconds;
-    if (slbl) slbl.textContent = vadSilenceSeconds + 's';
     if (overlay) overlay.classList.add('active');
     if (btn) btn.classList.add('is-paused');
     if (icon) icon.innerHTML = '<polygon points="6,4 20,12 6,20" fill="currentColor"/>';
@@ -1656,7 +1647,6 @@ export {
 
   // VAD
   VoiceActivityDetector,
-  onVadSliderChange,
   computeSilenceMsForActorLine,
   stopAutoVAD,
   armAutoVADForActorLine,

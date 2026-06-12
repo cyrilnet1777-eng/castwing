@@ -101,7 +101,6 @@ export const UI_FALLBACK_TRANSLATIONS={
   orUploadNewOne:{fr:'ou uploadez un nouveau',en:'or upload a new one',es:'o sube uno nuevo',it:'o carica uno nuovo',zh:'或上传新文件',ko:'또는 새 파일 업로드',ja:'または新しいファイルをアップロード',de:'oder lade eine neue hoch',pt:'ou envie um novo',ar:'أو ارفع ملفًا جديدًا',hi:'या एक नया अपलोड करें'},
   recentScripts:{fr:'Scripts récents',en:'Recent scripts',es:'Guiones recientes',it:'Copioni recenti',zh:'最近的剧本',ko:'최근 대본',ja:'最近の台本',de:'Letzte Skripte',pt:'Roteiros recentes',ar:'النصوص الأخيرة',hi:'हालिया स्क्रिप्ट'},
   partnersPace:{fr:'RYTHME DU PARTENAIRE',en:'PARTNER\'S PACE',es:'RITMO DEL COMPAÑERO',it:'RITMO DEL PARTNER',zh:'搭档节奏',ko:'파트너 속도',ja:'パートナーのペース',de:'TEMPO DES PARTNERS',pt:'RITMO DO PARCEIRO',ar:'سرعة الشريك',hi:'साथी की गति'},
-  reactionTime:{fr:'TEMPS DE RÉACTION',en:'REACTION TIME',es:'TIEMPO DE REACCIÓN',it:'TEMPO DI REAZIONE',zh:'反应时间',ko:'반응 시간',ja:'リアクション時間',de:'REAKTIONSZEIT',pt:'TEMPO DE REAÇÃO',ar:'وقت الاستجابة',hi:'प्रतिक्रिया समय'},
   displayLabel:{fr:'AFFICHAGE',en:'DISPLAY',es:'VISUALIZACIÓN',it:'VISUALIZZAZIONE',zh:'显示',ko:'디스플레이',ja:'表示',de:'ANZEIGE',pt:'EXIBIÇÃO',ar:'العرض',hi:'प्रदर्शन'},
   iosSaveVideoHint:{fr:'Touchez "Enregistrer la vidéo" pour sauvegarder',en:'Tap "Save Video" to save to Photos',es:'Toca "Guardar vídeo" para guardar en Fotos',it:'Tocca "Salva video" per salvare nelle Foto',zh:'点按"保存视频"以保存到相册',ko:'"비디오 저장"을 눌러 사진에 저장',ja:'「ビデオを保存」をタップして写真に保存',de:'Tippe auf "Video sichern" um in Fotos zu speichern',pt:'Toque em "Salvar vídeo" para salvar nas Fotos',ar:'اضغط على "حفظ الفيديو" للحفظ في الصور',hi:'"वीडियो सहेजें" पर टैप करें'},
   authMiniBtn:{fr:'Se connecter',en:'Login / Sign up',es:'Entrar / Registro',it:'Accedi / Iscriviti',zh:'登录 / 注册',ko:'로그인 / 가입',ja:'ログイン / 登録',ar:'تسجيل الدخول / إنشاء حساب',de:'Login / Registrieren',pt:'Entrar / Cadastro',hi:'लॉगिन / साइन अप'},
@@ -150,7 +149,6 @@ export const UI_FALLBACK_TRANSLATIONS={
   balanceLabel:{fr:'Solde',en:'Balance',es:'Saldo',it:'Saldo',zh:'余额',ko:'잔액',ja:'残高',ar:'الرصيد',de:'Guthaben',pt:'Saldo',hi:'बैलेंस',tr:'Bakiye',ru:'Баланс'},
   lowCredits:{fr:'Crédits bas',en:'Low credits',es:'Créditos bajos',it:'Crediti bassi',zh:'积分不足',ko:'크레딧 부족',ja:'クレジット残少',ar:'رصيد منخفض',de:'Niedriges Guthaben',pt:'Créditos baixos',hi:'कम क्रेडिट',tr:'Düşük kredi',ru:'Мало кредитов'},
   psSpeedLabel:{fr:'Vitesse IA',en:'AI Speed',es:'Velocidad IA',it:'Velocità IA',zh:'AI速度',ko:'AI 속도',ja:'AI速度',ar:'سرعة الذكاء',de:'KI-Geschwindigkeit',pt:'Velocidade IA',hi:'AI गति',tr:'AI Hızı',ru:'Скорость ИИ'},
-  psVadLabel:{fr:'Pause après ma réplique',en:'Pause after my line',es:'Pausa después de mi línea',it:'Pausa dopo la mia battuta',zh:'我台词后的停顿',ko:'내 대사 후 멈춤',ja:'私のセリフ後の間',ar:'توقف بعد جملتي',de:'Pause nach meiner Zeile',pt:'Pausa após minha fala',hi:'मेरी लाइन के बाद विराम',tr:'Repliğimden sonra duraklama',ru:'Пауза после моей реплики'},
   cameraDenied:{fr:'Camera denied — check permissions',en:'Camera denied — check permissions',es:'Cámara denegada',it:'Fotocamera negata',zh:'摄像头被拒绝',ko:'카메라 거부됨',ja:'カメラ拒否',ar:'الكاميرا مرفوضة',de:'Kamera verweigert',pt:'Câmera negada',hi:'कैमरा अस्वीकृत',tr:'Kamera reddedildi',ru:'Камера отклонена'},
   cameraUnavailable:{fr:'Camera unavailable',en:'Camera unavailable',es:'Cámara no disponible',it:'Fotocamera non disponibile',zh:'摄像头不可用',ko:'카메라 사용 불가',ja:'カメラ利用不可',ar:'الكاميرا غير متاحة',de:'Kamera nicht verfügbar',pt:'Câmera indisponível',hi:'कैमरा अनुपलब्ध',tr:'Kamera kullanılamıyor',ru:'Камера недоступна'},
   micDenied:{fr:'Micro refusé — vérifie les permissions',en:'Mic denied — check permissions',es:'Micrófono denegado',it:'Microfono negato',zh:'麦克风被拒绝',ko:'마이크 거부됨',ja:'マイク拒否',ar:'الميكروفون مرفوض',de:'Mikro verweigert',pt:'Microfone negado',hi:'माइक अस्वीकृत',tr:'Mikrofon reddedildi',ru:'Микрофон отклонён'},
@@ -180,8 +178,6 @@ export const UI_FALLBACK_TRANSLATIONS={
   cancelBtn2:{fr:'Annuler',en:'Cancel',es:'Cancelar',it:'Annulla',zh:'取消',ko:'취소',ja:'キャンセル',ar:'إلغاء',de:'Abbrechen',pt:'Cancelar',hi:'रद्द करें',tr:'İptal',ru:'Отмена'},
   psPartnerPace:{fr:'RYTHME DU PARTENAIRE',en:"PARTNER'S PACE",es:'RITMO DEL COMPAÑERO',it:'RITMO DEL PARTNER',zh:'搭档语速',ko:'파트너 속도',ja:'パートナーの速度',ar:'سرعة الشريك',de:'TEMPO DES PARTNERS',pt:'RITMO DO PARCEIRO',hi:'पार्टनर की गति',tr:'PARTNER HIZI',ru:'ТЕМП ПАРТНЁРА'},
   psPartnerPaceDesc:{fr:'Vitesse de lecture de l\'IA',en:'How fast the AI says its lines',es:'Velocidad con la que la IA dice sus líneas',it:'Quanto veloce l\'IA dice le sue battute',zh:'AI 朗读台词的速度',ko:'AI가 대사를 읽는 속도',ja:'AI の読み上げ速度',ar:'سرعة قراءة الذكاء الاصطناعي',de:'Wie schnell die KI ihre Zeilen spricht',pt:'Velocidade de leitura da IA',hi:'AI कितनी तेज़ी से बोलती है',tr:'AI repliklerini ne hızda söyler',ru:'Скорость реплик ИИ'},
-  psReactionTime:{fr:'TEMPS DE RÉACTION',en:'REACTION TIME',es:'TIEMPO DE REACCIÓN',it:'TEMPO DI REAZIONE',zh:'反应时间',ko:'반응 시간',ja:'反応時間',ar:'وقت الاستجابة',de:'REAKTIONSZEIT',pt:'TEMPO DE REAÇÃO',hi:'प्रतिक्रिया समय',tr:'TEPKİ SÜRESİ',ru:'ВРЕМЯ РЕАКЦИИ'},
-  psReactionTimeDesc:{fr:'Délai avant que l\'IA enchaîne après ta réplique',en:'Delay before the AI follows up after your line',es:'Pausa antes de que la IA responda tras tu línea',it:'Attesa prima che l\'IA risponda dopo la tua battuta',zh:'你台词之后AI跟进的延迟',ko:'당신의 대사 후 AI가 반응하기까지 대기 시간',ja:'あなたのセリフ後 AI が応答するまでの間',ar:'التأخير قبل أن يتابع الذكاء الاصطناعي بعد جملتك',de:'Verzögerung bevor die KI nach deiner Zeile antwortet',pt:'Atraso antes da IA responder após sua fala',hi:'आपकी लाइन के बाद AI के जवाब में देरी',tr:'AI repliğinizden sonra ne kadar bekler',ru:'Задержка перед ответом ИИ после вашей реплики'},
   psSlow:{fr:'Lent',en:'Slow',es:'Lento',it:'Lento',zh:'慢',ko:'느림',ja:'遅い',ar:'بطيء',de:'Langsam',pt:'Lento',hi:'धीमा',tr:'Yavaş',ru:'Медленно'},
   psFast:{fr:'Rapide',en:'Fast',es:'Rápido',it:'Veloce',zh:'快',ko:'빠름',ja:'速い',ar:'سريع',de:'Schnell',pt:'Rápido',hi:'तेज़',tr:'Hızlı',ru:'Быстро'},
   psShort:{fr:'Court',en:'Short',es:'Corto',it:'Breve',zh:'短',ko:'짧음',ja:'短い',ar:'قصير',de:'Kurz',pt:'Curto',hi:'छोटा',tr:'Kısa',ru:'Короткая'},
@@ -367,7 +363,6 @@ export function applyUILanguage(){
   setTextById('myCharacterLabel1','chooseYourRole');
   setTextById('charSectionHint1','aiPerformsOtherLines');
   setTextById('psSpeedLabel','partnersPace');
-  setTextById('psVadLabel','reactionTime');
   setTextById('psDisplayLabel','displayLabel');
   const joinInput=document.getElementById('joinCodeInput');
   if(joinInput)joinInput.placeholder=t('joinCodePlaceholder');
@@ -396,8 +391,6 @@ export function applyUILanguage(){
   // Pause screen
   const _psSL=document.getElementById('psSpeedLabel');if(_psSL)_psSL.textContent=t('psPartnerPace');
   const _psSD=_psSL&&_psSL.nextElementSibling;if(_psSD&&_psSD.classList.contains('ps-section-sub'))_psSD.textContent=t('psPartnerPaceDesc');
-  const _psVL=document.getElementById('psVadLabel');if(_psVL)_psVL.textContent=t('psReactionTime');
-  const _psVD=_psVL&&_psVL.nextElementSibling;if(_psVD&&_psVD.classList.contains('ps-section-sub'))_psVD.textContent=t('psReactionTimeDesc');
   document.querySelectorAll('.ps-end-label').forEach((el,i)=>{const keys=['psSlow','psFast','psShort','psLong'];if(keys[i])el.textContent=t(keys[i])});
   const _psDisp=document.querySelector('.pause-controls .ps-section-label[style*="color:#888"]');if(_psDisp)_psDisp.textContent=t('psDisplay');
   const _psResume=document.querySelector('.ps-resume-btn');if(_psResume)_psResume.innerHTML='\u25B6 \u00A0'+t('psResume');

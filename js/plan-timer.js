@@ -34,9 +34,30 @@ export function migrateFromCastwing() {
   localStorage.setItem('citizentape_migrated_v1', '1');
 }
 
-// ── getPauseBetweenLines ──
-export function getPauseBetweenLines() {
-  return S.voiceSpeed >= 4.5 ? 200 : 1000;
+// ── Script-derived line timing ──
+// Delay before the AI speaks/advances, derived from the script itself:
+// explicit cues in parentheticals win, rapid exchanges tighten the gap.
+const TIMING_CUES = [
+  { rx: /\b(silence|long pause|long silence|long temps|un long temps)\b/i, ms: 2000 },
+  { rx: /\b(pause|un temps|temps|attend|hésite|hesite)\b/i,                ms: 1000 },
+  { rx: /\b(beat|battement)\b/i,                                           ms: 500  },
+];
+
+const PROMPTER_PACE_MULT = { slow: 1.5, normal: 1.0, fast: 0.6 };
+
+export function computeLineDelayMs(prevLine, nextLine) {
+  const pace = PROMPTER_PACE_MULT[S.prompterPace] || 1.0;
+  if (S.voiceSpeed >= 4.5) return Math.round(150 * pace); // italienne speed-run
+  // Explicit cue on the upcoming line: "(un temps) Je sais."
+  const paren = nextLine && nextLine.parenthetical;
+  if (paren) { for (const c of TIMING_CUES) if (c.rx.test(paren)) return Math.round(c.ms * pace); }
+  // Trailing cue at the end of the previous line: "Je sais. (beat)"
+  const tail = prevLine && prevLine.text && String(prevLine.text).match(/\(([^)]*)\)\s*$/);
+  if (tail) { for (const c of TIMING_CUES) if (c.rx.test(tail[1])) return Math.round(c.ms * pace); }
+  // Rapid exchange: two short lines back to back
+  const wc = l => (((l && l.text) || '').split(/\s+/).filter(Boolean).length);
+  if (prevLine && nextLine && wc(prevLine) <= 6 && wc(nextLine) <= 6) return Math.round(150 * pace);
+  return Math.round(300 * pace);
 }
 
 // ── Plan & Timer System (citizentape_user_v2 + legacy PLAN_KEY mirror) ──

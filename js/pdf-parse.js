@@ -104,13 +104,15 @@ export function parseFdxFile(xmlText) {
   const paragraphs = doc.querySelectorAll('Paragraph');
   const lines = []; const characters = new Set();
   let currentChar = '';
+  let pendingParen = null;
   paragraphs.forEach(p => {
     const type = (p.getAttribute('Type') || '').trim();
     const text = Array.from(p.querySelectorAll('Text')).map(t => t.textContent || '').join('').trim();
     if (!text) return;
-    if (type === 'Character') { currentChar = text.replace(/\s*\(.*\)$/, '').trim(); characters.add(currentChar); }
-    else if (type === 'Dialogue' && currentChar) { lines.push({ character: currentChar, text, type: 'dialogue' }); }
-    else if (type === 'Action' || type === 'Scene Heading' || type === 'General') { lines.push({ text, type: type === 'Scene Heading' ? 'slug' : 'action' }); }
+    if (type === 'Character') { currentChar = text.replace(/\s*\(.*\)$/, '').trim(); characters.add(currentChar); pendingParen = null; }
+    else if (type === 'Parenthetical') { pendingParen = text.replace(/^\(|\)$/g, '').trim() || null; }
+    else if (type === 'Dialogue' && currentChar) { lines.push({ character: currentChar, text, type: 'dialogue', parenthetical: pendingParen }); pendingParen = null; }
+    else if (type === 'Action' || type === 'Scene Heading' || type === 'General') { lines.push({ text, type: type === 'Scene Heading' ? 'slug' : 'action' }); pendingParen = null; }
   });
   return { characters: Array.from(characters), lines };
 }
@@ -701,9 +703,11 @@ export function mergeLabelsWithText(lines, labelData) {
     if (type === 'character_cue') { pendingCue = character || text.trim(); continue; }
     if (type === 'dialogue') {
       var speaker = character || pendingCue || null;
-      var cleanText = text.replace(/^\s*\([^)]*\)\s*/, '').trim();
+      var parenMatch = text.match(/^\s*\(([^)]*)\)\s*/);
+      var parenthetical = parenMatch ? parenMatch[1].trim() : null;
+      var cleanText = parenMatch ? text.slice(parenMatch[0].length).trim() : text.trim();
       if (!cleanText) { pendingCue = null; continue; }
-      merged.push({ character: speaker, text: cleanText, type: 'dialogue' });
+      merged.push({ character: speaker, text: cleanText, type: 'dialogue', parenthetical: parenthetical });
       pendingCue = null;
     } else if (type === 'slug') {
       merged.push({ character: null, text: text, type: 'slug' });

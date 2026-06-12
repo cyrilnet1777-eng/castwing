@@ -30,7 +30,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<link rel="stylesheet" href="/styles.css?v=20260612d">
+<link rel="stylesheet" href="/styles.css?v=20260612e">
 </head>
 <body>
 <div id="toast" class="toast"></div>
@@ -367,17 +367,6 @@
         </div>
         <div class="ps-separator"></div>
         <div class="ps-section">
-          <div class="ps-section-label" id="psVadLabel">REACTION TIME</div>
-          <div class="ps-section-sub">Delay before the AI follows up after your line</div>
-          <div class="ps-slider-wrap">
-            <span class="ps-end-label">Short</span>
-            <input type="range" id="vadSilenceSlider" min="0.10" max="5" step="0.05" value="0.75" oninput="onVadSliderChange(this.value)" style="flex:1;accent-color:#FF3B30;cursor:pointer">
-            <span class="ps-end-label">Long</span>
-          </div>
-          <div class="ps-slider-value" id="vadSilenceLabel">0.75s</div>
-        </div>
-        <div class="ps-separator"></div>
-        <div class="ps-section">
           <div class="ps-section-label" id="psDisplayLabel" style="font-size:.75rem;color:#888">DISPLAY</div>
           <div id="viewModePause"></div>
         </div>
@@ -430,6 +419,6 @@
 </div></div>
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ttsAudioEl" playsinline></audio>
-<script type="module" src="/js/app.js?v=20260612d"></script>
+<script type="module" src="/js/app.js?v=20260612e"></script>
 </body>
 </html>
