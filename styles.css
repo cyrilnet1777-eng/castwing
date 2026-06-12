@@ -390,8 +390,25 @@ input[type="file"]{display:none}
 .ps-end-label{font-size:12px;color:#888;white-space:nowrap;min-width:32px}
 .ps-resume-btn{width:100%;padding:18px;border-radius:12px;border:none;background:#F5F0E1;color:#000;font-size:18px;font-weight:700;cursor:pointer;transition:transform .15s;font-family:'DM Sans',sans-serif;letter-spacing:.04em}
 .ps-resume-btn:active{transform:scale(.98)}
+.ps-resume-btn.ps-gold{background:var(--actor-gold);color:#1a1200}
+.ps-restart-btn{width:100%;margin-top:12px;padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,.22);background:transparent;color:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center}
+.ps-restart-btn:active{opacity:.7}
 .ps-quit-btn{width:100%;margin-top:12px;padding:16px;border-radius:0;border:none;background:transparent;color:#FF3B30;font-size:16px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center}
 .ps-quit-btn:active{opacity:.7}
+.speed-tri{display:flex;gap:8px;width:100%}
+.speed-tri-btn{flex:1;padding:10px 0;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.04);color:#ccc;font-size:.82rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;letter-spacing:.03em}
+.speed-tri-btn.selected{background:var(--actor-gold);border-color:var(--actor-gold);color:#1a1200}
+/* Minimal UI during an active take: only Stop, Pause, Speed remain */
+#session.take-active #btnMic,#session.take-active #btnCam,
+#session.take-active #mobMicBtn,#session.take-active #mobCamBtn,
+#session.take-active #mobViewBtn,#session.take-active #mobRecsBtn,
+#session.take-active #mobShareBtn,#session.take-active #recToggleBtn,
+#session.take-active #sessionShareBtn,#session.take-active #sessionModeManualBtn,
+#session.take-active #sessionModeAutoBtn,#session.take-active #viewModeSession,
+#session.take-active #speedBtnsSession,#session.take-active #speedBtnsOverlay,
+#session.take-active .ai-panel{display:none!important}
+#session.take-active #speedTriTake{display:flex}
+#speedTriTake{display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:60;width:min(60vw,260px)}
 .pause-controls input[type="range"]{width:100%;accent-color:rgba(245,239,224,.6)}
 .pause-controls .ps-toggle{position:relative;width:42px;height:24px;background:rgba(255,255,255,.12);border-radius:12px;border:none;cursor:pointer;transition:background .2s;flex-shrink:0}
 .pause-controls .ps-toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s}

@@ -30,7 +30,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<link rel="stylesheet" href="/styles.css?v=20260612i">
+<link rel="stylesheet" href="/styles.css?v=20260612j">
 </head>
 <body>
 <div id="toast" class="toast"></div>
@@ -299,6 +299,7 @@
   <div class="cine-cam-toggle">
     <div class="mode-opt" id="setupCamBtn" onclick="toggleSetupCamera()"><svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;vertical-align:middle;margin-right:4px"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>Camera ON</div>
   </div>
+  <div class="cine-view-mode" id="viewModeSetup" style="margin-top:.6rem"></div>
   <div class="voice-section active" id="voiceSection">
     <label id="voiceSectionLabel" style="display:none">AI voice</label>
     <div class="cine-voice-lang">
@@ -385,13 +386,13 @@
         <div class="take-info" id="takeInfo"></div>
         <div class="ps-separator"></div>
         <div class="ps-section">
-          <div class="ps-section-label" id="psSpeedLabel">PARTNER'S PACE</div>
-          <div class="ps-section-sub">How fast the AI says its lines</div>
-          <div class="ps-slider-wrap">
-            <span class="ps-end-label">Slow</span>
-            <div class="speed-btns" id="speedBtnsPause" style="flex:1"></div>
-            <span class="ps-end-label">Fast</span>
-          </div>
+          <div class="ps-section-label" id="psPaceLabel">PROMPTER</div>
+          <div class="speed-tri" id="speedTriPause"></div>
+        </div>
+        <div class="ps-separator"></div>
+        <div class="ps-section" id="psVoiceSpeedSection">
+          <div class="ps-section-label" id="psVoiceSpeedLabel">AI VOICE</div>
+          <div class="speed-tri" id="voiceSpeedTriPause"></div>
         </div>
         <div class="ps-separator"></div>
         <div class="ps-section">
@@ -399,11 +400,13 @@
           <div id="viewModePause"></div>
         </div>
         <div style="flex:1;min-height:24px"></div>
-        <button class="ps-resume-btn" onclick="togglePause(false)">▶ &nbsp;RESUME</button>
-        <button class="ps-quit-btn" onclick="showEndTakeModal()">End take</button>
+        <button class="ps-resume-btn ps-gold" id="psResumeBtn" onclick="togglePause(false)">▶ &nbsp;RESUME</button>
+        <button class="ps-restart-btn" id="psRestartBtn" onclick="confirmRestartTake()">↺ &nbsp;RESTART</button>
+        <button class="ps-quit-btn ps-red" id="psEndBtn" onclick="showEndTakeModal()">■ &nbsp;END TAKE</button>
       </div>
     </div>
     <div class="italienne-badge" id="italienneBadge">ITALIENNE</div>
+    <div class="speed-tri" id="speedTriTake"></div>
   </div>
   <div class="ai-panel" id="aiPanel"><span class="ai-label" id="sessionVoiceLabel">🦾 Voice:</span><select id="sessionVoiceSelect" onchange="changeSessionVoice()"></select></div>
   <div class="session-bottom">
@@ -447,6 +450,6 @@
 </div></div>
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ttsAudioEl" playsinline></audio>
-<script type="module" src="/js/app.js?v=20260612i"></script>
+<script type="module" src="/js/app.js?v=20260612j"></script>
 </body>
 </html>

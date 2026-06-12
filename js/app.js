@@ -175,6 +175,8 @@ import {
   showEndTakeModal,
   hideEndTakeModal,
   confirmEndTake,
+  confirmRestartTake,
+  restartTake,
   dismissRecModal,
   switchSessionMode,
   setMode,
@@ -277,6 +279,7 @@ function goConfigAi() {
   if (emo) emo.value = S.selectedEmotion;
   updateEmotionLock();
   updateSetupCameraButton();
+  renderViewModeToggle('viewModeSetup');
 }
 function goSetupPartner() {
   showScreen('setupPartner');
@@ -584,6 +587,9 @@ Object.assign(window, {
   showEndTakeModal,
   hideEndTakeModal,
   confirmEndTake,
+  confirmRestartTake,
+  restartTake,
+  renderAllSpeedSliders,
   cancelConnection,
   switchSessionMode,
   setMode,

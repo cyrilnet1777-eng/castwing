@@ -147,8 +147,8 @@ async function etmDeleteRec() {
 
 function toggleRecording() {
   if (!S.isRecording) { startRecording(); return; }
-  if (_recPaused) { resumeRecording(); return; }
-  pauseRecording();
+  // During a take the rec button means STOP — confirm via end-take modal
+  if (typeof window.showEndTakeModal === 'function') window.showEndTakeModal();
 }
 
 function pauseRecording() {
@@ -311,6 +311,12 @@ function _makeMediaRecorder(stream) {
       } catch (e) { console.error('[rec] restart failed:', e); }
     }
     _closeRecAudioCtx();
+    if (S._recDiscard) {
+      // Restart/redo path: drop the footage, never save
+      S._recDiscard = false;
+      S.recordedChunks = [];
+      return;
+    }
     track('recording_complete', {
       duration_s: _recStartTs ? Math.round((Date.now() - _recStartTs) / 1000) : 0,
       was_paused: _recWasPaused,
@@ -362,6 +368,10 @@ function startRecording() {
     _recStartTs = Date.now();
     _recWasPaused = false;
     track('recording_start', { mode: S.sessionMode, take_number: S.takeNumber });
+    // Minimal UI: hide non-essential controls while the take is rolling
+    const _sess = document.getElementById('session');
+    if (_sess) _sess.classList.add('take-active');
+    if (typeof window.renderAllSpeedSliders === 'function') window.renderAllSpeedSliders();
     document.getElementById('btnRec').classList.add('recording');
     document.getElementById('btnRec').innerHTML = '<span class="rec-dot"></span>';
     const _ri = document.getElementById('recIndicator');
@@ -388,6 +398,8 @@ function _closeRecAudioCtx() {
 function stopRecording() {
   _recPaused = false;
   S._recStopIntentional = true;
+  const _sessEl = document.getElementById('session');
+  if (_sessEl) _sessEl.classList.remove('take-active');
   // Thumbnail for the takes list (canvas still holds the last drawn frame)
   try { if (_recCanvas) _lastThumb = _recCanvas.toDataURL('image/jpeg', 0.6); } catch (_e) { _lastThumb = null; }
   _showRecPauseBar(false);

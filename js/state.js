@@ -61,6 +61,7 @@ export const S = {
   prompterPace:     'normal',
   monologueBlocks:  [],
   recCropFactor:    1,
+  _recDiscard:      false,
   currentScriptName: '',
 
   // ── Voice / TTS ────────────────────────────────────────────────────

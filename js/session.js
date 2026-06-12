@@ -1115,8 +1115,11 @@ function togglePause(forceState) {
     cancelSpeechFlow();
     freezeTimer();
     updateTakeInfo();
-    renderSpeedSlider('speedBtnsPause', false);
+    renderAllSpeedSliders();
     renderViewModeToggle('viewModePause');
+    // AI voice speed only makes sense in AI mode
+    const _vss = document.getElementById('psVoiceSpeedSection');
+    if (_vss) _vss.style.display = S.sessionMode === 'ai' ? '' : 'none';
     if (overlay) overlay.classList.add('active');
     if (btn) btn.classList.add('is-paused');
     if (icon) icon.innerHTML = '<polygon points="6,4 20,12 6,20" fill="currentColor"/>';
@@ -1166,7 +1169,7 @@ function togglePauseSettings() {
   if (panel.classList.contains('active')) { closePauseSettings(); return; }
   populatePauseCharGrid();
   populatePauseVoiceSelect();
-  renderSpeedSlider('speedBtnsPause', false);
+  renderAllSpeedSliders();
   const mtog = document.getElementById('psModeToggle');
   const mlabel = document.getElementById('psModeLabel');
   if (mtog) mtog.classList.toggle('on', S.mode === 'auto' || S.mode === 'ai');
@@ -1245,6 +1248,44 @@ function confirmEndTake() {
   endSession();
 }
 
+// =====================================================================
+//  Restart take (Recommencer) — discard recording, prompter to start
+// =====================================================================
+
+function confirmRestartTake() {
+  if (!confirm(t('restartConfirm'))) return;
+  restartTake();
+}
+
+function restartTake() {
+  track('take_restart', { from: 'pause', take_number: S.takeNumber });
+  track('pause_restart', {});
+  cancelSpeechFlow();
+  // Discard the current recording — never saved
+  if (S.isRecording && S.mediaRecorder && S.mediaRecorder.state !== 'inactive') {
+    S._recDiscard = true;
+    stopRecording();
+  }
+  S.prompterIndex = 0;
+  S.lastAutoSpokenIndex = -1;
+  // Close the pause overlay WITHOUT resuming the now-stopped recorder
+  S.sessionPaused = false;
+  if (typeof window.markTakePaused === 'function') window.markTakePaused(false);
+  const overlay = document.getElementById('pauseOverlay'); if (overlay) overlay.classList.remove('active');
+  const pbtn = document.getElementById('btnPause'); if (pbtn) pbtn.classList.remove('is-paused');
+  const picon = document.getElementById('pauseIcon');
+  if (picon) picon.innerHTML = '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>';
+  const pmob = document.getElementById('mobMainBtn'); if (pmob) pmob.classList.remove('is-paused');
+  unfreezeTimer();
+  renderPrompter();
+  showClapperboard(() => {
+    if (canRecord() && S.localStream && !S.isRecording) startRecording();
+    S.userScrolledUp = false;
+    handleCurrentLineAutomation();
+    forceScrollToActive();
+  });
+}
+
 function showRecSavedModal(blob, fname, mime) {
   _lastRecBlob = blob; _lastRecFname = fname; _lastRecMime = mime;
   const m = document.getElementById('endTakeModal');
@@ -1290,7 +1331,7 @@ function toggleItalienne() {
     const badge = document.getElementById('italienneBadge'); if (badge) badge.classList.add('active');
   }
   // Note: original calls renderSpeedBtns which doesn't exist — should be renderSpeedSlider
-  renderSpeedSlider('speedBtnsPause', false);
+  renderAllSpeedSliders();
 }
 
 // =====================================================================
@@ -1798,6 +1839,8 @@ export {
   showEndTakeModal,
   hideEndTakeModal,
   confirmEndTake,
+  confirmRestartTake,
+  restartTake,
   showRecSavedModal,
   dismissRecModal,
 

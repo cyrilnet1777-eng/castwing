@@ -99,6 +99,15 @@ export const UI_FALLBACK_TRANSLATIONS={
   monologueDetected:{fr:'Monologue détecté',en:'Monologue detected',es:'Monólogo detectado',it:'Monologo rilevato',zh:'检测到独白',ko:'독백 감지됨',ja:'モノローグ検出',de:'Monolog erkannt',pt:'Monólogo detectado',ar:'تم اكتشاف مونولوج',hi:'मोनोलॉग मिला',tr:'Monolog algılandı',ru:'Обнаружен монолог'},
   previewHint:{fr:'Cadre-toi, puis lance la prise',en:'Frame yourself, then start the take',es:'Encuádrate y lanza la toma',it:'Inquadrati, poi avvia la ripresa',zh:'调整好画面后开始拍摄',ko:'화면을 맞춘 후 테이크를 시작하세요',ja:'フレームを合わせてテイクを開始',de:'Bild einrichten, dann Take starten',pt:'Enquadre-se e inicie o take',ar:'اضبط الإطار ثم ابدأ اللقطة',hi:'फ्रेम सेट करें, फिर टेक शुरू करें',tr:'Kadrajı ayarla, sonra çekimi başlat',ru:'Настройте кадр и начните дубль'},
   previewStartBtn:{fr:'COMMENCER 🎬',en:'START 🎬',es:'EMPEZAR 🎬',it:'INIZIA 🎬',zh:'开始 🎬',ko:'시작 🎬',ja:'スタート 🎬',de:'STARTEN 🎬',pt:'COMEÇAR 🎬',ar:'ابدأ 🎬',hi:'शुरू करें 🎬',tr:'BAŞLA 🎬',ru:'НАЧАТЬ 🎬'},
+  psPaceLabel:{fr:'PROMPTEUR',en:'PROMPTER',es:'TELEPROMPTER',it:'GOBBO',zh:'提词器',ko:'프롬프터',ja:'プロンプター',de:'PROMPTER',pt:'TELEPROMPTER',ar:'الملقن',hi:'प्रॉम्प्टर',tr:'PROMPTER',ru:'СУФЛЁР'},
+  psVoiceSpeedLabel:{fr:'VOIX IA',en:'AI VOICE',es:'VOZ IA',it:'VOCE IA',zh:'AI 语音',ko:'AI 음성',ja:'AI ボイス',de:'KI-STIMME',pt:'VOZ IA',ar:'صوت الذكاء',hi:'AI आवाज़',tr:'YZ SESİ',ru:'ГОЛОС ИИ'},
+  paceSlow:{fr:'Lent',en:'Slow',es:'Lento',it:'Lento',zh:'慢',ko:'느리게',ja:'ゆっくり',de:'Langsam',pt:'Lento',ar:'بطيء',hi:'धीमा',tr:'Yavaş',ru:'Медленно'},
+  paceNormal:{fr:'Normal',en:'Normal',es:'Normal',it:'Normale',zh:'正常',ko:'보통',ja:'普通',de:'Normal',pt:'Normal',ar:'عادي',hi:'सामान्य',tr:'Normal',ru:'Обычно'},
+  paceFast:{fr:'Rapide',en:'Fast',es:'Rápido',it:'Veloce',zh:'快',ko:'빠르게',ja:'速い',de:'Schnell',pt:'Rápido',ar:'سريع',hi:'तेज़',tr:'Hızlı',ru:'Быстро'},
+  psResumeBtn:{fr:'▶ REPRENDRE',en:'▶ RESUME',es:'▶ REANUDAR',it:'▶ RIPRENDI',zh:'▶ 继续',ko:'▶ 재개',ja:'▶ 再開',de:'▶ FORTSETZEN',pt:'▶ RETOMAR',ar:'▶ استئناف',hi:'▶ जारी रखें',tr:'▶ DEVAM',ru:'▶ ПРОДОЛЖИТЬ'},
+  psRestartBtn:{fr:'↺ RECOMMENCER',en:'↺ RESTART',es:'↺ REINICIAR',it:'↺ RICOMINCIA',zh:'↺ 重新开始',ko:'↺ 다시 시작',ja:'↺ やり直す',de:'↺ NEU STARTEN',pt:'↺ RECOMEÇAR',ar:'↺ إعادة البدء',hi:'↺ फिर से शुरू करें',tr:'↺ YENİDEN BAŞLA',ru:'↺ ЗАНОВО'},
+  psEndBtn:{fr:'■ TERMINER',en:'■ END TAKE',es:'■ TERMINAR',it:'■ TERMINA',zh:'■ 结束',ko:'■ 종료',ja:'■ 終了',de:'■ BEENDEN',pt:'■ TERMINAR',ar:'■ إنهاء',hi:'■ समाप्त करें',tr:'■ BİTİR',ru:'■ ЗАВЕРШИТЬ'},
+  restartConfirm:{fr:'Recommencer la prise depuis le début ? L\'enregistrement actuel sera supprimé.',en:'Restart the take from the beginning? The current recording will be discarded.',es:'¿Reiniciar la toma desde el principio? La grabación actual se descartará.',it:'Ricominciare la ripresa dall\'inizio? La registrazione attuale sarà eliminata.',zh:'从头重新开始拍摄？当前录制将被删除。',ko:'테이크를 처음부터 다시 시작할까요? 현재 녹화는 삭제됩니다.',ja:'最初からやり直しますか？現在の録画は破棄されます。',de:'Take von vorn beginnen? Die aktuelle Aufnahme wird verworfen.',pt:'Recomeçar o take do início? A gravação atual será descartada.',ar:'إعادة اللقطة من البداية؟ سيتم حذف التسجيل الحالي.',hi:'टेक फिर से शुरू करें? वर्तमान रिकॉर्डिंग हटा दी जाएगी।',tr:'Çekimi baştan başlat? Mevcut kayıt silinecek.',ru:'Начать дубль заново? Текущая запись будет удалена.'},
   modeHintAi:{ko:'AI가 상대 대사를 자동으로 읽습니다.',hi:'AI पार्टनर की लाइनें खुद पढ़ेगा।',pt:'A IA lê as falas do parceiro automaticamente.',fr:'L\'IA lit les répliques du partenaire automatiquement.',en:'AI reads partner lines automatically.',es:'La IA lee las líneas del compañero automáticamente.',it:'L\'IA legge le battute del partner automaticamente.',zh:'AI自动朗读搭档台词。',de:'KI liest Partnerzeilen automatisch.',ja:'AIがパートナーのセリフを自動で読みます。',ar:'الذكاء الاصطناعي يقرأ سطور الشريك تلقائيًا.'},
   modeHintManual:{ko:'버튼으로 수동 진행합니다.',hi:'बटन से मैन्युअल आगे बढ़ें।',pt:'Avance manualmente entre as falas.',fr:'Avancez manuellement entre les répliques.',en:'Navigate lines manually.',es:'Avanza manualmente entre las líneas.',it:'Avanza manualmente tra le battute.',zh:'手动切换台词。',de:'Zeilen manuell navigieren.',ja:'手動でセリフを進めます。',ar:'تنقل يدويًا بين السطور.'},
   chooseYourRole:{fr:'Choisis ton rôle',en:'Choose your role',es:'Elige tu personaje',it:'Scegli il tuo ruolo',zh:'选择你的角色',ko:'역할을 선택하세요',ja:'役を選んでください',de:'Wähle deine Rolle',pt:'Escolha seu personagem',ar:'اختر دورك',hi:'अपनी भूमिका चुनें'},
@@ -393,6 +402,11 @@ export function applyUILanguage(){
   const _mbg=document.getElementById('monologueBadge1');if(_mbg)_mbg.textContent=t('monologueDetected');
   const _pvh=document.getElementById('previewHint');if(_pvh)_pvh.textContent=t('previewHint');
   const _pvs=document.getElementById('previewStartBtn');if(_pvs)_pvs.textContent=t('previewStartBtn');
+  const _ppl=document.getElementById('psPaceLabel');if(_ppl)_ppl.textContent=t('psPaceLabel');
+  const _pvl=document.getElementById('psVoiceSpeedLabel');if(_pvl)_pvl.textContent=t('psVoiceSpeedLabel');
+  const _prb=document.getElementById('psResumeBtn');if(_prb)_prb.textContent=t('psResumeBtn');
+  const _prs=document.getElementById('psRestartBtn');if(_prs)_prs.textContent=t('psRestartBtn');
+  const _peb=document.getElementById('psEndBtn');if(_peb)_peb.textContent=t('psEndBtn');
   const _arl=document.getElementById('authResendLink');if(_arl)_arl.textContent=t('resendCodeBtn');
   const _orb=document.getElementById('optionalReviewBtn1');if(_orb)_orb.textContent=t('reviewScriptBtn');
   const _priv=document.querySelector('.choose-privacy');if(_priv)_priv.textContent=t('privacyNote');

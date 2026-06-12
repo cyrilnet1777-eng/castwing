@@ -388,8 +388,34 @@ function renderSpeedSlider(containerId,compact){
 }
 function renderAllSpeedSliders(){
   renderSpeedSlider('speedBtnsSession',true);
-  renderSpeedSlider('speedBtnsPause',false);
   renderSpeedSlider('speedBtnsOverlay',true);
+  renderSpeedTriBtns('speedTriPause','pace');
+  renderSpeedTriBtns('voiceSpeedTriPause','voice');
+  renderSpeedTriBtns('speedTriTake','pace');
+}
+
+/** Three-button speed control.
+    kind 'pace'  → prompter pace Lent/Normal/Rapide (S.prompterPace)
+    kind 'voice' → AI voice speed 0.5x/1x/2x (S.voiceSpeed 0/4.5/7) */
+function renderSpeedTriBtns(containerId,kind){
+  var g=document.getElementById(containerId);
+  if(!g)return;
+  var opts=kind==='voice'
+    ?[{key:'0',label:'0.5x',active:S.voiceSpeed<2},{key:'4.5',label:'1x',active:S.voiceSpeed>=2&&S.voiceSpeed<6},{key:'7',label:'2x',active:S.voiceSpeed>=6}]
+    :[{key:'slow',label:t('paceSlow'),active:S.prompterPace==='slow'},{key:'normal',label:t('paceNormal'),active:S.prompterPace==='normal'},{key:'fast',label:t('paceFast'),active:S.prompterPace==='fast'}];
+  g.innerHTML='';
+  g.classList.add('speed-tri');
+  opts.forEach(function(o){
+    var b=document.createElement('button');
+    b.type='button';
+    b.className='speed-tri-btn'+(o.active?' selected':'');
+    b.textContent=o.label;
+    b.onclick=function(){
+      if(kind==='voice'){setVoiceSpeed(parseFloat(o.key),true);}
+      else{S.prompterPace=o.key;try{localStorage.setItem('cw_prompterPace',o.key)}catch(_e){}renderAllSpeedSliders();}
+    };
+    g.appendChild(b);
+  });
 }
 
 // ── Voice grid / session select ─────────────────────────────────────
@@ -461,6 +487,7 @@ export {
   formatDisplaySpeed,
   renderSpeedSlider,
   renderAllSpeedSliders,
+  renderSpeedTriBtns,
   initVoiceGrid,
   previewVoice,
   populateSessionVoiceSelect,
