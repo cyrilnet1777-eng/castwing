@@ -193,6 +193,8 @@ import {
   cancelConnection,
   startAiSession,
   endSession,
+  endTake,
+  teardownSession,
   enterRehearsalMode,
   onPrompterScrollSync,
   setupPrompterScrollListeners,
@@ -231,6 +233,17 @@ import {
   previewFlipCamera,
   cancelCameraPreview,
 } from './preview.js';
+
+// ── Post-take review ────────────────────────────────────────────────────
+import {
+  showTakeReviewModal,
+  trvWatch,
+  trvSave,
+  trvRedo,
+  trvDiscard,
+  trvNewTake,
+  trvFinish,
+} from './take-review.js';
 
 // ── Recording ───────────────────────────────────────────────────────────
 import {
@@ -687,6 +700,15 @@ Object.assign(window, {
   previewFlipCamera,
   cancelCameraPreview,
 
+  // ── Post-take review ──
+  showTakeReviewModal,
+  trvWatch,
+  trvSave,
+  trvRedo,
+  trvDiscard,
+  trvNewTake,
+  trvFinish,
+
   // ── Plan/Timer (used via window.* by other modules) ──
   updateTimerBadge,
   updateChronoDisplay,
@@ -727,6 +749,8 @@ Object.assign(window, {
   showScreen,
   startAiSession,
   endSession,
+  endTake,
+  teardownSession,
 
   // ── IDB / Recordings (JS-generated onclick) ──
   reDownloadRec,

@@ -108,6 +108,17 @@ export const UI_FALLBACK_TRANSLATIONS={
   psRestartBtn:{fr:'↺ RECOMMENCER',en:'↺ RESTART',es:'↺ REINICIAR',it:'↺ RICOMINCIA',zh:'↺ 重新开始',ko:'↺ 다시 시작',ja:'↺ やり直す',de:'↺ NEU STARTEN',pt:'↺ RECOMEÇAR',ar:'↺ إعادة البدء',hi:'↺ फिर से शुरू करें',tr:'↺ YENİDEN BAŞLA',ru:'↺ ЗАНОВО'},
   psEndBtn:{fr:'■ TERMINER',en:'■ END TAKE',es:'■ TERMINAR',it:'■ TERMINA',zh:'■ 结束',ko:'■ 종료',ja:'■ 終了',de:'■ BEENDEN',pt:'■ TERMINAR',ar:'■ إنهاء',hi:'■ समाप्त करें',tr:'■ BİTİR',ru:'■ ЗАВЕРШИТЬ'},
   restartConfirm:{fr:'Recommencer la prise depuis le début ? L\'enregistrement actuel sera supprimé.',en:'Restart the take from the beginning? The current recording will be discarded.',es:'¿Reiniciar la toma desde el principio? La grabación actual se descartará.',it:'Ricominciare la ripresa dall\'inizio? La registrazione attuale sarà eliminata.',zh:'从头重新开始拍摄？当前录制将被删除。',ko:'테이크를 처음부터 다시 시작할까요? 현재 녹화는 삭제됩니다.',ja:'最初からやり直しますか？現在の録画は破棄されます。',de:'Take von vorn beginnen? Die aktuelle Aufnahme wird verworfen.',pt:'Recomeçar o take do início? A gravação atual será descartada.',ar:'إعادة اللقطة من البداية؟ سيتم حذف التسجيل الحالي.',hi:'टेक फिर से शुरू करें? वर्तमान रिकॉर्डिंग हटा दी जाएगी।',tr:'Çekimi baştan başlat? Mevcut kayıt silinecek.',ru:'Начать дубль заново? Текущая запись будет удалена.'},
+  trvTitleDone:{fr:'Prise {n} terminée',en:'Take {n} complete',es:'Toma {n} terminada',it:'Ripresa {n} completata',zh:'第 {n} 条拍摄完成',ko:'테이크 {n} 완료',ja:'テイク {n} 完了',de:'Take {n} fertig',pt:'Take {n} concluído',ar:'اكتملت اللقطة {n}',hi:'टेक {n} पूरा हुआ',tr:'Çekim {n} tamamlandı',ru:'Дубль {n} завершён'},
+  trvTitleInterrupted:{fr:'Prise interrompue',en:'Take interrupted',es:'Toma interrumpida',it:'Ripresa interrotta',zh:'拍摄中断',ko:'테이크 중단됨',ja:'テイク中断',de:'Take unterbrochen',pt:'Take interrompido',ar:'انقطعت اللقطة',hi:'टेक बाधित हुआ',tr:'Çekim kesildi',ru:'Дубль прерван'},
+  trvWatch:{fr:'▶ Regarder',en:'▶ Watch',es:'▶ Ver',it:'▶ Guarda',zh:'▶ 观看',ko:'▶ 보기',ja:'▶ 見る',de:'▶ Ansehen',pt:'▶ Assistir',ar:'▶ مشاهدة',hi:'▶ देखें',tr:'▶ İzle',ru:'▶ Смотреть'},
+  trvSave:{fr:'Enregistrer',en:'Save',es:'Guardar',it:'Salva',zh:'保存',ko:'저장',ja:'保存',de:'Speichern',pt:'Salvar',ar:'حفظ',hi:'सहेजें',tr:'Kaydet',ru:'Сохранить'},
+  trvRedo:{fr:'↺ Refaire',en:'↺ Redo',es:'↺ Repetir',it:'↺ Rifai',zh:'↺ 重拍',ko:'↺ 다시 찍기',ja:'↺ やり直す',de:'↺ Wiederholen',pt:'↺ Refazer',ar:'↺ إعادة',hi:'↺ फिर से करें',tr:'↺ Tekrarla',ru:'↺ Переснять'},
+  trvRedoConfirm:{fr:'Refaire la prise ? Celle-ci sera supprimée.',en:'Redo the take? This one will be discarded.',es:'¿Repetir la toma? Esta se descartará.',it:'Rifare la ripresa? Questa sarà eliminata.',zh:'重拍？当前拍摄将被删除。',ko:'다시 찍을까요? 이 테이크는 삭제됩니다.',ja:'やり直しますか？このテイクは破棄されます。',de:'Take wiederholen? Dieser wird verworfen.',pt:'Refazer o take? Este será descartado.',ar:'إعادة اللقطة؟ سيتم حذف هذه.',hi:'टेक फिर से करें? यह हटा दिया जाएगा।',tr:'Tekrar mı? Bu çekim silinecek.',ru:'Переснять? Этот дубль будет удалён.'},
+  trvDeleteConfirm:{fr:'Supprimer cette prise sans la sauvegarder ?',en:'Discard this take without saving?',es:'¿Descartar esta toma sin guardar?',it:'Eliminare questa ripresa senza salvarla?',zh:'不保存就删除这条拍摄？',ko:'저장하지 않고 이 테이크를 삭제할까요?',ja:'保存せずにこのテイクを破棄しますか？',de:'Take verwerfen ohne zu speichern?',pt:'Descartar este take sem salvar?',ar:'حذف هذه اللقطة دون حفظ؟',hi:'बिना सहेजे यह टेक हटाएँ?',tr:'Kaydetmeden bu çekimi sil?',ru:'Удалить дубль без сохранения?'},
+  trvSaveFailed:{fr:'Échec de la sauvegarde — réessaie',en:'Save failed — try again',es:'Error al guardar — reintenta',it:'Salvataggio fallito — riprova',zh:'保存失败 — 请重试',ko:'저장 실패 — 다시 시도하세요',ja:'保存に失敗 — 再試行してください',de:'Speichern fehlgeschlagen — erneut versuchen',pt:'Falha ao salvar — tente novamente',ar:'فشل الحفظ — حاول مجددًا',hi:'सहेजना विफल — फिर से कोशिश करें',tr:'Kaydetme başarısız — tekrar dene',ru:'Не удалось сохранить — повторите'},
+  trvSavedTitle:{fr:'Prise sauvegardée ✓',en:'Take saved ✓',es:'Toma guardada ✓',it:'Ripresa salvata ✓',zh:'已保存 ✓',ko:'저장됨 ✓',ja:'保存済み ✓',de:'Take gespeichert ✓',pt:'Take salvo ✓',ar:'تم حفظ اللقطة ✓',hi:'टेक सहेजा गया ✓',tr:'Çekim kaydedildi ✓',ru:'Дубль сохранён ✓'},
+  trvNewTake:{fr:'🎬 Nouvelle prise',en:'🎬 New take',es:'🎬 Nueva toma',it:'🎬 Nuova ripresa',zh:'🎬 新拍摄',ko:'🎬 새 테이크',ja:'🎬 新しいテイク',de:'🎬 Neuer Take',pt:'🎬 Novo take',ar:'🎬 لقطة جديدة',hi:'🎬 नया टेक',tr:'🎬 Yeni çekim',ru:'🎬 Новый дубль'},
+  trvFinish:{fr:'Terminer',en:'Finish',es:'Terminar',it:'Termina',zh:'完成',ko:'완료',ja:'終了',de:'Fertig',pt:'Concluir',ar:'إنهاء',hi:'समाप्त',tr:'Bitir',ru:'Готово'},
   modeHintAi:{ko:'AI가 상대 대사를 자동으로 읽습니다.',hi:'AI पार्टनर की लाइनें खुद पढ़ेगा।',pt:'A IA lê as falas do parceiro automaticamente.',fr:'L\'IA lit les répliques du partenaire automatiquement.',en:'AI reads partner lines automatically.',es:'La IA lee las líneas del compañero automáticamente.',it:'L\'IA legge le battute del partner automaticamente.',zh:'AI自动朗读搭档台词。',de:'KI liest Partnerzeilen automatisch.',ja:'AIがパートナーのセリフを自動で読みます。',ar:'الذكاء الاصطناعي يقرأ سطور الشريك تلقائيًا.'},
   modeHintManual:{ko:'버튼으로 수동 진행합니다.',hi:'बटन से मैन्युअल आगे बढ़ें।',pt:'Avance manualmente entre as falas.',fr:'Avancez manuellement entre les répliques.',en:'Navigate lines manually.',es:'Avanza manualmente entre las líneas.',it:'Avanza manualmente tra le battute.',zh:'手动切换台词。',de:'Zeilen manuell navigieren.',ja:'手動でセリフを進めます。',ar:'تنقل يدويًا بين السطور.'},
   chooseYourRole:{fr:'Choisis ton rôle',en:'Choose your role',es:'Elige tu personaje',it:'Scegli il tuo ruolo',zh:'选择你的角色',ko:'역할을 선택하세요',ja:'役を選んでください',de:'Wähle deine Rolle',pt:'Escolha seu personagem',ar:'اختر دورك',hi:'अपनी भूमिका चुनें'},
@@ -211,12 +222,14 @@ export const TTS_LANGS=['fr','en','es','it','de','pt','ar','zh','ja','ko','hi','
 
 // ── Translation functions ────────────────────────────────────────────
 
-export function t(key){
+export function t(key,vars){
   const langPack=UI_I18N[S.selectedUILanguage]||UI_I18N.en;
   const extra=UI_EXTRA_I18N[S.selectedUILanguage]||UI_EXTRA_I18N.en||{};
   const fb=UI_FALLBACK_TRANSLATIONS[key];
   const fallback=(fb&&(fb[S.selectedUILanguage]||fb.en))||'';
-  return langPack[key]||extra[key]||fallback||UI_I18N.en[key]||(UI_EXTRA_I18N.en&&UI_EXTRA_I18N.en[key])||key;
+  const out=langPack[key]||extra[key]||fallback||UI_I18N.en[key]||(UI_EXTRA_I18N.en&&UI_EXTRA_I18N.en[key])||key;
+  if(vars&&typeof out==='string')return out.replace(/\{(\w+)\}/g,(m,k)=>(vars[k]!==undefined&&vars[k]!==null)?String(vars[k]):m);
+  return out;
 }
 export function ts(text){
   if(!text)return text;
@@ -407,6 +420,15 @@ export function applyUILanguage(){
   const _prb=document.getElementById('psResumeBtn');if(_prb)_prb.textContent=t('psResumeBtn');
   const _prs=document.getElementById('psRestartBtn');if(_prs)_prs.textContent=t('psRestartBtn');
   const _peb=document.getElementById('psEndBtn');if(_peb)_peb.textContent=t('psEndBtn');
+  const _twA=document.getElementById('trvWatchBtnA');if(_twA)_twA.textContent=t('trvWatch');
+  const _tsA=document.getElementById('trvSaveBtnA');if(_tsA)_tsA.textContent=t('trvSave');
+  const _trA=document.getElementById('trvRedoBtnA');if(_trA)_trA.textContent=t('trvRedo');
+  const _trB=document.getElementById('trvRedoBtnB');if(_trB)_trB.textContent=t('trvRedo');
+  const _twB=document.getElementById('trvWatchBtnB');if(_twB)_twB.textContent=t('trvWatch');
+  const _tsB=document.getElementById('trvSaveBtnB');if(_tsB)_tsB.textContent=t('trvSave');
+  const _tst=document.getElementById('trvSavedTitle');if(_tst)_tst.textContent=t('trvSavedTitle');
+  const _tnt=document.getElementById('trvNewTakeBtn');if(_tnt)_tnt.textContent=t('trvNewTake');
+  const _tft=document.getElementById('trvFinishBtn');if(_tft)_tft.textContent=t('trvFinish');
   const _arl=document.getElementById('authResendLink');if(_arl)_arl.textContent=t('resendCodeBtn');
   const _orb=document.getElementById('optionalReviewBtn1');if(_orb)_orb.textContent=t('reviewScriptBtn');
   const _priv=document.querySelector('.choose-privacy');if(_priv)_priv.textContent=t('privacyNote');

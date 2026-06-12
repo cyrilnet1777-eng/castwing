@@ -30,7 +30,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<link rel="stylesheet" href="/styles.css?v=20260612j">
+<link rel="stylesheet" href="/styles.css?v=20260612k">
 </head>
 <body>
 <div id="toast" class="toast"></div>
@@ -448,8 +448,33 @@
     </div>
   </div>
 </div></div>
+<div class="end-take-modal" id="takeReviewModal"><div class="end-take-card" style="position:relative">
+  <div id="trvReviewPhase">
+    <button class="etm-close" onclick="trvDiscard()" title="Discard take">&times;</button>
+    <h3 id="trvTitle">Take complete</h3>
+    <div class="etm-sub" id="trvSub"></div>
+    <video id="trvPlayer" controls playsinline style="display:none;width:100%;max-height:40vh;border-radius:10px;margin:.6rem 0;background:#000"></video>
+    <div class="etm-btns" id="trvBtnsA">
+      <button class="etm-btn etm-secondary trv-big" id="trvWatchBtnA" onclick="trvWatch()">▶ Watch</button>
+      <button class="etm-btn etm-primary trv-big" id="trvSaveBtnA" onclick="trvSave()">Save</button>
+      <button class="etm-btn etm-link trv-small" id="trvRedoBtnA" onclick="trvRedo()">↺ Redo</button>
+    </div>
+    <div class="etm-btns" id="trvBtnsB" style="display:none">
+      <button class="etm-btn etm-primary trv-big" id="trvRedoBtnB" onclick="trvRedo()">↺ Redo</button>
+      <button class="etm-btn etm-link trv-small" id="trvWatchBtnB" onclick="trvWatch()">▶ Watch</button>
+      <button class="etm-btn etm-link trv-small" id="trvSaveBtnB" onclick="trvSave()">Save</button>
+    </div>
+  </div>
+  <div id="trvSavedPhase" style="display:none">
+    <h3 id="trvSavedTitle">Take saved ✓</h3>
+    <div class="etm-btns">
+      <button class="etm-btn etm-primary trv-big" id="trvNewTakeBtn" onclick="trvNewTake()">🎬 New take</button>
+      <button class="etm-btn etm-secondary" id="trvFinishBtn" onclick="trvFinish()">Finish</button>
+    </div>
+  </div>
+</div></div>
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ttsAudioEl" playsinline></audio>
-<script type="module" src="/js/app.js?v=20260612j"></script>
+<script type="module" src="/js/app.js?v=20260612k"></script>
 </body>
 </html>

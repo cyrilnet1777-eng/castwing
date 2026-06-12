@@ -311,6 +311,10 @@ input[type="file"]{display:none}
 .end-take-card .etm-info-row{font-size:.75rem;color:var(--text-muted);display:flex;justify-content:space-between;padding:.15rem 0}
 .end-take-card .etm-info-val{color:var(--white);font-weight:600}
 .end-take-card .etm-close{position:absolute;top:.7rem;right:.8rem;background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer;padding:4px}.end-take-card .etm-close:hover{color:var(--white)}
+.end-take-card .etm-link{background:transparent;color:var(--text-muted);border-color:transparent;font-size:.78rem}
+.end-take-card .etm-link:hover{color:var(--white)}
+.end-take-card .trv-big{padding:1rem;font-size:1rem;font-weight:700}
+.end-take-card .trv-small{padding:.5rem}
 .italienne-badge{display:none;position:fixed;top:50px;left:50%;transform:translateX(-50%);z-index:62;font-size:.65rem;font-weight:800;letter-spacing:.25em;text-transform:uppercase;color:rgba(220,120,120,.7);pointer-events:none}
 .italienne-badge.active{display:block}
 .pause-settings-panel .ps-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-top:.5rem}

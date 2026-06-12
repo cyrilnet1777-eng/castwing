@@ -326,24 +326,25 @@ function _makeMediaRecorder(stream) {
       var ext = isMP4 ? 'mp4' : 'webm';
       var mime = isMP4 ? 'video/mp4' : 'video/webm';
       var blob = new Blob(S.recordedChunks, { type: mime });
+      S.recordedChunks = [];
       var fname = 'citizentape-' + Date.now() + '.' + ext;
       var tk = S.currentTake || {};
-      await saveRecToDB(blob, fname, mime, {
+      var meta = {
+        fname: fname,
+        mime: mime,
         sceneId: tk.sceneId || getSceneId(),
         sceneName: tk.sceneName || S.currentScriptName || '',
         takeNumber: Number.isFinite(tk.takeNumber) ? tk.takeNumber : S.takeNumber,
-        status: 'saved',
         wasPaused: !!(tk.wasPaused || _recWasPaused),
         duration: takeDurationMs() || (_recStartTs ? Date.now() - _recStartTs : null),
         thumb: _lastThumb,
-      });
+      };
       _lastThumb = null;
-      track('recording_save', { target: 'idb', size_mb: Math.round(blob.size / 1048576 * 10) / 10 });
-      renderRecordingsList();
-      showRecSavedModal(blob, fname, mime);
+      // No auto-save: the actor reviews the take and decides
+      window.showTakeReviewModal(blob, meta);
     } catch (e) {
       console.error('[rec] onstop error:', e);
-      showToast('Recording saved!', 3000);
+      showToast('Recording error — take may be lost', 4000);
     }
   };
   return rec;

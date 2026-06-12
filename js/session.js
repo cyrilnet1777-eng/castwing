@@ -1559,14 +1559,73 @@ async function startAiSession() {
   await requestRehearsalStart({ source: 'manual' });
 }
 
-function endSession() {
+/**
+ * End the current TAKE: stop the recorder (its onstop shows the review
+ * modal) but keep streams, peer connection, prompter state and the
+ * session screen alive so Refaire / Nouvelle prise restart instantly.
+ * If nothing was recording, falls through to a full teardown.
+ */
+function endTake() {
+  S.sessionPaused = false;
+  if (typeof window.markTakePaused === 'function') window.markTakePaused(false);
+  const po = document.getElementById('pauseOverlay'); if (po) po.classList.remove('active');
+  const pb = document.getElementById('btnPause'); if (pb) pb.classList.remove('is-paused');
+  const pi = document.getElementById('pauseIcon');
+  if (pi) pi.innerHTML = '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>';
+  const mb = document.getElementById('mobMainBtn'); if (mb) mb.classList.remove('is-paused');
+  cancelSpeechFlow();
+  if (S.isRecording && S.mediaRecorder && S.mediaRecorder.state !== 'inactive') {
+    const savedChunks = S.recordedChunks;
+    const savedRecorder = S.mediaRecorder;
+    const origOnStop = savedRecorder.onstop;
+    let _onstopDone = false;
+    savedRecorder.onstop = async function () {
+      if (_onstopDone) return;
+      _onstopDone = true;
+      clearTimeout(_onstopTimeout);
+      S.recordedChunks = savedChunks;
+      if (origOnStop) await origOnStop.call(this);
+    };
+    const _onstopTimeout = setTimeout(function () {
+      if (_onstopDone) return;
+      _onstopDone = true;
+      console.warn('[rec] onstop timeout \u2014 forcing review');
+      _closeRecAudioCtx();
+      if (savedChunks.length > 0) {
+        try {
+          var isMP4 = (savedRecorder.mimeType || '').startsWith('video/mp4');
+          var ext = isMP4 ? 'mp4' : 'webm'; var mime = isMP4 ? 'video/mp4' : 'video/webm';
+          var blob = new Blob(savedChunks, { type: mime });
+          var tk = S.currentTake || {};
+          window.showTakeReviewModal(blob, {
+            fname: 'citizentape-' + Date.now() + '.' + ext, mime: mime,
+            sceneId: tk.sceneId || (window.getSceneId ? window.getSceneId() : 'legacy'),
+            sceneName: tk.sceneName || S.currentScriptName || '',
+            takeNumber: tk.takeNumber || S.takeNumber,
+            wasPaused: !!tk.wasPaused, duration: null, thumb: null,
+          });
+        } catch (e) { console.error('[rec] timeout review:', e); showToast('Recording could not be recovered', 3000); teardownSession(); showScreen('home'); }
+      } else { showToast('Recording could not be saved', 3000); teardownSession(); showScreen('home'); }
+    }, 5000);
+    stopRecording();
+  } else {
+    teardownSession();
+    showScreen('home');
+  }
+}
+
+/**
+ * Full teardown: release streams and peers, reset session UI/state and
+ * mark the session over. Called when the actor is truly done (review
+ * modal Save\u2192Finish, discard, partner disconnect, navigation home).
+ */
+function teardownSession() {
   const _wasLive = __cwSessionActive;
   const _ssPrev = (typeof window !== 'undefined' && window.__cwSessionState) || {};
   __cwSessionActive = false;
-  cwSessionStateClear('endSession');
+  cwSessionStateClear('teardownSession');
   stopSessionTimer();
   if (_wasLive && !S.isRecording) {
-    // Session ended without an active recording → nothing was captured this take
     track('session_abandon', {
       screen: 'session',
       had_recording: false,
@@ -1589,52 +1648,22 @@ function endSession() {
   const _msb = document.getElementById('mobShareBtn'); if (_msb) _msb.style.display = 'none';
   const _rp = document.getElementById('recPanel'); if (_rp) _rp.classList.remove('active');
   const ib = document.getElementById('italienneBadge'); if (ib) ib.classList.remove('active');
+  const _sessEl = document.getElementById('session'); if (_sessEl) _sessEl.classList.remove('take-active');
   if (S._preItalienneVoice) { S.selectedVoice = S._preItalienneVoice; S._preItalienneVoice = null; }
   if (S.connectionTimeout) clearTimeout(S.connectionTimeout);
   cancelSpeechFlow();
-  const wasRecording = S.isRecording;
-  if (wasRecording && S.mediaRecorder && S.mediaRecorder.state !== 'inactive') {
-    const savedChunks = S.recordedChunks;
-    const savedRecorder = S.mediaRecorder;
-    const origOnStop = savedRecorder.onstop;
-    let _onstopDone = false;
-    savedRecorder.onstop = async function () {
-      if (_onstopDone) return;
-      _onstopDone = true;
-      clearTimeout(_onstopTimeout);
-      S.recordedChunks = savedChunks;
-      if (origOnStop) await origOnStop.call(this);
-      teardownStreamsAndPeers();
-    };
-    const _onstopTimeout = setTimeout(function () {
-      if (_onstopDone) return;
-      _onstopDone = true;
-      console.warn('[rec] onstop timeout \u2014 forcing teardown');
-      _closeRecAudioCtx();
-      teardownStreamsAndPeers();
-      if (savedChunks.length > 0) {
-        try {
-          var isMP4 = (savedRecorder.mimeType || '').startsWith('video/mp4');
-          var ext = isMP4 ? 'mp4' : 'webm'; var mime = isMP4 ? 'video/mp4' : 'video/webm';
-          var blob = new Blob(savedChunks, { type: mime });
-          var fname = 'citizentape-' + Date.now() + '.' + ext;
-          saveRecToDB(blob, fname, mime).then(function () { renderRecordingsList(); }).catch(function () {});
-          showRecSavedModal(blob, fname, mime);
-        } catch (e) { console.error('[rec] timeout save:', e); showToast('Recording may not have saved', 3000); hideEndTakeModal(); }
-      } else { showToast('Recording could not be saved', 3000); hideEndTakeModal(); }
-    }, 5000);
+  // endTake is the path that preserves footage; any recorder still
+  // running here is discarded
+  if (S.isRecording && S.mediaRecorder && S.mediaRecorder.state !== 'inactive') {
+    S._recDiscard = true;
     stopRecording();
-  } else {
-    teardownStreamsAndPeers();
   }
-  function teardownStreamsAndPeers() {
-    try { if (S.conn && S.conn.open) S.conn.send({ type: 'end-session' }); } catch (e) {}
-    if (S.call) { S.call.close(); S.call = null; }
-    if (S.conn) { S.conn.close(); S.conn = null; }
-    if (S.peer) { S.peer.destroy(); S.peer = null; }
-    if (window._cwMicStream) { window._cwMicStream.getTracks().forEach(t => t.stop()); window._cwMicStream = null; }
-    if (S.localStream) { S.localStream.getTracks().forEach(t => t.stop()); S.localStream = null; }
-  }
+  try { if (S.conn && S.conn.open) S.conn.send({ type: 'end-session' }); } catch (e) {}
+  if (S.call) { S.call.close(); S.call = null; }
+  if (S.conn) { S.conn.close(); S.conn = null; }
+  if (S.peer) { S.peer.destroy(); S.peer = null; }
+  if (window._cwMicStream) { window._cwMicStream.getTracks().forEach(t => t.stop()); window._cwMicStream = null; }
+  if (S.localStream) { S.localStream.getTracks().forEach(t => t.stop()); S.localStream = null; }
   const lv = document.getElementById('localVideo');
   lv.srcObject = null; lv.style.display = ''; lv.classList.remove('mirror');
   document.getElementById('remoteVideo').srcObject = null;
@@ -1652,20 +1681,19 @@ function endSession() {
   hideOverlay();
   S.isMicOn = true; S.isCamOn = true; S.currentFacingMode = 'user';
   S.prompterLines = []; S.prompterIndex = 0; S.lastAutoSpokenIndex = -1; S.activeSpeechToken = 0;
-  if (!wasRecording) { S.recordedChunks = []; S.mediaRecorder = null; hideEndTakeModal(); }
-  else {
-    const m = document.getElementById('endTakeModal');
-    if (m) {
-      document.getElementById('etmConfirmPhase').style.display = 'none';
-      const phase = document.getElementById('etmSavedPhase');
-      phase.style.display = '';
-      document.getElementById('etmRecInfo').innerHTML = '<div class="etm-info-row" style="justify-content:center"><span class="etm-info-val">Saving recording\u2026</span></div>';
-      var _h = document.getElementById('home'); if (_h) _h.style.pointerEvents = 'none';
-      m.classList.add('active');
-    }
-  }
-  showScreen('home');
+  S.recordedChunks = []; S.mediaRecorder = null;
+  hideEndTakeModal();
   S.role = 'actor'; S.sessionMode = 'ai';
+}
+
+/** Compat wrapper: recording \u2192 end the take (review); else full teardown. */
+function endSession() {
+  if (S.isRecording && S.mediaRecorder && S.mediaRecorder.state !== 'inactive') {
+    endTake();
+  } else {
+    teardownSession();
+    showScreen('home');
+  }
 }
 
 function cancelConnection() {
@@ -1864,6 +1892,8 @@ export {
   enterRehearsalMode,
   startAiSession,
   endSession,
+  endTake,
+  teardownSession,
   cancelConnection,
 
   // Scroll
