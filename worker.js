@@ -2575,6 +2575,56 @@ Return ONLY the JSON array, no explanation.`;
    D1 MIGRATION HELPER
 ========================================================= */
 
+/* =========================================================
+   ANALYTICS TRACKING (first-party, writes to usage_events)
+========================================================= */
+
+const TRACK_EVENT_ALLOWLIST = new Set([
+  "screen_view", "start_session", "end_take", "share_session",
+  "logout", "auth_request_code", "sign_up", "login",
+  "import_script", "import_success", "import_fail",
+  "change_language", "begin_checkout", "purchase", "checkout_cancel",
+  "recording_start", "recording_complete", "recording_save",
+  "recording_delete", "recording_redo",
+  "pause_menu_open", "pause_restart", "session_abandon",
+  "camera_preview_view", "preview_flip_camera", "preview_cancel",
+  "take_countdown_start", "take_begin", "take_pause", "take_restart",
+  "take_stop", "take_review_action", "take_saved", "takes_list_view",
+  "take_delete", "export_mp4",
+  "onboarding_start", "onboarding_permission", "onboarding_demo_complete",
+  "onboarding_skip", "onboarding_complete",
+]);
+
+async function handleTrack(request, env, ctx) {
+  if (request.method !== "POST") return new Response(null, { status: 204 });
+  try {
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    if (!rateCheck(`track:${ip}`, 120, 60)) return new Response(null, { status: 204 });
+    const raw = await request.text();
+    if (!raw || raw.length > 2048) return new Response(null, { status: 204 });
+    const body = JSON.parse(raw);
+    const type = String(body.event_type || "");
+    if (!TRACK_EVENT_ALLOWLIST.has(type)) return new Response(null, { status: 204 });
+    if (!env.DB) return new Response(null, { status: 204 });
+    const email = await resolveCurrentUser(request, env).catch(() => null);
+    const meta = (body.meta && typeof body.meta === "object") ? body.meta : {};
+    const metaJson = JSON.stringify({
+      ...meta,
+      sid: typeof body.sid === "string" ? body.sid.slice(0, 64) : null,
+      build: typeof body.build === "string" ? body.build.slice(0, 24) : null,
+      lang: typeof body.lang === "string" ? body.lang.slice(0, 8) : null,
+      device: typeof body.device === "string" ? body.device.slice(0, 16) : null,
+      country: (request.cf && request.cf.country) || null,
+    }).slice(0, 2048);
+    const insert = env.DB.prepare(
+      "INSERT INTO usage_events (id, email, event_type, meta_json) VALUES (?, ?, ?, ?)"
+    ).bind(crypto.randomUUID(), email, type, metaJson).run();
+    if (ctx) ctx.waitUntil(insert.catch(() => {}));
+    else await insert.catch(() => {});
+  } catch (_e) { /* analytics must never fail the request */ }
+  return new Response(null, { status: 204 });
+}
+
 async function ensureD1Tables(db) {
   if (!db) return;
   const statements = [
@@ -2599,6 +2649,7 @@ async function ensureD1Tables(db) {
     `CREATE INDEX IF NOT EXISTS idx_credit_created ON credit_transactions(email, created_at DESC)`,
     `CREATE INDEX IF NOT EXISTS idx_invite_redemptions_email ON invite_redemptions(email)`,
     `CREATE INDEX IF NOT EXISTS idx_usage_events_email ON usage_events(email, created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_usage_events_type_created ON usage_events(event_type, created_at)`,
   ];
   for (const idx of indexes) {
     try { await db.prepare(idx).run(); } catch (e) { /* ignore */ }
@@ -2841,6 +2892,7 @@ export default {
       return new Response(await r.text(), { status: 200, headers: { "Content-Type": "application/json" } });
     }
 
+    if (url.pathname === "/api/track" && request.method === "POST") return handleTrack(request, env, ctx);
     if (url.pathname === "/api/tts" && request.method === "POST") return handleTTS(request, env, ctx);
     if (url.pathname === "/api/label-script") return withAnthropicSlot(env, handleLabelScript, request);
     if (url.pathname === "/api/claude-parse-script") return withAnthropicSlot(env, handleClaudeParseScript, request);

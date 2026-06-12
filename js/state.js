@@ -20,6 +20,7 @@ export const S = {
   _cachedIceServers: null,
   _iceExpiry:        0,
   _peerKeepalive:    null,
+  _analyticsSid:     '',
 
   // ── Recording ──────────────────────────────────────────────────────
   mediaRecorder:    null,
@@ -135,6 +136,7 @@ export const S = {
  */
 export function initState() {
   S.sessionViewMode = localStorage.getItem('cw_viewMode') || '50-50';
+  try { S._analyticsSid = crypto.randomUUID(); } catch (_e) { S._analyticsSid = 'sid-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10); }
 }
 
 /**

@@ -1,7 +1,26 @@
 import { S } from './state.js';
+import { APP_BUILD } from './constants.js';
 
 /* ── Analytics ── */
 export function gaEvent(name, params) { try { window.gtag('event', name, params || {}); } catch(e) {} }
+
+/* Dual-write analytics: GA + first-party /api/track (D1).
+   Fire-and-forget; sendBeacon survives page unload (session_abandon). */
+export function track(name, params) {
+  gaEvent(name, params);
+  try {
+    const payload = JSON.stringify({
+      event_type: name,
+      meta: params || {},
+      sid: S._analyticsSid,
+      build: APP_BUILD,
+      lang: S.selectedUILanguage || '',
+      device: isMobileDevice() ? 'mobile' : 'desktop',
+    });
+    if (navigator.sendBeacon && navigator.sendBeacon('/api/track', new Blob([payload], { type: 'application/json' }))) return;
+    fetch('/api/track', { method: 'POST', body: payload, keepalive: true, credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } }).catch(() => {});
+  } catch (e) { /* analytics must never break the app */ }
+}
 
 /* ── Tiny helpers ── */
 export function genCode(){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let r='';for(let i=0;i<8;i++)r+=c[Math.floor(Math.random()*c.length)];return r}
