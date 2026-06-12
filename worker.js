@@ -615,7 +615,17 @@ async function handleTTS(request, env, ctx) {
 
     // Credit metering
     const email = await resolveCurrentUser(request, env);
-    if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
+    // Onboarding demo lane: unauthenticated, short lines only, hard
+    // per-IP cap — lets first-launch users hear the real voice without
+    // opening a metering bypass (4 short lines per demo, ~$0.02)
+    const isDemoTts = !email && request.headers.get("X-Demo-Tts") === "1" && text.length <= 120;
+    if (!email && !isDemoTts) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
+    if (isDemoTts) {
+      const demoIp = request.headers.get("CF-Connecting-IP") || "unknown";
+      if (!rateCheck(`ttsdemo:${demoIp}`, 8, 3600)) {
+        return json({ ok: false, error: "RATE_LIMIT", message: "Demo limit reached" }, 429);
+      }
+    }
     const isAdmin = email && isAdminEmail(email, env);
     const charCount = text.length;
     const costCents = Math.max(1, Math.ceil((charCount / 1000) * CREDIT_PRICING.TTS_COST_PER_1K_CHARS_CENTS));

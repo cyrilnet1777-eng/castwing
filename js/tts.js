@@ -26,17 +26,19 @@ function getTTSEndpointCandidates() {
   return [apiRoute, netlifyFn];
 }
 
-async function fetchTTSFromBestEndpoint(payload) {
+async function fetchTTSFromBestEndpoint(payload, demoFree) {
   const primary = S.ttsEndpointCache ? [S.ttsEndpointCache] : [];
   const candidates = getTTSEndpointCandidates().filter(ep => !primary.includes(ep));
   const endpoints = [...primary, ...candidates];
   let lastResponse = null, lastEndpoint = '';
   const ac = new AbortController();
   S._ttsAbort = ac;
+  const headers = { 'Content-Type': 'application/json' };
+  if (demoFree) headers['X-Demo-Tts'] = '1'; // onboarding demo lane (server-capped)
   for (const endpoint of endpoints) {
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(payload),
       credentials: 'same-origin',
       signal: ac.signal,
@@ -228,7 +230,7 @@ async function speakWithElevenLabs(text, preset, token, cb, speedOverride, demoF
         emotion: S.voiceSpeed > 6.5 ? 'neutral' : S.selectedEmotion,
         speed,
         languageCode: effectiveLang,
-      });
+      }, demoFree);
       if (rsp.ok) {
         blob = await rsp.blob();
         usedFallback = i > 0;
