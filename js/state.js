@@ -41,6 +41,10 @@ export const S = {
   // ── Prompter / script navigation ───────────────────────────────────
   prompterLines:    [],
   prompterIndex:    0,
+  // Display-line layer (one sentence at a time); prompterIndex stays the
+  // authoritative turn pointer for AI-speak / VAD / WebRTC sync / recording
+  displayLines:     [],
+  activeDisplayIndex: 0,
   userScrolledUp:   false,
   _lastPrompterScrollTop: 0,
   _scrollResumeTimer: null,

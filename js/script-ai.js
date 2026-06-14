@@ -1044,6 +1044,79 @@ function groupConsecutiveLines(scriptLines) {
   return grouped;
 }
 
+// ── Display-line splitting (teleprompter "one line at a time") ───────
+
+const DISPLAY_LINE_MAX_CHARS = 90;
+
+/** Split a block of prose into display lines: one per sentence, with
+    over-long sentences wrapped at a clause/space boundary near the cap. */
+function splitTextIntoDisplayLines(text) {
+  const clean = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!clean) return [];
+  // Sentence boundaries: . ! ? … and runs like ?! ... — keep the punctuation
+  const sentences = clean.match(/[^.!?…]+[.!?…]+(?:["')\]]+)?\s*|[^.!?…]+$/g) || [clean];
+  const out = [];
+  for (let s of sentences) {
+    s = s.trim();
+    if (!s) continue;
+    while (s.length > DISPLAY_LINE_MAX_CHARS) {
+      // Prefer a comma break, else the last space, before the cap
+      let cut = s.lastIndexOf(', ', DISPLAY_LINE_MAX_CHARS);
+      if (cut < DISPLAY_LINE_MAX_CHARS * 0.5) cut = s.lastIndexOf(' ', DISPLAY_LINE_MAX_CHARS);
+      if (cut <= 0) break; // single very long token — leave it
+      out.push(s.slice(0, cut + 1).trim());
+      s = s.slice(cut + 1).trim();
+    }
+    if (s) out.push(s);
+  }
+  return out;
+}
+
+/**
+ * Build the flat display-line layer from prompter lines (the turn layer).
+ * Each display line keeps a back-pointer to its source prompterIndex so
+ * the turn machinery (AI-speak, VAD, WebRTC sync, recording) stays
+ * authoritative while the highlight advances one sentence at a time.
+ */
+function buildDisplayLines(prompterLines) {
+  const out = [];
+  const lines = Array.isArray(prompterLines) ? prompterLines : [];
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    if (!l) continue;
+    const base = {
+      prompterIndex: i,
+      type: l.type || 'context',
+      char: l.char || '',
+      kind: l.kind || LINE_TYPE.ACTION,
+      isStageDirection: !!l.isStageDirection,
+      isSpoken: l.isSpoken !== false && l.kind === LINE_TYPE.DIALOGUE,
+    };
+    // Parenthetical reads as its own dim display line above the speech
+    if (l.parenthetical) {
+      out.push({ ...base, text: '(' + String(l.parenthetical).replace(/^\(|\)$/g, '').trim() + ')', subIndex: -1, isParenthetical: true, isStageDirection: true, isSpoken: false });
+    }
+    const parts = splitTextIntoDisplayLines(l.text);
+    if (!parts.length) { out.push({ ...base, text: String(l.text || ''), subIndex: 0 }); continue; }
+    parts.forEach((p, si) => out.push({ ...base, text: p, subIndex: si }));
+  }
+  // Tag the first display line of each turn for fast range mapping
+  for (let d = 0; d < out.length; d++) {
+    out[d].isFirstOfTurn = d === 0 || out[d].prompterIndex !== out[d - 1].prompterIndex;
+  }
+  return out;
+}
+
+/** First/last display-line indices belonging to a given prompterIndex. */
+function displayRangeForPrompter(displayLines, prompterIndex) {
+  let first = -1, last = -1;
+  for (let d = 0; d < displayLines.length; d++) {
+    if (displayLines[d].prompterIndex === prompterIndex) { if (first === -1) first = d; last = d; }
+    else if (first !== -1) break;
+  }
+  return [first, last];
+}
+
 // ── Monologue detection ─────────────────────────────────────────────
 
 /**
@@ -1141,4 +1214,7 @@ export {
   normalizeCharacterNameForGroup,
   groupConsecutiveLines,
   computeMonologueBlocks,
+  buildDisplayLines,
+  displayRangeForPrompter,
+  splitTextIntoDisplayLines,
 };

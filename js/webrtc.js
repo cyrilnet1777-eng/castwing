@@ -74,13 +74,15 @@ export function handleDataMessage(d) {
   if (d.type === 'prompter' || d.type === 'jump') {
     if (window._scrollOwner === 'local') return; // last-touch-wins: local user is scrolling
     S.prompterIndex = d.index;
-    // Lightweight update: toggle active/past/future without full DOM rebuild
+    // Map the turn index to its first display line, then lightweight update
+    if (typeof window.alignDisplayToPrompter === 'function') window.alignDisplayToPrompter();
     if (typeof window.updatePrompterProgress !== 'function' || !window.updatePrompterProgress()) {
       window.renderPrompter();
     }
   } else if (d.type === 'script') {
     S.prompterLines = (d.lines || []).map(l => ({ ...l }));
     S.prompterIndex = d.index || 0;
+    if (typeof window.rebuildDisplayLines === 'function') window.rebuildDisplayLines();
     window.debugPrompterPdfScriptKinds('peerScript');
     window.renderPrompter();
   } else if (d.type === 'ready') {

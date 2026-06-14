@@ -206,6 +206,8 @@ import {
   fallbackPrompterLinesFromPdfScript,
   updateTakeInfo,
   updatePrompterProgress,
+  alignDisplayToPrompter,
+  rebuildDisplayLines,
 } from './session.js';
 
 // ── Takes ───────────────────────────────────────────────────────────────
@@ -679,6 +681,8 @@ Object.assign(window, {
   hideAiOnlyControls,
   updateTakeInfo,
   updatePrompterProgress,
+  alignDisplayToPrompter,
+  rebuildDisplayLines,
 
   // ── Takes (used via window.* by other modules) ──
   getSceneId,

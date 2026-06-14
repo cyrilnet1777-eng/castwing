@@ -44,6 +44,7 @@ import {
   buildLines, normalizeCharacterNameForGroup, groupConsecutiveLines,
   pickDefaultRehearsalCharacter, renderPartnerAssignment,
   clearPDF, finishPdfSetupUi,
+  buildDisplayLines, displayRangeForPrompter,
 } from './script-ai.js';
 import {
   syncPdfScriptDebugMirror,
@@ -160,7 +161,81 @@ function setPrompterLinesForSession(n, tag) {
     }
     if (S.monologueBlocks.length) console.info('[monologue] blocks:', JSON.stringify(S.monologueBlocks));
   } catch (e) { S.monologueBlocks = []; }
+  // Build the display-line layer (one sentence at a time)
+  try { S.displayLines = buildDisplayLines(S.prompterLines); } catch (e) { S.displayLines = []; }
+  S.activeDisplayIndex = 0;
   debugPrompterPdfScriptKinds(tag);
+}
+
+// ── Display-line ↔ turn mapping helpers ─────────────────────────────
+
+function firstDisplayForPrompter(idx) {
+  const [first] = displayRangeForPrompter(S.displayLines, idx);
+  return first === -1 ? 0 : first;
+}
+
+/** Move the highlight to the first display line of S.prompterIndex's turn. */
+function alignDisplayToPrompter() {
+  if (!S.displayLines.length) { S.activeDisplayIndex = 0; return; }
+  S.activeDisplayIndex = firstDisplayForPrompter(S.prompterIndex);
+}
+
+/** Rebuild the display-line layer from current prompterLines (used by the
+    partner after receiving the actor's script over the data channel). */
+function rebuildDisplayLines() {
+  try { S.displayLines = buildDisplayLines(S.prompterLines); } catch (e) { S.displayLines = []; }
+  alignDisplayToPrompter();
+}
+
+/**
+ * Advance the highlight by one display line. If it crosses out of the
+ * current turn's range, hand off to the turn-level advance so AI-speak /
+ * VAD / WebRTC sync / recording stay coherent.
+ * Returns true if it advanced within the same turn (display-only).
+ */
+function advanceDisplayLine() {
+  const cur = S.displayLines[S.activeDisplayIndex];
+  const next = S.displayLines[S.activeDisplayIndex + 1];
+  if (!cur) return false;
+  if (next && next.prompterIndex === cur.prompterIndex) {
+    S.activeDisplayIndex++;
+    refreshPrompterAfterAdvance();
+    return true;
+  }
+  return false; // caller performs the turn advance
+}
+
+// Timers that step the highlight through a spoken turn's display lines
+let _displayStepTimers = [];
+function clearDisplayStepTimers() {
+  _displayStepTimers.forEach(id => clearTimeout(id));
+  _displayStepTimers = [];
+}
+
+/** While an AI/partner turn is being spoken, walk the highlight through
+    its display lines on a timer estimated from each line's word count
+    (~2.7 wps, scaled by the voice speed) so the bold line tracks the
+    spoken sentence instead of the whole speech lighting up at once. */
+function startSpokenDisplayStepping(turnIdx) {
+  clearDisplayStepTimers();
+  const [first, last] = displayRangeForPrompter(S.displayLines, turnIdx);
+  if (first === -1 || last <= first) return; // single display line — nothing to step
+  S.activeDisplayIndex = first;
+  const paceMult = voicePaceMultiplier();
+  let acc = 0;
+  for (let d = first; d < last; d++) {
+    const words = ((S.displayLines[d].text || '').split(/\s+/).filter(Boolean)).length || 1;
+    acc += Math.max(500, Math.round(words * 370 * paceMult));
+    const target = d + 1;
+    _displayStepTimers.push(setTimeout(() => {
+      if (!__cwSessionActive || S.sessionPaused) return;
+      if (S.prompterIndex !== turnIdx) return; // turn moved on
+      if (S.displayLines[target] && S.displayLines[target].prompterIndex === turnIdx) {
+        S.activeDisplayIndex = target;
+        refreshPrompterAfterAdvance();
+      }
+    }, acc));
+  }
 }
 
 function normalizeContParenDisplay(stored) {
@@ -501,6 +576,7 @@ function cancelSpeechFlow() {
   S.activeSpeechToken++;
   cancelTTSPlayback();
   clearAutoTimer();
+  clearDisplayStepTimers();
   stopAutoVAD();
 }
 
@@ -554,16 +630,29 @@ async function armAutoVADForActorLine() {
 function onAutoSpeechEnd() {
   if (S.sessionPaused) return;
   if ((S.mode !== 'auto' && S.mode !== 'ai') || S.sessionMode !== 'ai') return;
-  console.info('[VAD] speech ended \u2192 advancing to next line');
-  const line = S.prompterLines[S.prompterIndex];
-  if (!line || line.type !== 'actor') return;
+  const dl = S.displayLines[S.activeDisplayIndex];
+  if (!dl || dl.type !== 'actor') return;
+  const nextDl = S.displayLines[S.activeDisplayIndex + 1];
+  // Still more display lines in this actor speech \u2192 advance ONE line and
+  // re-arm for the next, so the highlight walks sentence by sentence.
+  if (nextDl && nextDl.prompterIndex === dl.prompterIndex) {
+    console.info('[VAD] speech ended \u2192 next display line');
+    S.activeDisplayIndex++;
+    refreshPrompterAfterAdvance();
+    armAutoVADForActorLine();
+    return;
+  }
+  // Last display line of the actor's turn \u2192 advance the turn
+  console.info('[VAD] speech ended \u2192 advancing turn');
   if (S.prompterIndex >= S.prompterLines.length - 1) return;
+  const line = S.prompterLines[S.prompterIndex];
   const lineIndex = S.prompterIndex;
   const advance = () => {
     if (!__cwSessionActive || S.sessionPaused) return;
     if (S.prompterIndex !== lineIndex) return; // manual nav during the delay
     S.prompterIndex++;
     S.lastAutoSpokenIndex = -1;
+    alignDisplayToPrompter();
     refreshPrompterAfterAdvance();
     syncPrompter();
     handleCurrentLineAutomation();
@@ -589,6 +678,7 @@ function scheduleAfterPartner(lineIndex) {
     if (S.prompterIndex >= S.prompterLines.length - 1) return;
     S.prompterIndex++;
     S.lastAutoSpokenIndex = -1;
+    alignDisplayToPrompter();
     refreshPrompterAfterAdvance();
     syncPrompter();
     handleCurrentLineAutomation();
@@ -619,27 +709,29 @@ function _extendScrollGuard() {
 }
 
 /** Lightweight per-advance update: toggle active/past/future classes and
-    move the turn dot without rebuilding the prompter DOM. */
+    move the turn dot without rebuilding the prompter DOM. Keys off the
+    display-line layer (activeDisplayIndex). */
 function updatePrompterProgress() {
   const pa = document.getElementById('prompterArea');
   if (!pa) return false;
-  const els = pa.querySelectorAll('[data-line-index]');
+  const els = pa.querySelectorAll('[data-display-index]');
   if (!els.length) return false;
+  const cur = S.activeDisplayIndex;
   let found = false;
   els.forEach(el => {
-    const idx = parseInt(el.dataset.lineIndex, 10);
+    const idx = parseInt(el.dataset.displayIndex, 10);
     const isLine = el.classList.contains('prompter-line');
-    const isActive = isLine && idx === S.prompterIndex;
+    const isActive = isLine && idx === cur;
     if (isActive) found = true;
     el.classList.toggle('active', isActive);
-    el.classList.toggle('past', idx < S.prompterIndex);
-    el.classList.toggle('future', idx > S.prompterIndex);
+    el.classList.toggle('past', idx < cur);
+    el.classList.toggle('future', idx > cur);
   });
   if (!found) return false; // active line not in DOM — caller should full-render
   pa.querySelectorAll('.turn-dot').forEach(d => d.remove());
   const act = pa.querySelector('.prompter-line.active');
-  const flat = S.prompterLines[S.prompterIndex];
-  if (act && flat && flat.type === 'actor') {
+  const dl = S.displayLines[cur];
+  if (act && dl && dl.type === 'actor') {
     const dot = document.createElement('span');
     dot.className = 'turn-dot turn-actor';
     act.appendChild(dot);
@@ -662,7 +754,7 @@ function refreshPrompterAfterAdvance() {
 function forceScrollToActive(force) {
   if (!force && S.userScrolledUp) return;
   const pa = document.getElementById('prompterArea'); if (!pa) return;
-  const act = pa.querySelector('.prompter-line.active') || pa.querySelector('[data-line-index="' + S.prompterIndex + '"]');
+  const act = pa.querySelector('.prompter-line.active') || pa.querySelector('[data-display-index="' + S.activeDisplayIndex + '"]');
   if (!act) return;
   S.userScrolledUp = false;
   _beginProgrammaticScroll();
@@ -674,67 +766,74 @@ function forceScrollToActive(force) {
 function renderPrompter() {
   const a = document.getElementById('prompterArea');
   const emptyTxt = (typeof t === 'function' && t('prompterEmptyText')) || 'Aucun texte charg\u00e9';
-  if (!S.prompterLines.length) {
+  if (!S.displayLines.length) {
     a.innerHTML = '<div class="prompter-empty" id="prompterEmptyText"></div>';
     const pe = a.querySelector('.prompter-empty');
     if (pe) pe.textContent = emptyTxt;
     return;
   }
   a.textContent = '';
-  const grouped = groupConsecutiveLines(S.prompterLines);
-  for (const g of grouped) {
-    if (g.kind === LINE_TYPE.SLUG || g.kind === LINE_TYPE.ACTION) {
+  const cur = S.activeDisplayIndex;
+  let groupEl = null, segWrap = null, groupKey = null;
+  for (let d = 0; d < S.displayLines.length; d++) {
+    const dl = S.displayLines[d];
+    const tense = d < cur ? ' past' : (d > cur ? ' future' : '');
+    // Action / slug \u2192 standalone block, breaks any open group
+    if (dl.kind === LINE_TYPE.SLUG || (dl.kind === LINE_TYPE.ACTION && !dl.isParenthetical)) {
+      groupEl = null; groupKey = null;
       const block = document.createElement('div');
-      let bcls = g.kind === LINE_TYPE.SLUG ? 'prompter-slug' : 'prompter-action';
-      if (g.originalIndex < S.prompterIndex) bcls += ' past';
-      else if (g.originalIndex > S.prompterIndex) bcls += ' future';
-      block.className = bcls;
-      block.dataset.lineIndex = String(g.originalIndex);
-      block.textContent = g.text;
+      block.className = (dl.kind === LINE_TYPE.SLUG ? 'prompter-slug' : 'prompter-action') + tense;
+      block.dataset.displayIndex = String(d);
+      block.dataset.lineIndex = String(dl.prompterIndex);
+      block.textContent = dl.text;
+      block.addEventListener('click', () => handleTapToJump(dl.prompterIndex));
       a.appendChild(block);
       continue;
     }
-    const isSel = S.selectedChar && normalizeCharacterNameForGroup(g.character) === normalizeCharacterNameForGroup(S.selectedChar);
-    const groupEl = document.createElement('div');
-    groupEl.className = 'prompter-group' + (isSel ? ' prompter-group-user' : ' prompter-group-partner');
-    const header = document.createElement('div');
-    header.className = 'prompter-character';
-    header.textContent = g.character || '';
-    groupEl.appendChild(header);
-    const segWrap = document.createElement('div');
-    segWrap.className = 'prompter-segments';
-    for (const seg of g.segments) {
-      const flat = S.prompterLines[seg.originalIndex];
-      const tense = seg.originalIndex < S.prompterIndex ? ' past' : (seg.originalIndex > S.prompterIndex ? ' future' : '');
-      if (seg.parenthetical) {
-        const parEl = document.createElement('div');
-        parEl.className = 'prompter-parenthetical' + tense;
-        parEl.dataset.lineIndex = String(seg.originalIndex);
-        parEl.textContent = '(' + normalizeContParenDisplay(seg.parenthetical) + ')';
-        segWrap.appendChild(parEl);
-      }
-      const lineEl = document.createElement('div');
-      let cls = 'prompter-line';
-      if (seg.originalIndex === S.prompterIndex) cls += ' active';
-      else cls += tense;
-      if (flat && flat.type === 'partner') cls += ' prompter-line-partner';
-      if (seg.isStageDirection) cls += ' is-stage-direction';
-      lineEl.className = cls;
-      lineEl.dataset.lineIndex = String(seg.originalIndex);
-      lineEl.appendChild(document.createTextNode(seg.text));
-      if (seg.originalIndex === S.prompterIndex && flat && flat.type === 'actor') {
-        const dot = document.createElement('span');
-        dot.className = 'turn-dot turn-actor';
-        lineEl.appendChild(dot);
-      }
-      lineEl.addEventListener('click', () => handleTapToJump(seg.originalIndex));
-      segWrap.appendChild(lineEl);
+    // Dialogue display line \u2192 grouped under one character header per turn
+    if (groupKey !== dl.prompterIndex) {
+      const isSel = S.selectedChar && normalizeCharacterNameForGroup(dl.char) === normalizeCharacterNameForGroup(S.selectedChar);
+      groupEl = document.createElement('div');
+      groupEl.className = 'prompter-group' + (isSel ? ' prompter-group-user' : ' prompter-group-partner');
+      const header = document.createElement('div');
+      header.className = 'prompter-character';
+      header.textContent = dl.char || '';
+      groupEl.appendChild(header);
+      segWrap = document.createElement('div');
+      segWrap.className = 'prompter-segments';
+      groupEl.appendChild(segWrap);
+      a.appendChild(groupEl);
+      groupKey = dl.prompterIndex;
     }
-    groupEl.appendChild(segWrap);
-    a.appendChild(groupEl);
+    if (dl.isParenthetical) {
+      const parEl = document.createElement('div');
+      parEl.className = 'prompter-parenthetical' + tense;
+      parEl.dataset.displayIndex = String(d);
+      parEl.dataset.lineIndex = String(dl.prompterIndex);
+      parEl.textContent = dl.text;
+      segWrap.appendChild(parEl);
+      continue;
+    }
+    const lineEl = document.createElement('div');
+    let cls = 'prompter-line';
+    if (d === cur) cls += ' active';
+    else cls += tense;
+    if (dl.type === 'partner') cls += ' prompter-line-partner';
+    if (dl.isStageDirection) cls += ' is-stage-direction';
+    lineEl.className = cls;
+    lineEl.dataset.displayIndex = String(d);
+    lineEl.dataset.lineIndex = String(dl.prompterIndex);
+    lineEl.appendChild(document.createTextNode(dl.text));
+    if (d === cur && dl.type === 'actor') {
+      const dot = document.createElement('span');
+      dot.className = 'turn-dot turn-actor';
+      lineEl.appendChild(dot);
+    }
+    lineEl.addEventListener('click', () => handleTapToJump(dl.prompterIndex));
+    segWrap.appendChild(lineEl);
   }
   if (!S.userScrolledUp) {
-    const act = a.querySelector('.prompter-line.active') || a.querySelector('[data-line-index="' + S.prompterIndex + '"]');
+    const act = a.querySelector('.prompter-line.active') || a.querySelector('[data-display-index="' + cur + '"]');
     if (act) {
       _beginProgrammaticScroll();
       requestAnimationFrame(() => {
@@ -766,6 +865,7 @@ function handleCurrentLineAutomation() {
       console.info('[auto] skipping stage directions idx=' + S.prompterIndex + ' \u2192 next spoken idx=' + nextSpokenIdx);
       S.prompterIndex = nextSpokenIdx;
       S.lastAutoSpokenIndex = nextSpokenIdx - 1;
+      alignDisplayToPrompter();
       renderPrompter(); syncPrompter();
       forceScrollToActive();
       handleCurrentLineAutomation();
@@ -795,7 +895,10 @@ function handleCurrentLineAutomation() {
       return;
     }
     console.info('[auto] speaking partner line:', spokenText.slice(0, 40));
-    aiSpeak(spokenText, () => { S.lastTTSEndTs = Date.now(); scheduleAfterPartner(currentIndex); });
+    alignDisplayToPrompter();
+    refreshPrompterAfterAdvance();
+    startSpokenDisplayStepping(currentIndex);
+    aiSpeak(spokenText, () => { S.lastTTSEndTs = Date.now(); clearDisplayStepTimers(); scheduleAfterPartner(currentIndex); });
     return;
   }
   if ((S.mode === 'auto' || S.mode === 'ai') && line.type === 'actor') {
@@ -807,26 +910,35 @@ function handleCurrentLineAutomation() {
   }
 }
 
-/** Monologue blocks: paced timed advance (~160 wpm), no VAD wait.
-    Each advance smooth-centers, reading as a continuous slow crawl. */
+/** Monologue blocks: paced timed crawl (~160 wpm), no VAD wait. Advances
+    one DISPLAY line per tick; crossing a turn boundary bumps prompterIndex
+    so WebRTC sync / recording stay coherent. */
 function scheduleMonologueAdvance() {
   clearAutoTimer();
-  const lineIndex = S.prompterIndex;
-  const line = S.prompterLines[lineIndex];
-  if (!line) return;
-  if (lineIndex >= S.prompterLines.length - 1) return;
-  const words = ((line.text || '').split(/\s+/).filter(Boolean)).length;
-  const paceMult = voicePaceMultiplier(); // crawl speed follows the voice speed setting
-  const ms = Math.max(1200, Math.round(words * 380 * paceMult));
+  const dIdx = S.activeDisplayIndex;
+  const dl = S.displayLines[dIdx];
+  if (!dl) return;
+  if (dIdx >= S.displayLines.length - 1) return;
+  const words = ((dl.text || '').split(/\s+/).filter(Boolean)).length;
+  const paceMult = voicePaceMultiplier();
+  const ms = Math.max(900, Math.round(words * 380 * paceMult));
   S.autoAdvanceTimer = setTimeout(() => {
     if (!__cwSessionActive || S.sessionPaused) return;
-    if (S.prompterIndex !== lineIndex) return;
+    if (S.activeDisplayIndex !== dIdx) return;
     if (S.mode === 'manual') return;
-    S.prompterIndex++;
-    S.lastAutoSpokenIndex = -1;
-    refreshPrompterAfterAdvance();
-    syncPrompter();
-    handleCurrentLineAutomation();
+    const nextDl = S.displayLines[dIdx + 1];
+    S.activeDisplayIndex = dIdx + 1;
+    if (nextDl && nextDl.prompterIndex !== dl.prompterIndex) {
+      // crossed into a new turn — keep the turn pointer in step
+      S.prompterIndex = nextDl.prompterIndex;
+      S.lastAutoSpokenIndex = -1;
+      refreshPrompterAfterAdvance();
+      syncPrompter();
+      handleCurrentLineAutomation();
+    } else {
+      refreshPrompterAfterAdvance();
+      scheduleMonologueAdvance();
+    }
   }, ms);
 }
 
@@ -842,6 +954,7 @@ function prompterNext() {
   while (next < S.prompterLines.length - 1 && S.prompterLines[next] && S.prompterLines[next].type !== 'actor') next++;
   S.prompterIndex = next;
   S.lastAutoSpokenIndex = -1;
+  alignDisplayToPrompter();
   refreshPrompterAfterAdvance();
   syncPrompter();
   handleCurrentLineAutomation();
@@ -855,6 +968,7 @@ function prompterPrev() {
   while (prev > 0 && S.prompterLines[prev] && S.prompterLines[prev].type !== 'actor') prev--;
   S.prompterIndex = prev;
   S.lastAutoSpokenIndex = -1;
+  alignDisplayToPrompter();
   refreshPrompterAfterAdvance();
   syncPrompter();
   handleCurrentLineAutomation();
@@ -868,6 +982,7 @@ function handleTapToJump(targetIndex) {
   cancelSpeechFlow();
   S.prompterIndex = targetIndex;
   S.lastAutoSpokenIndex = -1;
+  alignDisplayToPrompter();
   renderPrompter();
   syncPrompter();
   handleCurrentLineAutomation();
@@ -891,24 +1006,26 @@ function onPrompterScrollSync() {
     _scrollSyncTimer = null;
     const pa = document.getElementById('prompterArea');
     if (!pa || !S.prompterLines.length) return;
-    const centerY = pa.getBoundingClientRect().top + pa.clientHeight * 0.3;
+    const centerY = pa.getBoundingClientRect().top + pa.clientHeight * 0.5;
     let closest = -1, closestDist = Infinity;
     var closestAny = -1, closestAnyDist = Infinity;
     pa.querySelectorAll('.prompter-line').forEach(el => {
-      const idx = parseInt(el.dataset.lineIndex); if (isNaN(idx)) return;
+      const idx = parseInt(el.dataset.displayIndex); if (isNaN(idx)) return;
       const r = el.getBoundingClientRect();
       const mid = r.top + r.height / 2;
       const d = Math.abs(mid - centerY);
       if (d < closestAnyDist) { closestAnyDist = d; closestAny = idx; }
-      var line = S.prompterLines[idx];
-      if (line && line.type !== 'context' && d < closestDist) { closestDist = d; closest = idx; }
+      var dl = S.displayLines[idx];
+      if (dl && dl.type !== 'context' && d < closestDist) { closestDist = d; closest = idx; }
     });
     if (closest < 0) closest = closestAny;
-    if (closest >= 0 && closest !== S.prompterIndex) {
-      S.prompterIndex = closest;
+    if (closest >= 0 && closest !== S.activeDisplayIndex) {
+      S.activeDisplayIndex = closest;
+      const dl = S.displayLines[closest];
+      if (dl) S.prompterIndex = dl.prompterIndex;
       pa.querySelectorAll('.prompter-line.active').forEach(el => el.classList.remove('active'));
       pa.querySelectorAll('.prompter-line').forEach(el => {
-        if (parseInt(el.dataset.lineIndex) === closest) el.classList.add('active');
+        if (parseInt(el.dataset.displayIndex) === closest) el.classList.add('active');
       });
       syncPrompter();
     }
@@ -1284,6 +1401,7 @@ function restartTake() {
     stopRecording();
   }
   S.prompterIndex = 0;
+  S.activeDisplayIndex = 0;
   S.lastAutoSpokenIndex = -1;
   // Close the pause overlay WITHOUT resuming the now-stopped recorder
   S.sessionPaused = false;
@@ -1697,7 +1815,7 @@ function teardownSession() {
   stopPeerKeepalive();
   hideOverlay();
   S.isMicOn = true; S.isCamOn = true; S.currentFacingMode = 'user';
-  S.prompterLines = []; S.prompterIndex = 0; S.lastAutoSpokenIndex = -1; S.activeSpeechToken = 0;
+  S.prompterLines = []; S.prompterIndex = 0; S.displayLines = []; S.activeDisplayIndex = 0; S.lastAutoSpokenIndex = -1; S.activeSpeechToken = 0;
   S.recordedChunks = []; S.mediaRecorder = null;
   hideEndTakeModal();
   S.role = 'actor'; S.sessionMode = 'ai';
@@ -1918,4 +2036,7 @@ export {
   setupPrompterScrollListeners,
   scrollActiveLineToCenter,
   updatePrompterProgress,
+  alignDisplayToPrompter,
+  rebuildDisplayLines,
+  advanceDisplayLine,
 };
