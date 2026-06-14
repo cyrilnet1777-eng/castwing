@@ -13,7 +13,7 @@ import {
   setVoiceSpeed, renderAllSpeedSliders, setEmotion,
   VOICE_LOCALES, buildVoicePresetsFromLocale, initVoiceGrid,
   populateSessionVoiceSelect, sliderToElevenLabs, SPEED_DEFAULT,
-  renderSpeedSlider,
+  renderSpeedSlider, getLocaleConfig,
 } from './voices.js';
 import { aiSpeak, cancelTTSPlayback, normalizeTextForTTS, warmAudioForMobile } from './tts.js';
 import { playCountdownBeep, playSfx, unlockAudio } from './sfx.js';
@@ -40,6 +40,7 @@ import {
 } from './auth.js';
 import { persistScriptSnapshotNow } from './idb.js';
 import { refreshCreditBalance, showPaywallModal, updateCreditBadge } from './paywall.js';
+import { startSttFollow, stopSttFollow, setSttCapturing, isSttRunning } from './stt.js';
 import {
   buildLines, normalizeCharacterNameForGroup, groupConsecutiveLines,
   pickDefaultRehearsalCharacter, renderPartnerAssignment,
@@ -203,6 +204,114 @@ function advanceDisplayLine() {
     return true;
   }
   return false; // caller performs the turn advance
+}
+
+// ── STT word-following (Scribe v2) ──────────────────────────────────
+// STT drives activeDisplayIndex by matching the live transcript to the
+// actor's script words; the VAD path stays armed as a silent fallback
+// for when STT stalls (paraphrase / recognition error).
+
+let _sttSessionActive = false;   // WS open for this take
+const STT_WORD_NORM = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\p{L}\p{N}']/gu, '');
+let _sttWords = [];              // [{ w, displayIndex }] for the current actor turn
+let _sttWordPtr = 0;
+let _sttTurnIndex = -1;          // prompterIndex the matcher is built for
+let _lastSttAdvanceTs = 0;       // when STT last moved the highlight
+const STT_MATCH_WINDOW = 14;
+
+function sttFollowEnabled() {
+  if (S.sessionMode !== 'ai') return false;
+  if (S.mode !== 'ai' && S.mode !== 'auto') return false;
+  return !!(S.cwServerSession && S.cwServerSession.email) ||
+         !!(S.userAccess && S.userAccess.verified && S.userAccess.email);
+}
+
+function sttLangCode() {
+  try {
+    const loc = S.lockedVoiceLocale || S.selectedLocale;
+    const cfg = getLocaleConfig(loc);
+    return (cfg && cfg.languageCode) || '';
+  } catch (_e) { return ''; }
+}
+
+/** Build the word→displayIndex map for the actor's current turn. */
+function buildSttMatcherForTurn(turnIdx) {
+  _sttWords = [];
+  _sttWordPtr = 0;
+  _sttTurnIndex = turnIdx;
+  for (let d = 0; d < S.displayLines.length; d++) {
+    const dl = S.displayLines[d];
+    if (dl.prompterIndex !== turnIdx) continue;
+    if (dl.type !== 'actor' || dl.isParenthetical || dl.isStageDirection) continue;
+    for (const raw of String(dl.text || '').split(/\s+/)) {
+      const w = STT_WORD_NORM(raw);
+      if (w) _sttWords.push({ w, displayIndex: d });
+    }
+  }
+}
+
+/** Align the live transcript tail to the script and lead the highlight. */
+function onSttWords(words) {
+  if (!_sttSessionActive) return;
+  if (_sttTurnIndex !== S.prompterIndex || !_sttWords.length) return;
+  const tail = words.slice(-4);
+  if (!tail.length) return;
+  const lo = _sttWordPtr;
+  const hi = Math.min(_sttWords.length, _sttWordPtr + STT_MATCH_WINDOW);
+  let bestEnd = -1, bestScore = 0;
+  for (let start = lo; start < hi; start++) {
+    let score = 0, k = start;
+    for (let ti = 0; ti < tail.length && k < _sttWords.length; ti++, k++) {
+      const sw = _sttWords[k].w, tw = tail[ti];
+      const last = ti === tail.length - 1;
+      if (sw === tw || (last && (sw.startsWith(tw) || tw.startsWith(sw)))) score++;
+      else break;
+    }
+    if (score > bestScore) { bestScore = score; bestEnd = start + score; }
+  }
+  if (bestScore < 1 || bestEnd <= _sttWordPtr) return; // no forward progress — hold
+  _sttWordPtr = bestEnd;
+  _lastSttAdvanceTs = Date.now();
+  if (_sttWordPtr >= _sttWords.length) { sttFinishTurn(); return; }
+  // Lead to the line of the next expected word
+  const di = _sttWords[Math.min(_sttWordPtr, _sttWords.length - 1)].displayIndex;
+  if (di !== S.activeDisplayIndex) { S.activeDisplayIndex = di; refreshPrompterAfterAdvance(); }
+}
+
+/** Actor finished the turn per STT → advance to the next turn. */
+function sttFinishTurn() {
+  if (S.prompterIndex >= S.prompterLines.length - 1) return;
+  const lineIndex = S.prompterIndex;
+  if (S.prompterIndex !== lineIndex) return;
+  S.prompterIndex++;
+  S.lastAutoSpokenIndex = -1;
+  alignDisplayToPrompter();
+  refreshPrompterAfterAdvance();
+  syncPrompter();
+  handleCurrentLineAutomation();
+}
+
+/** Start the STT session for the whole take (capture stays paused until
+    an actor turn). Safe to call when ineligible — it just no-ops. */
+async function maybeStartSttSession() {
+  if (_sttSessionActive || isSttRunning()) return;
+  if (!sttFollowEnabled()) return;
+  const ok = await startSttFollow({ lang: sttLangCode(), onWords: onSttWords });
+  if (ok) {
+    _sttSessionActive = true;
+    // If we're already on an actor turn (e.g. it connected mid-turn),
+    // build the matcher and start capturing right away.
+    const cur = S.prompterLines[S.prompterIndex];
+    if (cur && cur.type === 'actor' && !S.sessionPaused) { buildSttMatcherForTurn(S.prompterIndex); setSttCapturing(true); }
+    else setSttCapturing(false);
+    console.info('[stt] session started');
+  } else console.info('[stt] unavailable → VAD fallback');
+}
+
+function stopSttSession() {
+  _sttSessionActive = false;
+  _sttWords = []; _sttWordPtr = 0; _sttTurnIndex = -1; _lastSttAdvanceTs = 0;
+  stopSttFollow();
 }
 
 // Timers that step the highlight through a spoken turn's display lines
@@ -578,6 +687,7 @@ function cancelSpeechFlow() {
   clearAutoTimer();
   clearDisplayStepTimers();
   stopAutoVAD();
+  setSttCapturing(false); // pause STT audio; keep the WS open for the take
 }
 
 async function armAutoVADForActorLine() {
@@ -630,6 +740,9 @@ async function armAutoVADForActorLine() {
 function onAutoSpeechEnd() {
   if (S.sessionPaused) return;
   if ((S.mode !== 'auto' && S.mode !== 'ai') || S.sessionMode !== 'ai') return;
+  // STT in control: if it moved the highlight recently, let it lead and
+  // don't double-advance on this silence.
+  if (_sttSessionActive && (Date.now() - _lastSttAdvanceTs) < 1500) return;
   const dl = S.displayLines[S.activeDisplayIndex];
   if (!dl || dl.type !== 'actor') return;
   const nextDl = S.displayLines[S.activeDisplayIndex + 1];
@@ -855,6 +968,8 @@ function handleCurrentLineAutomation() {
   if (S.sessionMode !== 'ai' || !S.prompterLines[S.prompterIndex]) { console.info('[auto] not ai or no line'); return; }
   const line = S.prompterLines[S.prompterIndex];
   console.info('[auto] idx=' + S.prompterIndex + ' type=' + line.type + ' spoken=' + line.isSpoken + ' char=' + line.char + ' lastSpoken=' + S.lastAutoSpokenIndex);
+  // STT captures only during the actor's turn (don't transcribe the AI's voice)
+  if (line.type !== 'actor') setSttCapturing(false);
   if (line.isSpoken !== true) {
     S.lastAutoSpokenIndex = S.prompterIndex;
     let nextSpokenIdx = -1;
@@ -905,7 +1020,12 @@ function handleCurrentLineAutomation() {
     S.userScrolledUp = false;
     if (S._scrollResumeTimer) { clearTimeout(S._scrollResumeTimer); S._scrollResumeTimer = null; }
     forceScrollToActive(true);
-    if (line.inMonologue) { scheduleMonologueAdvance(); return; }
+    // STT word-following drives the highlight; VAD stays armed as a silent
+    // fallback for when STT stalls. STT only follows real dialogue lines.
+    buildSttMatcherForTurn(S.prompterIndex);
+    if (_sttSessionActive) setSttCapturing(true);
+    else void maybeStartSttSession();
+    if (line.inMonologue && !_sttSessionActive) { scheduleMonologueAdvance(); return; }
     armAutoVADForActorLine();
   }
 }
@@ -1641,6 +1761,9 @@ async function bootstrapAiSessionFromCurrentScript(importScreenN) {
   setStatus('', S.sessionMode === 'ai' ? t('sessionReadyLabel') : '');
   renderViewModeToggle('viewModeSession');
   renderAllSpeedSliders();
+  // Connect STT for the take ahead of time (capture stays paused until an
+  // actor turn); falls back to VAD silently if it can't connect.
+  void maybeStartSttSession();
   showClapperboard(() => {
     // Recording starts only after the countdown — the take never
     // contains the countdown itself
@@ -1760,6 +1883,7 @@ function teardownSession() {
   __cwSessionActive = false;
   cwSessionStateClear('teardownSession');
   stopSessionTimer();
+  stopSttSession();
   if (_wasLive && !S.isRecording) {
     track('session_abandon', {
       screen: 'session',

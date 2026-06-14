@@ -597,6 +597,52 @@ async function fetchAccountFallbackVoiceId(apiKey, attemptedVoiceId) {
   } catch (e) { return ""; }
 }
 
+/* =========================================================
+   STT TOKEN — single-use token for ElevenLabs Scribe v2 Realtime
+   Keeps the API key server-side; the client connects the WebSocket
+   directly with this short-lived (15 min, single-use) token. STT cost
+   (~$0.004/min) is absorbed; we only gate on login + a credit balance
+   and rate-limit minting to prevent abuse.
+========================================================= */
+
+async function handleSttToken(request, env) {
+  const apiKey = String(env.ELEVENLABS_API_KEY || "").trim().replace(/^['"]|['"]$/g, "").replace(/^Bearer\s+/i, "");
+  if (!apiKey) return json({ ok: false, error: "STT_PROVIDER_ERROR", message: "Missing API key" }, 500);
+
+  const email = await resolveCurrentUser(request, env);
+  if (!email) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
+
+  const isAdmin = isAdminEmail(email, env);
+  if (!isAdmin) {
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    if (!rateCheck(`stt-token:${email}`, 20, 3600) || !rateCheck(`stt-token-ip:${ip}`, 40, 3600)) {
+      return json({ ok: false, error: "RATE_LIMIT", message: "Too many STT sessions" }, 429);
+    }
+    const _metered = await isMeteredUser(env.DB, email);
+    if (!_metered && env.DB) {
+      const { balance_cents } = await getCreditBalance(env.DB, email);
+      if ((balance_cents || 0) <= 0) {
+        return json({ ok: false, error: "NO_CREDITS", balance_cents }, 402);
+      }
+    }
+  }
+
+  try {
+    const r = await fetch("https://api.elevenlabs.io/v1/single-use-token/realtime_scribe", {
+      method: "POST",
+      headers: { "xi-api-key": apiKey },
+      signal: AbortSignal.timeout(10000),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || !data.token) {
+      return json({ ok: false, error: "STT_PROVIDER_ERROR", message: (data && data.detail && data.detail.message) || ("http_" + r.status) }, r.status >= 400 && r.status < 600 ? r.status : 502);
+    }
+    return json({ ok: true, token: data.token }, 200, { "Cache-Control": "no-store" });
+  } catch (e) {
+    return json({ ok: false, error: "STT_PROVIDER_ERROR", message: String(e && e.message || e).slice(0, 120) }, 502);
+  }
+}
+
 async function handleTTS(request, env, ctx) {
   try {
     const apiKey = String(env.ELEVENLABS_API_KEY || "").trim().replace(/^['"]|['"]$/g, "").replace(/^Bearer\s+/i, "");
@@ -2884,6 +2930,7 @@ export default {
 
     if (url.pathname === "/api/track" && request.method === "POST") return handleTrack(request, env, ctx);
     if (url.pathname === "/api/tts" && request.method === "POST") return handleTTS(request, env, ctx);
+    if (url.pathname === "/api/stt-token" && request.method === "POST") return handleSttToken(request, env);
     if (url.pathname === "/api/label-script") return withAnthropicSlot(env, handleLabelScript, request);
     if (url.pathname === "/api/claude-parse-script") return withAnthropicSlot(env, handleClaudeParseScript, request);
     if (url.pathname === "/api/parse-screenplay") {
