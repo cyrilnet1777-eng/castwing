@@ -273,8 +273,10 @@ function onSttWords(words) {
   _sttWordPtr = bestEnd;
   _lastSttAdvanceTs = Date.now();
   if (_sttWordPtr >= _sttWords.length) { sttFinishTurn(); return; }
-  // Lead to the line of the next expected word
-  const di = _sttWords[Math.min(_sttWordPtr, _sttWords.length - 1)].displayIndex;
+  // Lead one word ahead so the next line lights up as you finish the
+  // current one — hides the ~400ms transcription latency.
+  const leadPtr = Math.min(_sttWords.length - 1, _sttWordPtr + 1);
+  const di = _sttWords[leadPtr].displayIndex;
   if (di !== S.activeDisplayIndex) { S.activeDisplayIndex = di; refreshPrompterAfterAdvance(); }
 }
 
@@ -739,7 +741,7 @@ async function armAutoVADForActorLine() {
     // silence so it never pre-empts. minSpeechMs requires the actor to
     // actually speak before a silence advances (no jumping on a silent
     // mid-thought pause).
-    const silenceMs = computeSilenceMsForActorLine(line) + (_sttSessionActive ? 1600 : 0);
+    const silenceMs = computeSilenceMsForActorLine(line) + (_sttSessionActive ? 500 : 0);
     console.info('[VAD] arming: silence=' + silenceMs + 'ms, stt=' + _sttSessionActive + ', postTtsDelay=' + postTtsDelay + 'ms');
     S.vad = new VoiceActivityDetector({ speechThreshold: 0.010, silenceDuration: silenceMs, minSpeechMs: 350, onSpeechEnd: onAutoSpeechEnd });
     await S.vad.start(new MediaStream(liveTracks));
@@ -754,9 +756,14 @@ async function armAutoVADForActorLine() {
 function onAutoSpeechEnd() {
   if (S.sessionPaused) return;
   if ((S.mode !== 'auto' && S.mode !== 'ai') || S.sessionMode !== 'ai') return;
+  const dl0 = S.displayLines[S.activeDisplayIndex];
+  const next0 = S.displayLines[S.activeDisplayIndex + 1];
+  const isLastOfTurn = dl0 && (!next0 || next0.prompterIndex !== dl0.prompterIndex);
   // STT in control: if it moved the highlight recently, let it lead and
-  // don't double-advance on this silence.
-  if (_sttSessionActive && (Date.now() - _lastSttAdvanceTs) < 1500) return;
+  // don't double-advance on this silence — EXCEPT on the last line of the
+  // turn, where STT can't lead any further, so a silence means "done":
+  // finish the turn promptly instead of waiting on STT to catch the final word.
+  if (_sttSessionActive && !isLastOfTurn && (Date.now() - _lastSttAdvanceTs) < 1500) return;
   const dl = S.displayLines[S.activeDisplayIndex];
   if (!dl || dl.type !== 'actor') return;
   const nextDl = S.displayLines[S.activeDisplayIndex + 1];
