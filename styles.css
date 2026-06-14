@@ -70,6 +70,13 @@ body::after{content:none}
 .hero-join-link a{color:rgba(245,239,224,.5);text-decoration:underline;cursor:pointer}
 .hero-join-link a:hover{color:var(--white)}
 #home.dragover .home-hero{outline:2px solid var(--raspberry);outline-offset:-2px}
+/* Landscape (incl. iPad landscape): the hero can be taller than a short
+   viewport — let the page scroll instead of clipping IMPORT / Join out of
+   reach. Hero goes in-flow with a min-height so it still fills tall screens. */
+@media(orientation:landscape){
+  #home{overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .home-hero{position:relative;inset:auto;min-height:100dvh}
+}
 @media(min-width:768px){
   .home-hero{padding:4rem 5rem 2.5rem}
   .hero-titles{margin-top:8rem}
@@ -414,6 +421,7 @@ input[type="file"]{display:none}
 #session.take-active #sessionShareBtn,#session.take-active #sessionModeManualBtn,
 #session.take-active #sessionModeAutoBtn,#session.take-active #viewModeSession,
 #session.take-active #speedBtnsSession,#session.take-active #speedBtnsOverlay,
+#session.take-active .rec-indicator,
 #session.take-active .ai-panel{display:none!important}
 #session.take-active #speedTriTake{display:flex}
 #speedTriTake{display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:58;width:min(60vw,240px)}
@@ -426,6 +434,11 @@ input[type="file"]{display:none}
    above the bottom-left transport controls */
 @media(max-height:600px) and (orientation:landscape){
   #speedTriTake{bottom:56px;top:auto;left:20%;width:min(30vw,200px)}
+}
+/* Desktop/tablet split: video owns the left 60% — center the buttons over it
+   (50% would push them onto the prompter edge) */
+@media(min-width:768px) and (min-height:601px){
+  #speedTriTake{left:30%;bottom:calc(40px + env(safe-area-inset-bottom,0px));width:min(28vw,260px)}
 }
 #speedTriTake .speed-tri-btn{background:rgba(0,0,0,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
 #speedTriTake .speed-tri-btn.selected{background:var(--actor-gold)}
