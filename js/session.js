@@ -1337,20 +1337,37 @@ function toggleMic() {
 }
 
 async function toggleCam() {
-  S.currentFacingMode = S.currentFacingMode === 'user' ? 'environment' : 'user';
-  try {
-    const newStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { exact: S.currentFacingMode }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-      audio: false,
-    });
-    const newTrack = newStream.getVideoTracks()[0];
-    await applyCameraFieldOfViewFix(newTrack);
-    const oldTracks = S.localStream ? S.localStream.getVideoTracks() : [];
-    if (S.localStream) {
-      S.localStream.getVideoTracks().forEach(t => S.localStream.removeTrack(t));
-      S.localStream.addTrack(newTrack);
+  const target = S.currentFacingMode === 'user' ? 'environment' : 'user';
+  const oldTracks = S.localStream ? S.localStream.getVideoTracks() : [];
+  // Acquire the new camera. `exact` is rejected on many Android devices,
+  // and some can't open a 2nd camera while the 1st is live — so try
+  // exact, then ideal, then (stopping the old track) ideal again.
+  async function acquire() {
+    const dims = { width: { ideal: 1920 }, height: { ideal: 1080 } };
+    try {
+      return await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: target }, ...dims }, audio: false });
+    } catch (e1) {
+      try {
+        return await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: target }, ...dims }, audio: false });
+      } catch (e2) {
+        // Camera may be busy holding the current track — release and retry
+        oldTracks.forEach(t => t.stop());
+        return await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: target }, ...dims }, audio: false });
+      }
     }
-    oldTracks.forEach(t => t.stop());
+  }
+  try {
+    const newStream = await acquire();
+    const newTrack = newStream.getVideoTracks()[0];
+    if (!newTrack) throw new Error('no video track');
+    S.currentFacingMode = target;
+    await applyCameraFieldOfViewFix(newTrack);
+    if (S.localStream) {
+      S.localStream.getVideoTracks().forEach(t => { S.localStream.removeTrack(t); try { t.stop(); } catch (_e) {} });
+      S.localStream.addTrack(newTrack);
+    } else {
+      S.localStream = new MediaStream([newTrack]);
+    }
     const localVideo = document.getElementById('localVideo');
     localVideo.srcObject = S.localStream;
     localVideo.classList.toggle('mirror', S.currentFacingMode === 'user');
@@ -1362,7 +1379,7 @@ async function toggleCam() {
     document.getElementById('noVideoMsg').style.display = 'none';
     showToast(S.currentFacingMode === 'user' ? 'Front camera' : 'Rear camera');
   } catch (e) {
-    S.currentFacingMode = S.currentFacingMode === 'user' ? 'environment' : 'user';
+    console.warn('[camera] switch failed:', e && e.message);
     showToast(t('sesCameraSwitchUnavailable'), 3500);
   }
 }
@@ -1413,16 +1430,14 @@ function togglePause(forceState) {
     if (icon) icon.innerHTML = '<polygon points="6,4 20,12 6,20" fill="currentColor"/>';
     if (mobBtn) mobBtn.classList.add('is-paused');
     if (recInd) recInd.style.display = 'none';
-    if (S.isRecording && S.mediaRecorder && S.mediaRecorder.state === 'recording') {
-      try { S.mediaRecorder.pause(); } catch (_e) {}
-    }
+    // NOTE: do NOT pause the MediaRecorder here. On Android Webviews
+    // (Brave/Samsung) MediaRecorder.pause() can drop the whole recording.
+    // We keep it rolling through the pause (the take just includes the
+    // gap) — never lose footage. The prompter/AI/STT still freeze below.
     if (S.conn && S.conn.open) S.conn.send({ type: 'pause' });
   } else {
     if (typeof window.markTakePaused === 'function') window.markTakePaused(false);
     unfreezeTimer();
-    if (S.isRecording && S.mediaRecorder && S.mediaRecorder.state === 'paused') {
-      try { S.mediaRecorder.resume(); } catch (_e) {}
-    }
     if (overlay) overlay.classList.remove('active');
     if (btn) btn.classList.remove('is-paused');
     if (icon) icon.innerHTML = '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>';

@@ -94,7 +94,6 @@ const VOICE_LOCALES=[
   {id:'english',label:'English 🇺🇸',languageCode:'en',profiles:[
     {id:'en-us-f',voice:'elen',fallback:['isa','francesca','eliza','charlotte'],label:'Taylor',tag:'US',gender:'female',languageCode:'en-us'},
     {id:'en-us-m',voice:'edward',fallback:['john_doe','camille_m','austin','james'],label:'Mason',tag:'US',gender:'male',languageCode:'en-us'},
-    {id:'en-gb-m',voice:'austin',fallback:['john_doe','edward','camille_m','james'],label:'Oliver',tag:'UK',gender:'male',languageCode:'en-gb'},
     {id:'en-sadie',voice:'sadie',fallback:['elen','eliza','charlotte'],label:'Sadie',tag:'Calm & Gritty',gender:'female',languageCode:'en-us'},
     {id:'en-isla',voice:'isa',fallback:['eliza','elen','charlotte'],label:'Isla',tag:'Scottish',gender:'female',languageCode:'en-gb'},
     {id:'en-caty',voice:'caty',fallback:['elen','eliza','charlotte'],label:'Caty',tag:'Droll & Dry',gender:'female',languageCode:'en-us'},
