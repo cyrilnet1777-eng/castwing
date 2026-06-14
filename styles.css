@@ -411,6 +411,18 @@ input[type="file"]{display:none}
 .speed-tri{display:flex;gap:8px;width:100%}
 .speed-tri-btn{flex:1;padding:10px 0;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.04);color:#ccc;font-size:.82rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;letter-spacing:.03em}
 .speed-tri-btn.selected{background:var(--actor-gold);border-color:var(--actor-gold);color:#1a1200}
+/* Text-size selector (pause menu) — three "A" glyphs at increasing sizes */
+.fs-tri{display:flex;gap:8px;width:100%}
+.fs-btn{flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.04);color:#ccc;cursor:pointer;font-family:'DM Sans',sans-serif;line-height:1;transition:all .15s}
+.fs-btn.selected{background:var(--actor-gold);border-color:var(--actor-gold);color:#1a1200}
+.fs-btn:active{opacity:.7}
+/* Prompter text-size scaling (applied to .prompter-area; medium = default) */
+.prompter-area.fs-small .prompter-line{font-size:.86rem}
+.prompter-area.fs-small .prompter-line.active{font-size:1.1rem}
+.prompter-area.fs-small .prompter-line.is-stage-direction{font-size:.72rem}
+.prompter-area.fs-large .prompter-line{font-size:1.28rem}
+.prompter-area.fs-large .prompter-line.active{font-size:1.75rem}
+.prompter-area.fs-large .prompter-line.is-stage-direction{font-size:1.02rem}
 /* Minimal UI during an active take: only Stop, Pause, Speed remain.
    Camera flip + mic live on the preview screen and the pause menu — not
    during the take (actors don't touch the screen while recording). */

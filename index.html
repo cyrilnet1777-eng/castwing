@@ -30,7 +30,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<link rel="stylesheet" href="/styles.css?v=20260614k">
+<link rel="stylesheet" href="/styles.css?v=20260614l">
 </head>
 <body>
 <div id="toast" class="toast"></div>
@@ -406,6 +406,15 @@
           <div class="ps-section-label" id="psCameraLabel" style="font-size:.75rem;color:#888">CAMERA</div>
           <button class="ps-cam-btn" id="psCamBtn" onclick="toggleCam()"><svg viewBox="0 0 24 24" width="16" height="16" style="vertical-align:middle;margin-right:6px"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z" fill="currentColor"/></svg><span id="psCamBtnLabel">Switch camera</span></button>
         </div>
+        <div class="ps-separator"></div>
+        <div class="ps-section">
+          <div class="ps-section-label" id="psTextSizeLabel" style="font-size:.75rem;color:#888">TEXT SIZE</div>
+          <div class="fs-tri" id="fontSizeTri">
+            <button class="fs-btn" data-fs="small" onclick="setFontScale('small')"><span style="font-size:.85rem">A</span></button>
+            <button class="fs-btn" data-fs="medium" onclick="setFontScale('medium')"><span style="font-size:1.2rem">A</span></button>
+            <button class="fs-btn" data-fs="large" onclick="setFontScale('large')"><span style="font-size:1.6rem;font-weight:800">A</span></button>
+          </div>
+        </div>
         <div style="flex:1;min-height:24px"></div>
         <button class="ps-resume-btn ps-gold" id="psResumeBtn" onclick="togglePause(false)">▶ &nbsp;RESUME</button>
         <button class="ps-restart-btn" id="psRestartBtn" onclick="confirmRestartTake()">↺ &nbsp;RESTART</button>
@@ -482,6 +491,6 @@
 </div></div>
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ttsAudioEl" playsinline></audio>
-<script type="module" src="/js/app.js?v=20260614k"></script>
+<script type="module" src="/js/app.js?v=20260614l"></script>
 </body>
 </html>

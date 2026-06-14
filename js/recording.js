@@ -380,6 +380,16 @@ function startRecording() {
     // Minimal UI: hide non-essential controls while the take is rolling
     const _sess = document.getElementById('session');
     if (_sess) _sess.classList.add('take-active');
+    // Best-effort fullscreen to reclaim the space the browser chrome (Safari
+    // bars, Android URL bar) steals from the teleprompter. No-ops on iOS
+    // Safari (no element fullscreen) — the text-size selector covers that.
+    try {
+      const _de = document.documentElement;
+      const _req = _de.requestFullscreen || _de.webkitRequestFullscreen;
+      if (_req && !document.fullscreenElement && !document.webkitFullscreenElement) {
+        const _p = _req.call(_de); if (_p && _p.catch) _p.catch(function () {});
+      }
+    } catch (_e) {}
     if (typeof window.renderAllSpeedSliders === 'function') window.renderAllSpeedSliders();
     document.getElementById('btnRec').classList.add('recording');
     document.getElementById('btnRec').innerHTML = '<span class="rec-dot"></span>';
@@ -409,6 +419,12 @@ function stopRecording() {
   S._recStopIntentional = true;
   const _sessEl = document.getElementById('session');
   if (_sessEl) _sessEl.classList.remove('take-active');
+  try {
+    const _exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (_exit && (document.fullscreenElement || document.webkitFullscreenElement)) {
+      const _p = _exit.call(document); if (_p && _p.catch) _p.catch(function () {});
+    }
+  } catch (_e) {}
   // Thumbnail for the takes list (canvas still holds the last drawn frame)
   try { if (_recCanvas) _lastThumb = _recCanvas.toDataURL('image/jpeg', 0.6); } catch (_e) { _lastThumb = null; }
   _showRecPauseBar(false);

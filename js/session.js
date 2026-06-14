@@ -482,6 +482,16 @@ function setViewMode(m) {
       if (sessTop) { sessTop.style.setProperty('left', '0', 'important'); sessTop.style.setProperty('right', '0', 'important'); }
     } else if (window.innerWidth >= 768) {
       pa.style.marginTop = '0'; pa.style.position = 'fixed'; pa.style.bottom = '0'; pa.style.left = '0'; pa.style.right = '0';
+    } else {
+      // Portrait phone, text-only: the screen is too narrow for one row, so
+      // stack the controls in a reserved bottom strip — playback row on top,
+      // speed row below — never over the script.
+      pa.style.setProperty('position', 'fixed', 'important');
+      pa.style.setProperty('top', '0', 'important');
+      pa.style.setProperty('bottom', '108px', 'important');
+      pa.style.setProperty('height', 'auto', 'important');
+      if (mobCtrl) { mobCtrl.style.setProperty('left', '50%', 'important'); mobCtrl.style.setProperty('right', 'auto', 'important'); mobCtrl.style.setProperty('transform', 'translateX(-50%)', 'important'); mobCtrl.style.setProperty('bottom', 'calc(58px + env(safe-area-inset-bottom,0px))', 'important'); mobCtrl.style.setProperty('top', 'auto', 'important'); }
+      if (speedTri) { speedTri.style.setProperty('left', '50%', 'important'); speedTri.style.setProperty('right', 'auto', 'important'); speedTri.style.setProperty('transform', 'translateX(-50%)', 'important'); speedTri.style.setProperty('bottom', 'calc(12px + env(safe-area-inset-bottom,0px))', 'important'); speedTri.style.setProperty('top', 'auto', 'important'); speedTri.style.setProperty('width', 'min(82vw,300px)', 'important'); }
     }
   } else if (m === 'video') {
     pa.style.setProperty('display', 'none', 'important');
@@ -506,6 +516,24 @@ function cycleViewMode() {
   var modes = ['50-50', 'prompt', 'video'];
   var i = modes.indexOf(S.sessionViewMode);
   setViewMode(modes[(i + 1) % modes.length]);
+}
+
+// Teleprompter text size — compensates for browser chrome (Safari bars) eating
+// vertical space, and reading distance. Persisted in localStorage.
+function applyFontScale() {
+  var scale = S.prompterFontScale || 'medium';
+  var pa = document.querySelector('.prompter-area');
+  if (pa) { pa.classList.remove('fs-small', 'fs-medium', 'fs-large'); pa.classList.add('fs-' + scale); }
+  document.querySelectorAll('#fontSizeTri .fs-btn').forEach(function (b) {
+    b.classList.toggle('selected', b.getAttribute('data-fs') === scale);
+  });
+}
+
+function setFontScale(scale) {
+  S.prompterFontScale = scale;
+  try { localStorage.setItem('cw_fontScale', scale); } catch (_e) {}
+  applyFontScale();
+  if (typeof forceScrollToActive === 'function') forceScrollToActive();
 }
 
 function renderViewModeToggle(containerId) {
@@ -1433,6 +1461,7 @@ function togglePause(forceState) {
     updateTakeInfo();
     renderAllSpeedSliders();
     renderViewModeToggle('viewModePause');
+    applyFontScale();
     // AI voice speed only makes sense in AI mode
     const _vss = document.getElementById('psVoiceSpeedSection');
     if (_vss) _vss.style.display = S.sessionMode === 'ai' ? '' : 'none';
@@ -1831,6 +1860,7 @@ async function bootstrapAiSessionFromCurrentScript(importScreenN) {
     if (tier !== 'visitor' || getSpecTier() === 'figurant') startSessionTimer();
     else hideTimerBadge();
     setViewMode(S.sessionViewMode);
+    applyFontScale();
     S.userScrolledUp = false;
     handleCurrentLineAutomation();
     forceScrollToActive();
@@ -2142,6 +2172,8 @@ export {
   // View modes
   setViewMode,
   cycleViewMode,
+  setFontScale,
+  applyFontScale,
   renderViewModeToggle,
   updateViewModeButtons,
 

@@ -145,6 +145,7 @@ export const S = {
  */
 export function initState() {
   S.sessionViewMode = localStorage.getItem('cw_viewMode') || '50-50';
+  S.prompterFontScale = localStorage.getItem('cw_fontScale') || 'medium';
   try { localStorage.removeItem('cw_prompterPace'); } catch (_e) {}
   try { S._analyticsSid = crypto.randomUUID(); } catch (_e) { S._analyticsSid = 'sid-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10); }
 }
