@@ -702,6 +702,15 @@ function cancelSpeechFlow() {
   setSttCapturing(false); // pause STT audio; keep the WS open for the take
 }
 
+/** TTS was refused for lack of credits: freeze the take where it is
+    (no silent scrolling), surface a toast; the credit/top-up modal is
+    already shown by the caller. The recording keeps running so the actor
+    can top up and resume, or end the take. */
+function haltForCredits() {
+  cancelSpeechFlow();
+  showToast(t('insufficientCredits'), 5000);
+}
+
 async function armAutoVADForActorLine() {
   if (S.sessionPaused) return;
   if ((S.mode !== 'auto' && S.mode !== 'ai') || S.sessionMode !== 'ai') {
@@ -2124,6 +2133,7 @@ export {
 
   // Speech flow
   cancelSpeechFlow,
+  haltForCredits,
   clearAutoTimer,
   scheduleAfterPartner,
 

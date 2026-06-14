@@ -413,7 +413,10 @@ async function aiSpeak(text, cb, opts) {
     if (isLoggedIn) showCreditDepletedModal();
     else if (S.userAccess.email) { showToast(t('ttsSessionExpired')); openAuthModal(); }
     else showVisitorSignupPrompt();
-    if (cb) cb();
+    // Halt the take instead of advancing silently — the prompter stays
+    // put and the credit modal / toast tell the actor to top up.
+    if (typeof window.haltForCredits === 'function') window.haltForCredits();
+    else if (cb) cb();
     return;
   }
   // Only fall back to browser TTS for technical errors (API down, etc.)
