@@ -314,37 +314,46 @@ function stopSttSession() {
   stopSttFollow();
 }
 
-// Timers that step the highlight through a spoken turn's display lines
-let _displayStepTimers = [];
+// Walk the highlight through a spoken AI/partner turn IN SYNC WITH THE
+// ACTUAL VOICE: a rAF loop maps real playback progress (from
+// S.ttsPlaybackInfo, set by tts.js) onto the turn's display lines by
+// cumulative word fraction — no drift, never runs ahead of the audio.
+let _spokenStepRaf = null;
 function clearDisplayStepTimers() {
-  _displayStepTimers.forEach(id => clearTimeout(id));
-  _displayStepTimers = [];
+  if (_spokenStepRaf) { cancelAnimationFrame(_spokenStepRaf); _spokenStepRaf = null; }
 }
 
-/** While an AI/partner turn is being spoken, walk the highlight through
-    its display lines on a timer estimated from each line's word count
-    (~2.7 wps, scaled by the voice speed) so the bold line tracks the
-    spoken sentence instead of the whole speech lighting up at once. */
 function startSpokenDisplayStepping(turnIdx) {
   clearDisplayStepTimers();
   const [first, last] = displayRangeForPrompter(S.displayLines, turnIdx);
   if (first === -1 || last <= first) return; // single display line — nothing to step
   S.activeDisplayIndex = first;
-  const paceMult = voicePaceMultiplier();
-  let acc = 0;
-  for (let d = first; d < last; d++) {
-    const words = ((S.displayLines[d].text || '').split(/\s+/).filter(Boolean)).length || 1;
-    acc += Math.max(500, Math.round(words * 370 * paceMult));
-    const target = d + 1;
-    _displayStepTimers.push(setTimeout(() => {
-      if (!__cwSessionActive || S.sessionPaused) return;
-      if (S.prompterIndex !== turnIdx) return; // turn moved on
-      if (S.displayLines[target] && S.displayLines[target].prompterIndex === turnIdx) {
-        S.activeDisplayIndex = target;
-        refreshPrompterAfterAdvance();
-      }
-    }, acc));
+  // Cumulative word fraction at the END of each display line in the turn
+  const counts = [];
+  let total = 0;
+  for (let d = first; d <= last; d++) {
+    const w = ((S.displayLines[d].text || '').split(/\s+/).filter(Boolean)).length || 1;
+    total += w; counts.push(total);
   }
+  const startedAt = Date.now();
+  const tick = () => {
+    if (!__cwSessionActive || S.sessionPaused || S.prompterIndex !== turnIdx) { _spokenStepRaf = null; return; }
+    const info = S.ttsPlaybackInfo;
+    // Until real duration is known, estimate; once known, follow it exactly
+    let frac;
+    if (info && info.durationMs > 0) frac = Math.min(1, (Date.now() - info.startTs) / info.durationMs);
+    else frac = Math.min(0.95, (Date.now() - startedAt) / (total * 400)); // pre-metadata estimate, capped
+    const spokenWords = frac * total;
+    let target = first;
+    for (let i = 0; i < counts.length; i++) { if (spokenWords >= counts[i]) target = first + i + 1; }
+    if (target > last) target = last;
+    if (target !== S.activeDisplayIndex && target <= last && S.displayLines[target] && S.displayLines[target].prompterIndex === turnIdx) {
+      S.activeDisplayIndex = target;
+      refreshPrompterAfterAdvance();
+    }
+    _spokenStepRaf = requestAnimationFrame(tick);
+  };
+  _spokenStepRaf = requestAnimationFrame(tick);
 }
 
 function normalizeContParenDisplay(stored) {
@@ -725,9 +734,13 @@ async function armAutoVADForActorLine() {
   const doArm = async () => {
     _vadArmTimer = null;
     if ((S.mode !== 'auto' && S.mode !== 'ai') || S.sessionPaused) return;
-    const silenceMs = computeSilenceMsForActorLine(line);
-    console.info('[VAD] arming: silence=' + silenceMs + 'ms, words=' + ((line && line.text) || '').split(/\s+/).filter(Boolean).length + ', postTtsDelay=' + postTtsDelay + 'ms');
-    S.vad = new VoiceActivityDetector({ speechThreshold: 0.010, silenceDuration: silenceMs, minSpeechMs: 0, onSpeechEnd: onAutoSpeechEnd });
+    // When STT is following, VAD is only a backstop — give it a long
+    // silence so it never pre-empts. minSpeechMs requires the actor to
+    // actually speak before a silence advances (no jumping on a silent
+    // mid-thought pause).
+    const silenceMs = computeSilenceMsForActorLine(line) + (_sttSessionActive ? 1600 : 0);
+    console.info('[VAD] arming: silence=' + silenceMs + 'ms, stt=' + _sttSessionActive + ', postTtsDelay=' + postTtsDelay + 'ms');
+    S.vad = new VoiceActivityDetector({ speechThreshold: 0.010, silenceDuration: silenceMs, minSpeechMs: 350, onSpeechEnd: onAutoSpeechEnd });
     await S.vad.start(new MediaStream(liveTracks));
   };
   if (postTtsDelay > 100) {

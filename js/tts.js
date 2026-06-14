@@ -134,6 +134,7 @@ function cancelTTSPlayback() {
     try { S.ttsAudio.stop(); } catch (e) {}
   }
   if (S._ttsAbort) { try { S._ttsAbort.abort(); } catch (e) {} S._ttsAbort = null; }
+  S.ttsPlaybackInfo = null;
   const el = document.getElementById('ttsAudioEl');
   if (el) {
     el.pause();
@@ -323,6 +324,10 @@ async function speakWithElevenLabs(text, preset, token, cb, speedOverride, demoF
         src.connect(S._recDest);
         src.connect(S._recAudioCtx.destination);
         src.onended = recDone;
+        // Expose real playback timing so the prompter can step display
+        // lines in sync with the actual voice (not an estimate). Speed is
+        // baked into the rendered audio here, so duration is final.
+        S.ttsPlaybackInfo = { startTs: Date.now(), durationMs: Math.round((audioBuffer.duration || 0) * 1000) };
         src.start(0);
         // Safety: onended can fail to fire on iOS Safari -- use duration-based fallback
         var _safetyMs = Math.ceil((audioBuffer.duration || 3) * 1000) + 500;
@@ -350,9 +355,16 @@ async function speakWithElevenLabs(text, preset, token, cb, speedOverride, demoF
     };
     audio.onended = done;
     audio.onerror = done;
-    try { await audio.play(); } catch (e) {
+    // Publish real playback timing for in-sync prompter stepping
+    S.ttsPlaybackInfo = null;
+    const _publishDur = () => {
+      const d = audio.duration;
+      if (d && isFinite(d)) S.ttsPlaybackInfo = { startTs: Date.now(), durationMs: Math.round(d * 1000 / (audio.playbackRate || 1)) };
+    };
+    audio.onloadedmetadata = _publishDur;
+    try { await audio.play(); _publishDur(); } catch (e) {
       unlockAudio();
-      try { await audio.play(); } catch (e2) { done(); }
+      try { await audio.play(); _publishDur(); } catch (e2) { done(); }
     }
     return true;
   } catch (e) {

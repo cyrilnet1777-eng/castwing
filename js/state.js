@@ -126,6 +126,7 @@ export const S = {
 
   // ── Audio / TTS playback ───────────────────────────────────────────
   ttsAudio:         null,
+  ttsPlaybackInfo:  null,   // { startTs, durationMs } of the line being spoken
   lastTTSEndTs:     0,
   sfxCache:         {},
   _audioUnlocked:   false,

@@ -71,18 +71,33 @@ export async function startSttFollow({ lang, onWords } = {}) {
     token = data.token;
   } catch (e) { track('stt_token_fail', { error: 'network' }); return false; }
 
+  // Create the audio context FIRST so we know the real sample rate. Safari
+  // often ignores a requested 16k and runs at 44.1/48k; we must tell
+  // ElevenLabs the actual rate or it transcribes garbage. All of
+  // 16000/22050/24000/44100/48000 are supported by Scribe.
+  let realRate = STT_SAMPLE_RATE;
+  try {
+    let ctx;
+    try { ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: STT_SAMPLE_RATE }); }
+    catch (_e) { ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+    _audioCtx = ctx;
+    if (_audioCtx.state === 'suspended') await _audioCtx.resume();
+    realRate = _audioCtx.sampleRate || STT_SAMPLE_RATE;
+  } catch (e) { return false; }
+
+  // model_id is optional; omit it so the default realtime model applies
+  // (a wrong value rejects the connection).
   const params = new URLSearchParams({
     token,
-    model_id: 'scribe_v2_realtime',
     commit_strategy: 'vad',
     include_timestamps: 'false',
-    sample_rate: String(STT_SAMPLE_RATE),
+    sample_rate: String(realRate),
   });
   if (_lang) params.set('language_code', _lang);
 
   try {
     _ws = new WebSocket(WS_URL + '?' + params.toString());
-  } catch (e) { return false; }
+  } catch (e) { try { _audioCtx.close(); } catch (_e) {} _audioCtx = null; return false; }
 
   const ready = await new Promise((resolve) => {
     let settled = false;
@@ -91,7 +106,7 @@ export async function startSttFollow({ lang, onWords } = {}) {
     _ws.onopen = () => { clearTimeout(to); done(true); };
     _ws.onerror = () => { clearTimeout(to); done(false); };
   });
-  if (!ready) { try { _ws.close(); } catch (_e) {} _ws = null; return false; }
+  if (!ready) { try { _ws.close(); } catch (_e) {} _ws = null; try { _audioCtx.close(); } catch (_e) {} _audioCtx = null; return false; }
 
   _ws.onmessage = (ev) => {
     if (!_running) return;
@@ -104,13 +119,9 @@ export async function startSttFollow({ lang, onWords } = {}) {
   };
   _ws.onclose = () => { if (_running) track('stt_ws_closed', {}); };
 
-  // PCM capture on a dedicated 16 kHz context
   try {
-    _audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: STT_SAMPLE_RATE });
-    if (_audioCtx.state === 'suspended') await _audioCtx.resume();
     _srcNode = _audioCtx.createMediaStreamSource(new MediaStream(stream.getAudioTracks()));
-    // ScriptProcessor is deprecated but universally supported incl. iOS;
-    // 4096 frames @16k ≈ 256ms chunks.
+    // ScriptProcessor is deprecated but works everywhere incl. iOS Safari
     _procNode = _audioCtx.createScriptProcessor(4096, 1, 1);
     _procNode.onaudioprocess = (e) => {
       if (!_running || !_capturing || !_ws || _ws.readyState !== 1) return;
@@ -119,7 +130,7 @@ export async function startSttFollow({ lang, onWords } = {}) {
         _ws.send(JSON.stringify({
           message_type: 'input_audio_chunk',
           audio_base_64: floatToPcm16Base64(pcm),
-          sample_rate: STT_SAMPLE_RATE,
+          sample_rate: realRate,
         }));
       } catch (_e) { /* socket mid-close */ }
     };
@@ -131,7 +142,7 @@ export async function startSttFollow({ lang, onWords } = {}) {
   }
 
   _running = true;
-  track('stt_start', { lang: _lang || 'auto' });
+  track('stt_start', { lang: _lang || 'auto', rate: realRate });
   return true;
 }
 
