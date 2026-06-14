@@ -402,9 +402,10 @@ input[type="file"]{display:none}
 .speed-tri{display:flex;gap:8px;width:100%}
 .speed-tri-btn{flex:1;padding:10px 0;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.04);color:#ccc;font-size:.82rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;letter-spacing:.03em}
 .speed-tri-btn.selected{background:var(--actor-gold);border-color:var(--actor-gold);color:#1a1200}
-/* Minimal UI during an active take: only Stop, Pause, Speed remain */
-#session.take-active #btnMic,#session.take-active #btnCam,
-#session.take-active #mobMicBtn,#session.take-active #mobCamBtn,
+/* Minimal UI during an active take: Stop, Pause, Speed + camera flip.
+   (Camera flip stays — actors switch front/rear mid-take.) */
+#session.take-active #btnMic,
+#session.take-active #mobMicBtn,
 #session.take-active #mobViewBtn,#session.take-active #mobRecsBtn,
 #session.take-active #mobShareBtn,#session.take-active #recToggleBtn,
 #session.take-active #sessionShareBtn,#session.take-active #sessionModeManualBtn,
@@ -412,6 +413,8 @@ input[type="file"]{display:none}
 #session.take-active #speedBtnsSession,#session.take-active #speedBtnsOverlay,
 #session.take-active .ai-panel{display:none!important}
 #session.take-active #speedTriTake{display:flex}
+/* Keep the camera-flip reachable during the take (mobile action col) */
+#session.take-active #mobCamBtn{display:flex!important}
 #speedTriTake{display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:58;width:min(60vw,240px)}
 /* Mobile portrait: prompter owns the bottom half — keep the speed
    buttons in the video half, never over the script text */
@@ -666,6 +669,12 @@ input[type="file"]{display:none}
 .preview-bottom{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:1rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:.7rem;background:linear-gradient(to top,rgba(0,0,0,.78),transparent)}
 .preview-hint{text-align:center;font-size:.82rem;color:rgba(255,255,255,.75);letter-spacing:.02em}
 .preview-start-btn{margin-top:0;width:100%}
+/* Landscape (short viewport): compact centered START, not a full-width red bar */
+@media(max-height:600px) and (orientation:landscape){
+  .preview-bottom{background:none;flex-direction:column;align-items:center;gap:.4rem;padding-bottom:calc(.6rem + env(safe-area-inset-bottom,0px))}
+  .preview-start-btn{width:auto;min-width:200px;padding-left:2.4rem;padding-right:2.4rem;box-shadow:0 6px 20px rgba(0,0,0,.5)}
+  .preview-hint{background:rgba(0,0,0,.5);padding:.2rem .7rem;border-radius:999px}
+}
 
 .paywall-overlay{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));background:rgba(2,8,8,.56);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:paywallOverlayIn .22s ease}
 .paywall-mini{width:min(100%,380px);border-radius:16px;padding:20px 18px 16px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015)),rgba(7,18,18,.88);border:1px solid rgba(130,255,235,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 24px 60px rgba(0,0,0,.38),0 0 30px rgba(57,231,208,.10);text-align:center;color:#E8E8E8;animation:paywallCardIn .28s cubic-bezier(.2,.9,.2,1);position:relative;overflow:hidden}

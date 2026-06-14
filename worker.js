@@ -667,8 +667,9 @@ async function handleTTS(request, env, ctx) {
     const isDemoTts = !email && request.headers.get("X-Demo-Tts") === "1" && text.length <= 120;
     if (!email && !isDemoTts) return json({ ok: false, error: "AUTH_REQUIRED" }, 401);
     if (isDemoTts) {
+      // Covers onboarding demo + voice-preview sampling on the setup screen
       const demoIp = request.headers.get("CF-Connecting-IP") || "unknown";
-      if (!rateCheck(`ttsdemo:${demoIp}`, 8, 3600)) {
+      if (!rateCheck(`ttsdemo:${demoIp}`, 60, 3600)) {
         return json({ ok: false, error: "RATE_LIMIT", message: "Demo limit reached" }, 429);
       }
     }

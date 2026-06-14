@@ -396,6 +396,10 @@ function updateTakeInfo() {
 function showClapperboard(onComplete) {
   const existing = document.getElementById('clapOverlay');
   if (existing) existing.remove();
+  // Switch to minimal take UI now (during the countdown) so the old
+  // record/mic/view controls aren't visible behind the countdown overlay.
+  const _sess = document.getElementById('session');
+  if (_sess) _sess.classList.add('take-active');
   track('take_countdown_start', { mode: S.sessionMode });
   if (typeof window.beginTake === 'function') window.beginTake();
   else S.takeNumber++;

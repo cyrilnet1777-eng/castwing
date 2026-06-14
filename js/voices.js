@@ -435,7 +435,10 @@ function initVoiceGrid(){
 }
 
 function previewVoice(v){
-  window.aiSpeak(getPreviewTextForVoice(v),null,{speedOverride:sliderToElevenLabs(SPEED_DEFAULT)});
+  // demoFree: plays the real ElevenLabs voice for free (server-capped) and
+  // bypasses the "no speaking outside an active session" guard so previews
+  // work on the voice-setup screen.
+  window.aiSpeak(getPreviewTextForVoice(v),null,{speedOverride:sliderToElevenLabs(SPEED_DEFAULT),demoFree:true});
 }
 
 function populateSessionVoiceSelect(){
