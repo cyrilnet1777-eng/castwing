@@ -300,7 +300,6 @@ function goConfigAi() {
   if (emo) emo.value = S.selectedEmotion;
   updateEmotionLock();
   updateSetupCameraButton();
-  renderViewModeToggle('viewModeSetup');
 }
 function goSetupPartner() {
   showScreen('setupPartner');
