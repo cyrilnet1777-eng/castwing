@@ -335,21 +335,22 @@ function startSpokenDisplayStepping(turnIdx) {
     const w = ((S.displayLines[d].text || '').split(/\s+/).filter(Boolean)).length || 1;
     total += w; counts.push(total);
   }
-  const startedAt = Date.now();
   const tick = () => {
     if (!__cwSessionActive || S.sessionPaused || S.prompterIndex !== turnIdx) { _spokenStepRaf = null; return; }
     const info = S.ttsPlaybackInfo;
-    // Until real duration is known, estimate; once known, follow it exactly
-    let frac;
-    if (info && info.durationMs > 0) frac = Math.min(1, (Date.now() - info.startTs) / info.durationMs);
-    else frac = Math.min(0.95, (Date.now() - startedAt) / (total * 400)); // pre-metadata estimate, capped
-    const spokenWords = frac * total;
-    let target = first;
-    for (let i = 0; i < counts.length; i++) { if (spokenWords >= counts[i]) target = first + i + 1; }
-    if (target > last) target = last;
-    if (target !== S.activeDisplayIndex && target <= last && S.displayLines[target] && S.displayLines[target].prompterIndex === turnIdx) {
-      S.activeDisplayIndex = target;
-      refreshPrompterAfterAdvance();
+    // Hold on the first line until the voice ACTUALLY starts (TTS fetch +
+    // decode latency); only follow real playback progress — never guess
+    // ahead of the audio.
+    if (info && info.durationMs > 0) {
+      const frac = Math.min(1, (Date.now() - info.startTs) / info.durationMs);
+      const spokenWords = frac * total;
+      let target = first;
+      for (let i = 0; i < counts.length; i++) { if (spokenWords >= counts[i]) target = first + i + 1; }
+      if (target > last) target = last;
+      if (target !== S.activeDisplayIndex && target <= last && S.displayLines[target] && S.displayLines[target].prompterIndex === turnIdx) {
+        S.activeDisplayIndex = target;
+        refreshPrompterAfterAdvance();
+      }
     }
     _spokenStepRaf = requestAnimationFrame(tick);
   };
