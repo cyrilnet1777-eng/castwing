@@ -422,8 +422,15 @@ input[type="file"]{display:none}
 #session.take-active #sessionModeAutoBtn,#session.take-active #viewModeSession,
 #session.take-active #speedBtnsSession,#session.take-active #speedBtnsOverlay,
 #session.take-active .rec-indicator,
+#session.take-active #sessionEndBtn,
 #session.take-active .ai-panel{display:none!important}
 #session.take-active #speedTriTake{display:flex}
+/* Video-only view: no scrolling script, so the line-nav arrows and the
+   speed controls serve no purpose — hide them (pause stays as the exit). */
+#session.vm-video .mob-nav-btn,
+#session.vm-video #prevBtn,#session.vm-video #nextBtn,
+#session.vm-video #speedTriTake,
+#session.vm-video #speedBtnsSession{display:none!important}
 #speedTriTake{display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:58;width:min(60vw,240px)}
 /* Mobile portrait: prompter owns the bottom half — keep the speed
    buttons in the video half, never over the script text */

@@ -454,20 +454,31 @@ function setViewMode(m) {
   var mobCtrl = document.querySelector('.mob-controls-row');
   var mobAct = document.querySelector('.mob-action-col');
   var sessTop = document.querySelector('.session-top');
+  var speedTri = document.getElementById('speedTriTake');
   if (mobCtrl) mobCtrl.style.cssText = '';
   if (mobAct) mobAct.style.cssText = '';
   if (sessTop) sessTop.style.cssText = '';
+  if (speedTri) speedTri.style.cssText = '';
+  // Tag the session with the active view so CSS can hide text-only controls
+  // (nav arrows + speed) in video-only mode where they serve no purpose.
+  var sessEl = document.getElementById('session');
+  if (sessEl) { sessEl.classList.remove('vm-50-50', 'vm-prompt', 'vm-video'); sessEl.classList.add('vm-' + m); }
   if (m === 'prompt') {
     if (vc) vc.style.display = 'none';
     va.style.setProperty('width', '0', 'important'); va.style.setProperty('display', 'none', 'important');
     pa.style.setProperty('left', '0', 'important'); pa.style.setProperty('width', '100%', 'important');
     pa.style.height = '100dvh'; pa.style.top = '0'; pa.style.fontSize = '1.3rem';
     if (isLandscape) {
-      pa.style.setProperty('position', 'fixed', 'important'); pa.style.setProperty('right', '0', 'important'); pa.style.setProperty('bottom', '0', 'important');
-      if (mobCtrl) mobCtrl.style.setProperty('left', '0', 'important');
-      if (mobCtrl) mobCtrl.style.setProperty('right', 'auto', 'important');
-      if (mobAct) mobAct.style.setProperty('left', 'auto', 'important');
-      if (mobAct) mobAct.style.setProperty('right', '8px', 'important');
+      // Text-only landscape: reserve a 58px toolbar strip at the bottom so the
+      // playback + speed controls sit BELOW the script, never over it.
+      pa.style.setProperty('position', 'fixed', 'important');
+      pa.style.setProperty('right', '0', 'important');
+      pa.style.setProperty('top', '0', 'important');
+      pa.style.setProperty('bottom', '58px', 'important');
+      pa.style.setProperty('height', 'auto', 'important');
+      if (mobCtrl) { mobCtrl.style.setProperty('left', '8px', 'important'); mobCtrl.style.setProperty('right', 'auto', 'important'); mobCtrl.style.setProperty('bottom', '8px', 'important'); mobCtrl.style.setProperty('top', 'auto', 'important'); mobCtrl.style.setProperty('transform', 'none', 'important'); }
+      if (speedTri) { speedTri.style.setProperty('left', '50%', 'important'); speedTri.style.setProperty('right', 'auto', 'important'); speedTri.style.setProperty('transform', 'translateX(-50%)', 'important'); speedTri.style.setProperty('bottom', '10px', 'important'); speedTri.style.setProperty('top', 'auto', 'important'); speedTri.style.setProperty('width', 'min(44vw,260px)', 'important'); }
+      if (mobAct) { mobAct.style.setProperty('left', 'auto', 'important'); mobAct.style.setProperty('right', '8px', 'important'); mobAct.style.setProperty('bottom', '8px', 'important'); mobAct.style.setProperty('top', 'auto', 'important'); mobAct.style.setProperty('transform', 'none', 'important'); mobAct.style.setProperty('flex-direction', 'row', 'important'); }
       if (sessTop) { sessTop.style.setProperty('left', '0', 'important'); sessTop.style.setProperty('right', '0', 'important'); }
     } else if (window.innerWidth >= 768) {
       pa.style.marginTop = '0'; pa.style.position = 'fixed'; pa.style.bottom = '0'; pa.style.left = '0'; pa.style.right = '0';
