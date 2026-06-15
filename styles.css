@@ -455,9 +455,10 @@ input[type="file"]{display:none}
   #speedTriTake{bottom:56px;top:auto;left:20%;width:min(30vw,200px)}
 }
 /* Desktop/tablet split: video owns the left 60% — center the buttons over it
-   (50% would push them onto the prompter edge) */
+   (50% would push them onto the prompter edge), and sit ABOVE the Stop/Pause
+   controls (which live at bottom:.8rem, ~44px tall) so they never overlap. */
 @media(min-width:768px) and (min-height:601px){
-  #speedTriTake{left:30%;bottom:calc(40px + env(safe-area-inset-bottom,0px));width:min(28vw,260px)}
+  #speedTriTake{left:30%;bottom:calc(76px + env(safe-area-inset-bottom,0px));width:min(28vw,260px)}
 }
 #speedTriTake .speed-tri-btn{background:rgba(0,0,0,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
 #speedTriTake .speed-tri-btn.selected{background:var(--actor-gold)}
@@ -516,15 +517,15 @@ input[type="file"]{display:none}
 .prompter-action{font-size:.82rem;line-height:1.55;color:#888;font-style:italic;padding:4px 12px;margin-bottom:6px}
 .prompter-parenthetical{font-size:.78rem;font-style:italic;color:#888;padding:2px 12px 2px 0;margin-bottom:2px}
 .prompter-line{font-family:'DM Sans',-apple-system,sans-serif;font-size:1.02rem;line-height:1.55;font-weight:400;color:#E0E0E0;margin-bottom:.3rem;transition:all .2s ease;padding:.4rem .65rem;border-left:3px solid transparent;border-radius:0;cursor:pointer;-webkit-tap-highlight-color:transparent;font-style:normal;position:relative}
-.prompter-line.is-stage-direction{font-style:italic;color:#888;font-size:.82rem}
+.prompter-line.is-stage-direction{font-style:italic;color:#b7b0a2;font-size:.82rem}
 .prompter-line.prompter-line-partner{color:#E0E0E0}
 .prompter-line:active{background:rgba(255,255,255,.04)}
 .prompter-line.active{color:#FFFFFF;font-weight:700;font-size:1.35rem;background:rgba(255,255,255,.05);border-left:3px solid var(--raspberry);padding:14px 16px 14px 20px;position:relative}
 .prompter-group-user .prompter-line{color:#f0f0f0}
 .prompter-group-user .prompter-line.active{color:#FFFFFF;border-left-color:var(--actor-gold)}
 .prompter-group-partner .prompter-line.active{border-left-color:var(--partner-blue)}
-.prompter-line.past,.prompter-action.past,.prompter-slug.past,.prompter-parenthetical.past{opacity:.3}
-.prompter-line.future,.prompter-action.future,.prompter-slug.future,.prompter-parenthetical.future{opacity:.5}
+.prompter-line.past,.prompter-action.past,.prompter-slug.past,.prompter-parenthetical.past{opacity:.5}
+.prompter-line.future,.prompter-action.future,.prompter-slug.future,.prompter-parenthetical.future{opacity:.78}
 .prompter-line.active{opacity:1}
 .prompter-action,.prompter-slug,.prompter-parenthetical{transition:opacity .25s ease}
 .prompter-line::before,.prompter-character::before{content:none!important;display:none!important}

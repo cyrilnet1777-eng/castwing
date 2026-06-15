@@ -1,7 +1,7 @@
 // ── Pure data / config constants ──────────────────────────────────────
 // Extracted from index.html — every export is a frozen, side-effect-free value.
 
-export const APP_BUILD = '2026-06-14m';
+export const APP_BUILD = '2026-06-15a';
 
 export const AUDITION_WINDOW_MS = 24 * 60 * 60 * 1000;
 

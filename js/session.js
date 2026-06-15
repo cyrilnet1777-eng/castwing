@@ -194,6 +194,17 @@ function rebuildDisplayLines() {
  * VAD / WebRTC sync / recording stay coherent.
  * Returns true if it advanced within the same turn (display-only).
  */
+/** Next display index >= d within turnIdx that is actually spoken by the
+    actor (skips stage directions / parentheticals). -1 if none remain. */
+function nextSpokenDisplayInTurn(d, turnIdx) {
+  for (let i = d; i < S.displayLines.length; i++) {
+    const dl = S.displayLines[i];
+    if (!dl || dl.prompterIndex !== turnIdx) return -1;
+    if (!dl.isStageDirection && !dl.isParenthetical && dl.type === 'actor') return i;
+  }
+  return -1;
+}
+
 function advanceDisplayLine() {
   const cur = S.displayLines[S.activeDisplayIndex];
   const next = S.displayLines[S.activeDisplayIndex + 1];
@@ -330,13 +341,18 @@ function startSpokenDisplayStepping(turnIdx) {
   const [first, last] = displayRangeForPrompter(S.displayLines, turnIdx);
   if (first === -1 || last <= first) return; // single display line — nothing to step
   S.activeDisplayIndex = first;
-  // Cumulative word fraction at the END of each display line in the turn
-  const counts = [];
+  // Only spoken display lines get a share of the voice timeline — stage
+  // directions / parentheticals are passed instantly so the highlight never
+  // dwells on them "as if read aloud".
+  const steps = []; // { idx, cum } cumulative word count at the END of each spoken line
   let total = 0;
   for (let d = first; d <= last; d++) {
-    const w = ((S.displayLines[d].text || '').split(/\s+/).filter(Boolean)).length || 1;
-    total += w; counts.push(total);
+    const dl = S.displayLines[d];
+    if (!dl || dl.isStageDirection || dl.isParenthetical) continue;
+    const w = ((dl.text || '').split(/\s+/).filter(Boolean)).length || 1;
+    total += w; steps.push({ idx: d, cum: total });
   }
+  if (!steps.length) return;
   const tick = () => {
     if (!__cwSessionActive || S.sessionPaused || S.prompterIndex !== turnIdx) { _spokenStepRaf = null; return; }
     const info = S.ttsPlaybackInfo;
@@ -346,10 +362,11 @@ function startSpokenDisplayStepping(turnIdx) {
     if (info && info.durationMs > 0) {
       const frac = Math.min(1, (Date.now() - info.startTs) / info.durationMs);
       const spokenWords = frac * total;
-      let target = first;
-      for (let i = 0; i < counts.length; i++) { if (spokenWords >= counts[i]) target = first + i + 1; }
-      if (target > last) target = last;
-      if (target !== S.activeDisplayIndex && target <= last && S.displayLines[target] && S.displayLines[target].prompterIndex === turnIdx) {
+      let target = steps[0].idx;
+      for (let i = 0; i < steps.length; i++) {
+        if (spokenWords >= steps[i].cum) target = (i + 1 < steps.length) ? steps[i + 1].idx : steps[i].idx;
+      }
+      if (target !== S.activeDisplayIndex && S.displayLines[target] && S.displayLines[target].prompterIndex === turnIdx) {
         S.activeDisplayIndex = target;
         refreshPrompterAfterAdvance();
       }
@@ -718,9 +735,9 @@ class VoiceActivityDetector {
 function computeSilenceMsForActorLine(line) {
   // Fixed VAD floors by line length — speech-end detection, not dramatic pauses
   const words = ((line && line.text) || '').split(/\s+/).filter(Boolean).length;
-  if (words <= 3) return 700;
-  if (words <= 10) return 1200;
-  return 1800;
+  if (words <= 3) return 550;
+  if (words <= 10) return 900;
+  return 1300;
 }
 
 function getPostTtsArmDelayCapMs() {
@@ -789,11 +806,15 @@ async function armAutoVADForActorLine() {
   const doArm = async () => {
     _vadArmTimer = null;
     if ((S.mode !== 'auto' && S.mode !== 'ai') || S.sessionPaused) return;
-    // When STT is following, VAD is only a backstop — give it a long
-    // silence so it never pre-empts. minSpeechMs requires the actor to
-    // actually speak before a silence advances (no jumping on a silent
-    // mid-thought pause).
-    const silenceMs = computeSilenceMsForActorLine(line) + (_sttSessionActive ? 500 : 0);
+    // Base the silence window on the CURRENT SENTENCE (display line), not the
+    // whole speech — otherwise a long monologue waits ~1.8s to step one line.
+    // When STT is following, VAD is only a backstop: the onAutoSpeechEnd guard
+    // (ignores silence within 1.5s of an STT advance) stops it pre-empting, so
+    // a small +200 buffer is enough. minSpeechMs requires real speech first so
+    // a silent mid-thought pause never advances.
+    const curDisp = S.displayLines[S.activeDisplayIndex];
+    const silenceBase = (curDisp && curDisp.type === 'actor' && !curDisp.isStageDirection) ? curDisp : line;
+    const silenceMs = computeSilenceMsForActorLine(silenceBase) + (_sttSessionActive ? 200 : 0);
     console.info('[VAD] arming: silence=' + silenceMs + 'ms, stt=' + _sttSessionActive + ', postTtsDelay=' + postTtsDelay + 'ms');
     S.vad = new VoiceActivityDetector({ speechThreshold: 0.010, silenceDuration: silenceMs, minSpeechMs: 350, onSpeechEnd: onAutoSpeechEnd });
     await S.vad.start(new MediaStream(liveTracks));
@@ -818,12 +839,13 @@ function onAutoSpeechEnd() {
   if (_sttSessionActive && !isLastOfTurn && (Date.now() - _lastSttAdvanceTs) < 1500) return;
   const dl = S.displayLines[S.activeDisplayIndex];
   if (!dl || dl.type !== 'actor') return;
-  const nextDl = S.displayLines[S.activeDisplayIndex + 1];
-  // Still more display lines in this actor speech \u2192 advance ONE line and
-  // re-arm for the next, so the highlight walks sentence by sentence.
-  if (nextDl && nextDl.prompterIndex === dl.prompterIndex) {
+  // Still more spoken display lines in this actor speech \u2192 advance to the
+  // next one (skipping any stage directions) and re-arm, so the highlight
+  // walks sentence by sentence.
+  const nx = nextSpokenDisplayInTurn(S.activeDisplayIndex + 1, dl.prompterIndex);
+  if (nx !== -1) {
     console.info('[VAD] speech ended \u2192 next display line');
-    S.activeDisplayIndex++;
+    S.activeDisplayIndex = nx;
     refreshPrompterAfterAdvance();
     armAutoVADForActorLine();
     return;
