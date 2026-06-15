@@ -1114,6 +1114,11 @@ function handleCurrentLineAutomation() {
   if ((S.mode === 'auto' || S.mode === 'ai') && line.type === 'actor') {
     S.userScrolledUp = false;
     if (S._scrollResumeTimer) { clearTimeout(S._scrollResumeTimer); S._scrollResumeTimer = null; }
+    // If the highlight is sitting on a stage direction at the start of the
+    // turn (a leading didascalie / parenthetical), jump straight to the first
+    // spoken sentence — never arm VAD/STT waiting for the actor to read it.
+    const spoken = nextSpokenDisplayInTurn(S.activeDisplayIndex, S.prompterIndex);
+    if (spoken !== -1 && spoken !== S.activeDisplayIndex) { S.activeDisplayIndex = spoken; refreshPrompterAfterAdvance(); }
     forceScrollToActive(true);
     // STT word-following drives the highlight; VAD stays armed as a silent
     // fallback for when STT stalls. STT only follows real dialogue lines.
@@ -1136,7 +1141,10 @@ function scheduleMonologueAdvance() {
   if (dIdx >= S.displayLines.length - 1) return;
   const words = ((dl.text || '').split(/\s+/).filter(Boolean)).length;
   const paceMult = voicePaceMultiplier();
-  const ms = Math.max(900, Math.round(words * 380 * paceMult));
+  // Stage directions / parentheticals are not read aloud — flash past them
+  // instead of dwelling word-count time as if reading them silently.
+  const isSilent = dl.isStageDirection || dl.isParenthetical;
+  const ms = isSilent ? 60 : Math.max(900, Math.round(words * 380 * paceMult));
   S.autoAdvanceTimer = setTimeout(() => {
     if (!__cwSessionActive || S.sessionPaused) return;
     if (S.activeDisplayIndex !== dIdx) return;

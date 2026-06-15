@@ -389,7 +389,6 @@ function renderAllSpeedSliders(){
   renderSpeedSlider('speedBtnsSession',true);
   renderSpeedSlider('speedBtnsOverlay',true);
   renderSpeedTriBtns('voiceSpeedTriPause');
-  renderSpeedTriBtns('speedTriTake');
 }
 
 /** Three-button AI voice speed control: Slow/Normal/Fast → 0.5x/1x/2x.

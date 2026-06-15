@@ -435,8 +435,8 @@ input[type="file"]{display:none}
 #session.take-active #speedBtnsSession,#session.take-active #speedBtnsOverlay,
 #session.take-active .rec-indicator,
 #session.take-active #sessionEndBtn,
-#session.take-active .ai-panel{display:none!important}
-#session.take-active #speedTriTake{display:flex}
+#session.take-active .ai-panel,
+#session.take-active #speedTriTake{display:none!important}
 /* Video-only view: no scrolling script, so the line-nav arrows and the
    speed controls serve no purpose — hide them (pause stays as the exit). */
 #session.vm-video .mob-nav-btn,
