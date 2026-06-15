@@ -515,8 +515,8 @@ function setViewMode(m) {
     va.style.setProperty('width', '100%', 'important'); va.style.setProperty('height', '100dvh', 'important');
     if (isLandscape) {
       va.style.setProperty('right', '0', 'important');
-      if (mobCtrl) { mobCtrl.style.setProperty('right', '0', 'important'); mobCtrl.style.setProperty('left', '0', 'important'); }
-      if (mobAct) { mobAct.style.setProperty('left', 'auto', 'important'); mobAct.style.setProperty('right', '8px', 'important'); }
+      // Stop (top-left corner) + centered pause are handled by the landscape
+      // CSS defaults — don't override them here.
       if (sessTop) { sessTop.style.setProperty('left', '0', 'important'); sessTop.style.setProperty('right', '0', 'important'); }
     }
   }
