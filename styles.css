@@ -447,7 +447,9 @@ input[type="file"]{display:none}
 /* Mobile portrait: prompter owns the bottom half — keep the speed
    buttons in the video half, never over the script text */
 @media(max-width:767px){
-  #speedTriTake{bottom:auto;top:calc(50dvh - 124px);width:min(56vw,210px)}
+  #speedTriTake{bottom:auto;top:calc(50dvh - 116px);width:min(46vw,184px);gap:6px}
+  /* Compact pills over the video — the take overlay only, not the pause menu */
+  #speedTriTake .speed-tri-btn{padding:6px 0;font-size:.7rem;border-radius:8px}
 }
 /* Short landscape: video is the left 40% — center the buttons over it,
    above the bottom-left transport controls */
