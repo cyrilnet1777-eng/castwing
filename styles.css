@@ -72,10 +72,11 @@ body::after{content:none}
 .hero-join-link a{color:rgba(245,239,224,.5);text-decoration:underline;cursor:pointer}
 .hero-join-link a:hover{color:var(--white)}
 #home.dragover .home-hero{outline:2px solid var(--raspberry);outline-offset:-2px}
-/* Landscape (incl. iPad landscape): the hero can be taller than a short
-   viewport — let the page scroll instead of clipping IMPORT / Join out of
-   reach. Hero goes in-flow with a min-height so it still fills tall screens. */
-@media(orientation:landscape){
+/* Short landscape (phones): the hero can be taller than the viewport — let
+   the page scroll so IMPORT / Join stay reachable. Taller screens (desktop,
+   iPad landscape) fit the compact hero exactly, so they keep the fill-the-
+   viewport layout (no scroll). */
+@media(max-height:600px) and (orientation:landscape){
   #home{overflow-y:auto;-webkit-overflow-scrolling:touch}
   .home-hero{position:relative;inset:auto;min-height:100dvh}
 }
