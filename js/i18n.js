@@ -125,6 +125,10 @@ export const UI_FALLBACK_TRANSLATIONS={
   legacyRecsGroup:{fr:'Anciens enregistrements',en:'Older recordings',es:'Grabaciones antiguas',it:'Registrazioni precedenti',zh:'较早的录制',ko:'이전 녹화',ja:'以前の録画',de:'Ältere Aufnahmen',pt:'Gravações antigas',ar:'تسجيلات سابقة',hi:'पुरानी रिकॉर्डिंग',tr:'Eski kayıtlar',ru:'Старые записи'},
   deleteTakeConfirm:{fr:'Supprimer cette prise définitivement ?',en:'Delete this take permanently?',es:'¿Eliminar esta toma definitivamente?',it:'Eliminare definitivamente questa ripresa?',zh:'永久删除这条拍摄？',ko:'이 테이크를 영구 삭제할까요?',ja:'このテイクを完全に削除しますか？',de:'Diesen Take endgültig löschen?',pt:'Excluir este take permanentemente?',ar:'حذف هذه اللقطة نهائيًا؟',hi:'इस टेक को स्थायी रूप से हटाएँ?',tr:'Bu çekimi kalıcı olarak sil?',ru:'Удалить дубль навсегда?'},
   takeDeleted:{fr:'Prise supprimée',en:'Take deleted',es:'Toma eliminada',it:'Ripresa eliminata',zh:'已删除',ko:'테이크 삭제됨',ja:'テイクを削除しました',de:'Take gelöscht',pt:'Take excluído',ar:'تم حذف اللقطة',hi:'टेक हटाया गया',tr:'Çekim silindi',ru:'Дубль удалён'},
+  deleteAllTakesBtn:{fr:'🗑️ Supprimer toutes les prises',en:'🗑️ Delete all takes',es:'🗑️ Eliminar todas las tomas',it:'🗑️ Elimina tutte le riprese',zh:'🗑️ 删除全部拍摄',ko:'🗑️ 모든 테이크 삭제',ja:'🗑️ すべてのテイクを削除',de:'🗑️ Alle Takes löschen',pt:'🗑️ Excluir todos os takes',ar:'🗑️ حذف كل اللقطات',hi:'🗑️ सभी टेक हटाएँ',tr:'🗑️ Tüm çekimleri sil',ru:'🗑️ Удалить все дубли'},
+  deleteAllTakesConfirm:{fr:'Supprimer définitivement les {n} prises ? Cette action est irréversible.',en:'Permanently delete all {n} takes? This cannot be undone.',es:'¿Eliminar definitivamente las {n} tomas? No se puede deshacer.',it:'Eliminare definitivamente tutte le {n} riprese? Azione irreversibile.',zh:'永久删除全部 {n} 条拍摄？此操作无法撤销。',ko:'{n}개의 테이크를 모두 영구 삭제할까요? 되돌릴 수 없습니다.',ja:'{n} 件のテイクをすべて完全に削除しますか？元に戻せません。',de:'Alle {n} Takes endgültig löschen? Kann nicht rückgängig gemacht werden.',pt:'Excluir permanentemente todos os {n} takes? Não pode ser desfeito.',ar:'حذف كل اللقطات ({n}) نهائيًا؟ لا يمكن التراجع.',hi:'सभी {n} टेक स्थायी रूप से हटाएँ? यह पूर्ववत नहीं हो सकता।',tr:'{n} çekimin tümü kalıcı olarak silinsin mi? Geri alınamaz.',ru:'Удалить навсегда все дубли ({n})? Это нельзя отменить.'},
+  allTakesDeleted:{fr:'Toutes les prises supprimées',en:'All takes deleted',es:'Todas las tomas eliminadas',it:'Tutte le riprese eliminate',zh:'已删除全部拍摄',ko:'모든 테이크 삭제됨',ja:'すべてのテイクを削除しました',de:'Alle Takes gelöscht',pt:'Todos os takes excluídos',ar:'تم حذف كل اللقطات',hi:'सभी टेक हटा दिए गए',tr:'Tüm çekimler silindi',ru:'Все дубли удалены'},
+  noTakesToDelete:{fr:'Aucune prise à supprimer',en:'No takes to delete',es:'No hay tomas que eliminar',it:'Nessuna ripresa da eliminare',zh:'没有可删除的拍摄',ko:'삭제할 테이크가 없습니다',ja:'削除するテイクがありません',de:'Keine Takes zum Löschen',pt:'Nenhum take para excluir',ar:'لا توجد لقطات للحذف',hi:'हटाने के लिए कोई टेक नहीं',tr:'Silinecek çekim yok',ru:'Нет дублей для удаления'},
   myTakesBtn:{fr:'🎬 Mes takes',en:'🎬 My takes',es:'🎬 Mis tomas',it:'🎬 Le mie riprese',zh:'🎬 我的拍摄',ko:'🎬 내 테이크',ja:'🎬 マイテイク',de:'🎬 Meine Takes',pt:'🎬 Meus takes',ar:'🎬 لقطاتي',hi:'🎬 मेरे टेक',tr:'🎬 Çekimlerim',ru:'🎬 Мои дубли'},
   psCameraLabel:{fr:'CAMÉRA',en:'CAMERA',es:'CÁMARA',it:'FOTOCAMERA',zh:'摄像头',ko:'카메라',ja:'カメラ',de:'KAMERA',pt:'CÂMERA',ar:'الكاميرا',hi:'कैमरा',tr:'KAMERA',ru:'КАМЕРА'},
   psCamSwitchBtn:{fr:'Changer de caméra',en:'Switch camera',es:'Cambiar cámara',it:'Cambia fotocamera',zh:'切换摄像头',ko:'카메라 전환',ja:'カメラを切り替え',de:'Kamera wechseln',pt:'Trocar câmera',ar:'تبديل الكاميرا',hi:'कैमरा बदलें',tr:'Kamerayı değiştir',ru:'Сменить камеру'},
@@ -429,7 +433,8 @@ export function applyUILanguage(){
   setTextById('copyLinkBtn','copyLinkBtn');
   setTextById('shareBtn','shareBtn');
   setTextById('launchPartnerBtn','launchPartnerBtn');
-  setTextById('joinScreenTitle','joinScreenTitle');
+  setCineTitleById('joinScreenTitle','joinScreenTitle');
+  setTextById('joinScreenSub','partnerJoinDesc');
   setTextById('joinCodeLabel','joinCodeLabel');
   setTextById('joinSessionBtn','joinSessionBtn');
   setTextById('prompterEmptyText','prompterEmptyText');
@@ -501,6 +506,7 @@ export function applyUILanguage(){
   // Onboarding overlay
   const _obT=document.getElementById('obWelcomeTitle');
   if(_obT){_obT.textContent=t('obWelcomeTitle');const _obDot=document.createElement('span');_obDot.className='cine-dot';_obDot.textContent='.';_obT.appendChild(_obDot);}
+  const _owt=document.getElementById('obWelcomeTitle');if(_owt)_owt.innerHTML=t('obWelcomeTitle')+'<span class="cine-dot">.</span>';
   setTextById('obWelcomeBody','obWelcomeBody');
   setTextById('obStartBtn','obStartBtn');
   setTextById('obPermTitle','obPermTitle');

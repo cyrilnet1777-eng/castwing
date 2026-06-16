@@ -221,6 +221,7 @@ import {
   markTakePaused,
   renderMyTakes,
   deleteTake,
+  deleteAllTakes,
   goMyTakes,
 } from './takes.js';
 
@@ -695,6 +696,7 @@ Object.assign(window, {
   markTakePaused,
   renderMyTakes,
   deleteTake,
+  deleteAllTakes,
   goMyTakes,
 
   // ── Camera preview ──

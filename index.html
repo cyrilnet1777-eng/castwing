@@ -30,7 +30,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<link rel="stylesheet" href="/styles.css?v=20260615e">
+<link rel="stylesheet" href="/styles.css?v=20260616a">
 </head>
 <body>
 <div id="toast" class="toast"></div>
@@ -46,8 +46,9 @@
 <div id="connectOverlay" class="overlay"><div class="spinner"></div><h3 id="overlayTitle">Connecting…</h3><p id="overlayMsg"></p><button class="btn btn-secondary" onclick="cancelConnection()" style="margin-top:.5rem">Cancel</button></div>
 
 <!-- ═══ ONBOARDING (first launch) ═══ -->
-<div id="onboardingOverlay" class="ob-overlay">
+<div id="onboardingOverlay" class="ob-overlay" onclick="if(event.target===this)obSkip()">
   <div class="ob-card">
+    <button class="ob-close" onclick="obSkip()" aria-label="Close" title="Close">✕</button>
     <div id="obStep1">
       <h2 class="ob-title" id="obWelcomeTitle">Welcome to CitizenTape<span class="cine-dot">.</span></h2>
       <p class="ob-body" id="obWelcomeBody">CitizenTape turns your phone into a self-tape studio.</p>
@@ -357,11 +358,19 @@
 </div>
 
 <!-- ═══ JOIN (PARTENAIRE) ═══ -->
-<div id="joinScreen" class="screen">
-  <div class="screen-content">
-  <div class="setup-header"><button class="back-btn" onclick="goPartnerChoice()">←</button><h2 id="joinScreenTitle">Join a session</h2></div>
-  <div class="setup-card"><div class="field-group"><label id="joinCodeLabel">Session code</label><input type="text" id="joinCodeInput" placeholder="Enter actor code" maxlength="10" autocapitalize="characters" spellcheck="false"></div></div>
-  <button class="btn btn-primary btn-full" onclick="joinAsPartner()" id="joinSessionBtn" title="Connect to actor's session">Join 🎙️</button>
+<div id="joinScreen" class="screen cine-screen">
+  <div class="cine-content">
+  <button class="cine-back" onclick="goPartnerChoice()">←</button>
+  <h1 class="cine-title" id="joinScreenTitle">Join a session</h1>
+  <p class="cine-sub" id="joinScreenSub">Enter the code your partner shared.</p>
+  <div class="cine-code-section">
+    <div class="cine-code-label" id="joinCodeLabel">SESSION CODE</div>
+    <input type="text" id="joinCodeInput" class="cine-code-input" placeholder="Actor code" maxlength="10" autocapitalize="characters" spellcheck="false">
+  </div>
+  <div class="cine-sticky-cta">
+    <button class="cine-cta" style="margin-top:0" onclick="joinAsPartner()" id="joinSessionBtn" title="Connect to actor's session">JOIN 🎙️</button>
+  </div>
+  <div class="cine-privacy"><svg viewBox="0 0 24 24" width="12" height="12"><path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zM9 6a3 3 0 0 1 6 0v2H9V6zm9 14H6V10h12v10zm-6-3a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor"/></svg><span>PRIVATE. SECURE. OFF RECORD.</span></div>
   </div>
 </div>
 
@@ -486,6 +495,6 @@
 </div></div>
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ttsAudioEl" playsinline></audio>
-<script type="module" src="/js/app.js?v=20260615e"></script>
+<script type="module" src="/js/app.js?v=20260616a"></script>
 </body>
 </html>

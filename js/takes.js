@@ -6,7 +6,7 @@
 import { S } from './state.js';
 import { track, escHtml, showToast } from './utils.js';
 import { t } from './i18n.js';
-import { getRecsFromDB, scriptContentHash, deleteRecFromDB, formatRecDate, formatRecSize } from './idb.js';
+import { getRecsFromDB, scriptContentHash, deleteRecFromDB, clearAllRecsFromDB, formatRecDate, formatRecSize } from './idb.js';
 
 // ── Scene identity ───────────────────────────────────────────────────
 
@@ -129,6 +129,11 @@ export async function renderMyTakes() {
       list.appendChild(card);
     }
   }
+  const delAll = document.createElement('button');
+  delAll.className = 'mt-delete-all';
+  delAll.textContent = t('deleteAllTakesBtn');
+  delAll.onclick = deleteAllTakes;
+  list.appendChild(delAll);
 }
 
 export async function deleteTake(id) {
@@ -136,6 +141,18 @@ export async function deleteTake(id) {
   track('take_delete', { rec_id: id });
   await deleteRecFromDB(id);
   showToast(t('takeDeleted'));
+  await renderMyTakes();
+  if (typeof window.renderRecordingsList === 'function') window.renderRecordingsList();
+  if (typeof window.renderProfileRecordings === 'function') window.renderProfileRecordings();
+}
+
+export async function deleteAllTakes() {
+  const recs = await getRecsFromDB();
+  if (!recs.length) { showToast(t('noTakesToDelete')); return; }
+  if (!confirm(t('deleteAllTakesConfirm').replace('{n}', recs.length))) return;
+  track('takes_delete_all', { count: recs.length });
+  await clearAllRecsFromDB();
+  showToast(t('allTakesDeleted'));
   await renderMyTakes();
   if (typeof window.renderRecordingsList === 'function') window.renderRecordingsList();
   if (typeof window.renderProfileRecordings === 'function') window.renderProfileRecordings();

@@ -114,6 +114,18 @@ async function deleteRecFromDB(id) {
   } catch (e) { /* swallow */ }
 }
 
+async function clearAllRecsFromDB() {
+  try {
+    const db = await openRecDB();
+    return new Promise((res, rej) => {
+      const tx = db.transaction(REC_STORE, 'readwrite');
+      tx.objectStore(REC_STORE).clear();
+      tx.oncomplete = () => res();
+      tx.onerror    = () => rej(tx.error);
+    });
+  } catch (e) { /* swallow */ }
+}
+
 // ── Recording display helpers ────────────────────────────────────────
 
 function formatRecSize(b) {
@@ -308,7 +320,8 @@ async function renderProfileRecordings() {
     + '<button onclick="reShareRec(' + r.id + ')" style="background:none;border:1px solid var(--border);color:var(--white);padding:4px 8px;font-size:.68rem;cursor:pointer" title="Share">Share</button>'
     + '<button onclick="deleteRec(' + r.id + ')" style="background:none;border:1px solid var(--border);color:#d92027;padding:4px 8px;font-size:.68rem;cursor:pointer" title="Delete">&times;</button>'
     + '</div></div>'
-  ).join('');
+  ).join('')
+  + '<button onclick="deleteAllTakes()" style="width:100%;margin-top:10px;padding:8px;background:none;border:1px solid rgba(217,32,39,.4);color:#d92027;border-radius:8px;font-size:.72rem;cursor:pointer;font-family:inherit">' + escHtml(t('deleteAllTakesBtn')) + '</button>';
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -594,6 +607,7 @@ export {
   saveRecToDB,
   getRecsFromDB,
   deleteRecFromDB,
+  clearAllRecsFromDB,
   formatRecSize,
   formatRecDate,
   downloadRecToDevice,
