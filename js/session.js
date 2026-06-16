@@ -93,7 +93,7 @@ const SCREEN_ROUTES = {
   home: '', importScene: 'import', chooseMode: 'choose',
   setupAi: 'solo', partnerChoice: 'partner',
   setupPartner: 'create', joinScreen: 'join', session: 'session',
-  myTakes: 'takes',
+  myTakes: 'takes', usageHistory: 'activity',
 };
 const ROUTE_TO_SCREEN = Object.fromEntries(
   Object.entries(SCREEN_ROUTES).map(([k, v]) => [v, k])

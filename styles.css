@@ -80,8 +80,12 @@ body::after{content:none}
   .home-hero{position:relative;inset:auto;min-height:100dvh}
 }
 @media(min-width:768px){
-  .home-hero{padding:4rem 5rem 2.5rem}
-  .hero-titles{margin-top:8rem}
+  .home-hero{padding:3.5rem 5rem 2rem}
+  /* Keep the whole hero inside the viewport (no scroll) — flex pushes the
+     bottom block down; a smaller top margin avoids overflow on ~720px tall
+     desktop windows while still breathing on tall ones. */
+  .hero-titles{margin-top:clamp(1.5rem,8vh,5rem)}
+  .hero-subtitle-big{margin-bottom:1.5rem}
   .home-hero-bg img{content:url('/background-image-desktop.jpg')}
   .hero-title{font-size:3.2rem}
   .hero-import-btn{max-width:420px}

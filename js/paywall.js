@@ -255,20 +255,25 @@ export async function loadUsageHistory() {
       if (g.type === 'debit_group') {
         var costStr = g.metered ? ((g.chars / 1000 * 0.30).toFixed(2)) : ((g.total / 100).toFixed(2));
         var label = g.metered ? 'PAYG' : '';
-        return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee">'
-          + '<span style="color:#4B5563">' + g.date + ' \u2014 ' + g.count + ' AI lines' + (g.chars ? ' (' + g.chars.toLocaleString() + ' chars)' : '') + '</span>'
+        return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.1)">'
+          + '<span style="color:rgba(255,255,255,.7)">' + g.date + ' \u2014 ' + g.count + ' AI lines' + (g.chars ? ' (' + g.chars.toLocaleString() + ' chars)' : '') + '</span>'
           + '<span style="color:' + (g.metered ? '#6B7280' : '#D96F6F') + ';font-weight:600">' + (g.metered ? '~$' + costStr : '-$' + costStr) + (label ? ' <span style="font-size:.6rem;opacity:.6">' + label + '</span>' : '') + '</span>'
           + '</div>';
       } else {
         var sign = g.amount >= 0 ? '+' : '';
         var color = g.amount >= 0 ? '#22c55e' : '#D96F6F';
-        return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee">'
-          + '<span style="color:#4B5563">' + escHtml(g.date) + ' ' + escHtml(g.time) + ' \u2014 ' + escHtml(g.description) + '</span>'
+        return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.1)">'
+          + '<span style="color:rgba(255,255,255,.7)">' + escHtml(g.date) + ' ' + escHtml(g.time) + ' \u2014 ' + escHtml(g.description) + '</span>'
           + '<span style="color:' + color + ';font-weight:600">' + sign + '$' + (Math.abs(g.amount) / 100).toFixed(2) + '</span>'
           + '</div>';
       }
     }).join('');
   } catch (e) {}
+}
+
+export function goUsageHistory() {
+  void loadUsageHistory();
+  if (typeof window.showScreen === 'function') window.showScreen('usageHistory');
 }
 
 // ── Partner gate (sign-up required for partner mode) ────────────────

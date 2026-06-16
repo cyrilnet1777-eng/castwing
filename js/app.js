@@ -76,6 +76,7 @@ import {
   showCreditDepletedModal,
   showVisitorSignupPrompt,
   loadUsageHistory,
+  goUsageHistory,
 } from './paywall.js';
 
 // ── Auth ────────────────────────────────────────────────────────────────
@@ -698,6 +699,7 @@ Object.assign(window, {
   deleteTake,
   deleteAllTakes,
   goMyTakes,
+  goUsageHistory,
 
   // ── Camera preview ──
   openCameraPreview,

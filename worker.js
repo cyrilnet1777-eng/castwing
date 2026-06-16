@@ -394,7 +394,7 @@ async function handlePolarWebhook(request, env) {
   if (event.type === "subscription.active" || event.type === "subscription.created") {
     const sub = event.data;
     const email = ((sub.metadata && sub.metadata.email) || (sub.customer && sub.customer.email) || "").toLowerCase();
-    const isMeteredSub = sub.product && (sub.product.id === POLAR_METERED_PRODUCT_ID || sub.product.id === POLAR_METERED_PRODUCT_ID_OLD);
+    const isMeteredSub = sub.product && (sub.product.id === POLAR_METERED_PRODUCT_ID || sub.product.id === POLAR_METERED_PRODUCT_ID_OLD || sub.product.id === POLAR_METERED_PRODUCT_ID_OLD2);
     if (email && isMeteredSub && env.DB) {
       const customerId = (sub.customer && sub.customer.id) || "";
       await activateMeteredBilling(env.DB, email, customerId, sub.id);
@@ -1696,8 +1696,9 @@ async function handleSetAutoTopup(request, env) {
   return json({ ok: true, autoTopupCents: cents });
 }
 
-const POLAR_METERED_PRODUCT_ID = "42e0d0b0-3921-43b9-84c9-d9173811c054";
-const POLAR_METERED_PRODUCT_ID_OLD = "418d12be-cac3-4b87-a900-b80e07761392";
+const POLAR_METERED_PRODUCT_ID = "9c688628-d8d5-437b-b3e6-44f9231b4b91"; // weekly recurring (current)
+const POLAR_METERED_PRODUCT_ID_OLD = "42e0d0b0-3921-43b9-84c9-d9173811c054"; // prev daily
+const POLAR_METERED_PRODUCT_ID_OLD2 = "418d12be-cac3-4b87-a900-b80e07761392"; // legacy
 
 async function handleMeteredSubscribe(request, env) {
   const email = await resolveCurrentUser(request, env);

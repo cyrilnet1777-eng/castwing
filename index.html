@@ -30,7 +30,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<link rel="stylesheet" href="/styles.css?v=20260616b">
+<link rel="stylesheet" href="/styles.css?v=20260616c">
 </head>
 <body>
 <div id="toast" class="toast"></div>
@@ -142,10 +142,10 @@
     </div>
     <div id="authAccountView" style="display:none">
       <div class="auth-logged-in">
-        <div style="width:56px;height:56px;border-radius:0;background:transparent;border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--white);font-weight:500;margin-bottom:.3rem;letter-spacing:.05em" id="authAvatar">U</div>
+        <div style="width:56px;height:56px;border-radius:50%;background:transparent;border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--white);font-weight:500;margin-bottom:.3rem;letter-spacing:.05em" id="authAvatar">U</div>
         <div class="auth-logged-email" id="authLoggedEmail">user@email.com</div>
       </div>
-      <div id="profileCreditCard" style="background:transparent;border:1px solid var(--border);border-radius:0;padding:16px;margin:12px 0;text-align:center">
+      <div id="profileCreditCard" style="background:transparent;border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin:12px 0;text-align:center">
         <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;letter-spacing:.1em;text-transform:uppercase" id="profileBalanceLabel">Credit Balance</div>
         <div style="font-size:1.6rem;font-weight:400;color:var(--white);font-family:'Playfair Display',serif" id="profileBalanceAmount">$0.00</div>
         <div style="font-size:0.68rem;color:var(--text-muted);margin-top:12px;margin-bottom:6px;letter-spacing:.08em;text-transform:uppercase">Add credits</div>
@@ -155,32 +155,19 @@
           <button class="mode-opt" onclick="openTopupModal('pack_25')" style="flex:1">$25</button>
         </div>
       </div>
-      <div id="profilePaygo" style="background:transparent;border:1px solid var(--border);border-radius:0;padding:12px;margin:8px 0;font-size:.82rem">
+      <div id="profilePaygo" style="background:transparent;border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px;margin:8px 0;font-size:.82rem">
         <div style="display:flex;align-items:center;justify-content:space-between">
           <div>
             <div style="font-weight:600;color:var(--white)">Pay As You Go</div>
-            <div style="font-size:.72rem;color:var(--text-muted)" id="paygoDesc">Billed daily for actual usage — no pre-purchase needed</div>
+            <div style="font-size:.72rem;color:var(--text-muted)" id="paygoDesc">Billed weekly for actual usage — no pre-purchase needed</div>
           </div>
           <button class="ps-toggle" id="paygoToggle" onclick="handlePaygoToggle()" style="flex-shrink:0"></button>
         </div>
-        <div id="paygoActiveInfo" style="display:none;margin-top:8px;font-size:.72rem;color:#34C759">Active · billed daily</div>
+        <div id="paygoActiveInfo" style="display:none;margin-top:8px;font-size:.72rem;color:#34C759">Active · billed weekly</div>
         <div style="margin-top:6px;font-size:.72rem;color:var(--text-muted)">$0.30 / 1,000 characters</div>
       </div>
-      <button type="button" class="btn btn-secondary btn-full" id="myTakesBtn" style="margin:8px 0;padding:.6rem" onclick="closeAuthModal();goMyTakes()">🎬 My takes</button>
-      <div id="profileRecordings" style="margin:8px 0;border:1px solid var(--border)">
-        <div onclick="toggleProfileSection('profileRecList','profileRecToggle')" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;cursor:pointer;user-select:none">
-          <div style="font-size:0.7rem;color:var(--text-muted);letter-spacing:.1em;text-transform:uppercase">Recordings <span id="profileRecCount" style="color:var(--white)"></span></div>
-          <span id="profileRecToggle" style="font-size:.7rem;color:var(--text-muted);transition:transform .2s">▼</span>
-        </div>
-        <div id="profileRecList" style="display:none;max-height:200px;overflow-y:auto;padding:0 12px 10px;font-size:0.82rem"></div>
-      </div>
-      <div id="profileUsageHistory" style="margin:8px 0;border:1px solid var(--border)">
-        <div onclick="toggleProfileSection('profileUsageList','profileUsageToggle')" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;cursor:pointer;user-select:none">
-          <div style="font-size:0.7rem;color:var(--text-muted);letter-spacing:.1em;text-transform:uppercase" id="profileUsageLabel">Recent activity</div>
-          <span id="profileUsageToggle" style="font-size:.7rem;color:var(--text-muted);transition:transform .2s">▼</span>
-        </div>
-        <div id="profileUsageList" style="display:none;max-height:200px;overflow-y:auto;padding:0 12px 10px;font-size:0.82rem"></div>
-      </div>
+      <button type="button" class="btn btn-secondary btn-full" id="myTakesBtn" style="margin:8px 0;padding:.7rem;border-radius:var(--radius-lg)" onclick="closeAuthModal();goMyTakes()">🎬 My takes</button>
+      <button type="button" class="btn btn-secondary btn-full" id="usageHistoryBtn" style="margin:8px 0;padding:.7rem;border-radius:var(--radius-lg)" onclick="closeAuthModal();goUsageHistory()">📊 <span id="profileUsageLabel">Recent activity</span></button>
       <div class="auth-actions-grid">
         <button onclick="startChangeEmail()">Change email</button>
         <button class="auth-logout-btn" onclick="logoutUser()">Log out</button>
@@ -383,6 +370,15 @@
   </div>
 </div>
 
+<!-- ═══ RECENT ACTIVITY ═══ -->
+<div id="usageHistory" class="screen cine-screen">
+  <div class="cine-content cine-content-scroll">
+  <button class="cine-back" onclick="goHome()">←</button>
+  <h1 class="cine-title" id="usageHistoryTitle">Recent activity<span class="cine-dot">.</span></h1>
+  <div id="profileUsageList" class="usage-list"></div>
+  </div>
+</div>
+
 <!-- ═══ SESSION ═══ -->
 <div id="session" class="screen">
   <div id="sessionTimeRail" class="session-time-rail" aria-hidden="true"><span id="sessionTimeRailFill" class="session-time-rail-fill"></span></div>
@@ -495,6 +491,6 @@
 </div></div>
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ttsAudioEl" playsinline></audio>
-<script type="module" src="/js/app.js?v=20260616b"></script>
+<script type="module" src="/js/app.js?v=20260616c"></script>
 </body>
 </html>
