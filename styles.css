@@ -31,7 +31,9 @@ body::after{content:none}
 #home{padding:0;background:#1a1a1a;position:fixed;inset:0;overflow:hidden;z-index:1}
 #home.active{display:flex}
 .home-hero{position:absolute;inset:0;display:flex;flex-direction:column;padding:5rem 1.5rem 2rem;z-index:2}
-.home-hero-bg{position:absolute;inset:0;z-index:0}
+/* Fixed to the viewport so it always covers the window edge-to-edge and never
+   scrolls with the content (the hero can scroll in short/landscape viewports). */
+.home-hero-bg{position:fixed;inset:0;z-index:0}
 .home-hero-bg img{width:100%;height:100%;object-fit:cover;object-position:bottom right;display:block}
 .home-top-bar{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:.8rem 1.2rem;padding-top:calc(.8rem + env(safe-area-inset-top,0px));z-index:50}
 .home-wordmark{font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:500;color:var(--white);letter-spacing:.22em;text-transform:uppercase;opacity:.85}
