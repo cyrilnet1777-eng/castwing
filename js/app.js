@@ -313,6 +313,9 @@ function goSetupPartner() {
   initDragDrop('uploadZone2');
 }
 function goJoin() { showScreen('joinScreen'); }
+// My Takes / Recent Activity are opened from the profile modal — closing them
+// should return to that modal, not the bare landing page.
+function backToProfile() { showScreen('home'); if (typeof window.openAuthModal === 'function') window.openAuthModal(); }
 function goSetupAi() { goImportScene(); }
 
 function handleHomeDrop(e) {
@@ -700,6 +703,7 @@ Object.assign(window, {
   deleteAllTakes,
   goMyTakes,
   goUsageHistory,
+  backToProfile,
 
   // ── Camera preview ──
   openCameraPreview,

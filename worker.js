@@ -1735,6 +1735,60 @@ async function handleMeteredSubscribe(request, env) {
   return json({ ok: true, checkoutUrl: session.url });
 }
 
+// Admin: migrate active subscriptions from the old metered product(s) to the
+// new (weekly) product. Dry-run by default; pass ?execute=switch to PATCH the
+// product on each old sub (keeps service, no re-subscribe needed), or
+// ?execute=cancel to revoke old subs so users can re-subscribe to the new one.
+async function handleMigratePolar(request, env) {
+  if ((request.headers.get("X-Admin-Key") || "") !== ADMIN_DASHBOARD_KEY) {
+    return json({ ok: false, error: "FORBIDDEN" }, 403);
+  }
+  const polarKey = String(env.POLAR_ACCESS_TOKEN || "").trim();
+  if (!polarKey) return json({ ok: false, error: "POLAR_NOT_CONFIGURED" }, 500);
+  const execute = new URL(request.url).searchParams.get("execute") || ""; // "", "switch", "cancel"
+  const oldIds = [POLAR_METERED_PRODUCT_ID_OLD, POLAR_METERED_PRODUCT_ID_OLD2];
+  const auth = { "Authorization": "Bearer " + polarKey, "Content-Type": "application/json" };
+
+  // Collect active subscriptions (paginate)
+  const subs = [];
+  let page = 1;
+  for (let i = 0; i < 50; i++) {
+    const r = await fetch(`https://api.polar.sh/v1/subscriptions/?active=true&limit=100&page=${page}`, { headers: auth });
+    if (!r.ok) return json({ ok: false, error: "POLAR_LIST_ERROR", status: r.status, detail: (await r.text().catch(() => "")).slice(0, 300) }, 502);
+    const d = await r.json().catch(() => ({}));
+    const items = d.items || (d.result && d.result.items) || [];
+    subs.push(...items);
+    const maxPage = (d.pagination && d.pagination.max_page) || 1;
+    if (page >= maxPage || !items.length) break;
+    page++;
+  }
+
+  const report = { dryRun: !execute, execute, scanned: subs.length, onNew: 0, onOld: 0, migrated: 0, errors: [], details: [] };
+  for (const s of subs) {
+    const pid = s.product_id || (s.product && s.product.id) || "";
+    const email = (s.customer && s.customer.email) || s.customer_email || "";
+    const custId = (s.customer && s.customer.id) || s.customer_id || "";
+    if (pid === POLAR_METERED_PRODUCT_ID) { report.onNew++; continue; }
+    if (!oldIds.includes(pid)) continue;
+    report.onOld++;
+    const entry = { sub: s.id, email, from: pid };
+    if (execute === "switch") {
+      const pr = await fetch(`https://api.polar.sh/v1/subscriptions/${s.id}`, { method: "PATCH", headers: auth, body: JSON.stringify({ product_id: POLAR_METERED_PRODUCT_ID }) });
+      if (pr.ok) {
+        report.migrated++; entry.ok = true;
+        if (email && env.DB) { try { await env.DB.prepare("UPDATE users SET billing_mode='metered', polar_customer_id=?, polar_subscription_id=? WHERE lower(email)=?").bind(custId, s.id, email.toLowerCase()).run(); } catch (e) {} }
+      } else { entry.ok = false; entry.error = (await pr.text().catch(() => "")).slice(0, 300); report.errors.push(entry.error); }
+    } else if (execute === "cancel") {
+      const pr = await fetch(`https://api.polar.sh/v1/subscriptions/${s.id}`, { method: "PATCH", headers: auth, body: JSON.stringify({ revoke: true }) });
+      entry.ok = pr.ok;
+      if (pr.ok) { report.migrated++; if (email && env.DB) { try { await env.DB.prepare("UPDATE users SET billing_mode='credits', polar_subscription_id=NULL WHERE lower(email)=?").bind(email.toLowerCase()).run(); } catch (e) {} } }
+      else { entry.error = (await pr.text().catch(() => "")).slice(0, 300); report.errors.push(entry.error); }
+    }
+    report.details.push(entry);
+  }
+  return json({ ok: true, ...report });
+}
+
 async function activateMeteredBilling(db, email, polarCustomerId, polarSubscriptionId) {
   if (!db) return;
   await db.prepare("UPDATE users SET billing_mode = 'metered', polar_customer_id = ?, polar_subscription_id = ? WHERE lower(email) = ?")
@@ -2962,6 +3016,7 @@ export default {
     // if (url.pathname === "/api/credits/auto-charge" && request.method === "POST") return handleAutoCharge(request, env);
     if (url.pathname === "/api/invite/redeem" && request.method === "POST") return handleRedeemInvite(request, env);
     if (url.pathname === "/api/admin/analytics" && request.method === "GET") return handleAdminAnalytics(request, env);
+    if (url.pathname === "/api/admin/migrate-polar" && request.method === "POST") return handleMigratePolar(request, env);
     if ((url.pathname === "/admin" || url.pathname === "/admin/") && request.method === "GET") {
       return new Response(ADMIN_DASHBOARD_HTML, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
     }
