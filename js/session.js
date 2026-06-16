@@ -1331,6 +1331,25 @@ async function startCamera() {
   return null;
 }
 
+/** Re-prime the live preview after a recorder teardown (e.g. Restart). The
+    camera <video> can stall on its last frame even though the MediaStream
+    track is still live — calling play() alone doesn't always recover it, so
+    we re-attach srcObject (the same thing the camera-switch workaround did).
+    If the track actually died, fall back to a full re-acquire. */
+async function reprimeCameraPreview() {
+  const v = document.getElementById('localVideo');
+  if (!v) return;
+  const live = S.localStream && S.localStream.getVideoTracks().some(t => t.readyState === 'live');
+  if (!live) { try { await startCamera(); } catch (_e) {} return; }
+  try {
+    v.srcObject = null;
+    v.srcObject = S.localStream;
+    v.muted = true; v.playsInline = true;
+    v.classList.toggle('mirror', S.currentFacingMode === 'user');
+    await v.play();
+  } catch (_e) {}
+}
+
 async function _ensureSeparateAudio() {
   if (window._cwMicStream && window._cwMicStream.getAudioTracks().some(t => t.readyState === 'live'))
     return window._cwMicStream;
@@ -1630,7 +1649,7 @@ function confirmRestartTake() {
   restartTake();
 }
 
-function restartTake() {
+async function restartTake() {
   track('take_restart', { from: 'pause', take_number: S.takeNumber });
   track('pause_restart', {});
   cancelSpeechFlow();
@@ -1652,7 +1671,15 @@ function restartTake() {
   const pmob = document.getElementById('mobMainBtn'); if (pmob) pmob.classList.remove('is-paused');
   unfreezeTimer();
   renderPrompter();
+  // The previous recording's teardown can leave the camera <video> frozen on
+  // its last frame (the recurring Restart freeze) — re-prime the live preview
+  // so it's running through the countdown AND the new take.
+  await reprimeCameraPreview();
   showClapperboard(() => {
+    // Insurance: make sure the preview is still rolling before we capture it
+    // into the new recording (the reprime above already un-stalled it).
+    const _lv = document.getElementById('localVideo');
+    if (_lv) { try { _lv.play(); } catch (_e) {} }
     if (canRecord() && S.localStream && !S.isRecording) startRecording();
     S.userScrolledUp = false;
     handleCurrentLineAutomation();
