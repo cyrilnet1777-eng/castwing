@@ -30,7 +30,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<link rel="stylesheet" href="/styles.css?v=20260616g">
+<link rel="stylesheet" href="/styles.css?v=20260628a">
 </head>
 <body>
 <div id="toast" class="toast"></div>
@@ -195,7 +195,6 @@
     <input type="file" id="pdfInput1" accept=".pdf,.fdx,.txt,application/pdf,*/*" onchange="handlePDFInput(1,this)">
     <button type="button" class="btn btn-secondary btn-full" style="margin-top:.35rem;padding:.45rem;font-size:.78rem" onclick="void newScriptReset(1)" id="newScriptBtn1">Clear cache · new script</button>
     <div class="setup-status" id="setupStatus1"></div>
-    <button type="button" class="btn btn-secondary btn-full" style="margin-top:.45rem;display:none;padding:.45rem;font-size:.78rem" onclick="openOptionalScriptReview(1)" id="optionalReviewBtn1">Review / refine script…</button>
     <div class="cine-privacy" style="justify-content:flex-start;margin-top:.8rem"><svg viewBox="0 0 24 24" width="12" height="12"><path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zM9 6a3 3 0 0 1 6 0v2H9V6zm9 14H6V10h12v10zm-6-3a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor"/></svg><span>PRIVATE. SECURE. OFF RECORD.</span></div>
     <div id="charSection1" style="display:none;margin-top:1.2rem"><label id="myCharacterLabel1" style="font-size:.9rem">Choose your role</label><div class="mode-hint" style="margin-top:-.2rem;margin-bottom:.4rem" id="charSectionHint1">AI performs the other lines.</div><div class="char-grid" id="charGrid1"></div><div id="partnerAssignWrap1" style="display:none;margin-top:1rem"><label id="partnerReadsLabel1">AI reads lines for:</label><div class="char-grid partner-char-grid" id="partnerCharGrid1"></div><div class="mode-hint" id="partnerAssignHint1"></div></div></div>
     <div class="script-preview" id="scriptPreview1" style="display:none">
@@ -441,7 +440,6 @@
   <div class="rec-panel" id="recPanel"><div class="rec-panel-title"><span>Recordings</span><button class="rec-panel-close" onclick="toggleRecPanel()">✕</button></div><div id="recPanelList"></div></div>
 </div>
 
-<div id="scriptReviewOverlay" class="script-review-overlay" aria-hidden="true"><div class="script-review-inner"><h3 id="scriptReviewTitle">Review script</h3><p class="sr-sub" id="scriptReviewHint">Edit lines if needed, then validate or use as-is to return to setup.</p><p class="sr-meta" id="scriptReviewMeta"></p><div id="scriptReviewList" class="script-review-list"></div><div class="script-review-actions"><button type="button" class="sr-btn-skip" onclick="closeScriptReview(false)">Use as-is</button><button type="button" class="sr-btn-ok" id="scriptReviewValidateBtn" onclick="closeScriptReview(true)">Validate and continue</button></div></div></div>
 
 <div class="end-take-modal" id="endTakeModal"><div class="end-take-card" style="position:relative">
   <div id="etmConfirmPhase">
@@ -491,6 +489,6 @@
 </div></div>
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ttsAudioEl" playsinline></audio>
-<script type="module" src="/js/app.js?v=20260616g"></script>
+<script type="module" src="/js/app.js?v=20260628a"></script>
 </body>
 </html>

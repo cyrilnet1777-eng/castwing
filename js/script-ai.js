@@ -702,8 +702,6 @@ function finishPdfSetupUi(n, rawText, validChars, detectedLang) {
     document.getElementById('charSection' + n).style.display = 'block';
     setTimeout(() => aiMergeCharacters(n), 500);
     document.getElementById('setupStatus' + n).textContent = S.pdfScript.length + ' lines \u00b7 ' + (S.pdfScript.filter(r => r && r.kind === LINE_TYPE.DIALOGUE).length) + ' dialogues';
-    const orb = document.getElementById('optionalReviewBtn' + n);
-    if (orb) orb.style.display = 'block';
     if (detectedLang && VOICE_LOCALES.some(l => l.id === detectedLang)) { S.lockedVoiceLocale = detectedLang; applyLocaleVoices(detectedLang, false); initVoiceCountrySelect(); initVoiceGrid(); }
     if (n === 1) showToast(chars.length + ' roles found \u2014 ' + t('myCharacterLabel'), 4200);
     // Auto-select the top character so the continue CTA is immediately actionable
