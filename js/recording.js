@@ -263,20 +263,38 @@ function _buildRecordingStream() {
     try { S._recAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 }); }
     catch (_e) { S._recAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
     S._recDest = S._recAudioCtx.createMediaStreamDestination();
+    // Mic path conditioning — the actor's voice is captured much quieter (and
+    // often crackly) than the clean TTS buffer. Bring it UP to the AI's level
+    // and even it out, without touching the AI (which already sounds good):
+    //   source → high-pass (cut rumble/pops) → compressor (lift quiet parts,
+    //   tame peaks) → makeup gain → limiter (anti-clip) → dest
+    // _recMicGain stays the node we zero out during TTS to avoid echo.
     S._recMicGain = S._recAudioCtx.createGain();
-    S._recMicGain.gain.value = 1.0;
-    // Mic audio (routed through gain node so we can mute during TTS to prevent echo)
+    S._recMicLevel = 1.8;
+    S._recMicGain.gain.value = S._recMicLevel;
     if (S.localStream && S.localStream.getAudioTracks().length > 0) {
       S._recMicSource = S._recAudioCtx.createMediaStreamSource(S.localStream);
-      S._recMicSource.connect(S._recMicGain);
-      S._recMicGain.connect(S._recDest);
+      var hp = S._recAudioCtx.createBiquadFilter();
+      hp.type = 'highpass'; hp.frequency.value = 85;
+      var micComp = S._recAudioCtx.createDynamicsCompressor();
+      micComp.threshold.value = -30; micComp.knee.value = 24; micComp.ratio.value = 3.5;
+      micComp.attack.value = 0.005; micComp.release.value = 0.2;
+      var micLimiter = S._recAudioCtx.createDynamicsCompressor();
+      micLimiter.threshold.value = -3; micLimiter.knee.value = 2; micLimiter.ratio.value = 12;
+      micLimiter.attack.value = 0.002; micLimiter.release.value = 0.12;
+      S._recMicSource.connect(hp); hp.connect(micComp); micComp.connect(S._recMicGain);
+      S._recMicGain.connect(micLimiter); micLimiter.connect(S._recDest);
     }
+    // AI TTS bus — left at unity (AI already clean/loud); buffer sources in
+    // tts.js connect here so there's one place to tweak the AI level later.
+    S._recAiGain = S._recAudioCtx.createGain();
+    S._recAiGain.gain.value = 1.0;
+    S._recAiGain.connect(S._recDest);
     // Remote audio (partner's voice for actor, actor's voice for partner)
     if (remoteStream && remoteStream.getAudioTracks().length > 0) {
       var remoteSource = S._recAudioCtx.createMediaStreamSource(remoteStream);
       remoteSource.connect(S._recDest);
     }
-    // AI audio will be fed via playTtsIntoRecording() each time TTS plays
     S._recDest.stream.getAudioTracks().forEach(function (t) { combined.addTrack(t); });
   } catch (e) {
     console.warn('[rec] audio mix failed, mic only:', e.message);
@@ -411,6 +429,8 @@ function _closeRecAudioCtx() {
   S._recDest = null;
   S._recMicSource = null;
   S._recMicGain = null;
+  S._recAiGain = null;
+  S._recMaster = null;
   S._recStream = null;
 }
 

@@ -172,7 +172,7 @@ function playTtsIntoRecording(audioBuffer) {
   try {
     var src = S._recAudioCtx.createBufferSource();
     src.buffer = audioBuffer;
-    src.connect(S._recDest);
+    src.connect(S._recAiGain || S._recDest);
     src.connect(S._recAudioCtx.destination); // also play through speakers
     src.start(0);
     return src;
@@ -313,7 +313,7 @@ async function speakWithElevenLabs(text, preset, token, cb, speedOverride, demoF
         var _recDoneFired = false;
         var recDone = function() {
           if (_recDoneFired) return; _recDoneFired = true;
-          if (S._recMicGain) S._recMicGain.gain.value = 1.0;
+          if (S._recMicGain) S._recMicGain.gain.value = (S._recMicLevel || 1);
           if (token === S.activeSpeechToken && cb) cb();
           S.lastTTSEndTs = Date.now();
         };
@@ -321,7 +321,7 @@ async function speakWithElevenLabs(text, preset, token, cb, speedOverride, demoF
         if (S._recMicGain) S._recMicGain.gain.value = 0;
         var src = S._recAudioCtx.createBufferSource();
         src.buffer = audioBuffer;
-        src.connect(S._recDest);
+        src.connect(S._recAiGain || S._recDest);
         src.connect(S._recAudioCtx.destination);
         src.onended = recDone;
         // Expose real playback timing so the prompter can step display
@@ -332,7 +332,7 @@ async function speakWithElevenLabs(text, preset, token, cb, speedOverride, demoF
         // Safety: onended can fail to fire on iOS Safari -- use duration-based fallback
         var _safetyMs = Math.ceil((audioBuffer.duration || 3) * 1000) + 500;
         var _safetyTimer = setTimeout(function() { console.warn('[TTS] onended safety timeout after ' + _safetyMs + 'ms'); recDone(); }, _safetyMs);
-        S.ttsAudio = { stop: function() { try { src.stop(); } catch (e) {} clearTimeout(_safetyTimer); if (S._recMicGain) S._recMicGain.gain.value = 1.0; } };
+        S.ttsAudio = { stop: function() { try { src.stop(); } catch (e) {} clearTimeout(_safetyTimer); if (S._recMicGain) S._recMicGain.gain.value = (S._recMicLevel || 1); } };
         return true;
       } catch (e) { console.warn('[TTS] AudioContext decode failed, falling back to element:', e.message); }
     }
