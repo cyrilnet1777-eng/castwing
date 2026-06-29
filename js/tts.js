@@ -36,13 +36,19 @@ async function fetchTTSFromBestEndpoint(payload, demoFree) {
   const headers = { 'Content-Type': 'application/json' };
   if (demoFree) headers['X-Demo-Tts'] = '1'; // onboarding demo lane (server-capped)
   for (const endpoint of endpoints) {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload),
-      credentials: 'same-origin',
-      signal: ac.signal,
-    });
+    // Retry once on a transient network drop (e.g. ERR_CONNECTION_CLOSED)
+    // before giving up on this endpoint — avoids dropping to the robotic
+    // browser voice mid-take when the worker connection blips.
+    let response = null, netErr = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try { response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(payload), credentials: 'same-origin', signal: ac.signal }); netErr = null; break; }
+      catch (e) {
+        netErr = e;
+        if (ac.signal.aborted) throw e;
+        if (attempt === 0) await new Promise(r => setTimeout(r, 350));
+      }
+    }
+    if (netErr) { lastEndpoint = endpoint; continue; } // both attempts failed → try next endpoint
     lastResponse = response;
     lastEndpoint = endpoint;
     if (response.status === 404) {

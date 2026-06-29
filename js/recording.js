@@ -270,18 +270,21 @@ function _buildRecordingStream() {
     //   tame peaks) → makeup gain → limiter (anti-clip) → dest
     // _recMicGain stays the node we zero out during TTS to avoid echo.
     S._recMicGain = S._recAudioCtx.createGain();
-    S._recMicLevel = 1.8;
+    S._recMicLevel = 1.35;
     S._recMicGain.gain.value = S._recMicLevel;
     if (S.localStream && S.localStream.getAudioTracks().length > 0) {
       S._recMicSource = S._recAudioCtx.createMediaStreamSource(S.localStream);
       var hp = S._recAudioCtx.createBiquadFilter();
       hp.type = 'highpass'; hp.frequency.value = 85;
+      // Gentle, wide-knee compression — lift the level without the crushed/
+      // "saturated" sound the aggressive settings produced.
       var micComp = S._recAudioCtx.createDynamicsCompressor();
-      micComp.threshold.value = -30; micComp.knee.value = 24; micComp.ratio.value = 3.5;
-      micComp.attack.value = 0.005; micComp.release.value = 0.2;
+      micComp.threshold.value = -24; micComp.knee.value = 30; micComp.ratio.value = 2.2;
+      micComp.attack.value = 0.008; micComp.release.value = 0.25;
+      // Soft safety limiter — just catches stray peaks, doesn't crush.
       var micLimiter = S._recAudioCtx.createDynamicsCompressor();
-      micLimiter.threshold.value = -3; micLimiter.knee.value = 2; micLimiter.ratio.value = 12;
-      micLimiter.attack.value = 0.002; micLimiter.release.value = 0.12;
+      micLimiter.threshold.value = -1.5; micLimiter.knee.value = 6; micLimiter.ratio.value = 4;
+      micLimiter.attack.value = 0.003; micLimiter.release.value = 0.15;
       S._recMicSource.connect(hp); hp.connect(micComp); micComp.connect(S._recMicGain);
       S._recMicGain.connect(micLimiter); micLimiter.connect(S._recDest);
     }
